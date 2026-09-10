@@ -3,6 +3,7 @@
 My agentic AI playground aiming and sandboxing AI code generation from production code
 
 * [thinking](./thinking.md)
+* [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 * [Github Pages](https://kjelloh.github.io/plaiground/)
 
