@@ -4,6 +4,7 @@ My agentic AI playground aiming and sandboxing AI code generation from productio
 
 * [thinking](./thinking.md)
 * [chimes](../chime/index.md)
+* [Github Pages](https://kjelloh.github.io/plaiground/)
 
 All documentation is licenced as CC0 1.0 Universal as defined in LICENCE file in top folder 'docs' - [Documentation Licence](./docs/LICENCE.txt)
 
