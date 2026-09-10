@@ -53,3 +53,10 @@ Verified end-to-end: markdown/ now holds the .md (H1 intact, both images embedde
 ```
 
 * So it seems claude decided to decode all images in the eml-file to png-images?
+
+Anyhow, where am I and what is next?
+
+* I realise it is awkward to have eml -> html -> markdown
+* When I am also aiming at my other pipe-line markdown -> html (github pages style)
+
+So should I keep the html-step in this mail -> markdown as 'chimes'?
