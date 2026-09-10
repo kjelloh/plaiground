@@ -12,6 +12,7 @@ import mimetypes
 import re
 import sys
 from email import policy
+from html import escape as html_escape
 from pathlib import Path
 
 
@@ -22,17 +23,19 @@ def sanitize(name: str) -> str:
     return name or "unnamed"
 
 
-def unique_path(directory: Path, filename: str) -> Path:
-    candidate = directory / filename
-    if not candidate.exists():
-        return candidate
-    stem, suffix = candidate.stem, candidate.suffix
+def unique_name(filename: str, claimed: set[str]) -> str:
+    if filename not in claimed:
+        claimed.add(filename)
+        return filename
+    stem, dot, suffix = filename.rpartition(".")
+    stem = stem or filename
+    suffix = f".{suffix}" if dot else ""
     i = 1
-    while True:
-        candidate = directory / f"{stem}-{i}{suffix}"
-        if not candidate.exists():
-            return candidate
+    while f"{stem}-{i}{suffix}" in claimed:
         i += 1
+    name = f"{stem}-{i}{suffix}"
+    claimed.add(name)
+    return name
 
 
 def pick_html_part(msg):
@@ -53,6 +56,16 @@ def image_parts(msg):
             yield part
 
 
+def insert_h1(html: str, subject: str) -> str:
+    if not subject:
+        return html
+    heading = f"<h1>{html_escape(subject)}</h1>\n"
+    match = re.search(r"<body\b[^>]*>", html, flags=re.IGNORECASE)
+    if match:
+        return html[: match.end()] + "\n" + heading + html[match.end() :]
+    return heading + html
+
+
 def extract(eml_path: Path, out_dir: Path) -> None:
     msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
 
@@ -61,10 +74,14 @@ def extract(eml_path: Path, out_dir: Path) -> None:
         sys.exit("No text/html part found in the message.")
     html = html_part.get_content()
 
+    subject = str(msg["subject"] or "").strip()
+    html = insert_h1(html, subject)
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cid_to_file: dict[str, str] = {}
     written: list[str] = []
+    claimed: set[str] = set()
     for idx, part in enumerate(image_parts(msg), start=1):
         payload = part.get_payload(decode=True)
         if not payload:
@@ -73,9 +90,10 @@ def extract(eml_path: Path, out_dir: Path) -> None:
         if not filename:
             ext = mimetypes.guess_extension(part.get_content_type()) or ".bin"
             filename = f"image-{idx}{ext}"
-        target = unique_path(out_dir, sanitize(filename))
+        name = unique_name(sanitize(filename), claimed)
+        target = out_dir / name
         target.write_bytes(payload)
-        written.append(target.name)
+        written.append(name)
 
         cid = part.get("Content-ID")
         if cid:
