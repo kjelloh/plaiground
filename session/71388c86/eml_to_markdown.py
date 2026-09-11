@@ -3,6 +3,7 @@
 import email
 import sys
 from email import policy
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 class EmailParseError(Exception):
@@ -37,6 +38,20 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
       and not email_msg.is_multipart()
       and not email_msg.get_content()
   ): raise EmailEmptyError("No headers or content found — may not be a valid email")
+
+  raw_date = email_msg.get("date")
+  parsed_date = None
+  if raw_date:
+    try:
+      parsed_date = parsedate_to_datetime(raw_date)
+    except (TypeError, ValueError):
+      parsed_date = None
+
+  return {
+    "subject": email_msg.get("subject", "").strip() if email_msg.get("subject") else None,
+    "from": email_msg.get("from", "").strip() if email_msg.get("from") else None,
+    "date": parsed_date,          # datetime object (or None)
+  }  
 
 def main() -> None:
 
