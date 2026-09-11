@@ -69,6 +69,39 @@ def test_parse_mail_malformed_date(tmp_path):
     result = parse_email_msg(msg)
     assert result["date"] is None
 
+def test_parse_email_msg_parts_single_text_plain(tmp_path):
+    test_eml_path = tmp_path / "test.eml"
+    test_eml_path.write_text("Subject: Hello\nFrom: foo@bar.se\n\nBody text\n")
+    msg = to_email_msg(to_path(str(test_eml_path)))
+    result = parse_email_msg(msg)
+    assert result["parts"] == [
+        {"index": 0, "content_disposition": None, "content_type": "text/plain"}
+    ]
+
+def test_parse_email_msg_parts_multipart_text_plain_only():
+    raw = (
+        "From: foo@bar.se\r\n"
+        "Subject: Multi\r\n"
+        'Content-Type: multipart/mixed; boundary="BOUNDARY"\r\n'
+        "\r\n"
+        "--BOUNDARY\r\n"
+        "Content-Type: text/plain\r\n"
+        "\r\n"
+        "Body text\r\n"
+        "--BOUNDARY\r\n"
+        "Content-Type: text/plain\r\n"
+        'Content-Disposition: attachment; filename="note.txt"\r\n'
+        "\r\n"
+        "Attachment text\r\n"
+        "--BOUNDARY--\r\n"
+    ).encode()
+    msg = email.message_from_bytes(raw, policy=policy.default)
+    result = parse_email_msg(msg)
+    assert result["parts"] == [
+        {"index": 1, "content_disposition": None, "content_type": "text/plain"},
+        {"index": 2, "content_disposition": "attachment", "content_type": "text/plain"},
+    ]
+
 def test_parse_sample_eml():
     session_dir = Path(__file__).parent
     eml_paths = list(session_dir.glob("*.eml"))
