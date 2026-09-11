@@ -5,6 +5,14 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20260911
+
+I dont like to tarnsform mail eml-file to markdown over html.
+
+maybe I can go for a python script that goes from a mail eml-file directly to markdown?
+
+I continued thinking in [Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?](../session/71388c86/session.md)
+
 ## 20260910
 
 So I created this 'plaiground' git repo and project to have a home for my AI interactions and to keep AI sandboxed from any production code.

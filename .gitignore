@@ -1,3 +1,5 @@
+# Ignore pytest caches anywhere
+__pycache__/
 # ignore generated html files (in folders named html)
 html/
 #ignore generated markdown files (in folders named markdown)
@@ -72,3 +74,6 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# python virtualenv
+.venv/

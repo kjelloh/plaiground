@@ -1,5 +1,23 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260911
+
+I now want to try to get a tight and to-the-point python script that turns a mail eml-file into markdown 'directly'.
+
+* I created empty [eml_to_markdown.py](./eml_to_markdown.py)
+* I have [eml_to_html.py](./eml_to_html.py)
+* I have [html_to_markdown.py](./html_to_markdown.py)
+
+How can I refactor them into a single tight python script?
+
+* Accept a single argument path_to_eml_file
+
+I have now vibe-coded, holding hard on the leache, a pytest environment, a [test_eml_to_markdown.py](./test_eml_to_markdown.py), a [pytest.ini](./pytest.ini) to have the pytest cache local to the session folder and a root [init_python_tool_chain.py](../../init_python_tool_chain.py) with a print statement to manually 'source' the venv in teh current shell.
+
+I find it 'stone age' and inconveniant that python venv mechanism is shell environment vartiable based and thus the user needs to manually inject the mutation for venv to be 'activated'.
+
+Here we are in 2026 and we still as developers builds 'houses of cards'? We need to erect the environment each time we come to work? Adn it all comes down the moment we turn our backs or don't look?
+
 ## 20260910
 
 So I now have an email in an eml-file 'Todo_ Consider to document the networks accessed by an ODB2 connecting device?.eml´.
