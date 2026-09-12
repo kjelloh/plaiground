@@ -10,7 +10,7 @@ I now think it is time to try a batch run on my almost 4500 Todo-mails with the 
 
 Maybe what I shall do is to make a script emls_to_markdown.py?
 
-I have now vibe-coded under strict harenssing with Claude Code.
+I have now vibe-coded with Claude Code under strict harnessing.
 
 * The script [emls_to_markdowns.py](./emls_to_markdowns.py) seems to work on my ' ~/Downloads/mail_export/eml' folder?
 
@@ -22,6 +22,35 @@ I have now vibe-coded under strict harenssing with Claude Code.
 1291 ok, 3138 failed, 4429 total
 (.venv) kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/71388c86 %
 ```
+
+So what's next?
+
+* What to-mails did actually pass?
+* Maybe I can implement to actually transform the mails that pass into markdown?
+  * Then I will have the seed for creating the markdown folders?
+
+Yes, that seems like a next logical step.
+
+* To dump the script output to a log file I hade to redirect stderr (2) to stdout.
+
+```sh
+> ./emls_to_markdowns.py ~/Downloads/mail_export/eml > todo_mail_processing.log 2>&1
+```
+
+  * It seems this means 'redirect file '2' (stderr) to whatever file '1' (stdout) refers to
+  * The '&' is the syntax thing to tell the shell we mean the 'reference' (not a literal file named "1")?
+
+AHA! My logging does not output what processing that actually did NOT raise an excpetion.
+
+* I added a print for the eml-file that did not cause a raised error.
+* E.g., my todo_mail 'Owls an bells - make .NET app that reads todo mails and creates a todo-list'.
+
+So what should hapoen for an accepted email?
+
+1. Do ```init_new chime <subject>```
+  * Where 'subject' is from the mail
+
+Hm... it seems we should make 'init_new' into a python script so tat we can re-use it?
 
 ## 20260911
 

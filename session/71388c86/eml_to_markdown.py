@@ -125,7 +125,7 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
 def eml_path_to_markdown_folder(eml_path: Path) -> None:
     email_msg = to_email_msg(eml_path)
     email_dict = parse_email_msg(email_msg)
-
+    print(f"OK: {eml_path.name}")
 
 def main() -> None:
 
