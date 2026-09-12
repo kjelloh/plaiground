@@ -18,6 +18,11 @@ I find it 'stone age' and inconveniant that python venv mechanism is shell 'envi
 
 Here we are in 2026 and we still as developers builds 'houses of cards'? We need to erect the environment each time we come to work? Adn it all comes down the moment we turn our backs or don't look?
 
+Ok, I made some progress after all.
+
+* I now have some understanding on what 'walking an email' means
+* I have defined a tight harness and only accepts parsing of text/plain for now.
+
 ## 20260910
 
 So I now have an email in an eml-file 'Todo_ Consider to document the networks accessed by an ODB2 connecting device?.eml´.

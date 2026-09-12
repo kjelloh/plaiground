@@ -34,6 +34,15 @@ def to_email_msg(eml_path: Path) -> "email.message.EmailMessage":
     return msg
 
 
+# IMF: https://www.rfc-editor.org/info/rfc5322/
+# Group From/To: https://www.rfc-editor.org/info/rfc6854/
+# MIME Body: https://www.rfc-editor.org/info/rfc2045/
+# MIME Media: https://www.rfc-editor.org/info/rfc2046/
+# MIME non-ASCII,non-textual,multipart: https://www.rfc-editor.org/info/rfc2049/
+# Original Mail: https://www.w3.org/Protocols/rfc822/
+# SMTP: https://www.rfc-editor.org/info/rfc5321/
+# Python: https://docs.python.org/3/library/email.parser.html#module-email.parser
+# Python: https://docs.python.org/3/library/email.examples.html#parsing-a-message-from-a-file
 def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
 
     if email_msg.defects:
