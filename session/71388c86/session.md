@@ -1,5 +1,28 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260912
+
+I now think it is time to try a batch run on my almost 4500 Todo-mails with the current eml_to_markdown-script?
+
+* I want the script to wine about what it fails to parse in the eml-file (e-mail).
+  * That is, I currently fail on mail parts with content_type not in 'SUPPORTED_CONTENT_TYPES'
+  * So a print (log output) of encoutering such parts in a mail is what I aim for.
+
+Maybe what I shall do is to make a script emls_to_markdown.py?
+
+I have now vibe-coded under strict harenssing with Claude Code.
+
+* The script [emls_to_markdowns.py](./emls_to_markdowns.py) seems to work on my ' ~/Downloads/mail_export/eml' folder?
+
+```sh
+(.venv) kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/71388c86 % ./emls_to_markdowns.py ~/Downloads/mail_export/eml
+
+...
+
+1291 ok, 3138 failed, 4429 total
+(.venv) kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/71388c86 %
+```
+
 ## 20260911
 
 I now want to try to get a tight and to-the-point python script that turns a mail eml-file into markdown 'directly'.

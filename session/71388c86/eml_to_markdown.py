@@ -19,8 +19,10 @@ class EmailDefectsError(EmailParseError):
 class EmailEmptyError(EmailParseError):
     """Rais when the email has no usable headers or content."""
 
+
 class UnsupportedContentTypeError(Exception):
     """Rais when the email has parts with not-yet-supported content type"""
+
 
 def to_path(path_str: str) -> Path:
     eml_path = Path(path_str)
@@ -71,7 +73,7 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
         if part.is_multipart():
             # container parts carry no content of their own
             continue
-    
+
         content_disposition = (
             # 'attachment', 'inline', or None
             part.get_content_disposition()
@@ -88,7 +90,7 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
         # audio/*, video/*	Media attachments
         # message/rfc822	A full forwarded email embedded as an attachment — this one's a genuine edge case worth knowing about
         # text/calendar	Calendar invites (.ics) — sometimes attached, sometimes inline
-        # application/octet-stream	Generic fallback for unrecognized binary content        
+        # application/octet-stream	Generic fallback for unrecognized binary content
         content_type = part.get_content_type()
 
         SUPPORTED_CONTENT_TYPES = {
@@ -96,17 +98,19 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
         }
 
         if content_type not in SUPPORTED_CONTENT_TYPES:
-                raise UnsupportedContentTypeError(
-                    f"Unimplemented content_type encountered: {content_type!r} "
-                    f"(index={index}, disposition={content_disposition!r}, "
-                    f"filename={part.get_filename()!r})"
-                )
+            raise UnsupportedContentTypeError(
+                f"Unimplemented content_type encountered: {content_type!r} "
+                f"(index={index}, disposition={content_disposition!r}, "
+                f"filename={part.get_filename()!r})"
+            )
 
-        parts_meta.append({
-            "index": index,
-            "content_disposition": content_disposition,
-            "content_type": content_type,
-        })
+        parts_meta.append(
+            {
+                "index": index,
+                "content_disposition": content_disposition,
+                "content_type": content_type,
+            }
+        )
 
     return {
         "subject": (
@@ -114,8 +118,13 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
         ),
         "from": email_msg.get("from", "").strip() if email_msg.get("from") else None,
         "date": parsed_date,  # datetime object (or None)
-        "parts": parts_meta
+        "parts": parts_meta,
     }
+
+
+def eml_path_to_markdown_folder(eml_path: Path) -> None:
+    email_msg = to_email_msg(eml_path)
+    email_dict = parse_email_msg(email_msg)
 
 
 def main() -> None:
@@ -124,8 +133,7 @@ def main() -> None:
         sys.exit(f"Usage: {sys.argv[0]} <path-to-eml-file>")
 
     try:
-        eml_path = to_path(sys.argv[1])
-        email_msg = to_email_msg(eml_path)
+        eml_path_to_markdown_folder(to_path(sys.argv[1]))
     except Exception as e:
         sys.exit(f"Exception: {e}")
 

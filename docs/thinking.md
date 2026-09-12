@@ -5,9 +5,16 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20260912
+
+I now think it is time to try a batch run on my almost 4500 Todo-mails with the current eml_to_markdown-script?
+
+* I want the script to wine about what it fails to parse in the eml-file (e-mail).
+  * That is, I currently fail on mail parts with unsupported conet 
+
 ## 20260911
 
-I dont like to tarnsform mail eml-file to markdown over html.
+I dont like to transform mail eml-file to markdown over html.
 
 maybe I can go for a python script that goes from a mail eml-file directly to markdown?
 
