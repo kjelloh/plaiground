@@ -52,6 +52,8 @@ So what should hapoen for an accepted email?
 
 Hm... it seems we should make 'init_new' into a python script so tat we can re-use it?
 
+WAIT! The [init_new](../../init_new.py) IS already a python script! GREAT!
+
 ## 20260911
 
 I now want to try to get a tight and to-the-point python script that turns a mail eml-file into markdown 'directly'.

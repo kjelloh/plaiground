@@ -1,0 +1,20 @@
+Received: from [10.0.1.2] ([83.250.83.181])
+        by smtp60.webbpost.se (IceWarp 10.0.4) with ASMTP (SSL) id CAR72306
+        for <kjell-olov.hogdahl@itfied.se>; Sat, 18 Aug 2012 20:25:06 +0200
+Subject: Owls an bells - make .NET app that reads todo mails and creates a todo-list
+From: =?utf-8?Q?"Kjell-Olov_H=C3=B6gdahl_=28itfied=29"?= <kjell-olov.hogdahl@itfied.se>
+Content-Type: text/plain;
+	charset=us-ascii
+X-Mailer: iPad Mail (9B206)
+Message-Id: <070982B9-A497-409F-BB64-C65D8171A958@itfied.se>
+Date: Sat, 18 Aug 2012 20:25:11 +0200
+To: =?utf-8?Q?Kjell-Olov_H=C3=B6gdahl?= <kjell-olov.hogdahl@itfied.se>
+Content-Transfer-Encoding: quoted-printable
+Mime-Version: 1.0 (1.0)
+
+Make first owl and bells app as a .NET app on itfied.se! It reads mails at t=
+odo@itfied.se and creates a todo-list.
+
+Iterate later into balloned list!
+
+Sent from my iPad=

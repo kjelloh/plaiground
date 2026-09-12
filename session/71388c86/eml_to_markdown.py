@@ -7,6 +7,10 @@ from email import policy
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
+from init_new import ensure_entry_folder
+
+SESSION_DIR = Path(__file__).resolve().parent
+
 
 class EmailParseError(Exception):
     """Base exception for email parsing failures."""
@@ -20,8 +24,21 @@ class EmailEmptyError(EmailParseError):
     """Rais when the email has no usable headers or content."""
 
 
+class EmailMissingSubjectError(EmailParseError):
+    """Rais when the email has no Subject header — a chime cannot be named without one."""
+
+
 class UnsupportedContentTypeError(Exception):
     """Rais when the email has parts with not-yet-supported content type"""
+
+
+class ChimeVariantsNotSupportedError(Exception):
+    """Rais when a chime already exists for this subject.
+
+    Multiple mails sharing a subject should eventually become versions of
+    the same chime; that isn't implemented yet, so this is raised instead
+    of silently reusing or overwriting the existing chime.md.
+    """
 
 
 def to_path(path_str: str) -> Path:
@@ -125,7 +142,19 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
 def eml_path_to_markdown_folder(eml_path: Path) -> None:
     email_msg = to_email_msg(eml_path)
     email_dict = parse_email_msg(email_msg)
-    print(f"OK: {eml_path.name}")
+
+    subject = email_dict["subject"]
+    if not subject:
+        raise EmailMissingSubjectError("Email has no Subject header — cannot name a chime")
+
+    chime_path, created = ensure_entry_folder("chime", subject, base_dir=SESSION_DIR)
+    if not created:
+        raise ChimeVariantsNotSupportedError(
+            f"chime already exists for subject {subject!r} ({chime_path}) — "
+            "chime variants not yet supported"
+        )
+
+    print(f"OK: {eml_path.name} -> {chime_path}")
 
 def main() -> None:
 

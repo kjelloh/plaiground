@@ -5,9 +5,13 @@ from pathlib import Path
 
 import pytest
 
+import eml_to_markdown
 from eml_to_markdown import (
+    ChimeVariantsNotSupportedError,
     EmailDefectsError,
     EmailEmptyError,
+    EmailMissingSubjectError,
+    eml_path_to_markdown_folder,
     parse_email_msg,
     to_email_msg,
     to_path,
@@ -101,6 +105,35 @@ def test_parse_email_msg_parts_multipart_text_plain_only():
         {"index": 1, "content_disposition": None, "content_type": "text/plain"},
         {"index": 2, "content_disposition": "attachment", "content_type": "text/plain"},
     ]
+
+def test_eml_path_to_markdown_folder_missing_subject_raises(tmp_path):
+    test_eml_path = tmp_path / "test.eml"
+    test_eml_path.write_text("From: foo@bar.se\n\nBody text\n")
+    with pytest.raises(EmailMissingSubjectError):
+        eml_path_to_markdown_folder(to_path(str(test_eml_path)))
+
+def test_eml_path_to_markdown_folder_creates_chime(tmp_path, monkeypatch):
+    monkeypatch.setattr(eml_to_markdown, "SESSION_DIR", tmp_path)
+    test_eml_path = tmp_path / "test.eml"
+    test_eml_path.write_text("Subject: Hello\nFrom: foo@bar.se\n\nBody text\n")
+
+    eml_path_to_markdown_folder(to_path(str(test_eml_path)))
+
+    chime_files = list((tmp_path / "chime").glob("*/chime.md"))
+    assert len(chime_files) == 1
+    assert chime_files[0].read_text(encoding="utf-8") == "# Hello\n\n"
+
+def test_eml_path_to_markdown_folder_subject_collision_raises(tmp_path, monkeypatch):
+    monkeypatch.setattr(eml_to_markdown, "SESSION_DIR", tmp_path)
+
+    first_eml_path = tmp_path / "first.eml"
+    first_eml_path.write_text("Subject: Hello\nFrom: foo@bar.se\n\nBody text\n")
+    eml_path_to_markdown_folder(to_path(str(first_eml_path)))
+
+    second_eml_path = tmp_path / "second.eml"
+    second_eml_path.write_text("Subject: Hello\nFrom: baz@qux.se\n\nOther body\n")
+    with pytest.raises(ChimeVariantsNotSupportedError):
+        eml_path_to_markdown_folder(to_path(str(second_eml_path)))
 
 def test_parse_sample_eml():
     session_dir = Path(__file__).parent
