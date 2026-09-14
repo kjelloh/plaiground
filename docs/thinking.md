@@ -12,12 +12,19 @@ Time to commit some progress.
 * session/71388c86 (mail eml to chime generator)
 * session/b214e74e (local jekyll site generator)
 
+Good!
+
+* We have a way to apply Jekyll locally to a Githb Pages configured git-repo ok.
+* We have a mechnism to turn 'simple' eml-file to chimes ok.
+
+So we are close to tie these together in 'chime' to get todo-mail eml-file -> chime -> add and commit in 'chime' repo?
+
 ## 20260912
 
 I now think it is time to try a batch run on my almost 4500 Todo-mails with the current eml_to_markdown-script?
 
 * I want the script to wine about what it fails to parse in the eml-file (e-mail).
-  * That is, I currently fail on mail parts with unsupported conet 
+  * That is, I currently fail on mail parts with unsupported content 
 
 ## 20260911
 
