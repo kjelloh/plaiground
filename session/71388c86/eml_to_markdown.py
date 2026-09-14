@@ -139,6 +139,24 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
     }
 
 
+def email_msg_to_markdown_body(email_msg: "email.message.EmailMessage") -> str:
+    """Extract the email's text/plain body as markdown-ready text.
+
+    Only non-attachment text/plain parts are used — attached text/plain
+    files are left out of the body (they'll get their own handling later).
+    get_content() (policy.default) already hands back a decoded str, so
+    "text/plain -> markdown" is currently just: use it as-is.
+    """
+    body_parts = [
+        part.get_content()
+        for part in email_msg.walk()
+        if not part.is_multipart()
+        and part.get_content_type() == "text/plain"
+        and part.get_content_disposition() != "attachment"
+    ]
+    return "\n\n".join(body_parts)
+
+
 def eml_path_to_markdown_folder(eml_path: Path) -> None:
     email_msg = to_email_msg(eml_path)
     email_dict = parse_email_msg(email_msg)
@@ -153,6 +171,10 @@ def eml_path_to_markdown_folder(eml_path: Path) -> None:
             f"chime already exists for subject {subject!r} ({chime_path}) — "
             "chime variants not yet supported"
         )
+
+    body = email_msg_to_markdown_body(email_msg)
+    with chime_path.open("a", encoding="utf-8") as f:
+        f.write(body)
 
     print(f"OK: {eml_path.name} -> {chime_path}")
 

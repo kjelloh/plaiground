@@ -5,6 +5,13 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20260914
+
+Time to commit some progress.
+
+* session/71388c86 (mail eml to chime generator)
+* session/b214e74e (local jekyll site generator)
+
 ## 20260912
 
 I now think it is time to try a batch run on my almost 4500 Todo-mails with the current eml_to_markdown-script?

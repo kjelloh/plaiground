@@ -1,5 +1,14 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260913
+
+I think it is now time to actually turn the single eml-files into maarkdown files.
+
+* I have the mechanism that initiates the chime-foler and chime.md file for a mail subject.
+* I now need to parse the content_type 'text/plain' to markdown.
+
+How can I do this?
+
 ## 20260912
 
 I now think it is time to try a batch run on my almost 4500 Todo-mails with the current eml_to_markdown-script?
@@ -53,6 +62,15 @@ So what should hapoen for an accepted email?
 Hm... it seems we should make 'init_new' into a python script so tat we can re-use it?
 
 WAIT! The [init_new](../../init_new.py) IS already a python script! GREAT!
+
+So claude was able to refactor code to create chime scaffolding for parseable eml-file.
+
+* Local init_new.py refactored to be usable by eml_to_markdown.py
+  * Claude was blocked from working on files outside thge session folder and I liked this
+  * So a local clone for development was the way to go.
+* eml_to_markdown.py now creates chime folder caffolding ok
+
+I tested on my 4500 Todo-mails and it seem to succeed to create chime-folders for eml-files that are simple enough to be parsed for now.
 
 ## 20260911
 

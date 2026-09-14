@@ -121,7 +121,36 @@ def test_eml_path_to_markdown_folder_creates_chime(tmp_path, monkeypatch):
 
     chime_files = list((tmp_path / "chime").glob("*/chime.md"))
     assert len(chime_files) == 1
-    assert chime_files[0].read_text(encoding="utf-8") == "# Hello\n\n"
+    assert chime_files[0].read_text(encoding="utf-8") == "# Hello\n\nBody text\n"
+
+def test_eml_path_to_markdown_folder_skips_attachment_body(tmp_path, monkeypatch):
+    monkeypatch.setattr(eml_to_markdown, "SESSION_DIR", tmp_path)
+    raw = (
+        "Subject: Multi\r\n"
+        "From: foo@bar.se\r\n"
+        'Content-Type: multipart/mixed; boundary="BOUNDARY"\r\n'
+        "\r\n"
+        "--BOUNDARY\r\n"
+        "Content-Type: text/plain\r\n"
+        "\r\n"
+        "Body text\r\n"
+        "--BOUNDARY\r\n"
+        "Content-Type: text/plain\r\n"
+        'Content-Disposition: attachment; filename="note.txt"\r\n'
+        "\r\n"
+        "Attachment text\r\n"
+        "--BOUNDARY--\r\n"
+    )
+    test_eml_path = tmp_path / "test.eml"
+    test_eml_path.write_text(raw)
+
+    eml_path_to_markdown_folder(to_path(str(test_eml_path)))
+
+    chime_files = list((tmp_path / "chime").glob("*/chime.md"))
+    assert len(chime_files) == 1
+    content = chime_files[0].read_text(encoding="utf-8")
+    assert "Body text" in content
+    assert "Attachment text" not in content
 
 def test_eml_path_to_markdown_folder_subject_collision_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(eml_to_markdown, "SESSION_DIR", tmp_path)
