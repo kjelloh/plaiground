@@ -150,49 +150,6 @@ def parse_email_meta(email_msg: "email.message.EmailMessage") -> dict:
         except (TypeError, ValueError):
             parsed_date = None
 
-    # for index, part in enumerate(email_msg.walk()):
-    #     if part.is_multipart():
-    #         # container parts carry no content of their own
-    #         continue
-
-    #     content_disposition = (
-    #         # 'attachment', 'inline', or None
-    #         part.get_content_disposition()
-    #     )
-
-    #     # text/plain
-    #     # text/html
-    #     # multipart/mixed	Container: general grouping (e.g. body + attachments)
-    #     # multipart/alternative	Container: same content in different formats (plain + html versions of the same body)
-    #     # multipart/related	Container: body + its inline resources (e.g. HTML + inline images referenced via cid:)
-    #     # multipart/signed / multipart/encrypted	Container: S/MIME or PGP signed/encrypted content
-    #     # image/png, image/jpeg, image/gif, etc.	Embedded images (attachment or inline)
-    #     # application/pdf, application/msword, application/zip, etc.	Document/binary attachments
-    #     # audio/*, video/*	Media attachments
-    #     # message/rfc822	A full forwarded email embedded as an attachment — this one's a genuine edge case worth knowing about
-    #     # text/calendar	Calendar invites (.ics) — sometimes attached, sometimes inline
-    #     # application/octet-stream	Generic fallback for unrecognized binary content
-    #     content_type = part.get_content_type()
-
-    #     SUPPORTED_CONTENT_TYPES = {
-    #         "text/plain",
-    #     }
-
-    #     if content_type not in SUPPORTED_CONTENT_TYPES:
-    #         raise UnsupportedContentTypeError(
-    #             f"Unimplemented content_type encountered: {content_type!r} "
-    #             f"(index={index}, disposition={content_disposition!r}, "
-    #             f"filename={part.get_filename()!r})"
-    #         )
-
-    #     parts_meta.append(
-    #         {
-    #             "index": index,
-    #             "content_disposition": content_disposition,
-    #             "content_type": content_type,
-    #         }
-    #     )
-
     return {
         "subject": (
             email_msg.get("subject", "").strip() if email_msg.get("subject") else None

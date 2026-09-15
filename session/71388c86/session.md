@@ -8,6 +8,58 @@ We currently have the 'eml_to_markdown.py' script that can parse an eml-file to 
 
 After some thinking I decided to vibe code a 'print_tree' of the parsed mail part structiure. This seems to be a good base for further development!
 
+I have now discovered some intricancy of mail parsing.
+
+* For one example mail I got a somewhat complicated tree structure
+
+```sh
+❯ 'multipart/alternative
+  ├── text/plain (5221 chars/bytes)
+  └── multipart/related
+      ├── text/html (21507 chars/bytes)
+      ├── image/tiff (inline, filename='Digicert Hardware Token Receipt Acknowledge Downloads.tiff', cid=<91CBF0A6-5A9C-43C7-A3E1-4D2A28B01156>, 589622 chars/bytes)
+      ├── image/tiff (inline, filename='Digicert Driver Install 1.tiff', cid=<87174D76-6D63-44BC-9CC5-7174E5E3FC23>, 133194 chars/bytes)
+      ├── image/tiff (inline, filename='Digicert Driver Install 2.tiff', cid=<A48CA807-8C1F-4A7B-A407-B3F84495D5E9>, 35364 chars/bytes)
+      ├── image/tiff (inline, filename='Digicert Driver Install 3.tiff', cid=<32CDA4F9-7791-402F-BF52-202C226E2F5F>, 39838 chars/bytes)
+      ├── image/tiff (inline, filename='Digicert Driver Install 4.tiff', cid=<2FC403AB-0BD2-4215-A730-9CA98A8FE5BF>, 122314 chars/bytes)
+      ├── image/tiff (inline, filename='SafeNet Authentication Client Tools.tiff', cid=<C38720E7-30FD-45B0-8628-E47D6B371795>, 1188062 chars/bytes)
+      └── image/tiff (inline, filename='Code Signing Token Password Changed Succesfully.tiff', cid=<DE5D91F9-5DE0-48A5-90FE-5122CA52640B>, 1115094 chars/bytes)'
+```
+
+* And Claude Code provided me with some beard crumb info.
+
+  For this structure, the relevant parts to carry into markdown are:
+
+  - The content itself: prefer text/html → markdown (richer than plaintext — headings, lists, etc.), falling back to text/plain only when no HTML alternative exists.
+  - Inline images with a cid: these are referenced from the HTML body via cid:... and are meant to render in place in the message. You'd save each to a file and rewrite the HTML's cid: references to markdown image links (![](images/xyz.png))
+  - True attachments (Content-Disposition: attachment, no matching cid reference in the body): these should become a separate "Attachments" list of links at the end, not inlined into the body text.
+
+* Claude Code also made me observant on the fact that I need to convert tiff-images to png images!
+
+```text
+  One snag specific to your example: the inline images are image/tiff. TIFF isn't renderable by browsers or markdown viewers, so those would need converting to PNG/JPEG when extracted, otherwise the ![]() links will just be broken in any markdown preview.
+```
+
+* I copied this mail to this session and tried 'eml_to_html.py' on it.
+
+```sh
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/71388c86 % ./eml_to_html.py "Todo_ Code Signing - Consider to document how ordering, receiving activating and applying Digicert Code Signing Certificate went? 2.eml"
+HTML  -> html/Todo_ Code Signing - Consider to document how ordering, receiving activating and applying Digicert Code Signing Certificate went 2.html
+image -> html/Digicert Hardware Token Receipt Acknowledge Downloads.tiff
+image -> html/Digicert Driver Install 1.tiff
+image -> html/Digicert Driver Install 2.tiff
+image -> html/Digicert Driver Install 3.tiff
+image -> html/Digicert Driver Install 4.tiff
+image -> html/SafeNet Authentication Client Tools.tiff
+image -> html/Code Signing Token Password Changed Succesfully.tiff
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/71388c86 %
+```
+
+* This oepened just fine in Safari on my mac
+* BUT: I now suspect this would NOT work on say a Windows machine?
+
+So it seems I need to call on some converter to transform the tiff to jpeg (or png?).
+
 ## 20260913
 
 I think it is now time to actually turn the single eml-files into markdown files.
