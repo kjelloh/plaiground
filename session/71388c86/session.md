@@ -1,8 +1,16 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260915
+
+So what is next to do today?
+
+We currently have the 'eml_to_markdown.py' script that can parse an eml-file to a 'mail' and parse relevant meta-data and a 'text/plain' part into a markdown file ok.
+
+After some thinking I decided to vibe code a 'print_tree' of the parsed mail part structiure. This seems to be a good base for further development!
+
 ## 20260913
 
-I think it is now time to actually turn the single eml-files into maarkdown files.
+I think it is now time to actually turn the single eml-files into markdown files.
 
 * I have the mechanism that initiates the chime-foler and chime.md file for a mail subject.
 * I now need to parse the content_type 'text/plain' to markdown.

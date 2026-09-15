@@ -5,6 +5,7 @@ from operator import index
 import sys
 from email import policy
 from email.utils import parsedate_to_datetime
+from email.message import EmailMessage
 from pathlib import Path
 
 from init_new import ensure_entry_folder
@@ -52,6 +53,64 @@ def to_email_msg(eml_path: Path) -> "email.message.EmailMessage":
     msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
     return msg
 
+# Part of 'print_email_part_tree'
+def to_child_prefix_string(prefix: str, parent_is_last: bool) -> str:
+    return prefix + ("    " if parent_is_last else "│   ")
+
+def to_part_descriptor_string(part: EmailMessage) -> str:
+    content_type = part.get_content_type()
+    disposition = part.get_content_disposition()  # 'attachment' | 'inline' | None
+    content_id = part.get("Content-ID")
+    filename = part.get_filename()
+
+    details = []
+    if disposition:
+        details.append(disposition)
+    if filename:
+        details.append(f"filename={filename!r}")
+    if content_id:
+        details.append(f"cid={content_id}")
+    if not part.is_multipart():
+        try:
+            size = len(part.get_content())
+            details.append(f"{size} chars/bytes")
+        except Exception:
+            pass
+
+    suffix = f" ({', '.join(details)})" if details else ""
+    return f"{content_type}{suffix}"
+
+# Part of 'print_email_part_tree'
+def print_email_part_node(part: EmailMessage, depth: int, prefix: str) -> None:
+    """Print a single node's label, then recurse into its children if any."""
+    print(to_part_descriptor_string(part))
+    if part.is_multipart():
+        children = part.get_payload()
+        for i, child in enumerate(children):
+            is_last = i == len(children) - 1
+            connector = "└── " if is_last else "├── "
+            child_prefix = to_child_prefix_string(prefix, is_last)
+            print(f"{prefix}{connector}", end="")
+            print_email_part_node(child, depth + 1, child_prefix)
+
+# prints the email structure as Unix 'tree'
+def print_email_part_tree(email_msg: EmailMessage, _depth: int = 0, _prefix: str = "") -> None:
+    """Print the MIME structure of an email, similar to the Unix `tree` command.
+
+    Recurses manually (rather than using .walk()) so that indentation
+    reflects actual nesting depth, not just visitation order.
+    """
+    label = to_part_descriptor_string(email_msg)
+    print(f"{_prefix}{label}")
+
+    if email_msg.is_multipart():
+        children = email_msg.get_payload()  # list[EmailMessage] when multipart
+        for i, child in enumerate(children):
+            is_last = i == len(children) - 1
+            connector = "└── " if is_last else "├── "
+            child_prefix = to_child_prefix_string(_prefix, is_last)
+            print(f"{_prefix}{connector}", end="")
+            print_email_part_node(child, _depth + 1, child_prefix)
 
 # IMF: https://www.rfc-editor.org/info/rfc5322/
 # Group From/To: https://www.rfc-editor.org/info/rfc6854/
@@ -62,7 +121,7 @@ def to_email_msg(eml_path: Path) -> "email.message.EmailMessage":
 # SMTP: https://www.rfc-editor.org/info/rfc5321/
 # Python: https://docs.python.org/3/library/email.parser.html#module-email.parser
 # Python: https://docs.python.org/3/library/email.examples.html#parsing-a-message-from-a-file
-def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
+def parse_email_meta(email_msg: "email.message.EmailMessage") -> dict:
 
     if email_msg.defects:
         raise EmailDefectsError(f"Email Parsing defects: {email_msg.defects}")
@@ -84,50 +143,48 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
         except (TypeError, ValueError):
             parsed_date = None
 
-    parts_meta = []
+    # for index, part in enumerate(email_msg.walk()):
+    #     if part.is_multipart():
+    #         # container parts carry no content of their own
+    #         continue
 
-    for index, part in enumerate(email_msg.walk()):
-        if part.is_multipart():
-            # container parts carry no content of their own
-            continue
+    #     content_disposition = (
+    #         # 'attachment', 'inline', or None
+    #         part.get_content_disposition()
+    #     )
 
-        content_disposition = (
-            # 'attachment', 'inline', or None
-            part.get_content_disposition()
-        )
+    #     # text/plain
+    #     # text/html
+    #     # multipart/mixed	Container: general grouping (e.g. body + attachments)
+    #     # multipart/alternative	Container: same content in different formats (plain + html versions of the same body)
+    #     # multipart/related	Container: body + its inline resources (e.g. HTML + inline images referenced via cid:)
+    #     # multipart/signed / multipart/encrypted	Container: S/MIME or PGP signed/encrypted content
+    #     # image/png, image/jpeg, image/gif, etc.	Embedded images (attachment or inline)
+    #     # application/pdf, application/msword, application/zip, etc.	Document/binary attachments
+    #     # audio/*, video/*	Media attachments
+    #     # message/rfc822	A full forwarded email embedded as an attachment — this one's a genuine edge case worth knowing about
+    #     # text/calendar	Calendar invites (.ics) — sometimes attached, sometimes inline
+    #     # application/octet-stream	Generic fallback for unrecognized binary content
+    #     content_type = part.get_content_type()
 
-        # text/plain
-        # text/html
-        # multipart/mixed	Container: general grouping (e.g. body + attachments)
-        # multipart/alternative	Container: same content in different formats (plain + html versions of the same body)
-        # multipart/related	Container: body + its inline resources (e.g. HTML + inline images referenced via cid:)
-        # multipart/signed / multipart/encrypted	Container: S/MIME or PGP signed/encrypted content
-        # image/png, image/jpeg, image/gif, etc.	Embedded images (attachment or inline)
-        # application/pdf, application/msword, application/zip, etc.	Document/binary attachments
-        # audio/*, video/*	Media attachments
-        # message/rfc822	A full forwarded email embedded as an attachment — this one's a genuine edge case worth knowing about
-        # text/calendar	Calendar invites (.ics) — sometimes attached, sometimes inline
-        # application/octet-stream	Generic fallback for unrecognized binary content
-        content_type = part.get_content_type()
+    #     SUPPORTED_CONTENT_TYPES = {
+    #         "text/plain",
+    #     }
 
-        SUPPORTED_CONTENT_TYPES = {
-            "text/plain",
-        }
+    #     if content_type not in SUPPORTED_CONTENT_TYPES:
+    #         raise UnsupportedContentTypeError(
+    #             f"Unimplemented content_type encountered: {content_type!r} "
+    #             f"(index={index}, disposition={content_disposition!r}, "
+    #             f"filename={part.get_filename()!r})"
+    #         )
 
-        if content_type not in SUPPORTED_CONTENT_TYPES:
-            raise UnsupportedContentTypeError(
-                f"Unimplemented content_type encountered: {content_type!r} "
-                f"(index={index}, disposition={content_disposition!r}, "
-                f"filename={part.get_filename()!r})"
-            )
-
-        parts_meta.append(
-            {
-                "index": index,
-                "content_disposition": content_disposition,
-                "content_type": content_type,
-            }
-        )
+    #     parts_meta.append(
+    #         {
+    #             "index": index,
+    #             "content_disposition": content_disposition,
+    #             "content_type": content_type,
+    #         }
+    #     )
 
     return {
         "subject": (
@@ -135,33 +192,16 @@ def parse_email_msg(email_msg: "email.message.EmailMessage") -> dict:
         ),
         "from": email_msg.get("from", "").strip() if email_msg.get("from") else None,
         "date": parsed_date,  # datetime object (or None)
-        "parts": parts_meta,
     }
-
-
-def email_msg_to_markdown_body(email_msg: "email.message.EmailMessage") -> str:
-    """Extract the email's text/plain body as markdown-ready text.
-
-    Only non-attachment text/plain parts are used — attached text/plain
-    files are left out of the body (they'll get their own handling later).
-    get_content() (policy.default) already hands back a decoded str, so
-    "text/plain -> markdown" is currently just: use it as-is.
-    """
-    body_parts = [
-        part.get_content()
-        for part in email_msg.walk()
-        if not part.is_multipart()
-        and part.get_content_type() == "text/plain"
-        and part.get_content_disposition() != "attachment"
-    ]
-    return "\n\n".join(body_parts)
-
 
 def eml_path_to_markdown_folder(eml_path: Path) -> None:
     email_msg = to_email_msg(eml_path)
-    email_dict = parse_email_msg(email_msg)
 
-    subject = email_dict["subject"]
+    print_email_part_tree(email_msg)
+
+    email_meta = parse_email_meta(email_msg)
+
+    subject = email_meta["subject"]
     if not subject:
         raise EmailMissingSubjectError("Email has no Subject header — cannot name a chime")
 
@@ -172,11 +212,10 @@ def eml_path_to_markdown_folder(eml_path: Path) -> None:
             "chime variants not yet supported"
         )
 
-    body = email_msg_to_markdown_body(email_msg)
-    with chime_path.open("a", encoding="utf-8") as f:
-        f.write(body)
-
-    print(f"OK: {eml_path.name} -> {chime_path}")
+    # body = 'email_part_tree_string'
+    # with chime_path.open("a", encoding="utf-8") as f:
+    #     f.write(body)
+    # print(f"OK: {eml_path.name} -> {chime_path}")
 
 def main() -> None:
 
