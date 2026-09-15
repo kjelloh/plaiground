@@ -80,28 +80,29 @@ def to_part_descriptor_string(part: EmailMessage) -> str:
     suffix = f" ({', '.join(details)})" if details else ""
     return f"{content_type}{suffix}"
 
-# Part of 'print_email_part_tree'
-def print_email_part_node(part: EmailMessage, depth: int, prefix: str) -> None:
-    """Print a single node's label, then recurse into its children if any."""
-    print(to_part_descriptor_string(part))
+# Part of 'to_email_part_tree_string'
+def to_part_node_string(part: EmailMessage, depth: int, prefix: str) -> str:
+    """Build a single node's label line, then recurse into its children if any."""
+    lines = [to_part_descriptor_string(part)]
     if part.is_multipart():
         children = part.get_payload()
         for i, child in enumerate(children):
             is_last = i == len(children) - 1
             connector = "└── " if is_last else "├── "
             child_prefix = to_child_prefix_string(prefix, is_last)
-            print(f"{prefix}{connector}", end="")
-            print_email_part_node(child, depth + 1, child_prefix)
+            child_string = to_part_node_string(child, depth + 1, child_prefix)
+            lines.append(f"{prefix}{connector}{child_string}")
+    return "\n".join(lines)
 
-# prints the email structure as Unix 'tree'
-def print_email_part_tree(email_msg: EmailMessage, _depth: int = 0, _prefix: str = "") -> None:
-    """Print the MIME structure of an email, similar to the Unix `tree` command.
+# builds the email structure as a Unix 'tree'-style string
+def to_email_part_tree_string(email_msg: EmailMessage, _depth: int = 0, _prefix: str = "") -> str:
+    """Build the MIME structure of an email as a string, similar to the Unix `tree` command.
 
     Recurses manually (rather than using .walk()) so that indentation
     reflects actual nesting depth, not just visitation order.
     """
     label = to_part_descriptor_string(email_msg)
-    print(f"{_prefix}{label}")
+    lines = [f"{_prefix}{label}"]
 
     if email_msg.is_multipart():
         children = email_msg.get_payload()  # list[EmailMessage] when multipart
@@ -109,8 +110,14 @@ def print_email_part_tree(email_msg: EmailMessage, _depth: int = 0, _prefix: str
             is_last = i == len(children) - 1
             connector = "└── " if is_last else "├── "
             child_prefix = to_child_prefix_string(_prefix, is_last)
-            print(f"{_prefix}{connector}", end="")
-            print_email_part_node(child, _depth + 1, child_prefix)
+            child_string = to_part_node_string(child, _depth + 1, child_prefix)
+            lines.append(f"{_prefix}{connector}{child_string}")
+
+    return "\n".join(lines)
+
+def print_email_part_tree(email_msg: EmailMessage, _depth: int = 0, _prefix: str = "") -> None:
+    """Print the MIME structure of an email, similar to the Unix `tree` command."""
+    print(to_email_part_tree_string(email_msg, _depth, _prefix))
 
 # IMF: https://www.rfc-editor.org/info/rfc5322/
 # Group From/To: https://www.rfc-editor.org/info/rfc6854/
@@ -194,10 +201,11 @@ def parse_email_meta(email_msg: "email.message.EmailMessage") -> dict:
         "date": parsed_date,  # datetime object (or None)
     }
 
-def eml_path_to_markdown_folder(eml_path: Path) -> None:
+def eml_file_to_markdown(eml_path: Path) -> None:
     email_msg = to_email_msg(eml_path)
 
-    print_email_part_tree(email_msg)
+    email_part_tree_string = to_email_part_tree_string(email_msg)
+    print(email_part_tree_string)
 
     email_meta = parse_email_meta(email_msg)
 
@@ -208,14 +216,13 @@ def eml_path_to_markdown_folder(eml_path: Path) -> None:
     chime_path, created = ensure_entry_folder("chime", subject, base_dir=SESSION_DIR)
     if not created:
         raise ChimeVariantsNotSupportedError(
-            f"chime already exists for subject {subject!r} ({chime_path}) — "
+            f"chime already exists for subject {subject!r} — "
             "chime variants not yet supported"
         )
 
-    # body = 'email_part_tree_string'
-    # with chime_path.open("a", encoding="utf-8") as f:
-    #     f.write(body)
-    # print(f"OK: {eml_path.name} -> {chime_path}")
+    with chime_path.open("a", encoding="utf-8") as f:
+        f.write(email_part_tree_string)
+    print(f"OK: {eml_path.name} -> {chime_path}")
 
 def main() -> None:
 
@@ -223,7 +230,7 @@ def main() -> None:
         sys.exit(f"Usage: {sys.argv[0]} <path-to-eml-file>")
 
     try:
-        eml_path_to_markdown_folder(to_path(sys.argv[1]))
+        eml_file_to_markdown(to_path(sys.argv[1]))
     except Exception as e:
         sys.exit(f"Exception: {e}")
 

@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from eml_to_markdown import eml_path_to_markdown_folder, to_path
+from eml_to_markdown import eml_file_to_markdown, to_path
 
 
 def to_dir_path(path_str: str) -> Path:
@@ -33,10 +33,11 @@ def main() -> None:
 
     for eml_path in eml_paths:
         try:
-            eml_path_to_markdown_folder(to_path(str(eml_path)))
+            eml_file_to_markdown(to_path(str(eml_path)))
         except Exception as e:
             fail_count += 1
-            print(f"FAIL: {eml_path.name}: {type(e).__name__}: {e}", file=sys.stderr)
+            print(f"FAIL: {eml_path.name}", file=sys.stderr)
+            print(f"    └── {type(e).__name__}: {e}", file=sys.stderr)
         else:
             ok_count += 1
 
