@@ -1,5 +1,14 @@
 # Consider ways to mirror Jekyll Github Pages generation on local git repos?
 
+## 20260915
+
+Let's see what we can do next to crate a local jekyll site generator framework?
+
+* Create a top folder '.jekyll' with the jekyll build environment?
+* A top folder skript 'to_site.py' that engages '.jekyll' build environment on git repo as defined by '_config.yml'?
+
+Jupp! I now seem to have a working to_site.py that creates a '.jekyll' folder with jekyll built tool chain and then calls on jekyll to build a site at '.jekyll/_site' ok.
+
 ## 20260914
 
 So time to commit what we have and move on with making local jekyll create statc sites work.

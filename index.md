@@ -1,6 +1,6 @@
 # plaiground
 
-My agentic AI playground aiming and sandboxing AI code generation from production code
+My agentic AI playground aiming at sandboxing AI code generation from production code. An agent like Claude Code can be instructed to restrain itself to operate only inside a session folder.
 
 * [docs/README](./docs/REAME.md)
 * [thinking](./docs/thinking.md)

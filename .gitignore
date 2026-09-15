@@ -1,3 +1,5 @@
+# Ignore file produced by the to_site.py jekyll mechanism
+.jekyll/
 # Ignore pytest caches anywhere
 __pycache__/
 # ignore generated html files (in folders named html)

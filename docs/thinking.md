@@ -5,6 +5,11 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20260915
+
+Time to do some more work on [Consider ways to mirror Jekyll Github Pages generation on local git repos?](../session/b214e74e/session.md).
+
+
 ## 20260914
 
 Time to commit some progress.
