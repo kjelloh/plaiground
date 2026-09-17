@@ -1,12 +1,33 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260917
+
+Maybe the next step is to actaully save any text parts.
+
+* I hand-rolled an 'to_email_ast'
+* The ast is a list of strings with a path into the stricture as prefix.
+* And a '=' followed by any 'text/plain' or 'text/html'
+* I could now see that the same text is present in two parts
+  * In path 'multipart/alternative.text/plain' as 'raw' text
+  * In path 'multipart/alternative.multipart/related.text/html' as HTML
+
+```sh
+multipart/alternative
+├── text/plain (2622 chars/bytes)
+└── multipart/related
+    ├── text/html (4349 chars/bytes)
+```
+
+  * The HTML is MUCH larger!
+  * And REALLY elaborated!
+
 ## 20260915
 
 So what is next to do today?
 
 We currently have the 'eml_to_markdown.py' script that can parse an eml-file to a 'mail' and parse relevant meta-data and a 'text/plain' part into a markdown file ok.
 
-After some thinking I decided to vibe code a 'print_tree' of the parsed mail part structiure. This seems to be a good base for further development!
+After some thinking I decided to vibe code a 'print_tree' of the parsed mail part structure. This seems to be a good base for further development!
 
 I have now discovered some intricancy of mail parsing.
 
@@ -26,7 +47,7 @@ I have now discovered some intricancy of mail parsing.
       └── image/tiff (inline, filename='Code Signing Token Password Changed Succesfully.tiff', cid=<DE5D91F9-5DE0-48A5-90FE-5122CA52640B>, 1115094 chars/bytes)'
 ```
 
-* And Claude Code provided me with some beard crumb info.
+* And Claude Code provided me with some bread crumb info.
 
   For this structure, the relevant parts to carry into markdown are:
 

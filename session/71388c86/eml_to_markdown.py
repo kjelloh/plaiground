@@ -115,10 +115,6 @@ def to_email_part_tree_string(email_msg: EmailMessage, _depth: int = 0, _prefix:
 
     return "\n".join(lines)
 
-def print_email_part_tree(email_msg: EmailMessage, _depth: int = 0, _prefix: str = "") -> None:
-    """Print the MIME structure of an email, similar to the Unix `tree` command."""
-    print(to_email_part_tree_string(email_msg, _depth, _prefix))
-
 # IMF: https://www.rfc-editor.org/info/rfc5322/
 # Group From/To: https://www.rfc-editor.org/info/rfc6854/
 # MIME Body: https://www.rfc-editor.org/info/rfc2045/
@@ -158,12 +154,24 @@ def parse_email_meta(email_msg: "email.message.EmailMessage") -> dict:
         "date": parsed_date,  # datetime object (or None)
     }
 
+def to_email_ast(parent_path: list,part: EmailMessage) -> list:
+    result = []
+    content_type = part.get_content_type()
+    current_path = parent_path + [content_type]
+    if part.is_multipart():
+        children = part.get_payload()  # list[EmailMessage] when multipart
+        for i, child in enumerate(children):
+          result.extend(to_email_ast(current_path, child))
+    else:
+        if content_type == "text/plain":
+            result.append(".".join(current_path) + "=" + part.get_content())
+        elif content_type == "text/html":
+            result.append(".".join(current_path) + "=" + part.get_content())
+
+    return result
+          
 def eml_file_to_markdown(eml_path: Path) -> None:
     email_msg = to_email_msg(eml_path)
-
-    email_part_tree_string = to_email_part_tree_string(email_msg)
-    print(email_part_tree_string)
-
     email_meta = parse_email_meta(email_msg)
 
     subject = email_meta["subject"]
@@ -176,6 +184,12 @@ def eml_file_to_markdown(eml_path: Path) -> None:
             f"chime already exists for subject {subject!r} — "
             "chime variants not yet supported"
         )
+
+    email_ast = to_email_ast([],email_msg)
+    print("\n".join(email_ast))
+
+    email_part_tree_string = to_email_part_tree_string(email_msg)
+    print(email_part_tree_string)
 
     with chime_path.open("a", encoding="utf-8") as f:
         f.write(email_part_tree_string)
