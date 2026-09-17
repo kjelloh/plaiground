@@ -7,6 +7,9 @@ from email import policy
 from email.utils import parsedate_to_datetime
 from email.message import EmailMessage
 from pathlib import Path
+# See https://docs.python.org/3/library/html.parser.html
+from html.parser import HTMLParser
+
 
 from init_new import ensure_entry_folder
 
@@ -154,6 +157,61 @@ def parse_email_meta(email_msg: "email.message.EmailMessage") -> dict:
         "date": parsed_date,  # datetime object (or None)
     }
 
+class MyHTMLParser(HTMLParser):
+
+    def __init__(self) -> None:
+      super().__init__()
+      self.current_path: list[str] = []
+      self.ast: list[str] = []
+
+    def result(self) -> list[str]:
+        return self.ast
+
+    # tags that are 'void' as in has no end tag
+    VOID_ELEMENTS = {
+        "br",
+        "img"
+    }    
+
+    # defines what tags is auto closed by a new start tag
+    AUTO_CLOSE_ON_START = {
+        "body":   {"head"},   # a <body> tag auto-closes <head> tag
+    }
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.VOID_ELEMENTS:
+          attrs_str = f" attrs:{attrs}" if attrs else ""
+          print(f"{".".join(self.current_path)} Encountered void tag:{tag} {attrs_str}")
+        else:
+          print(f"{".".join(self.current_path)} Encountered start tag:{tag}")
+          while self.current_path and self.current_path[-1] in self.AUTO_CLOSE_ON_START.get(tag,()):
+              print(f"{".".join(self.current_path)} auto-closed")
+              self.current_path.pop();
+          self.current_path.append(tag)
+          self.ast.append(f"{".".join(self.current_path)}")
+            
+    def handle_endtag(self, tag):
+        print(f"{".".join(self.current_path)} Encountered end tag:{tag}")
+        self.current_path.pop()
+        self.ast.append(f"{".".join(self.current_path)}")
+
+    def handle_startendtag(self, tag, attrs):
+        print(f"{".".join(self.current_path)} Encountered start-end tag:{tag}")
+        self.current_path.append(tag)
+        self.ast.append(f"{".".join(self.current_path)}")
+        self.current_path.pop()
+        self.ast.append(f"{".".join(self.current_path)}")
+
+    def handle_data(self, data):
+        print(f"{".".join(self.current_path)} Encountered some data:{data}")
+        self.ast.append(f"{".".join(self.current_path)} = {data}")
+
+
+def to_html_ast(html_str: str) -> list[str]:
+    html_parser = MyHTMLParser()
+    html_parser.feed(html_str)
+    return html_parser.result();
+    
 def to_email_ast(parent_path: list,part: EmailMessage) -> list:
     result = []
     content_type = part.get_content_type()
@@ -166,7 +224,7 @@ def to_email_ast(parent_path: list,part: EmailMessage) -> list:
         if content_type == "text/plain":
             result.append(".".join(current_path) + "=" + part.get_content())
         elif content_type == "text/html":
-            result.append(".".join(current_path) + "=" + part.get_content())
+            result.append(".".join(current_path) + "=" + "\n".join(to_html_ast(part.get_content())))
 
     return result
           

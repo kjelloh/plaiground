@@ -21,6 +21,13 @@ multipart/alternative
   * The HTML is MUCH larger!
   * And REALLY elaborated!
 
+OK, So I catually also implemented HTML parsing (hand rolled with claude assistance as web-mentor)
+
+It seems the html in the mail is not that elaborated after all?
+
+* I had to auto close 'head' on 'body'.
+* I had to recognise void 'br' and 'img' so far. 
+
 ## 20260915
 
 So what is next to do today?
