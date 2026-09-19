@@ -8,7 +8,7 @@ After some long thinking I decided to adress the todo-mail 'history' to get a ch
 * At least I get all eml-files processd into a 'chime'.
 * So I can test that the logic succeeds on all eml-files.
 
-I now have to decoide how to home in on the final processing eml-to-cjime though?
+I now have to decide how to home in on the final processing eml-to-cjime though?
 
 * How should I treat each Todo-mail history?
 * That is, a newer Todo-mail with the same subject sgould be the 'head' (current) version.
@@ -20,6 +20,7 @@ I also do not inject any date of the mail processed into markdown.
 
 * That is, I cant infer from the cerated chime what date the todo-mail it comes from was sent?
 
+So now I CAN! I vibe coded with claude to have the date injected into the created chime ok. 
 
 ## 20260917
 

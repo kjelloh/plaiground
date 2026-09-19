@@ -244,6 +244,8 @@ def eml_file_to_markdown(eml_path: Path) -> None:
             "already processed"
         )
 
+    date_line = email_meta["date"].isoformat() if email_meta["date"] else "(no date)"
+
     email_ast = to_email_ast([],email_msg)
     print("\n".join(email_ast))
 
@@ -251,6 +253,7 @@ def eml_file_to_markdown(eml_path: Path) -> None:
     print(email_part_tree_string)
 
     with chime_path.open("a", encoding="utf-8") as f:
+        f.write(f"{date_line}\n\n")
         f.write(email_part_tree_string)
     print(f"OK: {eml_path.name} -> {chime_path}")
 
