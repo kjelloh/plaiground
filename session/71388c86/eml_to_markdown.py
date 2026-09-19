@@ -158,6 +158,9 @@ def parse_email_meta(email_msg: "email.message.EmailMessage") -> dict:
         "date": parsed_date,  # datetime object (or None)
     }
 
+class IncompleteParseError(ValueError):
+    """Raised when parsing did not consume a well-formed document."""
+
 class MyHTMLParser(HTMLParser):
 
     def __init__(self) -> None:
@@ -166,12 +169,17 @@ class MyHTMLParser(HTMLParser):
       self.ast: list[str] = []
 
     def result(self) -> list[str]:
+        if self.current_path != []:
+            raise IncompleteParseError(
+                f"Expected emtpy 'current tag path' after parsing, got {self.current_path!r}"
+            )        
         return self.ast
 
     # tags that are 'void' as in has no end tag
     VOID_ELEMENTS = {
         "br",
-        "img"
+        "img",
+        "meta"
     }    
 
     # defines what tags is auto closed by a new start tag

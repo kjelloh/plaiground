@@ -22,6 +22,10 @@ I also do not inject any date of the mail processed into markdown.
 
 So now I CAN! I vibe coded with claude to have the date injected into the created chime ok. 
 
+And now I have added check that all of the DOM was parsed.
+
+* I check for current_path is empty after full parse.
+
 ## 20260917
 
 Maybe the next step is to actaully save any text parts.
