@@ -1,5 +1,26 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260919
+
+After some long thinking I decided to adress the todo-mail 'history' to get a chime for all eml-files.
+
+* I just make the script use the eml-file name as the subject for the chime.
+* At least I get all eml-files processd into a 'chime'.
+* So I can test that the logic succeeds on all eml-files.
+
+I now have to decoide how to home in on the final processing eml-to-cjime though?
+
+* How should I treat each Todo-mail history?
+* That is, a newer Todo-mail with the same subject sgould be the 'head' (current) version.
+* But for now I don't know how Apple mail names the eml-files for same subject mails?
+  * I guess the indes suffix gets incremented for each newer mail with the same subject?
+  * But it could also be that it cycles teh index so that the file wioth no index is the latest?
+
+I also do not inject any date of the mail processed into markdown.
+
+* That is, I cant infer from the cerated chime what date the todo-mail it comes from was sent?
+
+
 ## 20260917
 
 Maybe the next step is to actaully save any text parts.

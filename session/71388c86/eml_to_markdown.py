@@ -36,12 +36,13 @@ class UnsupportedContentTypeError(Exception):
     """Rais when the email has parts with not-yet-supported content type"""
 
 
-class ChimeVariantsNotSupportedError(Exception):
-    """Rais when a chime already exists for this subject.
+class ChimeAlreadyExistsError(Exception):
+    """Rais when a chime already exists for this eml file's name.
 
-    Multiple mails sharing a subject should eventually become versions of
-    the same chime; that isn't implemented yet, so this is raised instead
-    of silently reusing or overwriting the existing chime.md.
+    The eml file name is used as the chime key, so this only fires when
+    the same eml file is processed more than once — a guard against
+    accidentally reprocessing (and silently reusing or overwriting) an
+    already-imported mail.
     """
 
 
@@ -236,11 +237,11 @@ def eml_file_to_markdown(eml_path: Path) -> None:
     if not subject:
         raise EmailMissingSubjectError("Email has no Subject header — cannot name a chime")
 
-    chime_path, created = ensure_entry_folder("chime", subject, base_dir=SESSION_DIR)
+    chime_path, created = ensure_entry_folder("chime", eml_path.stem, base_dir=SESSION_DIR)
     if not created:
-        raise ChimeVariantsNotSupportedError(
-            f"chime already exists for subject {subject!r} — "
-            "chime variants not yet supported"
+        raise ChimeAlreadyExistsError(
+            f"chime already exists for eml file {eml_path.name!r} — "
+            "already processed"
         )
 
     email_ast = to_email_ast([],email_msg)
