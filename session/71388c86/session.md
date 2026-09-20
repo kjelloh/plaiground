@@ -1,5 +1,12 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260920
+
+I decided to make current eml-to-chime fail hard on parsing error on any eml-file processing error
+
+* Now fails of end-tag that does not match current open tag path while parsing
+* In this way I can fix parsing so path matches html that is actually ok
+
 ## 20260919
 
 After some long thinking I decided to adress the todo-mail 'history' to get a chime for all eml-files.

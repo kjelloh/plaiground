@@ -38,6 +38,7 @@ def main() -> None:
             fail_count += 1
             print(f"FAIL: {eml_path.name}", file=sys.stderr)
             print(f"    └── {type(e).__name__}: {e}", file=sys.stderr)
+            break
         else:
             ok_count += 1
 

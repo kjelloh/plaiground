@@ -190,29 +190,34 @@ class MyHTMLParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag in self.VOID_ELEMENTS:
           attrs_str = f" attrs:{attrs}" if attrs else ""
-          print(f"{".".join(self.current_path)} Encountered void tag:{tag} {attrs_str}")
+          print(f"{'.'.join(self.current_path)} Encountered void tag:{tag} {attrs_str}")
         else:
-          print(f"{".".join(self.current_path)} Encountered start tag:{tag}")
+          print(f"{'.'.join(self.current_path)} Encountered start tag:{tag}")
           while self.current_path and self.current_path[-1] in self.AUTO_CLOSE_ON_START.get(tag,()):
-              print(f"{".".join(self.current_path)} auto-closed")
+              print(f"{'.'.join(self.current_path)} auto-closed")
               self.current_path.pop();
           self.current_path.append(tag)
-          self.ast.append(f"{".".join(self.current_path)}")
+          self.ast.append(f"{'.'.join(self.current_path)}")
             
     def handle_endtag(self, tag):
-        print(f"{".".join(self.current_path)} Encountered end tag:{tag}")
+        print(f"{'.'.join(self.current_path)} Encountered end tag:{tag}")
+        if not self.current_path or self.current_path[-1] != tag:
+            raise IncompleteParseError(
+                f"End tag {tag} does not match current_path:"
+                f"{'.'.join(self.current_path)}"
+            )
         self.current_path.pop()
         self.ast.append(f"{".".join(self.current_path)}")
 
     def handle_startendtag(self, tag, attrs):
-        print(f"{".".join(self.current_path)} Encountered start-end tag:{tag}")
+        print(f"{'.'.join(self.current_path)} Encountered start-end tag:{tag}")
         self.current_path.append(tag)
         self.ast.append(f"{".".join(self.current_path)}")
         self.current_path.pop()
         self.ast.append(f"{".".join(self.current_path)}")
 
     def handle_data(self, data):
-        print(f"{".".join(self.current_path)} Encountered some data:{data}")
+        print(f"{'.'.join(self.current_path)} Encountered some data:{data}")
         self.ast.append(f"{".".join(self.current_path)} = {data}")
 
 
