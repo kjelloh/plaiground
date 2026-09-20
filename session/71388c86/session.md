@@ -7,6 +7,12 @@ I decided to make current eml-to-chime fail hard on parsing error on any eml-fil
 * Now fails of end-tag that does not match current open tag path while parsing
 * In this way I can fix parsing so path matches html that is actually ok
 
+I got the parsing to consume the html structures of all my Todo-mails ok.
+
+And so now I have added a scaffolding 'harness' to trigger markdown generation on html tags void, open, close with processed attributes and data.
+
+* For now it is rigged to raise on all 'unprocssed' artefacts (No actual markdown generated yet)
+
 ## 20260919
 
 After some long thinking I decided to adress the todo-mail 'history' to get a chime for all eml-files.
@@ -15,7 +21,7 @@ After some long thinking I decided to adress the todo-mail 'history' to get a ch
 * At least I get all eml-files processd into a 'chime'.
 * So I can test that the logic succeeds on all eml-files.
 
-I now have to decide how to home in on the final processing eml-to-cjime though?
+I now have to decide how to home in on the final processing eml-to-chime though?
 
 * How should I treat each Todo-mail history?
 * That is, a newer Todo-mail with the same subject sgould be the 'head' (current) version.
