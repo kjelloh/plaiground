@@ -181,7 +181,13 @@ class MyHTMLParser(HTMLParser):
         "br",
         "img",
         "meta",
-        "col"
+        "col",
+        "link",
+        "base",
+        "hr",
+        "input",      
+        "wbr",        # The wbr element represents a line break opportunity.
+        "area",       # 
     }    
 
     # defines what tags is auto closed by a new start tag
@@ -205,8 +211,8 @@ class MyHTMLParser(HTMLParser):
         print(f"{'.'.join(self.current_path)} Encountered end tag:{tag}")
         if not self.current_path or self.current_path[-1] != tag:
             raise IncompleteParseError(
-                f"End tag {tag} does not match current_path:"
-                f"{'.'.join(self.current_path)}"
+                f"End tag <{tag}> does not match current_path:'"
+                f"{'.'.join(self.current_path)}'"
             )
         self.current_path.pop()
         self.ast.append(f"{".".join(self.current_path)}")
