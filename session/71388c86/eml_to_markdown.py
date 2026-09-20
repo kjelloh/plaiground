@@ -176,10 +176,12 @@ class MyHTMLParser(HTMLParser):
         return self.ast
 
     # tags that are 'void' as in has no end tag
+    # See https://html.spec.whatwg.org/multipage/syntax.html#void-elements
     VOID_ELEMENTS = {
         "br",
         "img",
-        "meta"
+        "meta",
+        "col"
     }    
 
     # defines what tags is auto closed by a new start tag
