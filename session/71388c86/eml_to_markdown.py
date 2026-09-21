@@ -280,6 +280,16 @@ class MyHTMLParser(HTMLParser):
     # HTML Parser - END
     # -------------------------------------------------------------------
 
+def to_html_ast(html_str: str) -> list[str]:
+    html_parser = MyHTMLParser()
+    html_parser.feed(html_str)
+    return html_parser.email_ast()
+
+
+# -------------------------------------------------------------------
+# Mail Parsers - BEGIN
+# -------------------------------------------------------------------
+
 def parse_text_plain(content_path: list[str],plain_str: str) -> tuple[list[str],list[str],list[str]]:
     log: list[str] = [f"Parsing:{'.'.join(content_path)} = {plain_str}"]
     ast: list[str] = []
@@ -294,35 +304,59 @@ def parse_text_html(content_path: list[str],html_str: str) -> tuple[list[str],li
     ast = to_html_ast(html_str)
     markdown: list[str] = []
     return log,ast,markdown
-
-def to_html_ast(html_str: str) -> list[str]:
-    html_parser = MyHTMLParser()
-    html_parser.feed(html_str)
-    return html_parser.email_ast()
     
-def to_email_ast(parent_path: list[str],part: EmailMessage) -> list:
-    email_ast = []
+def dfs(parent_path: list[str],part: EmailMessage) -> tuple[list[str],list[str],list[str]]:
+    log: list[str] = [f"Parsing:{'.'.join(parent_path)}"]
+    ast: list[str] = []
+    markdown_from_plain: list[str] = []
+    markdown_from_html: list[str] = []
     content_type = part.get_content_type()
+    current_content_path = parent_path + [content_type]
     current_content_path = parent_path + [content_type]
     if part.is_multipart():
         children = part.get_payload()  # list[EmailMessage] when multipart
         for i, child in enumerate(children):
-          email_ast.extend(to_email_ast(current_content_path, child))
+          child_log,child_ast,child_markdown = dfs(current_content_path,child)
     else:
         if content_type == "text/plain":
-            log,ast,markdown_from_plain = parse_text_plain(current_content_path,part.get_content())
-            print(f"{'\n'.join(log)}")
-            email_ast.append(".".join(current_content_path) + "=" + "\n".join(ast))
+            child_log,child_ast,child_markdown = parse_text_plain(current_content_path,part.get_content())
+            print(f"{'\n'.join(child_log)}")
+            log.extend(child_log)
+            ast.extend(child_ast)
+            markdown_from_plain.extend(child_markdown)
         elif content_type == "text/html":
-            log,ast,markdown_from_html = parse_text_html(current_content_path,part.get_content())
-            print(f"{'\n'.join(log)}")
-            email_ast.append(".".join(current_content_path) + "=" + "\n".join(ast))
+            child_log,child_ast,child_markdown = parse_text_html(current_content_path,part.get_content())
+            print(f"{'\n'.join(child_log)}")
+            log.extend(child_log)
+            ast.extend(child_ast)
+            markdown_from_html.extend(child_markdown)
+        else:
+            raise UnsupportedContentTypeError(
+                f"{'.'.join(current_content_path)}"
+            )
 
-    return email_ast
-          
+    if len(markdown_from_plain) > 0 and len(markdown_from_html) == 0:
+      return log,ast,markdown_from_plain
+    elif len(markdown_from_html) > 0:
+      return log,ast,markdown_from_html
+    else:
+        raise EmailParseError(
+            f"No text/plain nor text/html found in mail"
+        )
+
+# -------------------------------------------------------------------
+# Mail Parsers - END
+# -------------------------------------------------------------------
+
 def eml_file_to_markdown(eml_path: Path) -> None:
     print(f"\n--------------------------------------\nSTART PROCESSING: {eml_path}")
     email_msg = to_email_msg(eml_path)
+
+
+    # -------------------------------------------------------------------
+    # Mail Meta/Chime - BEGIN
+    # -------------------------------------------------------------------
+
     email_meta = parse_email_meta(email_msg)
 
     subject = email_meta["subject"]
@@ -338,8 +372,12 @@ def eml_file_to_markdown(eml_path: Path) -> None:
 
     date_line = email_meta["date"].isoformat() if email_meta["date"] else "(no date)"
 
-    email_ast = to_email_ast([],email_msg)
-    print("\n".join(email_ast))
+    # -------------------------------------------------------------------
+    # Mail Meta/Chime - END
+    # -------------------------------------------------------------------
+
+    log,ast,markdown = dfs([],email_msg)
+    print("\n".join(ast))
 
     email_part_tree_string = to_email_part_tree_string(email_msg)
     print(email_part_tree_string)
