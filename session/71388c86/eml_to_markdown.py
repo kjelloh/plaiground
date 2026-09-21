@@ -212,6 +212,11 @@ class HTML2MarkdownParser(HTMLParser):
             self.print_to_log(f"path:{'.'.join(self.current_html_path)}.{tag} :  No meta attributes applies = Ignored")
             return
 
+        if self.current_html_path == ["html","body"] and tag == "meta":
+            # No attributes apply
+            self.print_to_log(f"path:{'.'.join(self.current_html_path)}.{tag} :  No meta attributes applies. Ignored:{attrs_dict}")
+            return
+
         self.current_attr = attrs_dict
         return
 
