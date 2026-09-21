@@ -385,6 +385,10 @@ def eml_file_to_markdown(eml_path: Path) -> None:
     with tree_path.open("a", encoding="utf-8") as f:
         f.write(email_part_tree_string)
 
+    log_path = chime_path.with_name("log.md")
+    with log_path.open("a", encoding="utf-8") as f:
+        f.write('\n'.join(log))
+
     with chime_path.open("a", encoding="utf-8") as f:
         f.write(f"{date_line}\n\n")
         f.write('\n'.join(markdown))
