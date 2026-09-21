@@ -310,10 +310,10 @@ def to_email_ast(parent_path: list[str],part: EmailMessage) -> list:
           email_ast.extend(to_email_ast(current_content_path, child))
     else:
         if content_type == "text/plain":
-            log,ast,markdown = parse_text_plain(current_content_path,part.get_content())
+            log,ast,markdown_from_plain = parse_text_plain(current_content_path,part.get_content())
             email_ast.append(".".join(current_content_path) + "=" + "\n".join(ast))
         elif content_type == "text/html":
-            log,ast,markdown = parse_text_html(current_content_path,part.get_content())
+            log,ast,markdown_from_html = parse_text_html(current_content_path,part.get_content())
             email_ast.append(".".join(current_content_path) + "=" + "\n".join(ast))
 
     return email_ast
