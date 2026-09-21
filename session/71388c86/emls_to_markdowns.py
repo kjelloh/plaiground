@@ -34,6 +34,7 @@ def main() -> None:
     for eml_path in eml_paths:
         try:
             eml_file_to_markdown(to_path(str(eml_path)))
+            print(f"OK: {eml_path.name}")
         except Exception as e:
             fail_count += 1
             print(f"FAIL: {eml_path.name}", file=sys.stderr)

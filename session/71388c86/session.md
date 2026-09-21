@@ -1,5 +1,31 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260921
+
+Time to start generating some markdown.
+
+* I succeed on ' Owls an bells - make .NET app that reads todo mails and creates a todo-list.eml'
+  * But: I should NOT as I have now markdown created for this mail.
+  * It passes because it contains only 'text/plain'
+
+So my first fix is to ensure this fails until I have a mardown mechanism for text/plain.
+
+OK, we actually have other issues to attend to first.
+
+* For now we create two things.
+  * One on-the-fly print of the parsing progress
+  * The 'email part tree string'
+* And we create NO markdown yet.
+
+So we need to refactor this a bit to get to the 'markdown generation' bit.
+
+* Where (who) keeps track of generating the markdown?
+  * For text/plain we can just write it as-is (un formatted markdown)
+  * For text/html we need to parse html and interpåret it in markdown
+* How do we detect single text/plain or 'alternative' plain vs html?
+
+
+
 ## 20260920
 
 I decided to make current eml-to-chime fail hard on parsing error on any eml-file processing error
@@ -12,6 +38,10 @@ I got the parsing to consume the html structures of all my Todo-mails ok.
 And so now I have added a scaffolding 'harness' to trigger markdown generation on html tags void, open, close with processed attributes and data.
 
 * For now it is rigged to raise on all 'unprocssed' artefacts (No actual markdown generated yet)
+
+I just remembered!
+
+* I need to implement the mechanism to chose the text/html over text/plain!
 
 ## 20260919
 

@@ -166,15 +166,15 @@ class MyHTMLParser(HTMLParser):
     def __init__(self) -> None:
       # convert_charrefs=True tells parser to convert 'character references' to actual unicode code points
       super().__init__(convert_charrefs=True)
-      self.current_html: list[str] = []
+      self.current_html_path: list[str] = []
       self.current_attr: dict = {}
       self.current_data: str = ""
       self.trace_ast: list[str] = []
 
     def email_ast(self) -> list[str]:
-        if self.current_html != []:
+        if self.current_html_path != []:
             raise IncompleteParseError(
-                f"Expected empty 'current tag path' after parsing, unconsumed ==> {self.current_html!r}"
+                f"Expected empty 'current html path' after parsing end. Unconsumed ==> {self.current_html_path!r}"
             )        
         return self.trace_ast
 
@@ -183,29 +183,29 @@ class MyHTMLParser(HTMLParser):
     # -------------------------------------------------------------------
 
     def to_markdown_apply_void_html(self,tag,attrs_dict: dict) -> None:
-        print(f"{'.'.join(self.current_html)}: to_markdown_apply_void_html: attrs_dict:{attrs_dict}")
+        print(f"{'.'.join(self.current_html_path)}: to_markdown_apply_void_html: attrs_dict:{attrs_dict}")
         if self.current_attr:
             raise IncompleteParseError(
-                f"{'.'.join(self.current_html)}: Expected empty current attrs on void html attrs:{attrs_dict}"
+                f"{'.'.join(self.current_html_path)}: Expected empty current attrs on void html attrs:{attrs_dict}"
                 f" unconsumed ==> {self.current_attr}"
             )
         
         return
 
     def to_markdown_apply_open_html(self,attrs_dict: dict) -> None:
-        print(f"{'.'.join(self.current_html)}: to_markdown_apply_open_html: attrs_dict:{attrs_dict}")
+        print(f"{'.'.join(self.current_html_path)}: to_markdown_apply_open_html: attrs_dict:{attrs_dict}")
         if self.current_attr:
             raise IncompleteParseError(
-                f"{'.'.join(self.current_html)}: Expected empty current attrs on open html attrs:{attrs_dict}"
+                f"{'.'.join(self.current_html_path)}: Expected empty current attrs on open html attrs:{attrs_dict}"
                 f" unconsumed ==> {self.current_attr}"
             )
         return
 
     def to_markdown_apply_data(self,data: str) -> None:
-        print(f"{'.'.join(self.current_html)}: to_markdown_apply_data: data:{len(data)} chars")
+        print(f"{'.'.join(self.current_html_path)}: to_markdown_apply_data: data:{len(data)} chars")
         if self.current_data != "":
             raise IncompleteParseError(
-                f"{'.'.join(self.current_html)}: Expected empty (consumed) current data on open new html data"
+                f"{'.'.join(self.current_html_path)}: Expected empty (consumed) current data on open new html data"
                 f" unconsumed ==> '{data}'"
             )
 
@@ -215,7 +215,7 @@ class MyHTMLParser(HTMLParser):
         return
 
     def to_markdown_apply_close_html(self) -> None:
-        print(f"{'.'.join(self.current_html)}: to_markdown_apply_close_html")
+        print(f"{'.'.join(self.current_html_path)}: to_markdown_apply_close_html")
         return
 
     # -------------------------------------------------------------------
@@ -250,31 +250,31 @@ class MyHTMLParser(HTMLParser):
         attrs_dict = dict(attrs)
         if tag in self.VOID_ELEMENTS:
           attrs_str = f" attrs:{attrs}" if attrs else ""
-          print(f"{'.'.join(self.current_html)} Encountered void tag:{tag} {attrs_str}")
+          print(f"{'.'.join(self.current_html_path)} Encountered void tag:{tag} {attrs_str}")
           self.to_markdown_apply_void_html(tag,attrs_dict)
         else:
-          print(f"{'.'.join(self.current_html)} Encountered start tag:{tag}")
-          while self.current_html and self.current_html[-1] in self.AUTO_CLOSE_ON_START.get(tag,()):
-              print(f"{'.'.join(self.current_html)} auto-closed")
-              self.current_html.pop()
-          self.current_html.append(tag)
-          self.trace_ast.append(f"{'.'.join(self.current_html)}")
+          print(f"{'.'.join(self.current_html_path)} Encountered start tag:{tag}")
+          while self.current_html_path and self.current_html_path[-1] in self.AUTO_CLOSE_ON_START.get(tag,()):
+              print(f"{'.'.join(self.current_html_path)} auto-closed")
+              self.current_html_path.pop()
+          self.current_html_path.append(tag)
+          self.trace_ast.append(f"{'.'.join(self.current_html_path)}")
           self.to_markdown_apply_open_html(attrs_dict)
             
     def handle_endtag(self, tag):
-        print(f"{'.'.join(self.current_html)} Encountered end tag:{tag}")
-        if not self.current_html or self.current_html[-1] != tag:
+        print(f"{'.'.join(self.current_html_path)} Encountered end tag:{tag}")
+        if not self.current_html_path or self.current_html_path[-1] != tag:
             raise IncompleteParseError(
-                f"End tag <{tag}> does not match current_html:'"
-                f"{'.'.join(self.current_html)}'"
+                f"End tag <{tag}> does not match current_html_path:'"
+                f"{'.'.join(self.current_html_path)}'"
             )
         self.to_markdown_apply_close_html()
-        self.current_html.pop()
-        self.trace_ast.append(f"{".".join(self.current_html)}")
+        self.current_html_path.pop()
+        self.trace_ast.append(f"{".".join(self.current_html_path)}")
 
     def handle_data(self, data):
-        print(f"{'.'.join(self.current_html)} Encountered some data:{data}")
-        self.trace_ast.append(f"{".".join(self.current_html)} = {data}")
+        print(f"{'.'.join(self.current_html_path)} Encountered some data:{data}")
+        self.trace_ast.append(f"{".".join(self.current_html_path)} = {data}")
         self.to_markdown_apply_data(data)
 
     # -------------------------------------------------------------------
@@ -290,20 +290,21 @@ def to_html_ast(html_str: str) -> list[str]:
 def to_email_ast(parent_path: list,part: EmailMessage) -> list:
     email_ast = []
     content_type = part.get_content_type()
-    current_html = parent_path + [content_type]
+    current_content_path = parent_path + [content_type]
     if part.is_multipart():
         children = part.get_payload()  # list[EmailMessage] when multipart
         for i, child in enumerate(children):
-          email_ast.extend(to_email_ast(current_html, child))
+          email_ast.extend(to_email_ast(current_content_path, child))
     else:
         if content_type == "text/plain":
-            email_ast.append(".".join(current_html) + "=" + part.get_content())
+            email_ast.append(".".join(current_content_path) + "=" + part.get_content())
         elif content_type == "text/html":
-            email_ast.append(".".join(current_html) + "=" + "\n".join(to_html_ast(part.get_content())))
+            email_ast.append(".".join(current_content_path) + "=" + "\n".join(to_html_ast(part.get_content())))
 
     return email_ast
           
 def eml_file_to_markdown(eml_path: Path) -> None:
+    print(f"\n\nSTART PROCESSING: {eml_path}")
     email_msg = to_email_msg(eml_path)
     email_meta = parse_email_meta(email_msg)
 
@@ -329,7 +330,7 @@ def eml_file_to_markdown(eml_path: Path) -> None:
     with chime_path.open("a", encoding="utf-8") as f:
         f.write(f"{date_line}\n\n")
         f.write(email_part_tree_string)
-    print(f"OK: {eml_path.name} -> {chime_path}")
+    print(f"END PROCESSING: {eml_path.name} -> {chime_path}")
 
 def main() -> None:
 
