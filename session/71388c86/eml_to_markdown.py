@@ -197,31 +197,40 @@ class HTML2MarkdownParser(HTMLParser):
     # -------------------------------------------------------------------
 
     def to_markdown_apply_void_html(self,tag,attrs_dict: dict) -> None:
-        self.print_to_log(f"{'.'.join(self.current_html_path)}: to_markdown_apply_void_html: attrs_dict:{attrs_dict}")
+        self.print_to_log(f"path:{'.'.join(self.current_html_path)}.{tag} :  to_markdown_apply_void_html: attrs_dict:{attrs_dict}")
+        # Expect no unconsumed attributes
         if self.current_attr:
             raise IncompleteParseError(
-                f"{'.'.join(self.current_html_path)}: Expected empty current attrs on void html attrs:{attrs_dict}"
+                f"path:{'.'.join(self.current_html_path)}.{tag} :  Expected empty current attrs on void html attrs:{attrs_dict}"
                 f" unconsumed ==> {self.current_attr}"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
-        
+
+        # apply attributes
+        if self.current_html_path == ["html","head"] and tag == "meta":
+            # No attributes apply
+            self.print_to_log(f"path:{'.'.join(self.current_html_path)}.{tag} :  No meta attributes applies = Ignored")
+            return
+
+        self.current_attr = attrs_dict
         return
 
     def to_markdown_apply_open_html(self,attrs_dict: dict) -> None:
-        self.print_to_log(f"{'.'.join(self.current_html_path)}: to_markdown_apply_open_html: attrs_dict:{attrs_dict}")
+        self.print_to_log(f"path:{'.'.join(self.current_html_path)} :  to_markdown_apply_open_html: attrs_dict:{attrs_dict}")
         if self.current_attr:
             raise IncompleteParseError(
-                f"{'.'.join(self.current_html_path)}: Expected empty current attrs on open html attrs:{attrs_dict}"
+                f"path:{'.'.join(self.current_html_path)} :  Expected empty current attrs on open html attrs:{attrs_dict}"
                 f" unconsumed ==> {self.current_attr}"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
+        self.current_attr = attrs_dict
         return
 
     def to_markdown_apply_data(self,data: str) -> None:
-        self.print_to_log(f"{'.'.join(self.current_html_path)}: to_markdown_apply_data: data:{len(data)} chars")
+        self.print_to_log(f"path:{'.'.join(self.current_html_path)} :  to_markdown_apply_data: data:{len(data)} chars")
         if self.current_data != "":
             raise IncompleteParseError(
-                f"{'.'.join(self.current_html_path)}: Expected empty (consumed) current data on open new html data"
+                f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on open new html data"
                 f"\n\tunconsumed ==> '{self.current_data}'"
                 f"\n\tdata:{data}"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
@@ -233,10 +242,17 @@ class HTML2MarkdownParser(HTMLParser):
         return
 
     def to_markdown_apply_close_html(self) -> None:
-        self.print_to_log(f"{'.'.join(self.current_html_path)}: to_markdown_apply_close_html")
+        self.print_to_log(f"path:{'.'.join(self.current_html_path)} :  to_markdown_apply_close_html")
+        if self.current_attr:
+            raise IncompleteParseError(
+                f"path:{'.'.join(self.current_html_path)} :  Expected empty unconsumed attrs on close html"
+                f" unconsumed ==> {self.current_attr}"
+                f"\n<Parse LOG>\n{'\n'.join(self.log)}"
+            )
+
         if self.current_data != "":
             raise IncompleteParseError(
-                f"{'.'.join(self.current_html_path)}: Expected empty (consumed) current data on open new html data"
+                f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on open new html data"
                 f"\n\tunconsumed ==> '{self.current_data}'"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
