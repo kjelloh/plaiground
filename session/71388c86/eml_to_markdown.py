@@ -178,6 +178,7 @@ class HTML2MarkdownParser(HTMLParser):
         if self.current_html_path != []:
             raise IncompleteParseError(
                 f"Expected empty 'current html path' after parsing end. Unconsumed ==> {self.current_html_path!r}"
+                f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )        
         return self.trace_ast
 
@@ -197,6 +198,7 @@ class HTML2MarkdownParser(HTMLParser):
             raise IncompleteParseError(
                 f"{'.'.join(self.current_html_path)}: Expected empty current attrs on void html attrs:{attrs_dict}"
                 f" unconsumed ==> {self.current_attr}"
+                f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
         
         return
@@ -207,6 +209,7 @@ class HTML2MarkdownParser(HTMLParser):
             raise IncompleteParseError(
                 f"{'.'.join(self.current_html_path)}: Expected empty current attrs on open html attrs:{attrs_dict}"
                 f" unconsumed ==> {self.current_attr}"
+                f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
         return
 
@@ -216,6 +219,7 @@ class HTML2MarkdownParser(HTMLParser):
             raise IncompleteParseError(
                 f"{'.'.join(self.current_html_path)}: Expected empty (consumed) current data on open new html data"
                 f" unconsumed ==> '{data}'"
+                f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
 
         # TODO: Apply proper processing.
@@ -276,6 +280,7 @@ class HTML2MarkdownParser(HTMLParser):
             raise IncompleteParseError(
                 f"End tag <{tag}> does not match current_html_path:'"
                 f"{'.'.join(self.current_html_path)}'"
+                f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
         self.to_markdown_apply_close_html()
         self.current_html_path.pop()
