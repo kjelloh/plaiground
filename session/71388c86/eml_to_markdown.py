@@ -284,9 +284,9 @@ def parse_text_plain(content_path: list[str],plain_str: str) -> tuple[list[str],
     log: list[str] = []
     ast: list[str] = []
     markdown: list[str] = []
-    # raise UnsupportedContentTypeError(
-    #     f"{'.'.join(content_path)} = '{plain_str}'"
-    # )
+    raise UnsupportedContentTypeError(
+        f"{'.'.join(content_path)} = '{plain_str}'"
+    )
     return log,ast,markdown
 
 def parse_text_html(content_path: list[str],html_str: str) -> tuple[list[str],list[str],list[str]]:
