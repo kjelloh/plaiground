@@ -228,6 +228,12 @@ class HTML2MarkdownParser(HTMLParser):
                 f" unconsumed ==> {self.current_attr}"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
+
+        # Apply attributes
+        for name, value in attrs_dict.items():
+            self.print_to_log(f"path:{'.'.join(self.current_html_path)}[attr:{name}] = '{value}'")
+
+
         self.current_attr = attrs_dict
         return
 

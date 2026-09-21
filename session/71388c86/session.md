@@ -24,6 +24,14 @@ So we need to refactor this a bit to get to the 'markdown generation' bit.
   * For text/html we need to parse html and interpåret it in markdown
 * How do we detect single text/plain or 'alternative' plain vs html?
 
+Ok, I am making progress.
+
+* I ignore attributes for html.head.meta and html.body.meta.
+
+But now I encounter ```path:html.body[attr:style] = 'word-wrap: break-word; -webkit-nbsp-mode: space; -webkit-line-break: after-white-space;'```
+
+DARN! The value of attribute 'style' is itself a name-value list!! 
+
 
 
 ## 20260920
