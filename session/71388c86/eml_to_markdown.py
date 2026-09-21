@@ -294,9 +294,7 @@ def parse_text_plain(content_path: list[str],plain_str: str) -> tuple[list[str],
     log: list[str] = [f"Parsing:{'.'.join(content_path)} = {plain_str}"]
     ast: list[str] = []
     markdown: list[str] = []
-    raise UnsupportedContentTypeError(
-        f"{'.'.join(content_path)} = '{plain_str}'"
-    )
+    markdown.append(plain_str)
     return log,ast,markdown
 
 def parse_text_html(content_path: list[str],html_str: str) -> tuple[list[str],list[str],list[str]]:
@@ -382,9 +380,14 @@ def eml_file_to_markdown(eml_path: Path) -> None:
     email_part_tree_string = to_email_part_tree_string(email_msg)
     print(email_part_tree_string)
 
+
+    tree_path = chime_path.with_name("tree.md")
+    with tree_path.open("a", encoding="utf-8") as f:
+        f.write(email_part_tree_string)
+
     with chime_path.open("a", encoding="utf-8") as f:
         f.write(f"{date_line}\n\n")
-        f.write(email_part_tree_string)
+        f.write('\n'.join(markdown))
     print(f"END PROCESSING: {eml_path.name} -> {chime_path}")
 
 def main() -> None:
