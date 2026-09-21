@@ -280,12 +280,12 @@ class MyHTMLParser(HTMLParser):
     # HTML Parser - END
     # -------------------------------------------------------------------
 
-def parse_text_plain(plain_str: str) -> tuple[list[str],list[str],list[str]]:
+def parse_text_plain(content_path: list[str],plain_str: str) -> tuple[list[str],list[str],list[str]]:
     log: list[str] = []
     ast: list[str] = []
     markdown: list[str] = []
     raise UnsupportedContentTypeError(
-        f"plain/text to markdown not yet supported: \n\n'{plain_str}'"
+        f"{'.'.join(content_path)} = '{plain_str}'"
     )
     return log,ast,markdown
     
@@ -295,7 +295,7 @@ def to_html_ast(html_str: str) -> list[str]:
     html_parser.feed(html_str)
     return html_parser.email_ast()
     
-def to_email_ast(parent_path: list,part: EmailMessage) -> list:
+def to_email_ast(parent_path: list[str],part: EmailMessage) -> list:
     email_ast = []
     content_type = part.get_content_type()
     current_content_path = parent_path + [content_type]
@@ -305,8 +305,8 @@ def to_email_ast(parent_path: list,part: EmailMessage) -> list:
           email_ast.extend(to_email_ast(current_content_path, child))
     else:
         if content_type == "text/plain":
-            log,ast,markdown = parse_text_plain(part.get_content())
-            email_ast.append(".".join(current_content_path) + "=" + "\n".joind(ast))
+            log,ast,markdown = parse_text_plain(current_content_path,part.get_content())
+            email_ast.append(".".join(current_content_path) + "=" + "\n".join(ast))
         elif content_type == "text/html":
             email_ast.append(".".join(current_content_path) + "=" + "\n".join(to_html_ast(part.get_content())))
 
