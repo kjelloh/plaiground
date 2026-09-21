@@ -281,7 +281,7 @@ class MyHTMLParser(HTMLParser):
     # -------------------------------------------------------------------
 
 def parse_text_plain(content_path: list[str],plain_str: str) -> tuple[list[str],list[str],list[str]]:
-    log: list[str] = []
+    log: list[str] = [f"Parsing:{'.'.join(content_path)} = {plain_str}"]
     ast: list[str] = []
     markdown: list[str] = []
     raise UnsupportedContentTypeError(
@@ -290,7 +290,7 @@ def parse_text_plain(content_path: list[str],plain_str: str) -> tuple[list[str],
     return log,ast,markdown
 
 def parse_text_html(content_path: list[str],html_str: str) -> tuple[list[str],list[str],list[str]]:
-    log: list[str] = []
+    log: list[str] = [f"Parsing:{'.'.join(content_path)} = {html_str}"]
     ast = to_html_ast(html_str)
     markdown: list[str] = []
     return log,ast,markdown
@@ -311,15 +311,17 @@ def to_email_ast(parent_path: list[str],part: EmailMessage) -> list:
     else:
         if content_type == "text/plain":
             log,ast,markdown_from_plain = parse_text_plain(current_content_path,part.get_content())
+            print(f"{'\n'.join(log)}")
             email_ast.append(".".join(current_content_path) + "=" + "\n".join(ast))
         elif content_type == "text/html":
             log,ast,markdown_from_html = parse_text_html(current_content_path,part.get_content())
+            print(f"{'\n'.join(log)}")
             email_ast.append(".".join(current_content_path) + "=" + "\n".join(ast))
 
     return email_ast
           
 def eml_file_to_markdown(eml_path: Path) -> None:
-    print(f"\n\nSTART PROCESSING: {eml_path}")
+    print(f"\n--------------------------------------\nSTART PROCESSING: {eml_path}")
     email_msg = to_email_msg(eml_path)
     email_meta = parse_email_meta(email_msg)
 
