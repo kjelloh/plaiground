@@ -34,6 +34,9 @@ class EmailMissingSubjectError(EmailParseError):
 class UnsupportedContentTypeError(Exception):
     """Rais when the email has parts with not-yet-supported content type"""
 
+class DesignInsufficiencyError(EmailParseError):
+    """Rais when the parsing encounters an insufficient to deal with the input data"""
+
 
 class ChimeAlreadyExistsError(Exception):
     """Rais when a chime already exists for this eml file's name.
@@ -330,9 +333,9 @@ class HTML2MarkdownParser(HTMLParser):
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
 
-        # TODO: Apply proper processing.
-        #       Current code only to trigger unprocessed data for now
+        # Store for processing when html tag is closed (or new tag is opened?) 
         self.current_data = data
+
         return
 
     def to_markdown_apply_close_html(self) -> None:
@@ -343,6 +346,15 @@ class HTML2MarkdownParser(HTMLParser):
                 f" unconsumed ==> {self.current_attr}"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
+
+        # Process any data stored for closed tag
+        if self.current_data != "":
+            if any(ord(c) < ord(' ') for c in self.current_data):
+                raise DesignInsufficiencyError(
+                    f"path:{'.'.join(self.current_html_path)} :  Control characters in data (text) not yet supported"
+                )
+            self.markdown.append(self.current_data)
+            self.current_data = "" # consumed
 
         if self.current_data != "":
             raise IncompleteParseError(

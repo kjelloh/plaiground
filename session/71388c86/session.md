@@ -66,6 +66,12 @@ path:html.body.div :  to_markdown_apply_close_html
 
 * So let's try to just emit this text to a single markdown line entry?
 
+Great! I now raise an error if the text contains control characters.
+
+* And append it as a single entry to markdown liost otherwise.
+
+And now the processing goes on to a 'br' tag ok.
+
 ## 20260921
 
 Time to start generating some markdown.
