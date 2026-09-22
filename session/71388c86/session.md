@@ -14,9 +14,57 @@ path:html.body[attr:class] = ''
 
 * So, how do we do this?
 * We can design the parser to process html attributes into our own markdown 'attributes'?
-* What about a fucntion that takes html tag attributes and returns our own markdown attributes and uncosnumed html attributes?
+* What about a function that takes html tag attributes and returns our own markdown attributes and unconsumed html attributes?
 
 Let's try!
+
+Ok, so I now have a working processing of html attributes plus special handling of the 'style' attribute as css style settings.
+
+* For now I have pciked out and ignored those I encounter
+* I imagine CSS properties defines how contents is viewed, NOT how it is actyally formatted?
+* So my reasoning is that it is up to the markdown viewer to apply its formatting?
+* What I need to pay attention to are formatting like bold, italic, bullet liosts etc.
+* And I hope (fingers crossed) those are represented as html tags, NOT CSS attributes?
+
+I think it is time to take a look at the email that the script currently is failing to process.
+
+* It is the eml file 'Todo_ Code Signing - Consider to document how ordering, receiving activating and applying Digicert Code Signing Certificate went? 2.eml'.
+* It seems to be the email 'Todo: Code Signing - Consider to document how ordering, receiving activating and applying Digicert Code Signing Certificate went?' sent: 2016-12-07T22:09:04+01:00?
+* In Apple Mail it looks someting like this:
+
+```text
+So, could it be a good idea to document for further references how to purchase and apply a Digicert Code Signing Certificate?
+
+-1) It seems I am able to export a cer-file from the USB Token and then create a pfx-file to be used with Install Shield?
+
+	==> Consider to export a cer-file as described below?
+	==> Consider to convert the cer-file to pfx-file as documented in ”Todo: Create an encrypted pfx-file from bought spc-certificate code-signing file”?
+	
+”Tried openssl default behaviour for output passphrase.
+	> openssl pkcs12 -export -out certificate.pfx -inkey privateKey.key -in TheITfiedCert.cer
+
+	*) Note this is the same command as the one that worked above.
+	*) Openssl now prompts “Enter Export Password” and “Verifying - Enter Export Password”. I entered a password.
+
+	==> YES, the created pfx-file now works with InstallShield (provided the password in InstallShield “Certificate Password” field!"
+
+1) This seem to be the order confirmation 19/2 2016 (e-mail “DigiCert Order Confirmation for Order# 00877323 (your order is currently being processed)")?
+```
+
+* And then after this there is in inline image in tghe mail.
+
+So lets focus on getting the markdown formatting mirror how the mail looks when I read it in Apple mail?
+
+* So the parser now finds the first text in a div.
+
+```sh
+html.body.div Encountered some data:So, could it be a good idea to document for further references how to purchase and apply a Digicert Code Signing Certificate?
+path:html.body.div :  to_markdown_apply_data: data:125 chars
+html.body.div Encountered end tag:div
+path:html.body.div :  to_markdown_apply_close_html
+```
+
+* So let's try to just emit this text to a single markdown line entry?
 
 ## 20260921
 

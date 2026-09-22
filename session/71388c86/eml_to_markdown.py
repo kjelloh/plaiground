@@ -206,10 +206,13 @@ class HTML2MarkdownParser(HTMLParser):
             
             # process style entries
             if name == "word-wrap":
+                # view property only (no markdown mapping for now)
                 unconsumed.pop(name,None)
             elif name == "-webkit-nbsp-mode":
+                # view property only (no markdown mapping for now)
                 unconsumed.pop(name,None)
             elif name == "-webkit-line-break":
+                # view property only (no markdown mapping for now)
                 unconsumed.pop(name,None)
 
             if name in unconsumed:           
@@ -249,7 +252,6 @@ class HTML2MarkdownParser(HTMLParser):
         # Process html attributes
         for name, value in attrs_dict.items():
             log_entry:str = f"path:{'.'.join(self.current_html_path)}[attr:{name}] = '{value}'"
-            self.print_to_log(log_entry)
             if name=="class":
                 if value=="":
                     unconsumed_attrs.pop(name,None)
@@ -265,6 +267,11 @@ class HTML2MarkdownParser(HTMLParser):
                     )
                 else:
                     unconsumed_attrs.pop(name, None)
+
+            if name in unconsumed_attrs:
+                self.print_to_log(log_entry + " ?")
+            else:
+                self.print_to_log(log_entry + " CONSUMED")
 
         return markdown_props,unconsumed_attrs
 
@@ -339,7 +346,7 @@ class HTML2MarkdownParser(HTMLParser):
 
         if self.current_data != "":
             raise IncompleteParseError(
-                f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on open new html data"
+                f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on close html"
                 f"\n\tunconsumed ==> '{self.current_data}'"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
@@ -377,10 +384,10 @@ class HTML2MarkdownParser(HTMLParser):
         attrs_dict = dict(attrs)
         if tag in self.VOID_ELEMENTS:
           attrs_str = f" attrs:{attrs}" if attrs else ""
-          print(f"{'.'.join(self.current_html_path)} Encountered void tag:{tag} {attrs_str}")
+          self.print_to_log(f"{'.'.join(self.current_html_path)} Encountered void tag:{tag} {attrs_str}")
           self.to_markdown_apply_void_html(tag,attrs_dict)
         else:
-          print(f"{'.'.join(self.current_html_path)} Encountered start tag:{tag}")
+          self.print_to_log(f"{'.'.join(self.current_html_path)} Encountered start tag:{tag}")
           while self.current_html_path and self.current_html_path[-1] in self.AUTO_CLOSE_ON_START.get(tag,()):
               print(f"{'.'.join(self.current_html_path)} auto-closed")
               self.current_html_path.pop()
@@ -389,7 +396,7 @@ class HTML2MarkdownParser(HTMLParser):
           self.to_markdown_apply_open_html(attrs_dict)
             
     def handle_endtag(self, tag):
-        print(f"{'.'.join(self.current_html_path)} Encountered end tag:{tag}")
+        self.print_to_log(f"{'.'.join(self.current_html_path)} Encountered end tag:{tag}")
         if not self.current_html_path or self.current_html_path[-1] != tag:
             raise IncompleteParseError(
                 f"End tag <{tag}> does not match current_html_path:'"
@@ -401,7 +408,7 @@ class HTML2MarkdownParser(HTMLParser):
         self.trace_ast.append(f"{".".join(self.current_html_path)}")
 
     def handle_data(self, data):
-        print(f"{'.'.join(self.current_html_path)} Encountered some data:{data}")
+        self.print_to_log(f"{'.'.join(self.current_html_path)} Encountered some data:{data}")
         self.trace_ast.append(f"{".".join(self.current_html_path)} = {data}")
         self.to_markdown_apply_data(data)
 
@@ -495,6 +502,9 @@ def eml_file_to_markdown(eml_path: Path) -> None:
 
     date_line = email_meta["date"].isoformat() if email_meta["date"] else "(no date)"
 
+    with chime_path.open("a", encoding="utf-8") as f:
+        f.write(f"{date_line}\n\n")
+
     # -------------------------------------------------------------------
     # Mail Meta/Chime - END
     # -------------------------------------------------------------------
@@ -515,7 +525,6 @@ def eml_file_to_markdown(eml_path: Path) -> None:
         f.write('\n'.join(log))
 
     with chime_path.open("a", encoding="utf-8") as f:
-        f.write(f"{date_line}\n\n")
         f.write('\n'.join(markdown))
     print(f"END PROCESSING: {eml_path.name} -> {chime_path}")
 
