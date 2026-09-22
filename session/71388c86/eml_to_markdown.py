@@ -168,6 +168,8 @@ class HTML2MarkdownParser(HTMLParser):
 
       self.log: list[str] = []
       self.trace_ast: list[str] = []
+
+      self.current_markdown_props: dict = {}
       self.markdown: list[str] = []
 
       self.current_html_path: list[str] = []
@@ -196,6 +198,58 @@ class HTML2MarkdownParser(HTMLParser):
     # Markdown parser - BEGIN
     # -------------------------------------------------------------------
 
+    def css_style_to_markdown_props(self,css_style_dict:dict) -> tuple[dict,dict]:
+        markdown_props:dict = {}
+        unconsumed:dict = dict(css_style_dict)
+        return markdown_props,unconsumed
+
+    def to_css_style_dict(self,css_style_str: str) -> dict:
+        result:dict = {}
+        # todo: parse e.g., 'word-wrap: break-word; -webkit-nbsp-mode: space; -webkit-line-break: after-white-space;'
+
+        for declaration in css_style_str.split(";"):
+            declaration = declaration.strip()
+            if not declaration:
+                continue  # skip empty for ';;' or trailing ';'
+
+            if ":" not in declaration:
+                raise EmailParseError(
+                    f"Failed to parse css style attribute:'{css_style_str}'"
+                    f"Element:'{declaration}' is not a valid name-value-pair (no ':')"
+                )
+
+            prop, value = declaration.split(":", 1)
+            prop = prop.strip().lower()
+            value = value.strip()
+
+            if prop:
+                result[prop] = value
+
+        return result
+
+    def attrs_to_markdown_props(self,html_path: list[str],attrs_dict: dict) -> tuple[dict,dict]:
+        unconsumed_attrs = dict(attrs_dict) # clone
+        markdown_props: dict = {}
+        # Process html attributes
+        for name, value in attrs_dict.items():
+            self.print_to_log(f"path:{'.'.join(self.current_html_path)}[attr:{name}] = '{value}'")
+            if name=="class":
+                if value=="":
+                    unconsumed_attrs.pop(name,None)
+            elif name=="style":
+                css_style_dict = self.to_css_style_dict(value)
+                css_md_props,unconsumed_style_attrs = self.css_style_to_markdown_props(css_style_dict)
+                markdown_props.update(css_md_props)
+
+                if unconsumed_style_attrs:
+                    unconsumed_attrs["style"] = "; ".join(
+                        f"{k}: {v}" for k, v in unconsumed_style_attrs.items()
+                    )
+                else:
+                    unconsumed_attrs.pop(name, None)
+
+        return markdown_props,unconsumed_attrs
+
     def to_markdown_apply_void_html(self,tag,attrs_dict: dict) -> None:
         self.print_to_log(f"path:{'.'.join(self.current_html_path)}.{tag} :  to_markdown_apply_void_html: attrs_dict:{attrs_dict}")
         # Expect no unconsumed attributes
@@ -223,18 +277,22 @@ class HTML2MarkdownParser(HTMLParser):
     def to_markdown_apply_open_html(self,attrs_dict: dict) -> None:
         self.print_to_log(f"path:{'.'.join(self.current_html_path)} :  to_markdown_apply_open_html: attrs_dict:{attrs_dict}")
         if self.current_attr:
+            log_text = "\n".join(self.log)
             raise IncompleteParseError(
                 f"path:{'.'.join(self.current_html_path)} :  Expected empty current attrs on open html attrs:{attrs_dict}"
                 f" unconsumed ==> {self.current_attr}"
-                f"\n<Parse LOG>\n{'\n'.join(self.log)}"
+                f"\n<Parse LOG>\n{log_text}"
             )
 
         # Apply attributes
-        for name, value in attrs_dict.items():
-            self.print_to_log(f"path:{'.'.join(self.current_html_path)}[attr:{name}] = '{value}'")
+        markdown_props,unconsumed_attrs = self.attrs_to_markdown_props(
+            self.current_html_path,
+            attrs_dict
+        )
 
+        self.current_markdown_props.update(markdown_props)
+        self.current_attr.update(unconsumed_attrs)
 
-        self.current_attr = attrs_dict
         return
 
     def to_markdown_apply_data(self,data: str) -> None:

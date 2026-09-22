@@ -1,5 +1,23 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260922
+
+So the [eml_to_markdown](./eml_to_markdown.py) is now hardened and we are on the way to pick apart the html parsed into markdown.
+
+* Time to iterate over unconsumed html attributes and data.
+
+```sh
+path:html.body :  to_markdown_apply_open_html: attrs_dict:{'style': 'word-wrap: break-word; -webkit-nbsp-mode: space; -webkit-line-break: after-white-space;', 'class': ''}
+path:html.body[attr:style] = 'word-wrap: break-word; -webkit-nbsp-mode: space; -webkit-line-break: after-white-space;'
+path:html.body[attr:class] = ''
+```
+
+* So, how do we do this?
+* We can design the parser to process html attributes into our own markdown 'attributes'?
+* What about a fucntion that takes html tag attributes and returns our own markdown attributes and uncosnumed html attributes?
+
+Let's try!
+
 ## 20260921
 
 Time to start generating some markdown.
