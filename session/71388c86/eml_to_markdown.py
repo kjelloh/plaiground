@@ -201,6 +201,22 @@ class HTML2MarkdownParser(HTMLParser):
     def css_style_to_markdown_props(self,css_style_dict:dict) -> tuple[dict,dict]:
         markdown_props:dict = {}
         unconsumed:dict = dict(css_style_dict)
+        for name,value in css_style_dict.items():
+            log_entry:str = f"path:{'.'.join(self.current_html_path)}[style].{name} = '{value}'"
+            
+            # process style entries
+            if name == "word-wrap":
+                unconsumed.pop(name,None)
+            elif name == "-webkit-nbsp-mode":
+                unconsumed.pop(name,None)
+            elif name == "-webkit-line-break":
+                unconsumed.pop(name,None)
+
+            if name in unconsumed:           
+                self.print_to_log(log_entry + " ?")
+            else:
+                self.print_to_log(log_entry + " CONSUMED")
+
         return markdown_props,unconsumed
 
     def to_css_style_dict(self,css_style_str: str) -> dict:
@@ -232,10 +248,12 @@ class HTML2MarkdownParser(HTMLParser):
         markdown_props: dict = {}
         # Process html attributes
         for name, value in attrs_dict.items():
-            self.print_to_log(f"path:{'.'.join(self.current_html_path)}[attr:{name}] = '{value}'")
+            log_entry:str = f"path:{'.'.join(self.current_html_path)}[attr:{name}] = '{value}'"
+            self.print_to_log(log_entry)
             if name=="class":
                 if value=="":
                     unconsumed_attrs.pop(name,None)
+
             elif name=="style":
                 css_style_dict = self.to_css_style_dict(value)
                 css_md_props,unconsumed_style_attrs = self.css_style_to_markdown_props(css_style_dict)
