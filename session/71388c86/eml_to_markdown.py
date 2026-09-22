@@ -173,7 +173,7 @@ class HTML2MarkdownParser(HTMLParser):
       self.trace_ast: list[str] = []
 
       self.current_markdown_props: dict = {}
-      self.markdown: list[str] = []
+      self.markdown: list[str] = [""]
 
       self.current_html_path: list[str] = []
       self.current_attr: dict = {}
@@ -252,9 +252,21 @@ class HTML2MarkdownParser(HTMLParser):
     def attrs_to_markdown_props(self,html_path: list[str],attrs_dict: dict) -> tuple[dict,dict]:
         unconsumed_attrs = dict(attrs_dict) # clone
         markdown_props: dict = {}
+
+        # apply tag-based attributes
+        if html_path == ["html","head","meta"]:
+            # No attributes apply
+            self.print_to_log(f"path:{'.'.join(html_path)} :  No meta attributes applies = Ignored")
+            return markdown_props,{}
+
+        if html_path == ["html","body","meta"]:
+            # No attributes apply
+            self.print_to_log(f"path:{'.'.join(html_path)} :  No meta attributes applies. Ignored:{attrs_dict}")
+            return markdown_props,{}
+
         # Process html attributes
         for name, value in attrs_dict.items():
-            log_entry:str = f"path:{'.'.join(self.current_html_path)}[attr:{name}] = '{value}'"
+            log_entry:str = f"path:{'.'.join(html_path)}[attr:{name}] = '{value}'"
             if name=="class":
                 if value=="":
                     unconsumed_attrs.pop(name,None)
@@ -288,18 +300,18 @@ class HTML2MarkdownParser(HTMLParser):
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
 
-        # apply attributes
-        if self.current_html_path == ["html","head"] and tag == "meta":
-            # No attributes apply
-            self.print_to_log(f"path:{'.'.join(self.current_html_path)}.{tag} :  No meta attributes applies = Ignored")
-            return
+        # Apply attributes
+        markdown_props,unconsumed_attrs = self.attrs_to_markdown_props(
+            self.current_html_path + [tag],
+            attrs_dict
+        )
+        self.current_markdown_props.update(markdown_props)
+        self.current_attr.update(unconsumed_attrs)
 
-        if self.current_html_path == ["html","body"] and tag == "meta":
-            # No attributes apply
-            self.print_to_log(f"path:{'.'.join(self.current_html_path)}.{tag} :  No meta attributes applies. Ignored:{attrs_dict}")
-            return
+        # apply formatting tag
+        if self.current_html_path[-1] == "br":
+            self.markdown.append("")
 
-        self.current_attr = attrs_dict
         return
 
     def to_markdown_apply_open_html(self,attrs_dict: dict) -> None:
@@ -353,7 +365,9 @@ class HTML2MarkdownParser(HTMLParser):
                 raise DesignInsufficiencyError(
                     f"path:{'.'.join(self.current_html_path)} :  Control characters in data (text) not yet supported"
                 )
-            self.markdown.append(self.current_data)
+
+            # The markdown list always contains at least one entry.
+            self.markdown[-1] += self.current_data
             self.current_data = "" # consumed
 
         if self.current_data != "":

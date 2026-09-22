@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import traceback
 from pathlib import Path
 
 from eml_to_markdown import eml_file_to_markdown, to_path
@@ -39,6 +40,7 @@ def main() -> None:
             fail_count += 1
             print(f"FAIL: {eml_path.name}", file=sys.stderr)
             print(f"    └── {type(e).__name__}: {e}", file=sys.stderr)
+            # traceback.print_exc(file=sys.stderr)
             break
         else:
             ok_count += 1
