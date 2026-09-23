@@ -194,7 +194,7 @@ class HTML2MarkdownParser(HTMLParser):
         self.markdown
 
     def print_to_log(self,entry: str) -> None:
-        print(f"print_to_log:'{entry}'")
+        # print(f"print_to_log:'{entry}'")
         self.log.append(entry)
 
     # -------------------------------------------------------------------
