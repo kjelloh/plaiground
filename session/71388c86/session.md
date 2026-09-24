@@ -13,6 +13,8 @@ plaiground/session/71388c86 % ./eml_to_markdown.py "Todo_ Consider to delve into
 
 * Attend to each error as they occur until I have a good-enough chime.md?
 
+  * Unconsumed attrs
+
 ```sh
 path:html.body :  to_markdown_apply_open_html: attrs_dict:{'style': 'overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;'}
 path:html.body[style].overflow-wrap = 'break-word' ?
@@ -20,6 +22,32 @@ path:html.body[style].-webkit-nbsp-mode = 'space' CONSUMED
 path:html.body[style].line-break = 'after-white-space' ?
 ```
 
+  * Unconsumed tag
+
+```sh
+html.body.div Encountered start tag:a
+path:html.body.div.a :  to_markdown_apply_open_html: attrs_dict:{'href': 'https://youtu.be/5vbl5FL-nsI'}
+path:html.body.div.a[attr:href] = 'https://youtu.be/5vbl5FL-nsI' ?
+html.body.div.a Encountered some data:https://youtu.be/5vbl5FL-nsI
+path:html.body.div.a :  to_markdown_apply_data: data:28 chars
+```  
+
+  * It seems I have an 'anchor' tag?
+  * ```<a href="https://youtu.be/5vbl5FL-nsI">https://youtu.be/5vbl5FL-nsI</a>```
+  * And should create markdown ```[https://youtu.be/5vbl5FL-nsI](https://youtu.be/5vbl5FL-nsI)```
+  * So how can we do this?
+
+I found the common mark spec [common mark links](https://spec.commonmark.org/0.31.2/#links).
+
+* 'link_text' goes into '[]'
+* 'link_destination' gows into '()'
+* So we emitt marldown ```[<link_text>](<link_destination>)````
+
+OK, So we ran into some problem here.
+
+* When the data for the anchor tag arrives we have umnprocessed data from the parent div tag.
+* So we need to be able to keep that data until we have procseed the child anchor tag.
+* The quickest solution for now is to make the current_data into a stack. 
 
 
 ## 20260923

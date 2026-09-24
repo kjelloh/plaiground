@@ -172,7 +172,7 @@ class HTML2MarkdownParser(HTMLParser):
       self.log: list[str] = []
       self.trace_ast: list[str] = []
 
-      self.current_markdown_props: dict = {}
+      self.current_markdown_props: list[dict] = [{}]
       self.markdown: list[str] = [""]
 
       self.current_html_path: list[str] = []
@@ -311,7 +311,8 @@ class HTML2MarkdownParser(HTMLParser):
             self.current_html_path + [tag],
             attrs_dict
         )
-        self.current_markdown_props.update(markdown_props)
+
+        self.current_markdown_props[-1].update(markdown_props)
         self.current_attr.update(unconsumed_attrs)
 
         # apply formatting tag
@@ -336,7 +337,7 @@ class HTML2MarkdownParser(HTMLParser):
             attrs_dict
         )
 
-        self.current_markdown_props.update(markdown_props)
+        self.current_markdown_props[-1].update(markdown_props)
         self.current_attr.update(unconsumed_attrs)
 
         return
