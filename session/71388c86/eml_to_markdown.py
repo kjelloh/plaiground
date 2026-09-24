@@ -177,7 +177,6 @@ class HTML2MarkdownParser(HTMLParser):
 
       self.current_html_path: list[str] = []
       self.current_attr: dict = {}
-      self.current_data: str = ""
  
     def email_ast(self) -> list[str]:
         if self.current_html_path != []:
@@ -194,7 +193,7 @@ class HTML2MarkdownParser(HTMLParser):
         self.markdown
 
     def print_to_log(self,entry: str) -> None:
-        # print(f"print_to_log:'{entry}'")
+        print(f"print_to_log:'{entry}'")
         self.log.append(entry)
 
     # -------------------------------------------------------------------
@@ -311,7 +310,7 @@ class HTML2MarkdownParser(HTMLParser):
             self.current_html_path + [tag],
             attrs_dict
         )
-
+            
         self.current_markdown_props[-1].update(markdown_props)
         self.current_attr.update(unconsumed_attrs)
 
@@ -337,6 +336,9 @@ class HTML2MarkdownParser(HTMLParser):
             attrs_dict
         )
 
+        if not self.current_markdown_props:
+            self.current_markdown_props.append({})
+
         self.current_markdown_props[-1].update(markdown_props)
         self.current_attr.update(unconsumed_attrs)
 
@@ -344,16 +346,19 @@ class HTML2MarkdownParser(HTMLParser):
 
     def to_markdown_apply_data(self,data: str) -> None:
         self.print_to_log(f"path:{'.'.join(self.current_html_path)} :  to_markdown_apply_data: data:{len(data)} chars")
-        if self.current_data != "":
+
+        # invariant: always a props entry on the stack
+        current_data = self.current_markdown_props[-1].get("data")
+        if current_data:
             raise IncompleteParseError(
                 f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on open new html data"
-                f"\n\tunconsumed ==> '{self.current_data}'"
+                f"\n\tunconsumed ==> '{current_data}'"
                 f"\n\tdata:{data}"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
 
-        # Store for processing when html tag is closed (or new tag is opened?) 
-        self.current_data = data
+        # Store for processing when top markdown element is emitted
+        self.current_markdown_props[-1]["data"] = data
 
         return
 
@@ -367,21 +372,28 @@ class HTML2MarkdownParser(HTMLParser):
             )
 
         # Process any data stored for closed tag
-        if self.current_data != "":
-            if any(ord(c) < ord(' ') for c in self.current_data):
+        current_data = self.current_markdown_props[-1].get("data")
+        if current_data:
+            if any(ord(c) < ord(' ') for c in current_data):
                 raise DesignInsufficiencyError(
                     f"path:{'.'.join(self.current_html_path)} :  Control characters in data (text) not yet supported"
                 )
 
             # The markdown list always contains at least one entry.
-            self.markdown[-1] += self.current_data
-            self.current_data = "" # consumed
+            self.markdown[-1] += current_data
+            current_data = None # consumed
 
-        if self.current_data != "":
+        if current_data:
             raise IncompleteParseError(
                 f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on close html"
-                f"\n\tunconsumed ==> '{self.current_data}'"
+                f"\n\tunconsumed ==> '{current_data}'"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
+            )
+        else:
+            # Consumed
+            self.current_markdown_props.pop()
+            self.print_to_log(
+                f"path:{'.'.join(self.current_html_path)} :  Consumed -> markdown:'{self.markdown[-1]}'"
             )
         return
 
@@ -566,11 +578,7 @@ def main() -> None:
     if len(sys.argv) != 2:
         sys.exit(f"Usage: {sys.argv[0]} <path-to-eml-file>")
 
-    try:
-        eml_file_to_markdown(to_path(sys.argv[1]))
-    except Exception as e:
-        sys.exit(f"Exception: {e}")
-
+    eml_file_to_markdown(to_path(sys.argv[1]))
 
 if __name__ == "__main__":
     main()
