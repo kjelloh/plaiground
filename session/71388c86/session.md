@@ -47,7 +47,19 @@ OK, So we ran into some problem here.
 
 * When the data for the anchor tag arrives we have umnprocessed data from the parent div tag.
 * So we need to be able to keep that data until we have procseed the child anchor tag.
-* The quickest solution for now is to make the current_data into a stack. 
+* The quickest solution for now is to make the current_data into a stack.
+
+OK, So I instead made current_markdown_props into a stack and use 'data' member in the props dict to process tag data.
+
+I have now introduced 'props stack' and mechanism for html tag 'a' to makrdown link.
+
+* But markdown pop-and-assemble is still missing
+
+```sh
+IncompleteParseError: path:html.body.div :  Expected empty (consumed) current data on open new html data
+	unconsumed ==> 'I want to explore self organising (emergent oriented) social development and technologies.'
+	data:'1) Consider youtube video "The Open Source Internet Is Here" ('
+```
 
 
 ## 20260923

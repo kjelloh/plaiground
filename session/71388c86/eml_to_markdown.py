@@ -163,6 +163,10 @@ def parse_email_meta(email_msg: "email.message.EmailMessage") -> dict:
 class IncompleteParseError(ValueError):
     """Raised when parsing did not consume a well-formed document."""
 
+class IncompleteMarkdownEmittError(ValueError):
+    """Raised when parsing did not consume a well-formed document."""
+
+
 class HTML2MarkdownParser(HTMLParser):
 
     def __init__(self) -> None:
@@ -258,6 +262,8 @@ class HTML2MarkdownParser(HTMLParser):
         unconsumed_attrs = dict(attrs_dict) # clone
         markdown_props: dict = {}
 
+        current_tag = html_path[-1] # invariant: always non empty path
+
         # apply tag-based attributes
         if html_path == ["html","head","meta"]:
             # No attributes apply
@@ -287,6 +293,14 @@ class HTML2MarkdownParser(HTMLParser):
                     )
                 else:
                     unconsumed_attrs.pop(name, None)
+            elif name == "href":
+                if current_tag == "a":
+                    # Initiate a link markdown (push props)
+                    link_props:dict = {
+                        "state" : "link",
+                        "link_destination" : value,
+                    }
+                    self.current_markdown_props.append(link_props)
 
             if name in unconsumed_attrs:
                 self.print_to_log(log_entry + " ?")
@@ -353,7 +367,7 @@ class HTML2MarkdownParser(HTMLParser):
             raise IncompleteParseError(
                 f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on open new html data"
                 f"\n\tunconsumed ==> '{current_data}'"
-                f"\n\tdata:{data}"
+                f"\n\tdata:'{data}'"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
 
@@ -372,29 +386,38 @@ class HTML2MarkdownParser(HTMLParser):
             )
 
         # Process any data stored for closed tag
+        # Invariant: self.current_markdown_props is always non-empty
         current_data = self.current_markdown_props[-1].get("data")
+        emitted_markdown = None
         if current_data:
             if any(ord(c) < ord(' ') for c in current_data):
                 raise DesignInsufficiencyError(
                     f"path:{'.'.join(self.current_html_path)} :  Control characters in data (text) not yet supported"
                 )
 
-            # The markdown list always contains at least one entry.
-            self.markdown[-1] += current_data
-            current_data = None # consumed
+            current_tag = self.current_html_path[-1] # invariant: always non-empty path
+            if current_tag == "a":
+                # Consume props for markdown link
+                markdown_state = self.current_markdown_props[-1].pop("state",None)
+                link_text = self.current_markdown_props[-1].pop("data",None)
+                link_destination = self.current_markdown_props[-1].pop("link_destination",None)
 
-        if current_data:
-            raise IncompleteParseError(
-                f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on close html"
-                f"\n\tunconsumed ==> '{current_data}'"
-                f"\n<Parse LOG>\n{'\n'.join(self.log)}"
-            )
-        else:
-            # Consumed
-            self.current_markdown_props.pop()
+                if markdown_state == "link" and link_text and link_destination:
+                    emitted_markdown = f"[{link_text}]({link_destination})"
+ 
+        if emitted_markdown:
             self.print_to_log(
-                f"path:{'.'.join(self.current_html_path)} :  Consumed -> markdown:'{self.markdown[-1]}'"
+                f"path:{'.'.join(self.current_html_path)} :  ==> EMITTED:'{emitted_markdown}'"
             )
+
+            unconsumed_props = self.current_markdown_props.pop()
+            if unconsumed_props:
+                raise IncompleteMarkdownEmittError(
+                    f"path:{'.'.join(self.current_html_path)} :  Expected empty unconsumed markdown props on emitted markdown"
+                    f" unconsumed ==> {unconsumed_props}"
+                    f"\n<Parse LOG>\n{'\n'.join(self.log)}"
+                )
+
         return
 
     # -------------------------------------------------------------------
