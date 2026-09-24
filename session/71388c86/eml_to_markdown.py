@@ -217,6 +217,12 @@ class HTML2MarkdownParser(HTMLParser):
             elif name == "-webkit-line-break":
                 # view property only (no markdown mapping for now)
                 unconsumed.pop(name,None)
+            elif name == "overflow-wrap":
+                # view property only (no markdown mapping for now)
+                unconsumed.pop(name,None)
+            elif name == "line-break":
+                # view property only (no markdown mapping for now)
+                unconsumed.pop(name,None)
 
             if name in unconsumed:           
                 self.print_to_log(log_entry + " ?")

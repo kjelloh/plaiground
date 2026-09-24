@@ -1,5 +1,27 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260924
+
+I think I will carry on as I have done so far (hard error on unattended tag,attribute or data)
+
+* Parse latest Todo-eml I added as a good template?
+
+```sh
+plaiground/session/71388c86 % rm -rf chime
+plaiground/session/71388c86 % ./eml_to_markdown.py "Todo_ Consider to delve into Lora based Reticulum open source P2P self organising networks?.eml"
+```
+
+* Attend to each error as they occur until I have a good-enough chime.md?
+
+```sh
+path:html.body :  to_markdown_apply_open_html: attrs_dict:{'style': 'overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;'}
+path:html.body[style].overflow-wrap = 'break-word' ?
+path:html.body[style].-webkit-nbsp-mode = 'space' CONSUMED
+path:html.body[style].line-break = 'after-white-space' ?
+```
+
+
+
 ## 20260923
 
 I added new "Todo_ Consider to delve into Lora based Reticulum open source P2P self organising networks?.eml" file as a mail to parse to markdown with all the 'bells and whistles' I have used a lot in my Todo-mails.
