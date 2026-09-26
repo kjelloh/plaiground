@@ -366,8 +366,8 @@ class HTML2MarkdownParser(HTMLParser):
         if current_data:
             raise IncompleteParseError(
                 f"path:{'.'.join(self.current_html_path)} :  Expected empty (consumed) current data on open new html data"
+                f"\n\tnew html data:'{data}'"
                 f"\n\tunconsumed ==> '{current_data}'"
-                f"\n\tdata:'{data}'"
                 f"\n<Parse LOG>\n{'\n'.join(self.log)}"
             )
 
@@ -601,7 +601,13 @@ def main() -> None:
     if len(sys.argv) != 2:
         sys.exit(f"Usage: {sys.argv[0]} <path-to-eml-file>")
 
-    eml_file_to_markdown(to_path(sys.argv[1]))
+    try:
+        eml_file_to_markdown(to_path(sys.argv[1]))
+    except Exception as e:
+        print(f"FAIL: {type(e).__name__}", file=sys.stderr)
+        print(f"    └── : {e}", file=sys.stderr)
+        # traceback.print_exc(file=sys.stderr)
+
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,138 @@
 # Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?
 
+## 20260926
+
+Time to assemble markdown as eml_to_markdown emitts markldown for closed html elements.
+
+* I have a hard time to decide how to implement this mechanism?
+* As always, my brain gets confused when dealing with collapsing structures.
+  * When should collapse happen?
+  * Where should the emitted markdown go?
+  * How does it fit into the html close elememtn mechanism?
+  * Should malrdown emitt update the parent markdown item on tge stack?
+  * But what it there is no parent item?
+  * How should markdown emitt sync with html item open and close?
+
+I asked Claude Code to propose a solution based on the code I have so far.
+
+* So, as I expected it proposed to mirror the html structure for makrdown props.
+* But I asked it for an asynchronous makrdown stack.
+
+Great! It was actually able to pick up on my need.
+
+```sh
+Fair pushback — the html_path and the markdown stack don't need to move in lockstep. The fix is to only push a markdown frame for tags you explicitly recognize as markdown-meaningful, and tag each pushed frame with enough info to know which later close event resolves it (since arbitrary non-markdown wrappers — div, span, table, tr, td, body, etc., which dominate email HTML — can sit in between without ever touching the stack).
+
+Mechanism:
+
+- Explicit whitelist, not tree-mirroring:
+MARKDOWN_TAGS = {
+    "a": "link", "strong": "bold", "b": "bold",
+    "em": "italic", "i": "italic",
+    "h1": "heading", "h2": "heading", ...,
+    "p": "paragraph", "li": "list_item", "ul": "list", "ol": "list",
+}
+```
+
+I still don't trust it to make such a bold step up-front though.
+
+* I want it to attend to the current design insufficiency to to assemble the emitted markdown with the parent markdown stack item.
+* I asked Claude to run on my test eml.file and be picky to attend only to the current design insufficiency.
+
+And it seems it was actually able to do so?
+
+```sh
+Single mechanism to propose: give every frame a persistent assembled: list[str] (separate from the transient single-slot data used only to catch one pending text run), and make close-handling always flush, never silently drop:
+
+- On close, look at current_tag:
+  - If it's one of the markdown constructs you've deliberately modeled (currently: a) — run its existing dedicated logic, pop its dedicated frame, and append the result to the now-top frame's assembled.
+  - Otherwise (the default case — div, body, anything you haven't modeled) — if data is set, treat it as plain text: append it verbatim to current_markdown_props[-1]["assembled"], then clear data to None.
+- Because this flush is unconditional on every close (not keyed to a specific tag), data is guaranteed empty again before the next handle_data fires — which is exactly the "ready to attend to the next html data" property you're asking for.
+- Final markdown = "".join(current_markdown_props[0]["assembled"]) once the html path empties, instead of the currently-unused self.markdown list.
+
+This keeps you picky: only a gets special treatment; every other tag falls through to one narrow, explicit default (plain-text passthrough), and nothing is invented or guessed about tags you haven't looked at yet — it's just no longer allowed to lose data.
+```
+
+This is in fact one of my ideas on how to do this. But I was unsure if it was not to complicated.
+
+* Push and populate markdown_props for html tags mapped to markdown elements.
+* Emitt markdown on html close for recognised markdown elements.
+* Default to plain text markdown emitt.
+
+I will let Claude implmenet this mechanism and then refactor it to my taste.
+
+* I imagine I will remove the fallback though?
+* And instead implement a recognition of 'plain text makrdown' for selected html tags
+* In this way I am still safe from forgetting to trigger on html tags that should in fact be represented as a markdown item?
+
+OK, so Claude actually failed.
+
+* It implemented an 'assembled' member in makrdown props on the stack.
+* But I do not grasp how (or if) it assembles the emitted markdown down the stack?
+
+I have to attend to the unconsumed 'href' attrubute first.
+
+```sh
+FAIL: IncompleteParseError
+    └── path:html.body.div.a :  Expected empty unconsumed attrs on close html
+unconsumed ==> {'href': 'https://youtu.be/5vbl5FL-nsI'}
+assembled[0]  ==> ['I want to explore self organising (emergent oriented) social development and technologies.']
+assembled[1]  ==> []
+```
+
+Ok, So now I consume 'href' and can inspect what markdown gets assembled.
+
+```sh
+FAIL: IncompleteParseError
+    └── path:html.body.div.span :  Expected empty unconsumed attrs on close html
+unconsumed ==> {'class': 'Apple-tab-span', 'style': 'white-space: pre'}
+assembled[0]  ==> ['I want to explore self organising (emergent oriented) social development and technologies.', '[https://youtu.be/5vbl5FL-nsI](https://youtu.be/5vbl5FL-nsI)', '1) Consider youtube video "The Open Source Internet Is Here" (', ' )?']
+```
+
+And this is backwards!
+
+* The emitted markdown link should be inserted inside the '()'.
+* But it is inserted in front of the while text!
+* Even in front of the line before the line with the '()'!
+
+So where is the error?
+
+* The code does NOT insert assembled line-by-line
+* But instead part-by-part.
+* So we need to identify where we should extend current maklrdown and when we shall insert a new markdown line.
+
+```sh
+html.body.div Encountered end tag:div
+path:html.body.div :  to_markdown_apply_close_html
+path:html.body.div :  ==> EMITTED (plain):'I want to explore self organising (emergent oriented) social development and technologies.'
+html.body Encountered start tag:div
+path:html.body.div :  to_markdown_apply_open_html: attrs_dict:{}
+html.body.div Encountered some data:1) Consider youtube video "The Open Source Internet Is Here" (
+path:html.body.div :  to_markdown_apply_data: data:62 chars
+html.body.div Encountered start tag:a
+path:html.body.div.a :  to_markdown_apply_open_html: attrs_dict:{'href': 'https://youtu.be/5vbl5FL-nsI'}
+path:html.body.div.a[attr:href] = 'https://youtu.be/5vbl5FL-nsI' CONSUMED
+html.body.div.a Encountered some data:https://youtu.be/5vbl5FL-nsI
+path:html.body.div.a :  to_markdown_apply_data: data:28 chars
+html.body.div.a Encountered end tag:a
+path:html.body.div.a :  to_markdown_apply_close_html
+path:html.body.div.a :  ==> EMITTED:'[https://youtu.be/5vbl5FL-nsI](https://youtu.be/5vbl5FL-nsI)'
+html.body.div Encountered some data: )?
+path:html.body.div :  to_markdown_apply_data: data:3 chars
+path:html.body.div :  ==> EMITTED (plain):'1) Consider youtube video "The Open Source Internet Is Here" ('
+html.body.div Encountered end tag:div
+path:html.body.div :  to_markdown_apply_close_html
+path:html.body.div :  ==> EMITTED (plain):' )?'
+```
+
+* It seems we must understand the implied line break for the first diov woth empty attrs?
+* It seems we should append the emitted markdown when the tag 'a' is closed? 
+
+OK, I give up!
+
+* Claude code ruined my architecture.
+* I have to gop back and implement the 'assembled' dict idea in my prevuous code myself!
+
 ## 20260924
 
 I think I will carry on as I have done so far (hard error on unattended tag,attribute or data)
