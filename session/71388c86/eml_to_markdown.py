@@ -176,8 +176,9 @@ class HTML2MarkdownParser(HTMLParser):
       self.log: list[str] = []
       self.trace_ast: list[str] = []
 
-      self.current_markdown_props: list[dict] = [{}]
-      self.markdown: list[str] = [""]
+      self.current_markdown_props: list[dict] = [{
+          "assembled" : list[str] # markdown lines 'so far'
+      }]
 
       self.current_html_path: list[str] = []
       self.current_attr: dict = {}
@@ -194,7 +195,7 @@ class HTML2MarkdownParser(HTMLParser):
         return 
         self.log,
         self.email_ast(),
-        self.markdown
+        self.current_markdown_props[0]["assembled"]
 
     def print_to_log(self,entry: str) -> None:
         print(f"print_to_log:'{entry}'")
@@ -330,7 +331,7 @@ class HTML2MarkdownParser(HTMLParser):
 
         # apply formatting tag
         if self.current_html_path[-1] == "br":
-            self.markdown.append("")
+            self.current_markdown_props[-1].append("")
 
         return
 
