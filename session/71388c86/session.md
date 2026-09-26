@@ -133,6 +133,37 @@ OK, I give up!
 * Claude code ruined my architecture.
 * I have to gop back and implement the 'assembled' dict idea in my prevuous code myself!
 
+DARN! It seems I can get data + tag + data in an html tag?
+
+```sh
+print_to_log:'html.body Encountered start tag:div'
+print_to_log:'path:html.body.div :  to_markdown_apply_open_html: attrs_dict:{}'
+print_to_log:'html.body.div Encountered some data:1) Consider youtube video "The Open Source Internet Is Here" ('
+print_to_log:'path:html.body.div :  to_markdown_apply_data: data:62 chars'
+print_to_log:'html.body.div Encountered start tag:a'
+print_to_log:'path:html.body.div.a :  to_markdown_apply_open_html: attrs_dict:{'href': 'https://youtu.be/5vbl5FL-nsI'}'
+print_to_log:'path:html.body.div.a[attr:href] = 'https://youtu.be/5vbl5FL-nsI' CONSUMED'
+print_to_log:'html.body.div.a Encountered some data:https://youtu.be/5vbl5FL-nsI'
+print_to_log:'path:html.body.div.a :  to_markdown_apply_data: data:28 chars'
+print_to_log:'html.body.div.a Encountered end tag:a'
+print_to_log:'path:html.body.div.a :  to_markdown_apply_close_html'
+print_to_log:'path:html.body.div.a :  ==> EMITTED:'[https://youtu.be/5vbl5FL-nsI](https://youtu.be/5vbl5FL-nsI)''
+print_to_log:'path:html.body.div.a
+assembled[0]  ==> ['']
+assembled[1]  ==> ['']
+assembled[2]  ==> ['[https://youtu.be/5vbl5FL-nsI](https://youtu.be/5vbl5FL-nsI)']'
+print_to_log:'html.body.div Encountered some data: )?'
+print_to_log:'path:html.body.div :  to_markdown_apply_data: data:3 chars'
+```
+
+* Both 'Encountered some data:' are in the SAME div-tag?
+  * Yes, it seems html allows a sequence of data, embedded tag, data etc.
+* Also, My html text ```1) Consider youtube ...``` is itself a markdown trigger!
+  * That is, I must handle cases where html plain text may be interpreted as makrdown triggers where I do NOT whant them to?
+  * Or how should I handle this?
+
+It seems this html to markdown IS NOT TRIVIAL at all?!!
+
 ## 20260924
 
 I think I will carry on as I have done so far (hard error on unattended tag,attribute or data)

@@ -177,7 +177,7 @@ class HTML2MarkdownParser(HTMLParser):
       self.trace_ast: list[str] = []
 
       self.current_markdown_props: list[dict] = [{
-          "assembled" : list[str] # markdown lines 'so far'
+          "assembled" : [""] # markdown lines 'so far'
       }]
 
       self.current_html_path: list[str] = []
@@ -302,6 +302,8 @@ class HTML2MarkdownParser(HTMLParser):
                         "link_destination" : value,
                     }
                     self.current_markdown_props.append(link_props)
+                    unconsumed_attrs.pop(name,None)
+
 
             if name in unconsumed_attrs:
                 self.print_to_log(log_entry + " ?")
@@ -331,7 +333,12 @@ class HTML2MarkdownParser(HTMLParser):
 
         # apply formatting tag
         if self.current_html_path[-1] == "br":
-            self.current_markdown_props[-1].append("")
+            # a line break
+            # Any unconsumed data is now makrdown to emitt
+            emitted_markdown = self.current_markdown_props[-1].get("data")
+            if emitted_markdown:
+                self.current_markdown_props[-1]["assembled"] += emitted_markdown;    
+            self.current_markdown_props[-1].append({"assembled" : [""]})
 
         return
 
@@ -351,8 +358,9 @@ class HTML2MarkdownParser(HTMLParser):
             attrs_dict
         )
 
-        if not self.current_markdown_props:
-            self.current_markdown_props.append({})
+        current_tag = self.current_html_path[-1] # invariant: always non-empty
+        if current_tag == "div":
+            self.current_markdown_props.append({"assembled" : [""]})    
 
         self.current_markdown_props[-1].update(markdown_props)
         self.current_attr.update(unconsumed_attrs)
@@ -419,6 +427,12 @@ class HTML2MarkdownParser(HTMLParser):
                     f"\n<Parse LOG>\n{'\n'.join(self.log)}"
                 )
 
+            self.current_markdown_props[-1]["assembled"][-1] += emitted_markdown
+            self.print_to_log(
+                f"path:{'.'.join(self.current_html_path)}"
+                f"{''.join(f'\nassembled[{d}]  ==> {p.get("assembled")}' for d, p in enumerate(self.current_markdown_props))}"
+            )
+
         return
 
     # -------------------------------------------------------------------
@@ -477,7 +491,7 @@ class HTML2MarkdownParser(HTMLParser):
         self.trace_ast.append(f"{".".join(self.current_html_path)}")
 
     def handle_data(self, data):
-        self.print_to_log(f"{'.'.join(self.current_html_path)} Encountered some data:{data}")
+        self.print_to_log(f"{'.'.join(self.current_html_path)} Encountered some data:'{data}'")
         self.trace_ast.append(f"{".".join(self.current_html_path)} = {data}")
         self.to_markdown_apply_data(data)
 
