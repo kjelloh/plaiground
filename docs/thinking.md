@@ -5,6 +5,10 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20260929
+
+Created * [Consider a way to filter out all files that is reachable from a site with an index.md root document?](../session/805fef21/session.md)
+
 ## 20260915
 
 Time to do some more work on [Consider ways to mirror Jekyll Github Pages generation on local git repos?](../session/b214e74e/session.md).
