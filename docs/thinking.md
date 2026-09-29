@@ -19,6 +19,8 @@ IMPORTANT! For Jekyll to treat links correctly ALL links must be RELATIVE!
 
 * It seems Jekyll leaves absolute links untouched...?
 
+I now also vibe coded publish_site.py that copies to a folder 'public_html' for easy intergation and upload to web hotell that uses that folder name for the site root folder.
+
 ## 20260915
 
 Time to do some more work on [Consider ways to mirror Jekyll Github Pages generation on local git repos?](../session/b214e74e/session.md).

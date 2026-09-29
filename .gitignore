@@ -2,6 +2,8 @@
 .jekyll/
 # Ignore the staged (reachable-only) site source produced by stage_site.py
 _staged_site/
+# Ignore the published site copy produced by publish_site.py
+public_html/
 # Ignore pytest caches anywhere
 __pycache__/
 # ignore generated html files (in folders named html)

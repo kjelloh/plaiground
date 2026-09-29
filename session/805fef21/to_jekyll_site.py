@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-to_jekyll_site.py: Build and serve a Jekyll site from a given source
-directory. Ensures a '.jekyll' folder inside that source holds the Jekyll
-toolchain and build output, then builds and serves the site.
+to_jekyll_site.py: Build a Jekyll site from a given source directory.
+Ensures a '.jekyll' folder inside that source holds the Jekyll toolchain
+and build output. Does not serve the site — see publish_site.py for that.
 """
 
 import subprocess
@@ -62,46 +62,35 @@ def build_site(source, site_dir, jekyll_dir):
     return result.returncode == 0
 
 
-def serve_site(source, site_dir, jekyll_dir):
-    command = [
-        "bundle", "exec", "jekyll", "serve",
-        "--source", str(source),
-        "--destination", str(site_dir),
-        "--skip-initial-build",
-    ]
-    result = subprocess.run(command, cwd=jekyll_dir)
-    return result.returncode == 0
-
-
-def build_and_serve(source: Path, jekyll_dir: Path = None) -> int:
-    """Build then serve a Jekyll site from 'source'. The Jekyll toolchain and
-    build output live under 'jekyll_dir' (defaults to 'source/.jekyll').
-    Returns a process exit code."""
+def build(source: Path, jekyll_dir: Path = None) -> Path:
+    """Build a Jekyll site from 'source'. The Jekyll toolchain and build
+    output live under 'jekyll_dir' (defaults to 'source/.jekyll'). Returns
+    the built site_dir on success, or None on failure."""
     source = source.resolve()
     jekyll_dir = (jekyll_dir if jekyll_dir is not None else source / ".jekyll").resolve()
 
     config_file = source / "_config.yml"
     if not config_file.exists():
         print(f"'{config_file}' not found. Run this on a Jekyll/GitHub Pages source folder.")
-        return 1
+        return None
 
     site_dir = jekyll_dir / "_site"
 
     if not ensure_jekyll_tool_chain(jekyll_dir):
         print(f"Failed to prepare the '{jekyll_dir}' tool chain.")
-        return 1
+        return None
 
     if not build_site(source, site_dir, jekyll_dir):
         print("Jekyll build failed.")
-        return 1
+        return None
 
-    print(f"Site built to '{site_dir}'. Starting local server (press Ctrl-C to stop)...")
-    return 0 if serve_site(source, site_dir, jekyll_dir) else 1
+    print(f"Site built to '{site_dir}'.")
+    return site_dir
 
 
 def main():
     source = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
-    sys.exit(build_and_serve(source))
+    sys.exit(0 if build(source) is not None else 1)
 
 
 if __name__ == "__main__":
