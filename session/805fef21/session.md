@@ -16,3 +16,11 @@ So it turns out that the jekyll site generator engine in fact copies ALL files f
 Suppose I implement this as a pythion script. What are my options to implement this in a terse and straight forward way?
 
 I vibe coded [reachable.py](./reachable.py) that seems to work?
+
+I now also vibe coded [stage_site.py](./stage_site.py) and [to_site.py](./to_site.py).
+
+* They use to_jekyll_site.py that originates from previous to_site.py script.
+
+IMPORTANT! For Jekyll to treat links correctly ALL links must be RELATIVE!
+
+* It seems Jekyll leaves absolute links untouched...?

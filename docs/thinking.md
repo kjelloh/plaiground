@@ -2,20 +2,22 @@
 
 I find that thinking by writing helps me focus on my goals and what may be done to get there.
 
-* [sessions](/session/index.md)
-* [chimes](/chime/index.md)
+* [sessions](../session/index.md)
+* [chimes](../chime/index.md)
 
 ## 20260929
 
-Created * [Consider a way to filter out all files that is reachable from a site with an index.md root document?](/session/805fef21/session.md)
+Created * [Consider a way to filter out all files that is reachable from a site with an index.md root document?](../session/805fef21/session.md)
 
 It seems there are some tools we need to use jekyll to generate a static site from a git repo in the same way Github Pages does it?
 
 * I want to first create a site source with ONLY the files reachable from a site starting at index.md in the git repo root.
 * I want to then transform all images to jpeg to work on the web
   * I have tiff,png, jpeg
-  
 
+IMPORTANT! For Jekyll to treat links correctly ALL links must be RELATIVE!
+
+* It seems Jekyll leaves absolute links untouched...?
 
 ## 20260915
 

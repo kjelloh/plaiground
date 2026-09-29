@@ -1,5 +1,7 @@
 # Ignore file produced by the to_site.py jekyll mechanism
 .jekyll/
+# Ignore the staged (reachable-only) site source produced by stage_site.py
+_staged_site/
 # Ignore pytest caches anywhere
 __pycache__/
 # ignore generated html files (in folders named html)
