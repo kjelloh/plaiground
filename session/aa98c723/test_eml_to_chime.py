@@ -14,6 +14,18 @@ SIMPLE_HTML_EML = (
     "<html><body><p>Body <strong>text</strong></p></body></html>\r\n"
 )
 
+SIMPLE_PLAIN_EML = (
+    "Subject: Plain\r\n"
+    "From: foo@bar.se\r\n"
+    "Date: Fri, 11 Sep 2026 12:00:00 +0000\r\n"
+    "Content-Type: text/plain; charset=utf-8\r\n"
+    "\r\n"
+    "First paragraph.\r\n"
+    "\r\n"
+    "Second paragraph,\r\n"
+    "with a line break.\r\n"
+)
+
 
 def write_eml(tmp_path: Path, name: str, content: str) -> Path:
     eml_path = tmp_path / name
@@ -80,6 +92,18 @@ def test_eml_file_to_chime_copies_inline_image(tmp_path, monkeypatch):
 
     assert (chime_path.parent / "pic.png").is_file()
     assert "![a pic](pic.png)" in chime_path.read_text(encoding="utf-8")
+
+
+def test_eml_file_to_chime_plain_text_fallback(tmp_path, monkeypatch):
+    monkeypatch.setattr(eml_to_chime, "SESSION_DIR", tmp_path)
+    eml_path = write_eml(tmp_path, "plain.eml", SIMPLE_PLAIN_EML)
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    content = chime_path.read_text(encoding="utf-8")
+    assert "First paragraph." in content
+    assert "Second paragraph," in content
+    assert "with a line break." in content
 
 
 def test_parse_sample_eml():

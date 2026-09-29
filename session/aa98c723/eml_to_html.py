@@ -38,8 +38,8 @@ def unique_name(filename: str, claimed: set[str]) -> str:
     return name
 
 
-class NoHtmlPartError(Exception):
-    """Raised when the message has no text/html part to extract."""
+class NoRenderablePartError(Exception):
+    """Raised when the message has neither a text/html nor a text/plain part."""
 
 
 def pick_html_part(msg):
@@ -50,6 +50,26 @@ def pick_html_part(msg):
         if part.get_content_type() == "text/html":
             return part
     return None
+
+
+def pick_text_part(msg):
+    body = msg.get_body(preferencelist=("plain",))
+    if body is not None and body.get_content_type() == "text/plain":
+        return body
+    for part in msg.walk():
+        if part.get_content_type() == "text/plain":
+            return part
+    return None
+
+
+def plain_text_to_html(text: str) -> str:
+    paragraphs = re.split(r"\n\s*\n", text.strip())
+    paras_html = [
+        f"<p>{html_escape(para).replace(chr(10), '<br>' + chr(10))}</p>"
+        for para in paragraphs
+        if para.strip()
+    ]
+    return "<html><body>\n" + "\n".join(paras_html) + "\n</body></html>\n"
 
 
 def image_parts(msg):
@@ -74,9 +94,15 @@ def extract(eml_path: Path, out_dir: Path, inject_h1: bool = True) -> None:
     msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
 
     html_part = pick_html_part(msg)
-    if html_part is None:
-        raise NoHtmlPartError("No text/html part found in the message.")
-    html = html_part.get_content()
+    if html_part is not None:
+        html = html_part.get_content()
+    else:
+        text_part = pick_text_part(msg)
+        if text_part is None:
+            raise NoRenderablePartError(
+                "No text/html or text/plain part found in the message."
+            )
+        html = plain_text_to_html(text_part.get_content())
 
     if inject_h1:
         subject = str(msg["subject"] or "").strip()
@@ -152,7 +178,7 @@ def main() -> None:
     out_dir = args.out or (eml_path.parent / "html")
     try:
         extract(eml_path, out_dir)
-    except NoHtmlPartError as e:
+    except NoRenderablePartError as e:
         sys.exit(str(e))
 
 
