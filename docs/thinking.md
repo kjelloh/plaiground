@@ -21,6 +21,8 @@ IMPORTANT! For Jekyll to treat links correctly ALL links must be RELATIVE!
 
 I now also vibe coded publish_site.py that copies to a folder 'public_html' for easy intergation and upload to web hotell that uses that folder name for the site root folder.
 
+Now we can place these python scripts on a root folder named say 'to_site' and do ```>python3 ./to_site/to_site .```
+
 ## 20260915
 
 Time to do some more work on [Consider ways to mirror Jekyll Github Pages generation on local git repos?](../session/b214e74e/session.md).
