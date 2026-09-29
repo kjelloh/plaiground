@@ -1,0 +1,4 @@
+# Ignore our local chime
+chime/
+__pycache__/
+.pytest_cache/

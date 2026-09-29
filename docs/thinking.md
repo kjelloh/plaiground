@@ -23,6 +23,8 @@ I now also vibe coded publish_site.py that copies to a folder 'public_html' for 
 
 Now we can place these python scripts on a root folder named say 'to_site' and do ```>python3 ./to_site/to_site .```
 
+Now it is time for take 2 on eml-to-chime?
+
 ## 20260915
 
 Time to do some more work on [Consider ways to mirror Jekyll Github Pages generation on local git repos?](../session/b214e74e/session.md).
