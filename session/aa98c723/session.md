@@ -19,7 +19,17 @@ I vide coded the mechanism.
 
 Using a cloned 'init_new.py' to be able to apply the git repo root 'in it new artcicle' mechanism.
 
+Now let's see what Jekyll produces on the chimes we get from the eml-files?
 
+* We may be able to apply the mechanism in 'session/805fef21/'?
+* Or maybe we should go back to session/805fef21/ and clone our chimes there for testing?
+
+I asked Claude to perform the test.
+
+* It seesm to work
+* But it littered this session with the to_site python scripts!
+
+Anyways, good enough for now I think (fingers crossed)!
 
 
 
