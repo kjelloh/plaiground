@@ -17,7 +17,14 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlsplit
 
-MD_ESCAPE = {ord(c): "\\" + c for c in "\\`*[]"}
+MD_ESCAPE = {ord(c): "\\" + c for c in "\\`*"}
+# Square brackets get HTML entities, not backslash escapes: "\[" / "\]" is
+# valid CommonMark escaping, but it's also the LaTeX display-math delimiter
+# many renderers (e.g. VS Code's Markdown preview) recognize, so backslash-
+# escaping a bracket can turn plain text into a bogus, sometimes-broken math
+# block. Entities can't be mistaken for either link syntax or math syntax.
+MD_ESCAPE[ord("[")] = "&#91;"
+MD_ESCAPE[ord("]")] = "&#93;"
 
 
 def md_link(url: str) -> str:

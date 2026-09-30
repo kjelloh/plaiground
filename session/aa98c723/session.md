@@ -10,9 +10,6 @@ I now ran a test on my Todo-mails.
 
 As it turns out it reports 4414 OK and 16 FAIL.
 
-* [output.log](./output.log)
-* [chimes](./chime/index.md)
-
 So it seems we are not yet able to process mails woth no text but with image(s)?
 
 ```sh
@@ -143,6 +140,43 @@ Verified:
 - Re-ran emls_to_chimes.py over all 6 .eml files in this session — 6 ok, 0 failed, 6 total.
 - Confirmed the actual chime output for Todo_ Programming...: the line now reads “\\\\\[^\\\\\]+$” - Matches “\\Hello.exe” — the original text, markdown-escaped, no stray smb:// link.
 ```
+
+I now looked into the chime created for 'Todo: Programming - Consider to learn and document about regular expression coding?' and we still have issues.
+
+* The mail-text ```“\d" is short for [0-9]``` seems to NOT be guarded against involontary makrdown syntax?
+    * That is, ```[0-9]``` must NOT be output as-is as this will then be interpreted as markdown and not the actual plain text ```[0-9]```?
+* The mail-text ``` ``` seems to NOT be guarded against being markdown in the final output?
+    * The markdown contains ```“\\w" stands for "word character". It always matches the ASCII characters \[A-Za-z0-9_\].```
+    * VSCode malrdown viewer shows ```“\w" stands for "word character". It always matches the ASCII characters ParseError: KaTeX parse error: Expected group after '_' at position 10: A-Za-z0-9_̲.```
+
+I wonder if the main issue is in fact that we have NO GUARDS against the input mail text containing constructs that are themselves markdown?
+
+* We need our parser to guard such text against being interpreted as markdown in the final output?
+
+I asked Claude to vibe code a solution.
+
+```sh
+All 16 tests pass. Now let's regenerate the actual chime for the regex mail and confirm the two reported lines are fixed.
+
+  Ran 1 shell command
+
+Both lines now use &#91;...&#93; instead of \[...\] — no bracket-based link syntax risk, and no LaTeX math-delimiter collision. Let's verify the full suite is clean and remove the batch artifacts.
+
+  Ran 1 shell command
+
+Root cause confirmed and fixed — and it was exactly the general principle you named: our own escaping of [/] as \[/\] (correct CommonMark to prevent link misparsing) is also the LaTeX display-math delimiter that renderers like VS Code's Markdown preview recognize. So the escaping meant to guard against markdown wasn't a fallback to "plain text" at all — it silently produced a different markup construct (math mode) that some renderers then tried to parse:
+- [0-9] → \[0-9\] → silently rendered as a math block (wrong, but no visible error since 0-9 parses as valid-ish math).
+- [A-Za-z0-9_] → \[A-Za-z0-9_\] → the trailing _ breaks KaTeX parsing → the exact error you saw.
+
+Fix in html_to_markdown.py: [ and ] are now escaped as HTML entities (&#91; / &#93;) instead of backslash-escapes. Entities still block CommonMark's link-syntax scanner (there's no raw [/] character left to pair), but produce no backslash-bracket sequence for any math extension to misfire on. Backslash, backtick, and asterisk escaping (\\, \`, \*) are unaffected — none of those coincide with a recognized math delimiter.
+
+Added two regression tests plus updated one existing test's expectation. All 16 tests pass, and the real mail's chime now shows &#91;0-9&#93; and &#91;A-Za-z0-9_&#93; — plain literal text in any renderer, no accidental link, no math-mode collision.
+```
+
+I now have 4430 ok, 0 failed, 4430 total!
+
+* [output.log](./output.log)
+* [chimes](./chime/index.md)
 
 ## 20260929
 
