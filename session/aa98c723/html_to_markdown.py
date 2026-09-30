@@ -221,6 +221,12 @@ class MarkdownConverter(HTMLParser):
             inner = "".join(self.link_buf or [])
             self.link_buf = None
             self.link_href = ""
+            if href and url_parts(href) is None:
+                # Unparsable href (e.g. a mail client's data detector
+                # mis-reading plain text as a link) has no usable link
+                # target — drop it and keep just the visible text.
+                self.raw(inner)
+                return
             if is_local_ref(href):
                 self.refs.append(href)
             label = inner.strip()

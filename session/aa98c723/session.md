@@ -106,6 +106,44 @@ This does not seem to be exactly what I want?
 
 Anyways, I decide when I have tried the reafctored mechaism on my Todo-mails again.
 
+I now added 'Todo_ Programming - Consider to learn and document about regular expression coding?.eml' as test-eml.
+
+I applied emls-to-chime on all local eml-files.
+
+So I looked into how the chime 'Todo_ Programming - Consider to learn and document about regular expression coding?' looked, and there are some issues.
+
+* The text ```“\\[^\\]+$” - Matches “\Hello.exe”``` in apple Mail.
+    * Renders to markdown ```“[\\\\\[^\\\\](smb://[^//)\]+$” - Matches “\\Hello.exe”````
+    * It should fallback to plain text ```“\\[^\\]+$” - Matches “\Hello.exe”```
+    * That is, the faulty URL should be disgarded and the markdown should just be the 'data' as-is
+
+I wonder if there is a simple way to just ignore invalid href URL:s and fall-back to add the data (text) as-is to the current markdown text?
+
+I aksed Claude to vibe code me a solution and it did.
+
+```sh
+All 14 tests pass. Now let's verify against the actual real mail the user added.
+
+  Ran 1 shell command
+
+6 ok, 0 failed, 6 total. Let's check the exact chime for the regex mail to confirm the specific line now reads correctly.
+
+  Ran 1 shell command
+
+That's exactly right — line 37 now reads “\\\\\[^\\\\\]+$” - Matches “\\Hello.exe”, which is the markdown-escaped form of the original text (backslashes/brackets escaped so a markdown renderer shows them literally instead of misreading [^\] as link syntax) — no smb:// junk, no broken link, just the data as-is. Cleaning up:
+
+  Ran 1 shell command
+
+Fixed. In html_to_markdown.py's <a> close-tag handling, added an early check: if the href doesn't even parse as a URL (url_parts(href) is None), there's no usable link target at all — drop the anchor entirely and emit just its inner text, rather than trying to build a [label](href) link out of garbage.
+
+This is exactly the case your mail hit: Apple Mail's Data Detector turned part of a regex snippet into href="smb://[^//" — a real scheme (smb:) but garbage content that urlsplit() can't parse (Invalid IPv6 URL), so it slipped past the scheme check and got rendered as a bogus link [\[^\](smb://[^//). Now it falls straight through to plain text.
+
+Verified:
+- Added 2 tests to test_html_to_markdown.py (14 total, all passing) covering both the label-equals-href case and the label-differs-from-href case (your real mail's shape).
+- Re-ran emls_to_chimes.py over all 6 .eml files in this session — 6 ok, 0 failed, 6 total.
+- Confirmed the actual chime output for Todo_ Programming...: the line now reads “\\\\\[^\\\\\]+$” - Matches “\\Hello.exe” — the original text, markdown-escaped, no stray smb:// link.
+```
+
 ## 20260929
 
 This is take 2 on [Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?](../71388c86/session.md)
