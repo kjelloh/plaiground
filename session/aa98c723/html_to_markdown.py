@@ -205,7 +205,7 @@ class MarkdownConverter(HTMLParser):
             if is_local_ref(href):
                 self.refs.append(href)
             label = inner.strip()
-            if href and label == href and not re.search(r"[ <>]", href):
+            if href and label == href and not is_local_ref(href) and not re.search(r"[ <>]", href):
                 self.raw(f"<{href}>")
             elif not label:
                 self.raw(f"<{href}>" if href else inner)

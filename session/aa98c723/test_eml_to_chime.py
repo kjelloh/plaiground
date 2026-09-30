@@ -130,13 +130,67 @@ def test_eml_file_to_chime_images_only_fallback(tmp_path, monkeypatch):
     assert "![](photo.png)" in chime_path.read_text(encoding="utf-8")
 
 
+def test_eml_file_to_chime_document_only_fallback(tmp_path, monkeypatch):
+    monkeypatch.setattr(eml_to_chime, "SESSION_DIR", tmp_path)
+    raw = (
+        "Subject: Document only\r\n"
+        "From: foo@bar.se\r\n"
+        'Content-Type: multipart/mixed; boundary="B"\r\n'
+        "\r\n"
+        "--B\r\n"
+        "Content-Type: application/x-iwork-pages-sffpages\r\n"
+        "Content-Disposition: attachment; filename=Plans.pages\r\n"
+        "Content-Transfer-Encoding: base64\r\n"
+        "\r\n"
+        "AAAA\r\n"
+        "--B--\r\n"
+    )
+    eml_path = write_eml(tmp_path, "doc.eml", raw)
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    content = chime_path.read_text(encoding="utf-8")
+    assert (chime_path.parent / "Plans.pages").is_file()
+    assert "## Attachments" in content
+    assert "[Plans.pages](Plans.pages)" in content
+
+
+def test_eml_file_to_chime_document_attachment_alongside_text(tmp_path, monkeypatch):
+    monkeypatch.setattr(eml_to_chime, "SESSION_DIR", tmp_path)
+    raw = (
+        "Subject: With attachment\r\n"
+        "From: foo@bar.se\r\n"
+        'Content-Type: multipart/mixed; boundary="B"\r\n'
+        "\r\n"
+        "--B\r\n"
+        'Content-Type: text/html; charset="utf-8"\r\n'
+        "\r\n"
+        "<html><body><p>See attached.</p></body></html>\r\n"
+        "--B\r\n"
+        "Content-Type: application/x-iwork-pages-sffpages\r\n"
+        "Content-Disposition: attachment; filename=Plans.pages\r\n"
+        "Content-Transfer-Encoding: base64\r\n"
+        "\r\n"
+        "AAAA\r\n"
+        "--B--\r\n"
+    )
+    eml_path = write_eml(tmp_path, "withdoc.eml", raw)
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    content = chime_path.read_text(encoding="utf-8")
+    assert (chime_path.parent / "Plans.pages").is_file()
+    assert "See attached." in content
+    assert "## Attachments" in content
+    assert "[Plans.pages](Plans.pages)" in content
+
+
 def test_eml_file_to_chime_no_content_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(eml_to_chime, "SESSION_DIR", tmp_path)
     raw = (
-        "Subject: Attachment only\r\n"
+        "Subject: Nothing\r\n"
         "From: foo@bar.se\r\n"
         "Content-Type: application/octet-stream\r\n"
-        "Content-Disposition: attachment; filename=data.bin\r\n"
         "Content-Transfer-Encoding: base64\r\n"
         "\r\n"
         "AAAA\r\n"
