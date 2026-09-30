@@ -9,6 +9,13 @@ from pathlib import Path
 
 from eml_to_chime import eml_file_to_chime
 
+# When stdout and stderr are both redirected to the same file (e.g.
+# `> output.log 2>&1`), stdout is block-buffered while stderr isn't, so
+# FAIL lines (stderr) can land mid-way through an unflushed stdout line.
+# Force line buffering so writes interleave in the order they're printed.
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
 
 def to_dir_path(path_str: str) -> Path:
     dir_path = Path(path_str)

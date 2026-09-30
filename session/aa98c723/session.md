@@ -58,8 +58,53 @@ Verified: all 10 tests pass; batch run over all 5 .eml files in this session (in
 ✻ Baked for 3m 42s · done 1:39 PM
 ```
 
+Now I am down to 3 FAIL. I looked into the log.
 
+```sh
+markdown -> /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/aa98c723/chime/d2a69299/Todo_ Programming - Consider to check out the site Techie Delight with what seems cool C++ solutions to a long list of problems.mdFAIL: Todo_ Programming - Consider to learn and document about regular expression coding?.eml
+    └── ValueError: Invalid IPv6 URL
+```
 
+There seems to be two issues to attend to?
+
+* The 'FAIL:...' output does not start on a new line?
+* The parser seems to compain about Invalid IPv6 URL?
+
+I openend the mail in Apple Mail to take a look.
+
+* The links that reads ok in APple Mail seems to work just fine.
+* But I find text that Apple Mails seems to interpret as an URL but it is not?
+
+```text
+“.*” - matches everything (‘.’ matches any character and ‘*’ means zero-or-more)
+	“\\[^\\]+$” - Matches “\Hello.exe”
+```
+
+* For some reason Apple mail seems to interpret ```\\[^\\``` as an URL?
+
+Can we implement a fallback for such URL:s and produce some viable html then markdown for it?
+
+I asked Claude to vibe code me a solution.
+
+```sh
+Both issues fixed.
+
+1. Garbled log ordering (emls_to_chimes.py): when stdout and stderr are both redirected to the same file (> output.log 2>&1), stdout was block-buffered while stderr wasn't — so a FAIL: line (stderr) could land mid-way through a not-yet-flushed stdout line, producing exactly ...chime.mdFAIL: .... Fixed by forcing line buffering on both streams at the top of the batch driver.
+
+2. ValueError: Invalid IPv6 URL (html_to_markdown.py): Apple Mail's data-detector had turned a regex snippet (\[^\]+$) into an href shaped like //[^\]+$ — Python's urlsplit() reads a leading //[ as a broken IPv6 host literal and raises. Root cause: is_local_ref() called urlsplit() unguarded. Fix:
+- New url_parts() wraps urlsplit() and returns None on a ValueError instead of crashing.
+- is_local_ref() now treats an unparsable URL as "not local" rather than raising.
+- Replaced the ad-hoc autolink condition (from last session's fix) with a proper is_autolinkable() — a link only becomes a bare <url> autolink when it's well-formed and has a URI scheme, which is what CommonMark autolinks actually require. Malformed or schemeless hrefs now fall through to ordinary [label](target) link syntax instead.
+
+Verified with a synthetic reproduction of your exact mail shape (//[^\]+$ href) through the full eml_to_chime pipeline — no crash, produces [//\[^\\]+$](//[^\]+$). Added test_html_to_markdown.py (3 tests: malformed href doesn't crash, external URL still autolinks, local ref with matching label gets bracket-link form) — all 13 tests across the suite pass, and the 5-mail batch in this session still runs clean (5 ok, 0 failed).
+```
+
+This does not seem to be exactly what I want?
+
+* I would like the faulty URL to be treated as plain text?
+* At least for the example mail this is the correct move?
+
+Anyways, I decide when I have tried the reafctored mechaism on my Todo-mails again.
 
 ## 20260929
 

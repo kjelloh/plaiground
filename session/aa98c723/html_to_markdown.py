@@ -27,9 +27,28 @@ def md_link(url: str) -> str:
     return url
 
 
+def url_parts(url: str):
+    """urlsplit(), tolerating malformed input (e.g. mail client "data
+    detector" mistakes, like text starting with "//[" that urlsplit reads
+    as a broken IPv6 host and rejects) by treating it as unparsable."""
+    try:
+        return urlsplit(url)
+    except ValueError:
+        return None
+
+
 def is_local_ref(url: str) -> bool:
-    parts = urlsplit(url)
+    parts = url_parts(url)
+    if parts is None:
+        return False
     return not parts.scheme and not parts.netloc and not url.startswith("#")
+
+
+def is_autolinkable(url: str) -> bool:
+    """True if url is well-formed enough to stand alone as a CommonMark
+    autolink (<url>), which requires an absolute URI with a scheme."""
+    parts = url_parts(url)
+    return bool(parts and parts.scheme) and not re.search(r"[ <>]", url)
 
 
 class MarkdownConverter(HTMLParser):
@@ -205,7 +224,7 @@ class MarkdownConverter(HTMLParser):
             if is_local_ref(href):
                 self.refs.append(href)
             label = inner.strip()
-            if href and label == href and not is_local_ref(href) and not re.search(r"[ <>]", href):
+            if href and label == href and is_autolinkable(href):
                 self.raw(f"<{href}>")
             elif not label:
                 self.raw(f"<{href}>" if href else inner)
