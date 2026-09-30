@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 import eml_to_chime
+import eml_to_html
 from eml_to_chime import ChimeAlreadyExistsError, eml_file_to_chime
 
 SIMPLE_HTML_EML = (
@@ -104,6 +105,46 @@ def test_eml_file_to_chime_plain_text_fallback(tmp_path, monkeypatch):
     assert "First paragraph." in content
     assert "Second paragraph," in content
     assert "with a line break." in content
+
+
+def test_eml_file_to_chime_images_only_fallback(tmp_path, monkeypatch):
+    monkeypatch.setattr(eml_to_chime, "SESSION_DIR", tmp_path)
+    raw = (
+        "Subject: Photo\r\n"
+        "From: foo@bar.se\r\n"
+        'Content-Type: multipart/mixed; boundary="B"\r\n'
+        "\r\n"
+        "--B\r\n"
+        "Content-Type: image/png\r\n"
+        "Content-Disposition: inline; filename=photo.png\r\n"
+        "Content-Transfer-Encoding: base64\r\n"
+        "\r\n"
+        "iVBORw0KGgo=\r\n"
+        "--B--\r\n"
+    )
+    eml_path = write_eml(tmp_path, "photo.eml", raw)
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    assert (chime_path.parent / "photo.png").is_file()
+    assert "![](photo.png)" in chime_path.read_text(encoding="utf-8")
+
+
+def test_eml_file_to_chime_no_content_raises(tmp_path, monkeypatch):
+    monkeypatch.setattr(eml_to_chime, "SESSION_DIR", tmp_path)
+    raw = (
+        "Subject: Attachment only\r\n"
+        "From: foo@bar.se\r\n"
+        "Content-Type: application/octet-stream\r\n"
+        "Content-Disposition: attachment; filename=data.bin\r\n"
+        "Content-Transfer-Encoding: base64\r\n"
+        "\r\n"
+        "AAAA\r\n"
+    )
+    eml_path = write_eml(tmp_path, "empty.eml", raw)
+
+    with pytest.raises(eml_to_html.NoRenderablePartError):
+        eml_file_to_chime(eml_path, base_dir=tmp_path)
 
 
 def test_parse_sample_eml():

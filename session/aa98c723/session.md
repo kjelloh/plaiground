@@ -1,5 +1,27 @@
 # Consider take 2 on eml-to-chime python mechanism?
 
+## 20260930
+
+I now ran a test on my Todo-mails.
+
+```sh
+% ./emls_to_chimes.py ~/Downloads/mail_export/eml > output.log 2>&1
+```
+
+As it turns out it reports 4414 OK and 16 FAIL.
+
+* [output.log](./output.log)
+* [chimes](./chime/index.md)
+
+So it seems we are not yet able to process mails woth no text but with image(s)?
+
+```sh
+FAIL: Todo_ Åk så här från Kallhäll till "Pernillas fik" på Spångavägen.eml
+    └── NoRenderablePartError: No text/html or text/plain part found in the message.
+```
+
+So how can we refactor the eml-to-chime scripts to create a chime.md with the images also when the original mail has no text parts?
+
 ## 20260929
 
 This is take 2 on [Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?](../71388c86/session.md)

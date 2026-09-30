@@ -39,7 +39,7 @@ def unique_name(filename: str, claimed: set[str]) -> str:
 
 
 class NoRenderablePartError(Exception):
-    """Raised when the message has neither a text/html nor a text/plain part."""
+    """Raised when the message has no text/html, text/plain or image part."""
 
 
 def pick_html_part(msg):
@@ -72,6 +72,11 @@ def plain_text_to_html(text: str) -> str:
     return "<html><body>\n" + "\n".join(paras_html) + "\n</body></html>\n"
 
 
+def images_only_html(image_names: list[str]) -> str:
+    imgs = "\n".join(f'<img src="{name}">' for name in image_names)
+    return f"<html><body>\n{imgs}\n</body></html>\n"
+
+
 def image_parts(msg):
     for part in msg.walk():
         if part.get_content_maintype() != "image":
@@ -93,23 +98,10 @@ def insert_h1(html: str, subject: str) -> str:
 def extract(eml_path: Path, out_dir: Path, inject_h1: bool = True) -> None:
     msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
 
-    html_part = pick_html_part(msg)
-    if html_part is not None:
-        html = html_part.get_content()
-    else:
-        text_part = pick_text_part(msg)
-        if text_part is None:
-            raise NoRenderablePartError(
-                "No text/html or text/plain part found in the message."
-            )
-        html = plain_text_to_html(text_part.get_content())
-
-    if inject_h1:
-        subject = str(msg["subject"] or "").strip()
-        html = insert_h1(html, subject)
-
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Extract images first: a fallback body (when there's no text/html or
+    # text/plain part) needs their final local filenames to embed them.
     cid_to_file: dict[str, str] = {}
     written: list[str] = []
     claimed: set[str] = set()
@@ -129,6 +121,24 @@ def extract(eml_path: Path, out_dir: Path, inject_h1: bool = True) -> None:
         cid = part.get("Content-ID")
         if cid:
             cid_to_file[cid.strip().strip("<>").lower()] = target.name
+
+    html_part = pick_html_part(msg)
+    if html_part is not None:
+        html = html_part.get_content()
+    else:
+        text_part = pick_text_part(msg)
+        if text_part is not None:
+            html = plain_text_to_html(text_part.get_content())
+        elif written:
+            html = images_only_html(written)
+        else:
+            raise NoRenderablePartError(
+                "No text/html, text/plain or image part found in the message."
+            )
+
+    if inject_h1:
+        subject = str(msg["subject"] or "").strip()
+        html = insert_h1(html, subject)
 
     def replace_cid(match: re.Match) -> str:
         key = match.group("cid").strip().strip("<>").lower()
