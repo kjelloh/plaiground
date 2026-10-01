@@ -5,7 +5,7 @@ import pytest
 
 import eml_to_chime
 import eml_to_html
-from eml_to_chime import ChimeAlreadyExistsError, eml_file_to_chime
+from eml_to_chime import ChimeSupersededError, eml_file_to_chime
 
 SITE_REPO_INIT_NEW = Path(__file__).parent.parent / "site_repo" / "init_new.py"
 
@@ -52,7 +52,7 @@ def test_eml_file_to_chime_creates_chime(tmp_path):
 
     assert chime_path == tmp_path / "chime" / chime_path.parent.name / "chime.md"
     content = chime_path.read_text(encoding="utf-8")
-    assert content.startswith("# test\n\n")
+    assert content.startswith("# Hello\n\n")  # from the mail's Subject, not the filename
     assert "2026-09-11T12:00:00+00:00" in content
     assert "Body **text**" in content
 
@@ -66,13 +66,59 @@ def test_eml_file_to_chime_cleans_up_scratch_dir(tmp_path):
     assert not (chime_path.parent / "test.md").exists()
 
 
-def test_eml_file_to_chime_duplicate_raises(tmp_path):
+def test_eml_file_to_chime_reprocessing_same_mail_is_superseded(tmp_path):
     eml_path = write_eml(tmp_path, "test.eml", SIMPLE_HTML_EML)
 
     eml_file_to_chime(eml_path, base_dir=tmp_path)
 
-    with pytest.raises(ChimeAlreadyExistsError):
+    with pytest.raises(ChimeSupersededError):
         eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+
+def test_eml_file_to_chime_keys_by_subject_not_filename(tmp_path):
+    # Apple Mail's exporter appends " 2", " 3", ... to the *filename* when
+    # several exported mails share a subject — the real Subject: header is
+    # identical across them, and that's what must key the chime.
+    older = write_eml(tmp_path, "todo.eml", SIMPLE_HTML_EML)
+    newer_raw = SIMPLE_HTML_EML.replace(
+        "Date: Fri, 11 Sep 2026 12:00:00 +0000",
+        "Date: Sat, 12 Sep 2026 09:00:00 +0000",
+    ).replace("Body <strong>text</strong>", "Updated <strong>text</strong>")
+    newer = write_eml(tmp_path, "todo 2.eml", newer_raw)
+
+    older_chime = eml_file_to_chime(older, base_dir=tmp_path)
+    newer_chime = eml_file_to_chime(newer, base_dir=tmp_path)
+
+    assert older_chime == newer_chime  # same subject -> same chime folder
+    content = newer_chime.read_text(encoding="utf-8")
+    assert "Updated **text**" in content
+    assert "Body **text**" not in content  # old revision's content is gone
+
+
+def test_eml_file_to_chime_older_revision_is_superseded_and_leaves_content_untouched(
+    tmp_path,
+):
+    newer = write_eml(
+        tmp_path,
+        "todo.eml",
+        SIMPLE_HTML_EML.replace(
+            "Date: Fri, 11 Sep 2026 12:00:00 +0000",
+            "Date: Sat, 12 Sep 2026 09:00:00 +0000",
+        ),
+    )
+    older_raw = SIMPLE_HTML_EML.replace(
+        "Body <strong>text</strong>", "Stale <strong>text</strong>"
+    )
+    older = write_eml(tmp_path, "todo 2.eml", older_raw)
+
+    chime_path = eml_file_to_chime(newer, base_dir=tmp_path)
+
+    with pytest.raises(ChimeSupersededError):
+        eml_file_to_chime(older, base_dir=tmp_path)
+
+    content = chime_path.read_text(encoding="utf-8")
+    assert "Body **text**" in content
+    assert "Stale **text**" not in content
 
 
 def test_eml_file_to_chime_copies_inline_image(tmp_path):

@@ -110,6 +110,34 @@ I interupted and Claude reverted the changes. But now I DON'T REALLY KNOW if the
 
 I will commit anyways and do a dry run myself to confirm I at least get a site ok?
 
+I have now confirmed that the pipeline works without errors on my todo-mails.
+
+* This is GREAT!
+
+There are still issues though!
+
+* Some entries in the index.md file is malformed.
+
+    * Maybe there are characters in the subject/eml-filename that causes the maklrdown to become illformed?
+```text
+[Todo_ Consider to outline my own philosophy in the making by commenting on the youtube video “My Problem With Sam Harris’ Morality	Featuring Rationality Rules”?](/chime/081baf88/chime.html)
+```
+* My chimes are still named after the eml-file and not after the actual mail subject.
+* I still create chimes for ALL eml-files (I want to keep the newest vesrion of each subject)
+* I still create chimes for todo-mails that are not in fact todo-mails I want to keep.
+
+So where to begin?
+
+* I imagine the filter can be based on hash-value (easiest and cleanest)?
+    * But then I need to first base the chime on the subject (an not on the eml-file name)?
+
+So maybe I should first filter out and keep only the latest mail for each subject?
+
+I asked Claude to implement a 'deduplication' based on mail subject and latest date ok.
+
+* [site_repo/chimes](./site_repo/chime/index.md)
+
+
 ## 20260930
 
 It seems I now have a working emls-to-chimes in [Consider take 2 on eml-to-chime python mechanism?](../../session/aa98c723/session.md)?

@@ -7,7 +7,7 @@ Failures are logged and skipped so one bad eml doesn't stop the run.
 import sys
 from pathlib import Path
 
-from eml_to_chime import eml_file_to_chime, update_chime_index
+from eml_to_chime import ChimeSupersededError, eml_file_to_chime, update_chime_index
 
 # When stdout and stderr are both redirected to the same file (e.g.
 # `> output.log 2>&1`), stdout is block-buffered while stderr isn't, so
@@ -41,12 +41,16 @@ def main() -> None:
         sys.exit(f"No .eml files found in {eml_dir}")
 
     ok_count = 0
+    skipped_count = 0
     fail_count = 0
 
     for eml_path in eml_paths:
         try:
             eml_file_to_chime(eml_path, base_dir=out_dir)
             print(f"OK: {eml_path.name}")
+        except ChimeSupersededError:
+            skipped_count += 1
+            print(f"SKIP: {eml_path.name} (superseded by a newer mail with the same subject)")
         except Exception as e:
             fail_count += 1
             print(f"FAIL: {eml_path.name}", file=sys.stderr)
@@ -54,7 +58,10 @@ def main() -> None:
         else:
             ok_count += 1
 
-    print(f"\n{ok_count} ok, {fail_count} failed, {len(eml_paths)} total")
+    print(
+        f"\n{ok_count} ok, {skipped_count} skipped (superseded), "
+        f"{fail_count} failed, {len(eml_paths)} total"
+    )
 
     if ok_count:
         update_chime_index(out_dir)

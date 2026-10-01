@@ -18,6 +18,7 @@ import importlib.util
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from email import policy
 from pathlib import Path
 
@@ -26,11 +27,15 @@ from eml_to_html import sanitize
 from html_to_markdown import convert as html_to_markdown_convert
 
 
-class ChimeAlreadyExistsError(Exception):
-    """Raised when a chime already exists for this eml file's name.
+class ChimeSupersededError(Exception):
+    """Raised when an existing chime for this mail's Subject already
+    reflects an equal-or-newer mail.
 
-    The eml file name is used as the chime key, so this only fires when
-    the same eml file has already been processed into a chime.
+    Mails are keyed by Subject, not filename: Apple Mail's exporter
+    appends a disambiguating " 2", " 3", ... to the *filename* alone when
+    several exported mails share a subject (the real Subject: header is
+    identical across them) — those are different versions of the same
+    chime, and only the latest (by Date header) is kept.
     """
 
 
@@ -67,28 +72,82 @@ def update_chime_index(base_dir: Path) -> None:
     )
 
 
-def parse_date_line(eml_path: Path) -> str:
-    msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
+def subject_of(msg) -> str:
+    return str(msg.get("subject") or "").strip() or "(no subject)"
+
+
+def parsed_date_of(msg):
+    """The mail's Date header as a datetime, or None if absent/unparsable."""
     date = msg.get("date")
     if date is None:
-        return "(no date)"
+        return None
     try:
-        return date.datetime.isoformat()
+        return date.datetime
     except AttributeError:
-        return str(date)
+        return None
+
+
+def date_line_of(msg) -> str:
+    parsed = parsed_date_of(msg)
+    if parsed is not None:
+        return parsed.isoformat()
+    date = msg.get("date")
+    return str(date) if date is not None else "(no date)"
+
+
+def is_newer(candidate_date, current_date) -> bool:
+    """True if candidate_date should replace current_date as the chime's
+    source mail. A missing date always loses to a present one; between two
+    present dates the later one wins; dates that aren't directly comparable
+    (e.g. one naive, one aware) keep the current one rather than crash the
+    whole batch over one odd header."""
+    if candidate_date is None:
+        return False
+    if current_date is None:
+        return True
+    try:
+        return candidate_date > current_date
+    except TypeError:
+        return False
+
+
+def read_chime_date(chime_path: Path):
+    """Read back the date eml_file_to_chime wrote into an existing chime:
+    line 1 is "# heading", line 2 blank, line 3 the date line — the exact
+    layout init_new.py + eml_file_to_chime always produce together. Returns
+    None if that line is missing or isn't a parseable ISO date (e.g. the
+    "(no date)" fallback)."""
+    lines = chime_path.read_text(encoding="utf-8").split("\n", 3)
+    if len(lines) < 3:
+        return None
+    try:
+        return datetime.fromisoformat(lines[2])
+    except ValueError:
+        return None
 
 
 def eml_file_to_chime(eml_path: Path, base_dir: Path) -> Path:
-    """Turn eml_path into a chime folder under base_dir/chime/<hash>/."""
+    """Turn eml_path into a chime folder under base_dir/chime/<hash>/,
+    keyed by the mail's Subject so later revisions of the same todo replace
+    earlier ones rather than piling up as separate chimes."""
     ensure_entry_folder = load_ensure_entry_folder(base_dir)
-    chime_path, created = ensure_entry_folder("chime", eml_path.stem, base_dir=base_dir)
-    if not created:
-        raise ChimeAlreadyExistsError(
-            f"chime already exists for eml file {eml_path.name!r} — "
-            "already processed"
-        )
+    msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
+    subject = subject_of(msg)
+    candidate_date = parsed_date_of(msg)
 
+    chime_path, created = ensure_entry_folder("chime", subject, base_dir=base_dir)
     chime_dir = chime_path.parent
+
+    if not created:
+        if not is_newer(candidate_date, read_chime_date(chime_path)):
+            raise ChimeSupersededError(
+                f"chime for subject {subject!r} already reflects an "
+                f"equal-or-newer mail — {eml_path.name!r} is superseded"
+            )
+        shutil.rmtree(chime_dir)
+        chime_path, created = ensure_entry_folder("chime", subject, base_dir=base_dir)
+        assert created, f"just removed {chime_dir}, recreating it should not clash"
+
     scratch_dir = chime_dir / "_html_scratch"
     md_path = chime_dir / (sanitize(eml_path.stem) + ".md")
 
@@ -99,7 +158,7 @@ def eml_file_to_chime(eml_path: Path, base_dir: Path) -> Path:
         markdown_body = md_path.read_text(encoding="utf-8")
         md_path.unlink()
 
-        date_line = parse_date_line(eml_path)
+        date_line = date_line_of(msg)
         with chime_path.open("a", encoding="utf-8") as f:
             f.write(f"{date_line}\n\n")
             # Mail content routinely contains "{{" / "{%" (C++ brace-init,
@@ -136,7 +195,7 @@ def main() -> None:
 
     try:
         chime_path = eml_file_to_chime(args.eml, base_dir=args.out_dir)
-    except (ChimeAlreadyExistsError, FileNotFoundError) as e:
+    except (ChimeSupersededError, FileNotFoundError) as e:
         sys.exit(str(e))
 
     update_chime_index(args.out_dir)
