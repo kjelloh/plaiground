@@ -188,6 +188,32 @@ def test_eml_file_to_chime_document_attachment_alongside_text(tmp_path):
     assert "[Plans.pages](Plans.pages)" in content
 
 
+def test_eml_file_to_chime_wraps_body_in_liquid_raw(tmp_path):
+    """Mail content with Liquid-looking "{{" / "{%" (e.g. C++ brace-init)
+    must not break the Jekyll build — see session.md 20261001 for the real
+    4433-mail run that hit this: some shapes abort the entire site build,
+    not just render oddly."""
+    raw = (
+        "Subject: Braces\r\n"
+        "From: foo@bar.se\r\n"
+        'Content-Type: text/plain; charset="utf-8"\r\n'
+        "\r\n"
+        'std::array<std::array<int,3>,3> a{{{{-1,-1,-1}},{{-1,-1,-1}}}};\r\n'
+    )
+    eml_path = write_eml(tmp_path, "braces.eml", raw)
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    content = chime_path.read_text(encoding="utf-8")
+    assert "{% raw %}" in content
+    assert "{% endraw %}" in content
+    assert "a{{{{-1,-1,-1}},{{-1,-1,-1}}}};" in content
+    raw_start = content.index("{% raw %}")
+    endraw_start = content.index("{% endraw %}")
+    body_start = content.index("a{{{{-1,-1,-1}}")
+    assert raw_start < body_start < endraw_start
+
+
 def test_eml_file_to_chime_no_content_raises(tmp_path):
     raw = (
         "Subject: Nothing\r\n"

@@ -70,6 +70,45 @@ I asked Claude to do the refactor and test it against `site_repo`. And it did.
 
 * Then I can do ```./to_site/to_site.py site_repo```
 
+I now asked Claude to try the mechanism on my almost 4500 todo-mails and take a look at the warnings and errors I encpuntered when I tried it myself.
+
+* It seems Claude identifies the problem that 'liquid' is in fact not disabled (although stated to be disabled in the _config-yml file)
+
+    * And it seems my mail with C++ code erroeously triggers liquid macro expansion?
+
+```sh
+Root cause: Mail content routinely contains {{...}} (C++ brace-initialization like std::array<...> a{{{{-1,-1,-1}}...}}, or notation like {name: text}). Jekyll's Liquid templating engine treats any file containing the literal substring {{ or {% as a template to parse — and the render_with_liquid: false setting in _config.yml that was supposed to disable this for chimes turns out to be a no-op in Jekyll 3.10.0 (the version github-pages pins): I checked the gem source directly — Jekyll::Page#render_with_liquid? never even looks at that config key, it just does content.include?("{{") || content.include?("{%"). So every chime was always exposed to this.
+
+Of 4433 chimes, exactly 18 contain {{/{%. I classified all 18 with the real liquid gem:
+- 9 produce a malformed-but-recoverable tag → Jekyll logs a warning and (silently!) drops/alters that content.
+- 8 produce an unterminated tag (e.g. {{name: text} missing its closing }}) → Liquid can't bound the parse and raises a fatal Liquid::SyntaxError, which aborts the entire site build, not just that page. That's the "hard fail on one" you saw.
+
+Fix implemented: eml_to_chime.py now wraps every chime body in Liquid's own {% raw %}...{% endraw %} — the mechanism Liquid provides specifically for "don't parse this," built to survive malformed-looking content (it scans for the literal {% endraw %} token rather than tokenizing what's inside). Verified against the real liquid gem: all 18 previously-broken files now parse and round-trip byte-for-byte with zero change in rendered output. Added a regression test; all 17 tests pass. Also cleaned up the now-proven-ineffective render_with_liquid config so it doesn't give false confidence.
+
+```
+
+* But I don't like this. Such syntax will show up in any markdown viewer (not nice)
+* But I also need to do something to make Github Pages generate properly?
+* Is there maybe another way to not trigger liquid macro expansion?
+
+Claude also found another bug.
+
+* It seems I have a mail with a large log file that conatins text that looks like embedded html?
+
+```
+Found and fixed a second bug — same bug class as before (unguarded markdown escaping), different trigger. The real culprit wasn't nested C++ templates but a huge pasted log full of literal <...> references (<Settings>-style text): raw <...> is valid inline HTML in CommonMark, so Kramdown's HTML parser engaged and, with ~4300 such sequences in one 950KB file, recursed itself into a stack overflow. Fixed html_to_markdown.py to entity-escape </> the same way it already does for [/]. Verified against the actual file and added a regression test. Regenerating all 4433 chimes a third time with both fixes now, then rebuilding to confirm.
+```
+
+MY GOD!! Everything is SOO FRAGILE!
+
+* WHen Claude finalised the fixes and confirmed that the site now builds for all my todo-mails it reads my notes above.
+* AND THEN STARTS TO ATTEND TO THIS ISSUE!!
+* But I wanted to commit the working fix FIRST!!
+* WHo works like this? Just WIlly vanilly keeps making changes without comitting what works first?
+
+I interupted and Claude reverted the changes. But now I DON'T REALLY KNOW if the fix still works?
+
+I will commit anyways and do a dry run myself to confirm I at least get a site ok?
 
 ## 20260930
 

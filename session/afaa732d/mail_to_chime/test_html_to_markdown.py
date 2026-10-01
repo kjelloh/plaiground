@@ -49,6 +49,19 @@ def test_bracket_text_does_not_become_a_link():
     assert "[0-9]" not in markdown
 
 
+def test_angle_bracket_text_is_entity_escaped():
+    # Raw "<...>" in markdown source is valid inline HTML per CommonMark, so
+    # a renderer's HTML parser (e.g. Jekyll's Kramdown) will try to parse it
+    # as a tag. A mail with many literal "<...>" references (e.g. "<Settings>
+    # menu") must not leave raw angle brackets in the output — on a large
+    # real mail (~4300 such sequences) this made Kramdown's HTML tag parser
+    # recurse once per occurrence and blow the Ruby call stack.
+    html = "<html><body><p>Set &lt;Connection Type&gt; to &lt;TCP/IP&gt;.</p></body></html>"
+    markdown, refs = html_to_markdown(html)
+    assert "<" not in markdown and ">" not in markdown
+    assert "&lt;Connection Type&gt; to &lt;TCP/IP&gt;." in markdown
+
+
 def test_bracket_text_does_not_collide_with_latex_math_delimiters():
     # "\[" / "\]" is valid CommonMark escaping for a literal bracket, but
     # it's also the LaTeX display-math delimiter many renderers (e.g. VS

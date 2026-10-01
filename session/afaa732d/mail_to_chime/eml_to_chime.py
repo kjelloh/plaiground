@@ -102,7 +102,16 @@ def eml_file_to_chime(eml_path: Path, base_dir: Path) -> Path:
         date_line = parse_date_line(eml_path)
         with chime_path.open("a", encoding="utf-8") as f:
             f.write(f"{date_line}\n\n")
+            # Mail content routinely contains "{{" / "{%" (C++ brace-init,
+            # JSON-ish notes, ...) which Jekyll/Liquid treats as template
+            # syntax regardless of front matter settings — a malformed one
+            # aborts the *entire* site build, not just this page. {% raw %}
+            # is Liquid's own mechanism for "don't parse this", built to
+            # survive exactly this case (verified: scans for the literal
+            # {% endraw %} token rather than tokenizing the content).
+            f.write("{% raw %}\n")
             f.write(markdown_body)
+            f.write("\n{% endraw %}\n")
     finally:
         if scratch_dir.is_dir():
             shutil.rmtree(scratch_dir)

@@ -25,6 +25,16 @@ MD_ESCAPE = {ord(c): "\\" + c for c in "\\`*"}
 # block. Entities can't be mistaken for either link syntax or math syntax.
 MD_ESCAPE[ord("[")] = "&#91;"
 MD_ESCAPE[ord("]")] = "&#93;"
+# Angle brackets, too: raw "<...>" in markdown source is valid inline HTML
+# per CommonMark, so a renderer's HTML parser (e.g. Jekyll's Kramdown) will
+# try to parse it as a tag. A mail full of literal "<...>" references (log
+# pastes, "<Settings> menu" style text) can make that parser recurse once
+# per occurrence and blow its stack on a large-enough file — seen for real
+# on a ~1000-line TestBench log mail with ~4300 "<...>" sequences. Escaping
+# as entities (not backslash — backslash-escaping "<"/">" isn't even valid
+# CommonMark) keeps it plain text no HTML parser will ever touch.
+MD_ESCAPE[ord("<")] = "&lt;"
+MD_ESCAPE[ord(">")] = "&gt;"
 
 
 def md_link(url: str) -> str:
