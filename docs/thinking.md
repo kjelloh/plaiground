@@ -5,6 +5,18 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20260930
+
+It seems I now have a working emls-to-chimes in [Consider take 2 on eml-to-chime python mechanism?](../session/aa98c723/session.md)?
+
+So it is time to put together the whole pipe todo-mails-to-chimes and git-repo-to-web-site?
+
+* I have the to_site scripts in [Consider a way to filter out all files that is reachable from a site with an index.md root document?](../session/805fef21/session.md)
+* And I have the the eml-to-chime in [Consider take 2 on eml-to-chime python mechanism?](../session/aa98c723/session.md)
+
+I created [Consider to vibe code a working emls-to-chimes and to_site integration?](../session/afaa732d/session.md) for this.
+
+
 ## 20260929
 
 Created * [Consider a way to filter out all files that is reachable from a site with an index.md root document?](../session/805fef21/session.md)
