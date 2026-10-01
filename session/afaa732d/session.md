@@ -33,7 +33,6 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 │   ├── eml_to_html.py
 │   ├── emls_to_chimes.py
 │   ├── html_to_markdown.py
-│   ├── init_new.py
 │   ├── pytest.ini
 │   ├── test_eml_to_chime.py
 │   └── test_html_to_markdown.py
@@ -41,6 +40,7 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 ├── site_repo
 │   ├── _config.yml
 │   ├── index.md
+│   ├── init_new.py
 │   └── update_index.py
 └── to_site
     ├── publish_site.py
@@ -48,6 +48,9 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
     ├── stage_site.py
     ├── to_jekyll_site.py
     └── to_site.py
+
+5 directories, 23 files
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % 
 ```
 
 * The 'example_eml' folder contains eml-files for testing
@@ -55,6 +58,18 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * The 'to_site' folder contains the mechanism to process a git repo site folder into a static wen site
     * The git repo site folder must be configured to work as required by Github Pages
 * The 'site_repo' folder is an example git repo site folder to test on
+
+I now need to ask Claude to refactor the scripts to work with the current session folder structure.
+
+* I want the mechanisms to use init_new and update_index in the site_repo folder.
+    * In this way it will mimic how the mechanisms shall be applied to my other existing git repos
+
+I asked Claude to do the refactor and test it against `site_repo`. And it did.
+
+* I can now do ```% ./mail_to_chime/emls_to_chimes.py example_eml site_repo```
+
+* Then I can do ```./to_site/to_site.py site_repo```
+
 
 ## 20260930
 

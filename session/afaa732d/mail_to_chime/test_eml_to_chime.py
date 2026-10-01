@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import pytest
@@ -5,6 +6,16 @@ import pytest
 import eml_to_chime
 import eml_to_html
 from eml_to_chime import ChimeAlreadyExistsError, eml_file_to_chime
+
+SITE_REPO_INIT_NEW = Path(__file__).parent.parent / "site_repo" / "init_new.py"
+
+
+@pytest.fixture(autouse=True)
+def init_new_in_tmp(tmp_path):
+    """eml_file_to_chime loads init_new.py from base_dir (the target
+    repo) — give tmp_path a copy of the real one, like any repo this
+    mechanism is pointed at would already have."""
+    shutil.copy2(SITE_REPO_INIT_NEW, tmp_path / "init_new.py")
 
 SIMPLE_HTML_EML = (
     "Subject: Hello\r\n"
@@ -193,6 +204,6 @@ def test_eml_file_to_chime_no_content_raises(tmp_path):
 
 
 def test_parse_sample_eml():
-    eml_dir = Path(__file__).parent.parent / "eml"
+    eml_dir = Path(__file__).parent.parent / "example_eml"
     eml_paths = list(eml_dir.glob("*.eml"))
     assert eml_paths, f"expected at least one sample .eml in {eml_dir}"

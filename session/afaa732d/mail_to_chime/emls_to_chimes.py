@@ -7,7 +7,7 @@ Failures are logged and skipped so one bad eml doesn't stop the run.
 import sys
 from pathlib import Path
 
-from eml_to_chime import eml_file_to_chime
+from eml_to_chime import eml_file_to_chime, update_chime_index
 
 # When stdout and stderr are both redirected to the same file (e.g.
 # `> output.log 2>&1`), stdout is block-buffered while stderr isn't, so
@@ -55,6 +55,9 @@ def main() -> None:
             ok_count += 1
 
     print(f"\n{ok_count} ok, {fail_count} failed, {len(eml_paths)} total")
+
+    if ok_count:
+        update_chime_index(out_dir)
 
 
 if __name__ == "__main__":
