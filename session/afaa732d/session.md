@@ -149,6 +149,50 @@ exclude.md (/Users/kjell-olovhogdahl/Downloads/mail_export/eml/exclude.md), 17 e
 kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % 
 ```
 
+I now edited exclude.md with 'Testbench' related todo-mails. The iterative process seems to work quite well now?
+
+```sh
+exclude.md (/Users/kjell-olovhogdahl/Downloads/mail_export/eml/exclude.md), 44 entries:
+  75 mail files excluded, covering 44 subjects
+  27 existing chimes removed
+  17 excluded subjects had no existing chime
+  0 entries matched nothing
+
+Removed 27 chime(s):
+  site_repo/chime/01f9199b  Todo: Testbench - Consider to implement Presentment-file generation as a proof-of-concept of DSL-based Protocol-message-encoding engine?   (1 mail files excluded)
+  site_repo/chime/170119ee  Todo: Testbench - Consider to define refactoring to enhance Testbench internal design?   (8 mail files excluded)
+  site_repo/chime/1b43ade2  Todo: Testbench - Consider tp document successful Code Signing with Digicert EV Code Signing HW Token?   (2 mail files excluded)
+  site_repo/chime/1b8ea010  Todo: Testbench - Consider milestones and path to refactor into using modern C++ and some standard tool-chain?   (2 mail files excluded)
+  site_repo/chime/2ada6706  Todo: Testbench - Consider to understand the SPDH encryption code to refactor it using standard encryption code?   (4 mail files excluded)
+  site_repo/chime/2f9b5eab  Todo: Testbench - Find a better code signing certificate!   (2 mail files excluded)
+  site_repo/chime/3653cdac  Todo: Testbench - Consider to find C++ alternatives for FTP Client/Server implementation?   (2 mail files excluded)
+  site_repo/chime/3752e44e  Todo: Testbench - Document upgrade process from 2.0.1 to 2.0.3w   (1 mail files excluded)
+  site_repo/chime/47709e70  Todo: Tesbench - Consider to port Swedbank Testbench to Rasperry Pi Computer?   (1 mail files excluded)
+  site_repo/chime/4e7d1d71  Todo: Testbench - Consider to NOT use exceptions for Data Representation Framework functions based on Alexandrescu statements in his "C++ and beyond 2012" talk?   (1 mail files excluded)
+  site_repo/chime/542e38eb  Todo: Testbench - Analyse 2.0.3 Design Insufficiency Log   (2 mail files excluded)
+  site_repo/chime/68438fd5  Todo: TestBench - Consider how to upgrade Testbench to RAD Studio 10, Clang and Digicert Code Signing?   (1 mail files excluded)
+  site_repo/chime/73b2126b  Todo: Testbench - Consider to investigate what raw loops there are and how to fix them?   (2 mail files excluded)
+  site_repo/chime/875b5ce1  Todo: Testbench - Consider to use the icu-project C++ library for UTF string conversions?   (1 mail files excluded)
+  site_repo/chime/8cd7a782  Todo: C++ Lecture - Consider to talk about the "Key Path" concept used extensively in Testbench for referring to elements in structures as well as files in file directories?   (1 mail files excluded)
+  site_repo/chime/94e66964  Todo: TestBench - Consider to implement Testbench Log filter mechanism?   (1 mail files excluded)
+  site_repo/chime/9ac1b862  Todo: Testbench - Add HTML Help   (1 mail files excluded)
+  site_repo/chime/a2768e5a  Todo: Testbench - Consider to extend ValueSetEvent with the value encoded in internal BER TLV?   (1 mail files excluded)
+  site_repo/chime/aa2ca9a6  Todo: Testbench - Consider to implement TCP IO using boost::asio?   (4 mail files excluded)
+  site_repo/chime/b204745f  Todo: Testbench - Consider to prepare the Testbench for different build-environments and possibly targets?   (1 mail files excluded)
+  site_repo/chime/b66ee905  Todo: Testbench - Consider to allow multiple instances of bench and log-dll?   (1 mail files excluded)
+  site_repo/chime/be53e83d  Todo: TestBench - Consider to initiate a process to refactor Testbench into Cmake, Git based Visual Studio and MinGW Clang tool-chain builds?   (1 mail files excluded)
+  site_repo/chime/c6fdbf40  Todo: Testbench - Consider to have iPosLog.dll open log file as Windows File Handle to enable synchronisation?   (1 mail files excluded)
+  site_repo/chime/c76b67dd  Todo: Testbench - Propose a way for Swedbank to monitor activities and progress by Testbench users?   (3 mail files excluded)
+  site_repo/chime/cd51fa5d  Todo: testBench - Consider to find why Clang-compiled win32 Testbench crashes on ECR start-up?   (1 mail files excluded)
+  site_repo/chime/dcab8ac6  Todo: Testbench - Consider to verify possible errors on BCC64 code related to char* + int not implying the same thing as in BCC32?   (2 mail files excluded)
+  site_repo/chime/f35668a6  Todo: Testbench - Consider to write down the "upgrade to XE 10" process (including subversion branching)?   (1 mail files excluded)
+Updated 'chime/index.md' with 3160 entries.
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % 
+```
+
+But I want to find somewhere to version control my exclude.md?
+
+
 ## 20261001
 
 My God, this is SOOO HARD!!
