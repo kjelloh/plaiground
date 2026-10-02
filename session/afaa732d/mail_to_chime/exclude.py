@@ -1,9 +1,10 @@
 """Parse an exclude.md listing mails that must not become chimes.
 
 exclude.md lives in the eml folder itself, so it filters the mail source:
-a listed mail never becomes a chime. Its format is the one update_index.py
-writes to chime/index.md, so entries can be cut-and-pasted (or grep'ed)
-straight from any chime index:
+a listed mail never becomes a chime, and an already existing chime for it
+is removed. Its format is the one update_index.py writes to
+chime/index.md, so entries can be cut-and-pasted (or grep'ed) straight
+from any chime index:
 
     * [TODO: Wrap up TestBench](ad2d0789/chime.md)
 
@@ -27,17 +28,47 @@ ENTRY_RE = re.compile(r"^\s*[*+-]\s+\[(?P<heading>.*)\]\((?P<target>[^()]*)\)\s*
 
 
 @dataclass
+class Entry:
+    line: str
+    heading: str
+    target_hash: str | None
+    # Set once the entry has matched a mail or an existing chime, so
+    # entries that matched nothing (typos, stale lines) can be reported.
+    hit: bool = False
+
+
+@dataclass
 class Exclusions:
     source: Path
     compute_hash: Callable[[str], str]
-    hashes: set[str] = field(default_factory=set)
-    headings: set[str] = field(default_factory=set)
+    entries: list[Entry] = field(default_factory=list)
 
     def __len__(self) -> int:
-        return len(self.hashes | {self.compute_hash(h) for h in self.headings})
+        return len(self.entries)
+
+    def entry_matches(self, entry: Entry, subject: str) -> bool:
+        return subject == entry.heading or self.compute_hash(subject) == entry.target_hash
 
     def matches(self, subject: str) -> bool:
-        return subject in self.headings or self.compute_hash(subject) in self.hashes
+        """True if any entry matches subject (marking those entries hit)."""
+        matched = False
+        for entry in self.entries:
+            if self.entry_matches(entry, subject):
+                entry.hit = True
+                matched = True
+        return matched
+
+    def chime_hashes(self, entry: Entry) -> set[str]:
+        """The chime folder hashes entry may refer to: its target's hash
+        and the hash of its heading (the folder a mail with exactly that
+        Subject would get)."""
+        hashes = {self.compute_hash(entry.heading)} if entry.heading else set()
+        if entry.target_hash is not None:
+            hashes.add(entry.target_hash)
+        return hashes
+
+    def unmatched(self) -> list[Entry]:
+        return [entry for entry in self.entries if not entry.hit]
 
 
 def hash_from_target(target: str, hash_length: int) -> str | None:
@@ -55,12 +86,13 @@ def load_exclusions(exclude_path: Path, compute_hash: Callable[[str], str]) -> E
         match = ENTRY_RE.match(line)
         if match is None:
             continue
-        heading = match["heading"].strip()
-        if heading:
-            exclusions.headings.add(heading)
-        key = hash_from_target(match["target"], hash_length)
-        if key is not None:
-            exclusions.hashes.add(key)
+        exclusions.entries.append(
+            Entry(
+                line=line.strip(),
+                heading=match["heading"].strip(),
+                target_hash=hash_from_target(match["target"], hash_length),
+            )
+        )
     return exclusions
 
 

@@ -40,10 +40,101 @@ Question is, how should I design the exclude-file?
 
 OK. I will copy an eml-file that is to be excluded to the example eml-files. And create an exclude.md with this mail chime as an entry and ask Claude to make the filter mechanism based on this design.
 
+Claude seems to have implemented the filter mechanism ok?
+
+I now started to define a filter for my todo-mails.
+
+* I start of with 3204 unique chimes.
+
+```sh
+3691 ok, 742 skipped (superseded), 0 excluded, 0 failed, 4433 total
+Updated 'chime/index.md' with 3204 entries.
+```
+
+* I checked the size of all images in created chimes (5677 files, 730.83 MB)
+
+```sh
+find site_repo/chime -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.gif' -o -iname '*.heic' -o -iname '*.webp' -o -iname '*.tiff' \) \ 
+  -exec stat -f%z {} + | awk '{s+=$1} END {printf "%d files, %.2f MB\n", NR, s/1024/1024}'
+5677 files, 730.83 MB
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % 
+```
+
+* I listed the sizes of the chimes for my todo_mails
+
+    * They are all from 30 MB down to 4KB (so no one is especially big)
+
+```sh
+du -sh site_repo/chime/* | sort -hr
+ 27M	site_repo/chime/3276d074
+ 12M	site_repo/chime/514c276b
+ 11M	site_repo/chime/06d04185
+ 10M	site_repo/chime/ecc1769f
+ 10M	site_repo/chime/24bfdc2f
+ ...
+ 8.0K	site_repo/chime/00df2efe
+8.0K	site_repo/chime/00bb7847
+8.0K	site_repo/chime/009a1290
+8.0K	site_repo/chime/008ee028
+8.0K	site_repo/chime/004bf692
+8.0K	site_repo/chime/00370ad0
+8.0K	site_repo/chime/00302a5a
+8.0K	site_repo/chime/002f886a
+4.0K	site_repo/chime/7c2f1471
+4.0K	site_repo/chime/71b94d41
+```
+
+    * But all chimes sums up to 1GB!
+
+```sh
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % du -sh site_repo/chime/ 
+1.0G	site_repo/chime/
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % 
+```
+
 * [site_repo/chimes](./site_repo/chime/index.md)
 * [example_eml/exclude.md](./example_eml/exclude.md)
 
-Claude seems to have implemented the filter mechanism ok?
+* According to online Claude a 1GB repo should be fine.
+
+I found out that if I first create exclude.md in the chime folder I can click the links to examine what I am excluding.
+
+* This does not work if I create and edit in my foreign eml-files folder (the links of the index entries does not work frm this folder)
+
+* [site_repo/chime/exclude.md](./site_repo/chime/exclude.md)
+
+I found that I now need the mail-to-chime to remove chimes as I edit the exclude.md file.
+
+* I asked Claude to implement this na dit did.
+* It now has a '--dry-run' flag so I can check before applying.
+
+```sh
+./mail_to_chime/emls_to_chimes.py --dry-run ~/Downloads/mail_export/eml site_repo
+...
+DRY RUN — nothing created or removed: 26 would be excluded, 17 would be removed, 0 failed, 4433 total
+
+Would remove 17 chime(s) listed in /Users/kjell-olovhogdahl/Downloads/mail_export/eml/exclude.md:
+  site_repo/chime/0df9bfd6  Todo: Ekbladet IT - Se till att använda rätt Auktoriseringskod vid flytt av bolinderstrand.se till Binero
+  site_repo/chime/225fff8d  Todo: Överväg att städa upp i BRF Ekbladet Dropbox med hjälp av nya programmet merkels (och genererad textfil med filer sorterade på signatur)?
+  site_repo/chime/31605a2f  Todo: Brf Ekbladet - mail från Åke om beträda gräsmattor
+  site_repo/chime/45e09be4  Todo: Ekbladet - Överväg att dokumentera köp av ny dator till föreningens datorrum Nov 2017?
+  site_repo/chime/50607dcc  Todo: Ekbladet IT - Se till att använda rätt Namn-servrar och Auktoriseringskod vid flytt av bolinderstrand.se till Binero
+  site_repo/chime/57239125  Todo: Ekbladet IT - Överväg att upprätta (städa) i Ekbladets Dropbox-arkiv och delade mapp?
+  site_repo/chime/591c50bf  Todo: Ekbladet IT - fotograferade uppgifter
+  site_repo/chime/75739e8d  BRF Ekbladet Todo - Skräp efter bänkrenoveringar behöver hjälp att slängas (städdag i höst?)
+  site_repo/chime/76102471  Todo: Ekbladet - Överväg att städa upp på webb-hotellet?
+  site_repo/chime/8097c87c  Todo: Ekbladet IT - Överväg att dokumentera och spara alla konton och login-information för löpande användning och uppdatering?
+  site_repo/chime/a4fb0e90  Todo: Ekbladet - Överväg att flytta bolinderstrand.se till en statisk sida på blogspot?
+  site_repo/chime/ae667961  Todo: Ekbladet IT - Överväg att upprätta ett diarium (log) över aktiviteter som har med vår IT (bolinderstrand.se) att göra (låsa upp konton, byta abonnemang, etc.)?
+  site_repo/chime/e2924cf7  brf Ekbladet Todo: Medlem önskarUtdrag ur lägenhetsförteckningen
+  site_repo/chime/e3bc7bb2  Todo BRF Ekbladet - Marcella är ledsen på sin trädgård och kvalité på uterum
+  site_repo/chime/f04f3ffa  Todo: Ekbladet IT - Överväg att hitta ett alternativ till att drifts eget webb-hotell (sida)?
+  site_repo/chime/f7cf7526  Todo: Ekbladet IT - Scan 23 nov. 2017 15.02
+  site_repo/chime/fe259eff  Todo: Ekbladet IT - Hemsida hos Borätterna  - Överväg att dokumentera kontaktpersoner och uppgifter för framtida underhåll?
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d %
+```
+
+
 
 ## 20261001
 

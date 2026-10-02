@@ -4,7 +4,8 @@
 Pipeline: eml_to_html (extract the HTML body + inline images) -> html_to_markdown
 (convert to markdown, copy images) -> merge the result into chime.md scaffolded
 by init_new. A mail listed in an exclude.md next to it (same format as
-chime/index.md, see exclude.py) is skipped before anything is written.
+chime/index.md, see exclude.py) is skipped before anything is written, and
+an already existing chime for it is removed.
 The mail's original text/plain body (if any) is also kept
 verbatim as chime.txt (via eml_to_txt), linked from chime.md
 right after the date line.
@@ -51,8 +52,8 @@ class ChimeExcludedError(Exception):
     """Raised when the mail is listed in the exclude.md of its eml folder.
 
     existing_chime is set when a chime for that Subject is already present
-    (e.g. from a run before it was excluded) — it is left in place, not
-    removed.
+    (e.g. from a run before it was excluded); eml_file_to_chime itself
+    leaves it in place — removing it is remove_chime's job.
     """
 
     def __init__(self, message: str, existing_chime: Path | None = None):
@@ -82,6 +83,44 @@ def find_exclusions_for(eml_dir: Path, base_dir: Path) -> Exclusions | None:
     return find_exclusions(eml_dir, load_init_new(base_dir).compute_hash)
 
 
+def chime_heading(chime_md: Path) -> str:
+    with chime_md.open(encoding="utf-8") as f:
+        return f.readline().strip().lstrip("#").strip()
+
+
+def remove_chime(chime_dir: Path, dry_run: bool = False) -> str:
+    """Remove a chime folder; returns its heading (read before removal)."""
+    heading = chime_heading(chime_dir / "chime.md")
+    if not dry_run:
+        shutil.rmtree(chime_dir)
+    return heading
+
+
+def remove_excluded_chimes(
+    base_dir: Path, exclusions: Exclusions, dry_run: bool = False
+) -> list[tuple[Path, str]]:
+    """Remove every base_dir/chime/<hash>/ that an exclude.md entry refers
+    to, whether or not its mail is still around. Returns (chime folder,
+    heading) for each removed (or, with dry_run, removable) chime.
+
+    Only an existing chime/<hash>/ folder holding a chime.md is touched:
+    entry targets are only mined for a hex hash, never followed as paths."""
+    chime_root = base_dir / "chime"
+    removed: list[tuple[Path, str]] = []
+    seen: set[str] = set()
+    for entry in exclusions.entries:
+        for key in sorted(exclusions.chime_hashes(entry)):
+            chime_dir = chime_root / key
+            if not (chime_dir / "chime.md").is_file():
+                continue
+            entry.hit = True
+            if key in seen:
+                continue
+            seen.add(key)
+            removed.append((chime_dir, remove_chime(chime_dir, dry_run=dry_run)))
+    return removed
+
+
 def update_chime_index(base_dir: Path) -> None:
     """Refresh base_dir/chime/index.md by running the target repo's own
     update_index.py — mirrors running it by hand from within that repo."""
@@ -101,6 +140,11 @@ def update_chime_index(base_dir: Path) -> None:
 
 def subject_of(msg) -> str:
     return str(msg.get("subject") or "").strip() or "(no subject)"
+
+
+def read_subject(eml_path: Path) -> str:
+    msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
+    return subject_of(msg)
 
 
 def parsed_date_of(msg):
@@ -162,7 +206,8 @@ def eml_file_to_chime(
 
     A mail matching exclusions — by default those of the exclude.md next
     to eml_path, if any; a batch passes them in pre-loaded — raises
-    ChimeExcludedError before anything is written."""
+    ChimeExcludedError before anything is written (an existing chime for
+    it is reported, not removed: see remove_chime / remove_excluded_chimes)."""
     init_new = load_init_new(base_dir)
     ensure_entry_folder = init_new.ensure_entry_folder
     msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
@@ -237,16 +282,40 @@ def main() -> None:
         default=Path("."),
         help="base directory to create the chime/ tree under (default: cwd)",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="if the mail is excluded, only report its existing chime instead of removing it",
+    )
     args = parser.parse_args()
 
     if not args.eml.is_file():
         sys.exit(f"Not a file: {args.eml}")
 
+    if args.dry_run:
+        # Only an excluded mail's removal is previewed; a non-excluded mail
+        # would be converted, so stop before writing anything.
+        try:
+            init_new = load_init_new(args.out_dir)
+        except FileNotFoundError as e:
+            sys.exit(str(e))
+        exclusions = find_exclusions(args.eml.parent, init_new.compute_hash)
+        subject = read_subject(args.eml)
+        if exclusions is None or not exclusions.matches(subject):
+            sys.exit(f"dry run: subject {subject!r} is not excluded — nothing to remove")
+        chime_dir = args.out_dir / "chime" / init_new.compute_hash(subject)
+        if (chime_dir / "chime.md").is_file():
+            sys.exit(f"WOULD REMOVE: {chime_dir}  {chime_heading(chime_dir / 'chime.md')}")
+        sys.exit(f"dry run: subject {subject!r} is excluded, no existing chime to remove")
+
     try:
         chime_path = eml_file_to_chime(args.eml, base_dir=args.out_dir)
     except ChimeExcludedError as e:
         if e.existing_chime is not None:
-            sys.exit(f"{e} (existing chime left in place: {e.existing_chime})")
+            chime_dir = e.existing_chime.parent
+            heading = remove_chime(chime_dir)
+            print(f"REMOVE: {chime_dir}  {heading}", flush=True)
+            update_chime_index(args.out_dir)
         sys.exit(str(e))
     except (ChimeSupersededError, FileNotFoundError) as e:
         sys.exit(str(e))

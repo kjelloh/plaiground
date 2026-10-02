@@ -19,8 +19,9 @@ def test_index_line_matches_by_hash_and_heading(tmp_path):
 
     exclusions = load_exclusions(path, compute_hash)
 
-    assert exclusions.hashes == {"ad2d0789"}
-    assert exclusions.headings == {"TODO: Wrap up TestBench"}
+    [entry] = exclusions.entries
+    assert entry.target_hash == "ad2d0789"
+    assert entry.heading == "TODO: Wrap up TestBench"
     assert exclusions.matches("TODO: Wrap up TestBench")
     assert not exclusions.matches("TODO: Something else")
     assert len(exclusions) == 1
@@ -37,7 +38,7 @@ def test_hand_written_entry_matches_by_heading(tmp_path):
 
     exclusions = load_exclusions(path, compute_hash)
 
-    assert exclusions.hashes == set()
+    assert exclusions.entries[0].target_hash is None
     assert exclusions.matches("Todo: hand written")
 
 
@@ -59,8 +60,27 @@ def test_non_entry_lines_ignored(tmp_path):
 
     exclusions = load_exclusions(path, compute_hash)
 
-    assert exclusions.hashes == {"8c17926c", "5135dc9a"}
-    assert exclusions.headings == {"Todo: one", "Todo: two"}
+    assert [e.target_hash for e in exclusions.entries] == ["8c17926c", "5135dc9a"]
+    assert [e.heading for e in exclusions.entries] == ["Todo: one", "Todo: two"]
+
+
+def test_chime_hashes_are_target_and_heading_hash(tmp_path):
+    path = write_exclude(tmp_path, "* [Todo: one (private)](8c17926c/chime.md)\n")
+    exclusions = load_exclusions(path, compute_hash)
+
+    assert exclusions.chime_hashes(exclusions.entries[0]) == {
+        "8c17926c",
+        compute_hash("Todo: one (private)"),
+    }
+
+
+def test_unmatched_lists_entries_that_matched_nothing(tmp_path):
+    path = write_exclude(tmp_path, "* [Todo: one]()\n* [Todo: typo]()\n")
+    exclusions = load_exclusions(path, compute_hash)
+
+    exclusions.matches("Todo: one")
+
+    assert [e.line for e in exclusions.unmatched()] == ["* [Todo: typo]()"]
 
 
 def test_find_exclusions_absent_file_is_none(tmp_path):

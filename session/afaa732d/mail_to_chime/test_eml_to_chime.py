@@ -5,7 +5,13 @@ import pytest
 
 import eml_to_chime
 import eml_to_html
-from eml_to_chime import ChimeExcludedError, ChimeSupersededError, eml_file_to_chime
+from eml_to_chime import (
+    ChimeExcludedError,
+    ChimeSupersededError,
+    eml_file_to_chime,
+    find_exclusions_for,
+    remove_excluded_chimes,
+)
 
 SITE_REPO_INIT_NEW = Path(__file__).parent.parent / "site_repo" / "init_new.py"
 
@@ -358,6 +364,77 @@ def test_eml_file_to_chime_not_listed_in_exclude_md_is_created(tmp_path):
     chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
 
     assert chime_path.is_file()
+
+
+def make_chimes_and_exclude(tmp_path, exclude_lines):
+    """Two chimes (Hello, Plain) in tmp_path; eml folder "eml" with the
+    given exclude.md lines. Returns (hello_chime, plain_chime, exclusions)."""
+    hello = eml_file_to_chime(write_eml(tmp_path, "hello.eml", SIMPLE_HTML_EML), base_dir=tmp_path)
+    plain = eml_file_to_chime(write_eml(tmp_path, "plain.eml", SIMPLE_PLAIN_EML), base_dir=tmp_path)
+    eml_dir = tmp_path / "eml"
+    eml_dir.mkdir()
+    (eml_dir / "exclude.md").write_text(
+        "".join(line + "\n" for line in exclude_lines(hello)), encoding="utf-8"
+    )
+    return hello, plain, find_exclusions_for(eml_dir, tmp_path)
+
+
+def test_remove_excluded_chimes_removes_listed_chime_only(tmp_path):
+    hello, plain, exclusions = make_chimes_and_exclude(
+        tmp_path, lambda hello: [f"* [Hello]({hello.parent.name}/chime.md)"]
+    )
+
+    removed = remove_excluded_chimes(tmp_path, exclusions)
+
+    assert removed == [(hello.parent, "Hello")]
+    assert not hello.parent.exists()
+    assert plain.is_file()
+    assert exclusions.unmatched() == []
+
+
+def test_remove_excluded_chimes_by_hand_written_heading(tmp_path):
+    hello, plain, exclusions = make_chimes_and_exclude(tmp_path, lambda hello: ["* [Hello]()"])
+
+    removed = remove_excluded_chimes(tmp_path, exclusions)
+
+    assert removed == [(hello.parent, "Hello")]
+    assert not hello.parent.exists()
+
+
+def test_remove_excluded_chimes_dry_run_removes_nothing(tmp_path):
+    hello, plain, exclusions = make_chimes_and_exclude(tmp_path, lambda hello: ["* [Hello]()"])
+
+    removed = remove_excluded_chimes(tmp_path, exclusions, dry_run=True)
+
+    assert removed == [(hello.parent, "Hello")]
+    assert hello.is_file()
+
+
+def test_remove_excluded_chimes_skips_folder_without_chime_md(tmp_path):
+    hello, plain, exclusions = make_chimes_and_exclude(
+        tmp_path, lambda hello: ["* [Not a chime](deadbeef/chime.md)"]
+    )
+    not_a_chime = tmp_path / "chime" / "deadbeef"
+    not_a_chime.mkdir()
+    (not_a_chime / "keep.txt").write_text("keep", encoding="utf-8")
+
+    removed = remove_excluded_chimes(tmp_path, exclusions)
+
+    assert removed == []
+    assert (not_a_chime / "keep.txt").is_file()
+    assert [e.line for e in exclusions.unmatched()] == ["* [Not a chime](deadbeef/chime.md)"]
+
+
+def test_remove_excluded_chimes_never_follows_target_paths(tmp_path):
+    hello, plain, exclusions = make_chimes_and_exclude(
+        tmp_path, lambda hello: ["* [Outside](../../elsewhere/chime.md)"]
+    )
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    (outside / "chime.md").write_text("# Outside\n", encoding="utf-8")
+
+    assert remove_excluded_chimes(tmp_path, exclusions) == []
+    assert (outside / "chime.md").is_file()
 
 
 def test_eml_file_to_chime_no_content_raises(tmp_path):
