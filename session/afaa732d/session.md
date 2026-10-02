@@ -1,5 +1,33 @@
 # Consider to vibe code a working emls-to-chimes and to_site integration?
 
+## 20261002
+
+I now have a pipe line to turn my large set of eml-fils into chimes.
+
+* But the chimes still includes todo-mails I do NOT want to have in the published set.
+    * So I need a mechanism to filter out unwanted todo-mails.
+    * I imagine an md-file with the same format as the index.md for existing chimes.
+    * In this way I can manyally cut-and-paste entries for chimes I want to exclude.
+    * And have the processing pipe line exclude them.
+* I find the final formatting of the chimes to maybe lack some new lines?
+    * I think it may be a good thing to have the processing pipe line actually also store the todo-mail plain text into a chime.txt and link from the md-file?
+    * And if so, I could just as well also store the html-part in the mail raw into say chime.html?
+
+Let's ask Claude to store the palin text part into a chime.txt and link from the chime.md?
+
+Let's inspect our results if and when there are any.
+
+* [site_repo/chimes](./site_repo/chime/index.md)
+
+So now I have the eml-to-maarkdown also create the chime.txt
+
+* But it seems we have an encoding issue?
+    * I imagine we miss the UTF8-BOM in the generated chime.txt?
+    * I think I will have to perform some iterations on the formatting of both makrdown and txt?
+* Also, the link to the txt-version shopuld be at the top after the heading?
+
+
+
 ## 20261001
 
 My God, this is SOOO HARD!!
@@ -136,6 +164,14 @@ So maybe I should first filter out and keep only the latest mail for each subjec
 I asked Claude to implement a 'deduplication' based on mail subject and latest date ok.
 
 * [site_repo/chimes](./site_repo/chime/index.md)
+
+I now tried in on my todo-mails and the result seems promising.
+
+```sh
+3682 ok, 751 skipped (superseded), 0 failed, 4433 total
+Updated 'chime/index.md' with 3204 entries.
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % 
+```
 
 
 ## 20260930

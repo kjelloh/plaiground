@@ -3,7 +3,8 @@
 
 Pipeline: eml_to_html (extract the HTML body + inline images) -> html_to_markdown
 (convert to markdown, copy images) -> merge the result into chime.md scaffolded
-by init_new.
+by init_new. The mail's original text/plain body (if any) is also kept
+verbatim as chime.txt (via eml_to_txt), linked from the end of chime.md.
 
 This mechanism is repo-agnostic: it does not bundle its own init_new.py /
 update_index.py, it uses whichever copies already live in the target repo
@@ -24,7 +25,10 @@ from pathlib import Path
 
 from eml_to_html import extract as eml_to_html_extract
 from eml_to_html import sanitize
+from eml_to_txt import plain_text_of
 from html_to_markdown import convert as html_to_markdown_convert
+
+PLAIN_TEXT_NAME = "chime.txt"
 
 
 class ChimeSupersededError(Exception):
@@ -158,6 +162,10 @@ def eml_file_to_chime(eml_path: Path, base_dir: Path) -> Path:
         markdown_body = md_path.read_text(encoding="utf-8")
         md_path.unlink()
 
+        plain_text = plain_text_of(msg)
+        if plain_text is not None:
+            (chime_dir / PLAIN_TEXT_NAME).write_text(plain_text, encoding="utf-8")
+
         date_line = date_line_of(msg)
         with chime_path.open("a", encoding="utf-8") as f:
             f.write(f"{date_line}\n\n")
@@ -171,6 +179,8 @@ def eml_file_to_chime(eml_path: Path, base_dir: Path) -> Path:
             f.write("{% raw %}\n")
             f.write(markdown_body)
             f.write("\n{% endraw %}\n")
+            if plain_text is not None:
+                f.write(f"\n[Plain text]({PLAIN_TEXT_NAME})\n")
     finally:
         if scratch_dir.is_dir():
             shutil.rmtree(scratch_dir)

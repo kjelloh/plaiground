@@ -260,6 +260,69 @@ def test_eml_file_to_chime_wraps_body_in_liquid_raw(tmp_path):
     assert raw_start < body_start < endraw_start
 
 
+def test_eml_file_to_chime_writes_and_links_plain_text(tmp_path):
+    eml_path = write_eml(tmp_path, "plain.eml", SIMPLE_PLAIN_EML)
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    txt_path = chime_path.parent / "chime.txt"
+    assert txt_path.read_text(encoding="utf-8") == (
+        "First paragraph.\n\nSecond paragraph,\nwith a line break.\n"
+    )
+    content = chime_path.read_text(encoding="utf-8")
+    assert content.rstrip().endswith("[Plain text](chime.txt)")
+    assert content.index("{% endraw %}") < content.index("[Plain text](chime.txt)")
+
+
+def test_eml_file_to_chime_no_plain_text_part_writes_no_txt(tmp_path):
+    eml_path = write_eml(tmp_path, "test.eml", SIMPLE_HTML_EML)
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    assert not (chime_path.parent / "chime.txt").exists()
+    assert "chime.txt" not in chime_path.read_text(encoding="utf-8")
+
+
+def test_eml_file_to_chime_ignores_attached_txt_file(tmp_path):
+    raw = (
+        "Subject: Attached txt\r\n"
+        "From: foo@bar.se\r\n"
+        'Content-Type: multipart/mixed; boundary="B"\r\n'
+        "\r\n"
+        "--B\r\n"
+        'Content-Type: text/html; charset="utf-8"\r\n'
+        "\r\n"
+        "<html><body><p>See attached.</p></body></html>\r\n"
+        "--B\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "Content-Disposition: attachment; filename=notes.txt\r\n"
+        "\r\n"
+        "Not the body.\r\n"
+        "--B--\r\n"
+    )
+    eml_path = write_eml(tmp_path, "att.eml", raw)
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    assert not (chime_path.parent / "chime.txt").exists()
+
+
+def test_eml_file_to_chime_newer_revision_replaces_plain_text(tmp_path):
+    older = write_eml(tmp_path, "plain.eml", SIMPLE_PLAIN_EML)
+    newer_raw = SIMPLE_PLAIN_EML.replace(
+        "Date: Fri, 11 Sep 2026 12:00:00 +0000",
+        "Date: Sat, 12 Sep 2026 09:00:00 +0000",
+    ).replace("First paragraph.", "Updated paragraph.")
+    newer = write_eml(tmp_path, "plain 2.eml", newer_raw)
+
+    eml_file_to_chime(older, base_dir=tmp_path)
+    chime_path = eml_file_to_chime(newer, base_dir=tmp_path)
+
+    text = (chime_path.parent / "chime.txt").read_text(encoding="utf-8")
+    assert "Updated paragraph." in text
+    assert "First paragraph." not in text
+
+
 def test_eml_file_to_chime_no_content_raises(tmp_path):
     raw = (
         "Subject: Nothing\r\n"
