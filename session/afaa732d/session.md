@@ -15,7 +15,7 @@ I now have a pipe line to turn my large set of eml-fils into chimes.
 
 Let's ask Claude to store the palin text part into a chime.txt and link from the chime.md?
 
-So now I have the eml-to-maarkdown also create the chime.txt
+So now I have the eml-to-markdown also create the chime.txt
 
 * But it seems we have an encoding issue?
     * I imagine we miss the UTF8-BOM in the generated chime.txt?
@@ -26,6 +26,19 @@ I asked Claude to make it so. And for some reason the chime.txt now renders ok f
 
 * [site_repo/chimes](./site_repo/chime/index.md)
 
+Anyhow. I now asked Claude for a filer mechanism.
+
+* I asked for an argument to a exclude.md file that lists what chimes to exclude (same format as chime index.md)
+* But when I though about it I changed my mind.
+
+I think it is better to have the folder with the eml-files to have a file defining what to exclude?
+
+* In this way it is the eml-source that gets filtered.
+* Exclduing chimes is backwards as an excluded todo-mail should not even become a chime in the first place!
+
+Question is, how should I design the exclude-file?
+
+* Should I still enable it to contain chime entries from the chime index.md so I can cut and paste until satisfied?
 
 ## 20261001
 
