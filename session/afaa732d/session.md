@@ -192,6 +192,44 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d %
 
 But I want to find somewhere to version control my exclude.md?
 
+While I thought about this I added some more to exclude.
+
+* As I thought it is EASY for me to FORGET to copy the latest exclude.md from chime folder to the eml-folder for my todo-mail source.
+* Can I imagine a sync-process step for this?
+* Or how can I edit the exclude ib the chime folder but have it be applied in the eml source folder? 
+
+```sh
+4433 mail files: 0 ok, 4196 skipped (superseded), 237 excluded, 0 failed
+
+exclude.md (/Users/kjell-olovhogdahl/Downloads/mail_export/eml/exclude.md), 125 entries:
+  237 mail files excluded, covering 119 subjects
+  46 existing chimes removed
+  73 excluded subjects had no existing chime
+  0 entries matched nothing
+```
+
+While I update the exclude.md with more and more chimes to exclude I feel I may be tempted to have them generate markdown to another location?
+
+* So I create chimes for all non-excluded
+* And something else from excluded subjects?
+
+```sh
+4433 mail files: 0 ok, 4109 skipped (superseded), 324 excluded, 0 failed
+
+exclude.md (/Users/kjell-olovhogdahl/Downloads/mail_export/eml/exclude.md), 186 entries:
+  324 mail files excluded, covering 180 subjects
+  61 existing chimes removed
+  119 excluded subjects had no existing chime
+  0 entries matched nothing
+
+# ...
+
+Updated 'chime/index.md' with 3024 entries.
+```
+
+At this stage I copied and added new file:   todo_to_chime/exclude.md
+
+* In this way I at least have a home for the exclude.md to use when I create the actual chimes in the public chime-repo?
 
 ## 20261001
 
