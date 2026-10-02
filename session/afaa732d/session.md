@@ -15,10 +15,6 @@ I now have a pipe line to turn my large set of eml-fils into chimes.
 
 Let's ask Claude to store the palin text part into a chime.txt and link from the chime.md?
 
-Let's inspect our results if and when there are any.
-
-* [site_repo/chimes](./site_repo/chime/index.md)
-
 So now I have the eml-to-maarkdown also create the chime.txt
 
 * But it seems we have an encoding issue?
@@ -26,6 +22,9 @@ So now I have the eml-to-maarkdown also create the chime.txt
     * I think I will have to perform some iterations on the formatting of both makrdown and txt?
 * Also, the link to the txt-version shopuld be at the top after the heading?
 
+I asked Claude to make it so. And for some reason the chime.txt now renders ok for Swedish letters in VSCode (shows as UTF8 encoded)? AHA! No, the browser does NOT render the chime.txt as UTF8 text.
+
+* [site_repo/chimes](./site_repo/chime/index.md)
 
 
 ## 20261001

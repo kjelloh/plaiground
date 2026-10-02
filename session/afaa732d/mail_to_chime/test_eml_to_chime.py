@@ -270,8 +270,9 @@ def test_eml_file_to_chime_writes_and_links_plain_text(tmp_path):
         "First paragraph.\n\nSecond paragraph,\nwith a line break.\n"
     )
     content = chime_path.read_text(encoding="utf-8")
-    assert content.rstrip().endswith("[Plain text](chime.txt)")
-    assert content.index("{% endraw %}") < content.index("[Plain text](chime.txt)")
+    assert content.startswith(
+        "# Plain\n\n2026-09-11T12:00:00+00:00\n\n[Plain text](chime.txt)\n\n{% raw %}\n"
+    )
 
 
 def test_eml_file_to_chime_no_plain_text_part_writes_no_txt(tmp_path):

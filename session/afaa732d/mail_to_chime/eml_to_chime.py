@@ -4,7 +4,8 @@
 Pipeline: eml_to_html (extract the HTML body + inline images) -> html_to_markdown
 (convert to markdown, copy images) -> merge the result into chime.md scaffolded
 by init_new. The mail's original text/plain body (if any) is also kept
-verbatim as chime.txt (via eml_to_txt), linked from the end of chime.md.
+verbatim as chime.txt (via eml_to_txt), linked from chime.md
+right after the date line.
 
 This mechanism is repo-agnostic: it does not bundle its own init_new.py /
 update_index.py, it uses whichever copies already live in the target repo
@@ -169,6 +170,8 @@ def eml_file_to_chime(eml_path: Path, base_dir: Path) -> Path:
         date_line = date_line_of(msg)
         with chime_path.open("a", encoding="utf-8") as f:
             f.write(f"{date_line}\n\n")
+            if plain_text is not None:
+                f.write(f"[Plain text]({PLAIN_TEXT_NAME})\n\n")
             # Mail content routinely contains "{{" / "{%" (C++ brace-init,
             # JSON-ish notes, ...) which Jekyll/Liquid treats as template
             # syntax regardless of front matter settings — a malformed one
@@ -179,8 +182,6 @@ def eml_file_to_chime(eml_path: Path, base_dir: Path) -> Path:
             f.write("{% raw %}\n")
             f.write(markdown_body)
             f.write("\n{% endraw %}\n")
-            if plain_text is not None:
-                f.write(f"\n[Plain text]({PLAIN_TEXT_NAME})\n")
     finally:
         if scratch_dir.is_dir():
             shutil.rmtree(scratch_dir)
