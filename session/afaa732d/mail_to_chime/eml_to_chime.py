@@ -56,8 +56,9 @@ class ChimeExcludedError(Exception):
     leaves it in place — removing it is remove_chime's job.
     """
 
-    def __init__(self, message: str, existing_chime: Path | None = None):
+    def __init__(self, message: str, subject: str, existing_chime: Path | None = None):
         super().__init__(message)
+        self.subject = subject
         self.existing_chime = existing_chime
 
 
@@ -220,6 +221,7 @@ def eml_file_to_chime(
         existing = base_dir / "chime" / init_new.compute_hash(subject) / "chime.md"
         raise ChimeExcludedError(
             f"subject {subject!r} is excluded by {exclusions.source}",
+            subject=subject,
             existing_chime=existing if existing.is_file() else None,
         )
 

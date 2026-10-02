@@ -11,6 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from exclude import Exclusions
 from eml_to_chime import (
     ChimeExcludedError,
     ChimeSupersededError,
@@ -35,6 +36,47 @@ def to_dir_path(path_str: str) -> Path:
         raise NotADirectoryError(f"Not a directory: {dir_path}")
 
     return dir_path
+
+
+def exclude_report(
+    exclusions: Exclusions,
+    excluded_files: dict[str, list[str]],
+    removed: list[tuple[Path, str]],
+    dry_run: bool = False,
+) -> list[str]:
+    """The exclude.md part of the final report. Mail files and chimes are
+    counted separately: several exported versions of one Subject (Apple
+    Mail's "x.eml", "x 2.eml", ...) are several excluded mail files but
+    only one chime. excluded_files maps chime hash -> excluded mail files."""
+    would = "would be " if dry_run else ""
+    removed_keys = {chime_dir.name for chime_dir, _ in removed}
+    file_count = sum(len(names) for names in excluded_files.values())
+    no_chime = [key for key in excluded_files if key not in removed_keys]
+    no_mail = [key for key in removed_keys if key not in excluded_files]
+    unmatched = exclusions.unmatched()
+
+    lines = [
+        f"exclude.md ({exclusions.source}), {len(exclusions)} entries:",
+        f"  {file_count} mail files {would}excluded, covering {len(excluded_files)} subjects",
+        f"  {len(removed)} existing chimes {would}removed",
+    ]
+    if no_chime:
+        lines.append(f"  {len(no_chime)} excluded subjects had no existing chime")
+    if no_mail:
+        lines.append(f"  {len(no_mail)} chimes {would}removed whose mail is not in this folder")
+    lines.append(f"  {len(unmatched)} entries matched nothing")
+
+    if removed:
+        verb = "Would remove" if dry_run else "Removed"
+        lines += ["", f"{verb} {len(removed)} chime(s):"]
+        for chime_dir, heading in removed:
+            count = len(excluded_files.get(chime_dir.name, []))
+            note = f"{count} mail files excluded" if count else "mail not in this folder"
+            lines.append(f"  {chime_dir}  {heading}   ({note})")
+    if unmatched:
+        lines += ["", f"UNMATCHED: {len(unmatched)} entry(ies) matched no mail and no existing chime:"]
+        lines += [f"  {entry.line}" for entry in unmatched]
+    return lines
 
 
 def main() -> None:
@@ -78,18 +120,22 @@ def main() -> None:
     skipped_count = 0
     excluded_count = 0
     fail_count = 0
+    excluded_files: dict[str, list[str]] = {}  # chime hash -> mail files
 
     for eml_path in eml_paths:
         try:
             if dry_run:
                 # Only report exclusions; converting would write chimes.
-                if exclusions is not None and exclusions.matches(read_subject(eml_path)):
-                    raise ChimeExcludedError("excluded")
+                subject = read_subject(eml_path)
+                if exclusions is not None and exclusions.matches(subject):
+                    raise ChimeExcludedError("excluded", subject=subject)
                 continue
             eml_file_to_chime(eml_path, base_dir=out_dir, exclusions=exclusions)
             print(f"OK: {eml_path.name}")
-        except ChimeExcludedError:
+        except ChimeExcludedError as e:
             excluded_count += 1
+            key = exclusions.compute_hash(e.subject)
+            excluded_files.setdefault(key, []).append(eml_path.name)
             print(f"EXCLUDE: {eml_path.name}")
         except ChimeSupersededError:
             skipped_count += 1
@@ -103,30 +149,19 @@ def main() -> None:
 
     if dry_run:
         print(
-            f"\nDRY RUN — nothing created or removed: {excluded_count} would be excluded, "
-            f"{len(removed)} would be removed, {fail_count} failed, {len(eml_paths)} total"
+            f"\nDRY RUN — nothing created or removed. {len(eml_paths)} mail files: "
+            f"{excluded_count} would be excluded, {fail_count} failed"
         )
     else:
         print(
-            f"\n{ok_count} ok, {skipped_count} skipped (superseded), "
-            f"{excluded_count} excluded, {len(removed)} removed, "
-            f"{fail_count} failed, {len(eml_paths)} total"
+            f"\n{len(eml_paths)} mail files: {ok_count} ok, "
+            f"{skipped_count} skipped (superseded), {excluded_count} excluded, "
+            f"{fail_count} failed"
         )
 
     if exclusions is not None:
-        if removed:
-            verb = "Would remove" if dry_run else "Removed"
-            print(f"\n{verb} {len(removed)} chime(s) listed in {exclusions.source}:")
-            for chime_dir, heading in removed:
-                print(f"  {chime_dir}  {heading}")
-        unmatched = exclusions.unmatched()
-        if unmatched:
-            print(
-                f"\nUNMATCHED: {len(unmatched)} entry(ies) in {exclusions.source} "
-                "matched no mail and no existing chime:"
-            )
-            for entry in unmatched:
-                print(f"  {entry.line}")
+        print()
+        print("\n".join(exclude_report(exclusions, excluded_files, removed, dry_run)))
 
     if not dry_run and (ok_count or removed):
         update_chime_index(out_dir)

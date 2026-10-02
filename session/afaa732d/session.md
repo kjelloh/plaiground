@@ -134,7 +134,20 @@ Would remove 17 chime(s) listed in /Users/kjell-olovhogdahl/Downloads/mail_expor
 kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d %
 ```
 
+I now found the existing summary a bit confusing (e.g., the number of excluded and removed)
 
+* Claude came up with what seemed like a good enhancement and I acceopted it.
+
+```sh
+DRY RUN — nothing created or removed. 4433 mail files: 26 would be excluded, 0 failed
+
+exclude.md (/Users/kjell-olovhogdahl/Downloads/mail_export/eml/exclude.md), 17 entries:
+  26 mail files would be excluded, covering 17 subjects
+  0 existing chimes would be removed
+  17 excluded subjects had no existing chime
+  0 entries matched nothing
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % 
+```
 
 ## 20261001
 
