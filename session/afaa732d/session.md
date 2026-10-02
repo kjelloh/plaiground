@@ -24,8 +24,6 @@ So now I have the eml-to-markdown also create the chime.txt
 
 I asked Claude to make it so. And for some reason the chime.txt now renders ok for Swedish letters in VSCode (shows as UTF8 encoded)? AHA! No, the browser does NOT render the chime.txt as UTF8 text.
 
-* [site_repo/chimes](./site_repo/chime/index.md)
-
 Anyhow. I now asked Claude for a filer mechanism.
 
 * I asked for an argument to a exclude.md file that lists what chimes to exclude (same format as chime index.md)
@@ -39,6 +37,13 @@ I think it is better to have the folder with the eml-files to have a file defini
 Question is, how should I design the exclude-file?
 
 * Should I still enable it to contain chime entries from the chime index.md so I can cut and paste until satisfied?
+
+OK. I will copy an eml-file that is to be excluded to the example eml-files. And create an exclude.md with this mail chime as an entry and ask Claude to make the filter mechanism based on this design.
+
+* [site_repo/chimes](./site_repo/chime/index.md)
+* [example_eml/exclude.md](./example_eml/exclude.md)
+
+Claude seems to have implemented the filter mechanism ok?
 
 ## 20261001
 

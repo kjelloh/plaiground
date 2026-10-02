@@ -3,7 +3,9 @@
 
 Pipeline: eml_to_html (extract the HTML body + inline images) -> html_to_markdown
 (convert to markdown, copy images) -> merge the result into chime.md scaffolded
-by init_new. The mail's original text/plain body (if any) is also kept
+by init_new. A mail listed in an exclude.md next to it (same format as
+chime/index.md, see exclude.py) is skipped before anything is written.
+The mail's original text/plain body (if any) is also kept
 verbatim as chime.txt (via eml_to_txt), linked from chime.md
 right after the date line.
 
@@ -27,6 +29,7 @@ from pathlib import Path
 from eml_to_html import extract as eml_to_html_extract
 from eml_to_html import sanitize
 from eml_to_txt import plain_text_of
+from exclude import Exclusions, find_exclusions
 from html_to_markdown import convert as html_to_markdown_convert
 
 PLAIN_TEXT_NAME = "chime.txt"
@@ -44,9 +47,22 @@ class ChimeSupersededError(Exception):
     """
 
 
-def load_ensure_entry_folder(base_dir: Path):
-    """Load ensure_entry_folder from base_dir/init_new.py — the target
-    repo's own scaffolding tool, not a copy bundled with this mechanism."""
+class ChimeExcludedError(Exception):
+    """Raised when the mail is listed in the exclude.md of its eml folder.
+
+    existing_chime is set when a chime for that Subject is already present
+    (e.g. from a run before it was excluded) — it is left in place, not
+    removed.
+    """
+
+    def __init__(self, message: str, existing_chime: Path | None = None):
+        super().__init__(message)
+        self.existing_chime = existing_chime
+
+
+def load_init_new(base_dir: Path):
+    """Load base_dir/init_new.py — the target repo's own scaffolding tool,
+    not a copy bundled with this mechanism."""
     init_new_path = base_dir / "init_new.py"
     if not init_new_path.is_file():
         raise FileNotFoundError(
@@ -57,7 +73,13 @@ def load_ensure_entry_folder(base_dir: Path):
     spec = importlib.util.spec_from_file_location("_target_init_new", init_new_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.ensure_entry_folder
+    return module
+
+
+def find_exclusions_for(eml_dir: Path, base_dir: Path) -> Exclusions | None:
+    """Exclusions from eml_dir/exclude.md (None if absent), hashed with
+    base_dir's own init_new.compute_hash so they match its chime folders."""
+    return find_exclusions(eml_dir, load_init_new(base_dir).compute_hash)
 
 
 def update_chime_index(base_dir: Path) -> None:
@@ -131,14 +153,30 @@ def read_chime_date(chime_path: Path):
         return None
 
 
-def eml_file_to_chime(eml_path: Path, base_dir: Path) -> Path:
+def eml_file_to_chime(
+    eml_path: Path, base_dir: Path, exclusions: Exclusions | None = None
+) -> Path:
     """Turn eml_path into a chime folder under base_dir/chime/<hash>/,
     keyed by the mail's Subject so later revisions of the same todo replace
-    earlier ones rather than piling up as separate chimes."""
-    ensure_entry_folder = load_ensure_entry_folder(base_dir)
+    earlier ones rather than piling up as separate chimes.
+
+    A mail matching exclusions — by default those of the exclude.md next
+    to eml_path, if any; a batch passes them in pre-loaded — raises
+    ChimeExcludedError before anything is written."""
+    init_new = load_init_new(base_dir)
+    ensure_entry_folder = init_new.ensure_entry_folder
     msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
     subject = subject_of(msg)
     candidate_date = parsed_date_of(msg)
+
+    if exclusions is None:
+        exclusions = find_exclusions(eml_path.parent, init_new.compute_hash)
+    if exclusions is not None and exclusions.matches(subject):
+        existing = base_dir / "chime" / init_new.compute_hash(subject) / "chime.md"
+        raise ChimeExcludedError(
+            f"subject {subject!r} is excluded by {exclusions.source}",
+            existing_chime=existing if existing.is_file() else None,
+        )
 
     chime_path, created = ensure_entry_folder("chime", subject, base_dir=base_dir)
     chime_dir = chime_path.parent
@@ -206,6 +244,10 @@ def main() -> None:
 
     try:
         chime_path = eml_file_to_chime(args.eml, base_dir=args.out_dir)
+    except ChimeExcludedError as e:
+        if e.existing_chime is not None:
+            sys.exit(f"{e} (existing chime left in place: {e.existing_chime})")
+        sys.exit(str(e))
     except (ChimeSupersededError, FileNotFoundError) as e:
         sys.exit(str(e))
 

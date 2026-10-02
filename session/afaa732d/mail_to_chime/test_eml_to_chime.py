@@ -5,7 +5,7 @@ import pytest
 
 import eml_to_chime
 import eml_to_html
-from eml_to_chime import ChimeSupersededError, eml_file_to_chime
+from eml_to_chime import ChimeExcludedError, ChimeSupersededError, eml_file_to_chime
 
 SITE_REPO_INIT_NEW = Path(__file__).parent.parent / "site_repo" / "init_new.py"
 
@@ -322,6 +322,42 @@ def test_eml_file_to_chime_newer_revision_replaces_plain_text(tmp_path):
     text = (chime_path.parent / "chime.txt").read_text(encoding="utf-8")
     assert "Updated paragraph." in text
     assert "First paragraph." not in text
+
+
+def test_eml_file_to_chime_excluded_by_exclude_md_next_to_eml(tmp_path):
+    eml_path = write_eml(tmp_path, "test.eml", SIMPLE_HTML_EML)
+    (tmp_path / "exclude.md").write_text("* [Hello]()\n", encoding="utf-8")
+
+    with pytest.raises(ChimeExcludedError) as info:
+        eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    assert info.value.existing_chime is None
+    assert not (tmp_path / "chime").exists()
+
+
+def test_eml_file_to_chime_excluded_by_index_line_leaves_existing_chime(tmp_path):
+    eml_path = write_eml(tmp_path, "test.eml", SIMPLE_HTML_EML)
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+    before = chime_path.read_text(encoding="utf-8")
+    # The exact line update_index.py writes for this chime.
+    (tmp_path / "exclude.md").write_text(
+        f"* [Hello]({chime_path.parent.name}/chime.md)\n", encoding="utf-8"
+    )
+
+    with pytest.raises(ChimeExcludedError) as info:
+        eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    assert info.value.existing_chime == chime_path
+    assert chime_path.read_text(encoding="utf-8") == before
+
+
+def test_eml_file_to_chime_not_listed_in_exclude_md_is_created(tmp_path):
+    eml_path = write_eml(tmp_path, "plain.eml", SIMPLE_PLAIN_EML)
+    (tmp_path / "exclude.md").write_text("* [Hello]()\n", encoding="utf-8")
+
+    chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
+
+    assert chime_path.is_file()
 
 
 def test_eml_file_to_chime_no_content_raises(tmp_path):

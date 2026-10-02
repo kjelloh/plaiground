@@ -2,12 +2,20 @@
 """Batch-run eml_to_chime over every .eml file in a folder.
 
 Failures are logged and skipped so one bad eml doesn't stop the run.
+If the folder has an exclude.md (same format as chime/index.md), mails
+listed in it are skipped.
 """
 
 import sys
 from pathlib import Path
 
-from eml_to_chime import ChimeSupersededError, eml_file_to_chime, update_chime_index
+from eml_to_chime import (
+    ChimeExcludedError,
+    ChimeSupersededError,
+    eml_file_to_chime,
+    find_exclusions_for,
+    update_chime_index,
+)
 
 # When stdout and stderr are both redirected to the same file (e.g.
 # `> output.log 2>&1`), stdout is block-buffered while stderr isn't, so
@@ -40,14 +48,28 @@ def main() -> None:
     if not eml_paths:
         sys.exit(f"No .eml files found in {eml_dir}")
 
+    try:
+        exclusions = find_exclusions_for(eml_dir, out_dir)
+    except Exception as e:
+        sys.exit(f"Exception: {e}")
+    if exclusions is not None:
+        print(f"Applying {exclusions.source} ({len(exclusions)} entries)")
+
     ok_count = 0
     skipped_count = 0
+    excluded_count = 0
     fail_count = 0
 
     for eml_path in eml_paths:
         try:
-            eml_file_to_chime(eml_path, base_dir=out_dir)
+            eml_file_to_chime(eml_path, base_dir=out_dir, exclusions=exclusions)
             print(f"OK: {eml_path.name}")
+        except ChimeExcludedError as e:
+            excluded_count += 1
+            if e.existing_chime is not None:
+                print(f"EXCLUDE: {eml_path.name} (existing chime left in place: {e.existing_chime})")
+            else:
+                print(f"EXCLUDE: {eml_path.name}")
         except ChimeSupersededError:
             skipped_count += 1
             print(f"SKIP: {eml_path.name} (superseded by a newer mail with the same subject)")
@@ -60,7 +82,7 @@ def main() -> None:
 
     print(
         f"\n{ok_count} ok, {skipped_count} skipped (superseded), "
-        f"{fail_count} failed, {len(eml_paths)} total"
+        f"{excluded_count} excluded, {fail_count} failed, {len(eml_paths)} total"
     )
 
     if ok_count:
