@@ -54,7 +54,9 @@ class ReachabilityGraph:
             if not target or is_external(target):
                 continue
             resolved = self._resolve(target, md_file)
-            if resolved is not None and resolved.exists():
+            # Only files are published: links to folders (and to missing
+            # files) are left as they are, not followed.
+            if resolved is not None and resolved.is_file():
                 targets[resolved] = None
         return list(targets)
 
