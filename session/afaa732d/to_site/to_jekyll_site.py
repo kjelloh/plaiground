@@ -3,12 +3,33 @@
 to_jekyll_site.py: Build a Jekyll site from a given source directory.
 Ensures a '.jekyll' folder inside that source holds the Jekyll toolchain
 and build output. Does not serve the site — see publish_site.py for that.
+
+Jekyll's own output is shown as it runs, except for a fatal error: its
+message (which may quote a long stretch of the failing page) and Ruby
+backtrace are replaced by a short summary of the failing file and error.
 """
 
+import re
 import subprocess
 import sys
 from pathlib import Path
 import shutil
+
+# "  Liquid Exception: <message> in <file>" — Jekyll's log line for the
+# failing page; <message> may span several lines.
+EXCEPTION_START_RE = re.compile(r'^\s*(?P<topic>[A-Za-z ]*(?:Exception|Error)):\s*(?P<text>.*)$')
+EXCEPTION_FILE_RE = re.compile(r'^(?P<message>.*) in (?P<file>[^\s].*?)\s*$', re.S)
+# "jekyll 3.10.0 | Error:  <message>" — the start of the fatal error dump.
+FATAL_ERROR_RE = re.compile(r'^jekyll \S+ \| Error:\s*(?P<text>.*)$')
+# Jekyll colours its warning/error lines, e.g. "\x1b[31m ... \x1b[0m".
+ANSI_COLOUR_RE = re.compile(r'\x1b\[[0-9;]*m')
+QUOTE_MAX = 40
+MESSAGE_MAX = 200
+
+LIQUID_FIX = (
+    "The page contains '{{' or '{%' that Liquid reads as template syntax. "
+    "If it is meant as plain text, wrap it in {% raw %} ... {% endraw %}."
+)
 
 
 def ensure_ruby_env():
@@ -58,8 +79,77 @@ def build_site(source, site_dir, jekyll_dir):
         "--source", str(source),
         "--destination", str(site_dir),
     ]
-    result = subprocess.run(command, cwd=jekyll_dir)
-    return result.returncode == 0
+    process = subprocess.Popen(
+        command, cwd=jekyll_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8", errors="replace",
+    )
+    held: list[str] = []  # from the first error line on, colour codes removed
+    for line in process.stdout:
+        plain = ANSI_COLOUR_RE.sub("", line)
+        if held or EXCEPTION_START_RE.match(plain) or FATAL_ERROR_RE.match(plain):
+            held.append(plain)
+        else:
+            print(line, end="", flush=True)
+    if process.wait() != 0:
+        print("\n".join(failure_summary(held, source)))
+        return False
+    print("".join(held), end="")  # an error line that didn't stop the build
+    return True
+
+
+def shorten(message: str) -> str:
+    """message on one line, with a long quoted stretch of page text and
+    the message as a whole cut short."""
+    message = " ".join(message.split())
+    message = re.sub(
+        r"'(.*)'",  # first to last quote: the quoted text may hold quotes itself
+        lambda m: f"'{m[1][:QUOTE_MAX]}…'" if len(m[1]) > QUOTE_MAX else m[0],
+        message,
+    )
+    return message if len(message) <= MESSAGE_MAX else message[:MESSAGE_MAX] + "…"
+
+
+def failure_summary(held: list[str], source: Path) -> list[str]:
+    """A short report of a failed Jekyll build from the output lines held
+    back from the first error line on: the failing file (if Jekyll named
+    one), the error, and for a Liquid error how to fix it."""
+    file = None
+    message = None
+    exception: list[str] = []
+    for line in held:
+        if FATAL_ERROR_RE.match(line):
+            break
+        if exception or EXCEPTION_START_RE.match(line):
+            exception.append(line)
+    if exception:
+        start = EXCEPTION_START_RE.match(exception[0])
+        text = "\n".join([start["text"]] + [line.rstrip("\n") for line in exception[1:]])
+        match = EXCEPTION_FILE_RE.match(text)
+        message, file = (match["message"], match["file"]) if match else (text, None)
+    else:
+        # No per-page exception line: use the fatal error's message, up to
+        # the Ruby backtrace.
+        fatal: list[str] = []
+        for line in held:
+            if fatal and re.search(r'\.rb:\d+:in ', line):
+                break
+            if fatal or FATAL_ERROR_RE.match(line):
+                fatal.append(FATAL_ERROR_RE.sub(r'\g<text>', line))
+        message = "".join(fatal) or "(no error message)"
+
+    if file is not None:
+        try:
+            file = str(Path(file).relative_to(source))
+        except ValueError:
+            pass
+
+    lines = ["", "Jekyll build failed."]
+    if file is not None:
+        lines.append(f"  File:  {file}")
+    lines.append(f"  Error: {shorten(message)}")
+    if "liquid" in message.lower() or (exception and "liquid" in exception[0].lower()):
+        lines.append(f"  Fix:   {LIQUID_FIX}")
+    return lines
 
 
 def build(source: Path, jekyll_dir: Path = None) -> Path:
@@ -81,8 +171,7 @@ def build(source: Path, jekyll_dir: Path = None) -> Path:
         return None
 
     if not build_site(source, site_dir, jekyll_dir):
-        print("Jekyll build failed.")
-        return None
+        return None  # build_site has reported why
 
     print(f"Site built to '{site_dir}'.")
     return site_dir
