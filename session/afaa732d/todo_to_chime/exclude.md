@@ -110,6 +110,47 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: TestBench - Consider to try out Animations of controls?](fd5b126d/chime.md)
 * [Todo: C++ Lecture - Consider my naming conventions as applied in the TestBench code (and compare with Kate Gregory “Naming is Hard: Let's Do Better” cppcon 2019 talk)?](fe110379/chime.md)
 
+# iPOS
+* [Todo: iPOS - Try out the EPUB format on an iPad](03e4025e/chime.md)
+* [Todo: Överväg att komma ihåg hur låsa upp iPOS-dokument till Swedbank?](14dc2d15/chime.md)
+* [Todo: Blogpost - iPOS introduction and overview](673720e7/chime.md)
+* [Todo: Programming - Consider to write Swedbank iPOS Terminal iPOS, SPDH, PPL and Clearing encoder/decoder open source libraries of interest to new iPOS Terminal Vendor?](6aca0089/chime.md)
+* [Todo: iPOS - Consider what it would take to build an iPOS T Emulator?](92c9c794/chime.md)
+* [Todo: iPOS - Consider to discuss Interface design and possible future enhanced Interfaces?](9e808dbb/chime.md)
+* [Todo: iPOS - Consider to follow up on June-2016 Terminal vendor iPOS introduction?](afe0c283/chime.md)
+* [Todo: iPOS - Consider to prepare a C++ cmake project for EPAS study activities at Zamsos?](b2ccc67e/chime.md)
+* [Todo: Consider to map iPOS --> EPAS and EPAS --> iPOS for "standard" message flow?](b45a4983/chime.md)
+* [Todo: iPOS - Consider good case study to learn iPOS development process and environment?](cee3aff3/chime.md)
+* [Todo: iPOS - Consider to get permission (and define restrictions) for the open_ipos GitHub project?](d8c7e06b/chime.md)
+
+# iPosLog
+* [Todo: iPosLog.dll - Consider to study the design (inner workings) of the dll](69db0c6d/chime.md)
+* [Todo: iPosLog - Consider to study and understand the filter mechanism design?](81bd1be5/chime.md)
+* [Todo: iPosLog.dll - Consider to attend to VS 2015 build warnings](d64b570e/chime.md)
+
+# zepos
+* [Todo: zepos - Consider to test out the ipos::msg::get(path) mechanism on real iPos messages?](38f9a610/chime.md)
+
+# Zepas
+* [Todo: Zepas - Consider to expand captured TCP/IP log to xml messages?](99d8bfb6/chime.md)
+* [Todo: Zepas - MyXMLUnpacker Xcode project](b7a67d98/chime.md)
+
+# open-ipos 
+* [Todo: open-ipos - Consider to have Epas implementation use the xsd and asn definition files?](bd96bd28/chime.md)
+* [Todo: open-ipso - Consider to have Epas implementation use the xsd and asn definition files?](a3a077aa/chime.md)
+
+# Swedbank
+* [Todo: Programming - Consider to implement Message Encoding/Decoding as a C++ template grammar that looks like the Element Tables used in Swedbank Specifications?](131c7d5f/chime.md)
+* [Todo: Överväg att komma ihåg hur låsa upp iPOS-dokument till Swedbank?](14dc2d15/chime.md)
+* [Todo: Swedbank Test - Cross Reference Test-cases and Requirement IDs](21751e4d/chime.md)
+* [Todo: Swedbank S&F - Consider to write a short white paper on how to address the "S&F full problem"](2329c356/chime.md)
+* [Todo: Programming - Consider to write Swedbank iPOS Terminal iPOS, SPDH, PPL and Clearing encoder/decoder open source libraries of interest to new iPOS Terminal Vendor?](6aca0089/chime.md)
+* [Todo: Swedbank verktyg för kravhantering](721d5d79/chime.md)
+* [Todo: Consider to learn about the Mobile Modem APN settings and its relevance to Swedbank Mobile Connection for test?](8066d517/chime.md)
+* [Todo: Be Swedbank aktivera SIM-kort igen?](a4a435f0/chime.md)
+* [Todo: Swedbank](b5638aa3/chime.md)
+* [Todo: Swedbank Test - Consider to update the latest credentials (login) and URLs for Testcase access?](da9745a0/chime.md)
+
 # KOH-Innovation
 * [Todo: Avsluta KOH-Innovation, dess avtal och flytta domäner till mig/ITfied?](116fb2b0/chime.md)
 * [Todo: Deklarera Privat (KOH-Innovation) 2016](179b6837/chime.md)
@@ -196,3 +237,83 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: Eget AB - Överväg att dokumentera hur bokföra "tullräkning" på import (utanför EU) enligt faktura från fraktbolag (DHL, UPS...)](ef589d66/chime.md)
 * [Todo: Eget AB - Överväg att förstå hur bokföra inköp (även import) till elektroniklabb baserat på i vilka poster i Årsredovisningen labbet skall redovisas?](faaa4d33/chime.md)
 * [Todo: Eget AB - Överväg att förstå Importregler och avgifter för inköp från China?](fe05def9/chime.md)
+
+# AB
+* [Todo: Bokföring - Överväg att lista de hur de vanligaste verifikationerna bokförs i mitt AB?](538babaa/chime.md)
+* [Todo: Årsredovisning eget AB - Överväg att dokumentera mappningen mellan BAS kontoplan konton och årsredovisning ÅR enligt svensk lagstiftning (från boken BOKSLUTSBOKEN)?](9e55894e/chime.md)
+* [Todo: Consider to write the "book of 03274463338B472B9E5D9803ABA51B62" as an input to a religion-of-the-future?](e3df193e/chime.md)
+
+# kajsa
+* [Todo: Skriv brev till Kajsa](f7edfc7b/chime.md)
+* [Todo: Överväg att skriva ett brev till Kajsa igen?](fc9ebf9f/chime.md)
+
+# Anja
+* [Todo: Överväg att gå på Anjas workshop i akvarell?](a63ae49e/chime.md)
+* [Todo: Skriv om kopplingen mellan Anja och min Mor (varför blir jag så besviken)?](bcb0b465/chime.md)
+
+# Renamed / Corrected
+* [Todo: Consider if there are already any V2L adapters from my Tesla Y?](5e620071/chime.md)
+
+# Fallromanen
+* [Todo: Fallroman - 160710 "När dök Pontus upp egentligen"](dfbaf216/chime.md)
+* [Todo: Fallroman - 160713 "Förståelse ändrar inget och minnet ändå dåligt bevisvärde"](aab56784/chime.md)
+* [Todo: Fallromanen - 160712 "Varför gör kärlek mig ledsen och irriterad?"](40ef836e/chime.md)
+* [Todo: Fallromanen - 160712 "Våra känslor tolkar världen"](8236a5fc/chime.md)
+* [Todo: Fallromanen - Finns det något sätt att formulera hur man skall relatera till livet som känns både meningsfullt och trovärdigt?](2f1f51ba/chime.md)
+* [Todo: Fallromanen - Glassvanens drömmar?](07d8f814/chime.md)
+* [Todo: Fallromanen - När jag fick orgasm precis på tolvslaget på nyårsafton](05cf4624/chime.md)
+* [Todo: Fallromanen - Skriv om vackra kassörskan på Konsum i Kungsängen](94262135/chime.md)
+* [Todo: Fallromanen - Överväg att skriva på "fallromanen" som Todo-mail?](51d18346/chime.md)
+
+# Övrigt Privat
+* [Todo: Hitta någon att leva med NU!](066b0c4b/chime.md)
+* [Todo: Min inre biograf visar sällan någon bra film?](c9b62988/chime.md)
+* [Todo: Skapa nya identiteter för konton på nätet att följa olika politiska strömningar](7455260f/chime.md)
+* [Todo: Skriv vidare på novellen "fritt fall" som en roman om mitt inte liv och samtidigt en filosofisk deklaration av emdividualism och framtidens religion?](b93dff5c/chime.md)
+* [Todo: Sweden C++ - Consider to invite swedish CppCon 2016 lighting talker "Arno Lepisk" to our community?](dd9b58e9/chime.md)
+* [Todo: Sweden C++ Video Editing - Consider to document and merge in Paul Dreik Notes?](de9303dd/chime.md)
+* [Todo: Sync Pro - Consider to document the administration experience of creating my private cloud of shared files using Sync Pro?](8becb4fd/chime.md)
+* [Todo: Uppmärksamma mina egna känslor kopplat till vad jag gjort 160617?](6cf4fb7c/chime.md)
+* [Todo: Uppmärksamma mina egna känslor kopplat till vad jag gjort 160626](326dd51b/chime.md)
+* [Todo: Visingsö 2017 - Gör ett utkast till vecka baserad på tidigare års kurs som "mall"?](d0506c33/chime.md)
+* [Todo: Visingsö 2017 - Överväg att kontakta "ambassadörer" och andra intresserade för att sätta bollen i rullning?](facf4112/chime.md)
+* [Todo: Visingsö P&S 2017 - Överväg att samla ihop input till "Drömveckan"?](955afa97/chime.md)
+
+
+# Inte egentlig Todo (ta bort helt)
+* [Todo: Mini Cooper D blocket annons](26022694/chime.md)
+* [Todo: Notera mätarställning 151123](a808e7f8/chime.md)
+* [Todo: Pernilla - I can let go now](b1e9d85a/chime.md)
+* [Todo: Pernillas Disputation - kl. 10.15 i lokal T52, Hälsovägen 11C i Flemingsberg.](da0b614c/chime.md)
+* [Todo: Provspela Kawai MP11](a432980b/chime.md)
+* [Todo: Saker jag "behöver" (kan tänka mig) att köpa](30431daf/chime.md)
+* [Todo: Skonaren Vega Ålesund - Skärhamn route map](2b36c58b/chime.md)
+* [Todo: Skapa en privat Todo-mailadress](09a36ef2/chime.md)
+* [Todo: Start using @itfied twitter account!](499a3373/chime.md)
+* [Todo: Säg upp Netflix](25ed2c42/chime.md)
+* [Todo: Sälj min Mini Cooper D 2011 (Chilli)](bed094fb/chime.md)
+* [Todo: Tidrapport Ti 16 Feb 2016](48928bb9/chime.md)
+* [Todo: Tidrapport fr 25 Sep 2015](ab1af4f0/chime.md)
+* [Todo: Sync Pro - Consider tp print and store digital information about purchased Sync Pro?](267d5fd2/chime.md)
+* [Todo: Skriv ut Skyfall.pdf](2e618c67/chime.md)
+* [Todo: Skriv ut alla covers och öva till vingsö](fc75dff5/chime.md)
+* [Todo: Update my LinkedIn profile](e9295c98/chime.md)
+* [Todo: Updatera lista över elpiano-kandidater att testa](5742c8bb/chime.md)
+* [Todo: Välj bra biografsalonger](43041b9b/chime.md)
+* [Todo: Värsta bredbandet gratis på Stockholms Bibliotek?](f7da115a/chime.md)
+* [Todo: Värsta bredbandet gratis på Sundbybergs Bibliotek?](fc4a940c/chime.md)
+* [Todo: Värsta bredbandet på Alviks bibliotek?](437cf80c/chime.md)
+* [Todo: Youtube Premium Subscription - Remember to cancel unless I like it?](64a35309/chime.md)
+* [Todo: Yxa till Pär?](c21648d0/chime.md)
+* [Todo: baldwin piano](f622d793/chime.md)
+* [Todo: Åk så här från Kallhäll till "Pernillas fik" på Spångavägen](5135dc9a/chime.md)
+
+
+
+
+
+
+
+
+
+
