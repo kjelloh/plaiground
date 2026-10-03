@@ -530,16 +530,20 @@ I now asked Claude to try the mechanism on my almost 4500 todo-mails and take a 
 
 * It seems Claude identifies the problem that 'liquid' is in fact not disabled (although stated to be disabled in the _config-yml file)
 
-    * And it seems my mail with C++ code erroeously triggers liquid macro expansion?
+    * And it seems my mail with C++ code erroneously triggers liquid macro expansion?
+    * I actually cant paste the report from Claude here!
+    * If I do this document will ALSO trigger jekyll liquid macro expandsion errors!
+    * The think to avoid is double '{' bla bla and the double '}'.
+    * Also the sequence '{' and then '%' bla bla ending with '%' and '}' are liquid macro triggers.
 
 ```sh
-Root cause: Mail content routinely contains {{...}} (C++ brace-initialization like std::array<...> a{{{{-1,-1,-1}}...}}, or notation like {name: text}). Jekyll's Liquid templating engine treats any file containing the literal substring {{ or {% as a template to parse — and the render_with_liquid: false setting in _config.yml that was supposed to disable this for chimes turns out to be a no-op in Jekyll 3.10.0 (the version github-pages pins): I checked the gem source directly — Jekyll::Page#render_with_liquid? never even looks at that config key, it just does content.include?("{{") || content.include?("{%"). So every chime was always exposed to this.
+Root cause: Mail content routinely contains ... (C++ brace-initialization like std::array<...>, or notation like '{' name: text '}'). Jekyll's Liquid templating engine treats any file containing the literal substring '{','{' or '{','%' as a template to parse — and the render_with_liquid: false setting in _config.yml that was supposed to disable this for chimes turns out to be a no-op in Jekyll 3.10.0 (the version github-pages pins): I checked the gem source directly — Jekyll::Page#render_with_liquid? never even looks at that config key, it just does content.include?("'{','{'") || content.include?("'{','%'"). So every chime was always exposed to this.
 
-Of 4433 chimes, exactly 18 contain {{/{%. I classified all 18 with the real liquid gem:
+Of 4433 chimes, exactly 18 contain '{','{'/'{','%'. I classified all 18 with the real liquid gem:
 - 9 produce a malformed-but-recoverable tag → Jekyll logs a warning and (silently!) drops/alters that content.
-- 8 produce an unterminated tag (e.g. {{name: text} missing its closing }}) → Liquid can't bound the parse and raises a fatal Liquid::SyntaxError, which aborts the entire site build, not just that page. That's the "hard fail on one" you saw.
+- 8 produce an unterminated tag (e.g. '{','{'name: text} missing its closing }}) → Liquid can't bound the parse and raises a fatal Liquid::SyntaxError, which aborts the entire site build, not just that page. That's the "hard fail on one" you saw.
 
-Fix implemented: eml_to_chime.py now wraps every chime body in Liquid's own {% raw %}...{% endraw %} — the mechanism Liquid provides specifically for "don't parse this," built to survive malformed-looking content (it scans for the literal {% endraw %} token rather than tokenizing what's inside). Verified against the real liquid gem: all 18 previously-broken files now parse and round-trip byte-for-byte with zero change in rendered output. Added a regression test; all 17 tests pass. Also cleaned up the now-proven-ineffective render_with_liquid config so it doesn't give false confidence.
+Fix implemented: eml_to_chime.py now wraps every chime body in Liquid's own '{','%' raw '%','}'...'{','%' endraw '%','}' — the mechanism Liquid provides specifically for "don't parse this," built to survive malformed-looking content (it scans for the literal '{','%' endraw '%','}' token rather than tokenizing what's inside). Verified against the real liquid gem: all 18 previously-broken files now parse and round-trip byte-for-byte with zero change in rendered output. Added a regression test; all 17 tests pass. Also cleaned up the now-proven-ineffective render_with_liquid config so it doesn't give false confidence.
 
 ```
 
@@ -660,3 +664,4 @@ With that fix, `reachable.py` correctly finds all 12 reachable files from `index
 * [mail_to_chime scripts](./mail_to_chime/)
 * [to_site scripts](./to_site/) (includes the `reachable.py` fix)
 * [chimes](./chime/index.md)
+
