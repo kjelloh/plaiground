@@ -272,7 +272,8 @@ def test_eml_file_to_chime_writes_and_links_plain_text(tmp_path):
     chime_path = eml_file_to_chime(eml_path, base_dir=tmp_path)
 
     txt_path = chime_path.parent / "chime.txt"
-    assert txt_path.read_text(encoding="utf-8") == (
+    assert txt_path.read_bytes().startswith(b"\xef\xbb\xbf")  # UTF-8 BOM, for browsers
+    assert txt_path.read_text(encoding="utf-8-sig") == (
         "First paragraph.\n\nSecond paragraph,\nwith a line break.\n"
     )
     content = chime_path.read_text(encoding="utf-8")
@@ -325,7 +326,7 @@ def test_eml_file_to_chime_newer_revision_replaces_plain_text(tmp_path):
     eml_file_to_chime(older, base_dir=tmp_path)
     chime_path = eml_file_to_chime(newer, base_dir=tmp_path)
 
-    text = (chime_path.parent / "chime.txt").read_text(encoding="utf-8")
+    text = (chime_path.parent / "chime.txt").read_text(encoding="utf-8-sig")
     assert "Updated paragraph." in text
     assert "First paragraph." not in text
 

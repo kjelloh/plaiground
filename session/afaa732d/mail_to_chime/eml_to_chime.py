@@ -29,7 +29,7 @@ from pathlib import Path
 
 from eml_to_html import extract as eml_to_html_extract
 from eml_to_html import sanitize
-from eml_to_txt import plain_text_of
+from eml_to_txt import plain_text_of, write_plain_text
 from exclude import Exclusions, find_exclusions
 from html_to_markdown import convert as html_to_markdown_convert
 
@@ -250,7 +250,7 @@ def eml_file_to_chime(
 
         plain_text = plain_text_of(msg)
         if plain_text is not None:
-            (chime_dir / PLAIN_TEXT_NAME).write_text(plain_text, encoding="utf-8")
+            write_plain_text(chime_dir / PLAIN_TEXT_NAME, plain_text)
 
         date_line = date_line_of(msg)
         with chime_path.open("a", encoding="utf-8") as f:

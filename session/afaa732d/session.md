@@ -2,7 +2,36 @@
 
 ## 20260903
 
-Extended exclude.md to filter my todo-mails.
+I asked Claude to compare the chime.txt with chime.md to see if and how line breaks are handled sufficiently correct by the markdown generator.
+
+* Claude found several issues and attended to them.
+
+```sh
+You were right: the Markdown generator was losing line breaks. I compared each example chime's chime.txt with the lines its chime.md shows a reader. Before the fix, 37 of 341 plain-text lines were joined to the previous line; after it, 0. All 52 tests pass, including 9 new line-break tests in test_html_to_markdown.py.
+
+How I compared, with no Jekyll involved: a scratchpad script, compare_breaks.py, applies the Markdown rule directly. A line ending in a plain newline joins the next line. Only a line ending in two spaces, or followed by a blank line or a new block, stays separate. The script then checks that every non-empty line of chime.txt appears as its own line in chime.md.
+
+What was wrong in html_to_markdown.py, and the fixes:
+1. Every <br> was lost. The converter correctly wrote "  \n" (a hard break), but its final whitespace cleanup removed those two spaces again. This hit plain-text mails too, which is why TestBench's two lines merged. Hard breaks are now protected during the cleanup, and dropped only where they do nothing, such as at the end of a paragraph.
+2. Lines inside quotes and lists were joined. Each <div> line there was separated by a plain newline. This merged the 13-line "Standards documents" quote in the OBD2 mail. They now get hard breaks.
+3. Pasted text's own line breaks were flattened (e.g. from YouTube). The text keeps real newlines under white-space: pre-wrap, which a browser shows as line breaks. Those newlines now become hard breaks. Apple's tab spans use a similar style but contain no newlines, so they're unaffected.
+4. Bold and italic markers misbehaved. An empty <i><br></i> left stray lines of just *. <b> WE ARE HERE…</b> came out as ** WE…**, which isn't valid bold, so the asterisks showed literally. The marker is now written only once visible text follows. Strictly this one isn't a line break issue, but it was tangled up with fixes 2 and 3.
+
+```
+
+* Now, I don't know how confident I am with the code Claude has generated until now.
+* I am vibe coding here and I only want an output that is usable.
+* I am betting though that the cirrent code is not the best?
+
+I now asked Claude to try and adress that the chime.txt does not render correctly in the browser as UTF8 encoded text.
+
+* Claude beleived a BOM could do the trick.
+* I asked it to generate chime.txt with a BOM
+* But when I tried it the chime.txt still rendered 'as ASCII' or something else (strange glyphs in the rendered text)
+
+Still, the example eml-files now looks quite good in the browser!
+
+I have now Extended exclude.md to filter my todo-mails.
 
 ```sh
 DRY RUN — nothing created or removed. 4433 mail files: 435 would be excluded, 0 failed

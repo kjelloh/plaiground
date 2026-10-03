@@ -73,3 +73,69 @@ def test_bracket_text_does_not_collide_with_latex_math_delimiters():
     markdown, refs = html_to_markdown(html)
     assert "\\[" not in markdown and "\\]" not in markdown
     assert "&#91;A-Za-z0-9_&#93;" in markdown
+
+
+# -- line breaks ---------------------------------------------------------
+# A lone newline in markdown is a *soft* break: renderers join the two
+# lines. Every line break the mail shows must therefore come out as a hard
+# break ("  " before the newline) or a paragraph break (blank line).
+
+
+def test_br_becomes_hard_break():
+    # The trailing-whitespace cleanup used to strip the "  " a <br> emits,
+    # silently turning every <br> into a soft break.
+    markdown, _ = html_to_markdown("<div>first<br>second</div>")
+    assert markdown == "first  \nsecond\n"
+
+
+def test_plain_text_mail_lines_stay_apart():
+    # eml_to_html wraps a plain-text-only mail's lines this way.
+    markdown, _ = html_to_markdown("<p>* Check in<br>\n* Wrap-up</p>")
+    assert markdown == "\\* Check in  \n\\* Wrap-up\n"
+
+
+def test_hard_break_dropped_at_paragraph_end():
+    markdown, _ = html_to_markdown("<div>a<br></div><div>b<br></div>")
+    assert markdown == "a\n\nb\n"
+
+
+def test_div_lines_in_blockquote_become_hard_breaks():
+    markdown, _ = html_to_markdown(
+        "<blockquote><div>Standards documents</div><div>J1962 – connector</div></blockquote>"
+    )
+    assert markdown == "> Standards documents  \n> J1962 – connector\n"
+
+
+def test_div_lines_in_list_item_become_hard_breaks():
+    markdown, _ = html_to_markdown("<ul><li><div>a</div><div>b</div></li><li>c</li></ul>")
+    assert markdown == "- a  \n  b\n- c\n"
+
+
+def test_pre_wrap_newlines_become_hard_breaks():
+    # Text pasted from e.g. YouTube keeps real newlines under
+    # white-space: pre-wrap; a browser shows them as line breaks.
+    markdown, _ = html_to_markdown(
+        '<div><span style="white-space: pre-wrap">Primer:  \nHaven:\nWorkbench</span></div>'
+    )
+    assert markdown == "Primer:  \nHaven:  \nWorkbench\n"
+
+
+def test_apple_tab_span_is_not_a_line_break():
+    markdown, _ = html_to_markdown(
+        '<div><span class="Apple-tab-span" style="white-space:pre">\t</span>==&gt; note</div>'
+    )
+    assert markdown == "==&gt; note\n"
+
+
+def test_empty_emphasis_leaves_no_stray_marker_lines():
+    markdown, _ = html_to_markdown(
+        "<blockquote><div><i>About</i></div><div><i><br></i></div><div><i>SBN</i></div></blockquote>"
+    )
+    assert "*\n" not in markdown.replace("*About*", "").replace("*SBN*", "")
+    assert "*About*" in markdown and "*SBN*" in markdown
+
+
+def test_emphasis_marker_moves_past_leading_space():
+    # "** x**" isn't emphasis in CommonMark; " **x**" is.
+    markdown, _ = html_to_markdown("<div>Note:<b> WE ARE HERE</b></div>")
+    assert markdown == "Note: **WE ARE HERE**\n"
