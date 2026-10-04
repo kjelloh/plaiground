@@ -13,3 +13,19 @@ But I want the process of turning eml files into 'chimes' to be broken up into d
 I want Claude to clone relevant code from [Consider to vibe code a working emls-to-chimes and to_site integration?](../afaa732d/session.md) and create new scripts and files in this session.
 
 Let's see what Claude can help us with.
+
+So Claude seems to have done a good job of creating the new eml to 'domain' mechanism.
+
+* [eml_to_domain/README.md](./eml_to_domain/README.md)
+
+I now realise I actually think the created markdown from eml file (email) should be without the hash tag?
+
+* I can invent some UUID later?
+
+I askeed Claude to apply this change and it did.
+
+I now added the example_eml from session/afaa732d to use in this one.
+
+* The ```python3 ./eml_to_domain/emls_to_domain.py example_eml site_repo --domain mail``` now creates [site_repo/mail/index.md](./site_repo/mail/index.md) ok.
+
+So we are back at markdowns without any hash ok.

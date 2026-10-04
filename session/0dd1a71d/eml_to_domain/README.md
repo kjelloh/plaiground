@@ -14,10 +14,8 @@ folder of .eml files ──emls_to_domain.py──▶ <repo>/<domain>/<hash>/<do
 * Python 3.10 or newer. Standard library only, nothing to install.
 * A **target repo** folder holding the two scaffolding scripts the mail
   scripts call. Copy them from [site_repo/](../site_repo/):
-  * `init_new.py` creates each entry folder and its markdown file. It must be
-    the version that writes the `#<full hash>` tag line (see
-    [Entry layout](#entry-layout)). [domain_to_domain](../domain_to_domain/domain_to_domain.py)
-    refuses to copy entries without that tag.
+  * `init_new.py` creates each entry folder (named after a hash of the
+    heading) and its markdown file.
   * `update_index.py` writes `<domain>/index.md`. If it is missing, entries are
     still created, but you get a warning and no index.
 
@@ -132,8 +130,6 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 ```
 # Todo: Build House - Consider to use google maps ...
 
-#1afd4852bfc404fd18f717a7694fc130
-
 2019-07-20T14:31:20+02:00
 
 [Plain text](mail.txt)
@@ -147,19 +143,14 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 
 | Line | Content |
 |---|---|
-| 1 | `# ` + the mail's Subject (`update_index.py` uses it as the link text). |
-| 3 | `#` + the full md5 hash of the heading: a tag that references this document. The folder name is its first 8 characters. |
-| 5 | The mail's date (ISO 8601). Used to decide whether a later mail is newer. Don't edit it. |
-| 7 | Link to `<domain>.txt`, only present when the mail had a plain-text body. |
+| 1 | `# ` + the mail's Subject (`update_index.py` uses it as the link text; the folder name is the first 8 characters of its md5 hash). Don't edit it: the folder is found by hashing it. |
+| 3 | The mail's date (ISO 8601). Used to decide whether a later mail is newer. Don't edit it. |
+| 5 | Link to `<domain>.txt`, only present when the mail had a plain-text body. |
 | rest | The body, wrapped in Liquid `raw` … `endraw` tags so that brace sequences in mail text (C++ code, templates, ...) can't break a Jekyll site build. |
 
 `<domain>.txt` is the mail's own `text/plain` part, kept verbatim (UTF-8
 with BOM so browsers show non-ASCII characters correctly). HTML-only mails
 have no `.txt`. Inline images and attachments are saved next to the `.md`.
-
-> **Rendering note:** the `#<hash>` line shows as plain text with GitHub
-> Flavored Markdown (Jekyll's default on GitHub Pages). A plain kramdown
-> setup would render it as a heading.
 
 ## Next step: pick entries into another domain
 
@@ -191,7 +182,7 @@ After a sync the target domain holds **exactly** the picked entries:
 | `UPDATE` | Picked, but the source entry changed since it was copied (e.g. a newer mail was imported), so replaced. |
 | `REMOVE` | In the target but no longer picked, or gone from the source, so **deleted** from the target. |
 | `UNMATCHED` | Pick list line that matches no source entry (typo, stale line). |
-| `FAIL` | Source entry whose `#<hash>` tag doesn't match its heading and folder. Not copied. |
+| `FAIL` | Source entry whose heading doesn't hash to its folder name (e.g. a hand-edited heading). Not copied. |
 
 A copy is the whole entry folder with `<source>.md` / `<source>.txt` renamed
 to `<target>.md` / `<target>.txt` and the plain-text link rewritten. The

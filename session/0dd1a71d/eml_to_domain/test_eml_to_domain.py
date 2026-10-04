@@ -61,10 +61,8 @@ def test_eml_file_to_entry_creates_entry(tmp_path, domain):
     assert entry_path == tmp_path / domain / entry_path.parent.name / f"{domain}.md"
     content = entry_path.read_text(encoding="utf-8")
     assert content.startswith("# Hello\n\n")  # from the mail's Subject, not the filename
-    # init_new's full-hash tag sits between heading and date line
-    full_hash = hashlib.md5(b"Hello").hexdigest()
-    assert content.startswith(f"# Hello\n\n#{full_hash}\n\n2026-09-11T12:00:00+00:00\n\n")
-    assert full_hash.startswith(entry_path.parent.name)
+    assert content.startswith("# Hello\n\n2026-09-11T12:00:00+00:00\n\n")
+    assert entry_path.parent.name == hashlib.md5(b"Hello").hexdigest()[:8]
     assert "Body **text**" in content
 
 
@@ -283,8 +281,7 @@ def test_eml_file_to_entry_writes_and_links_plain_text(tmp_path, domain):
     )
     content = entry_path.read_text(encoding="utf-8")
     assert content.startswith(
-        f"# Plain\n\n#{hashlib.md5(b'Plain').hexdigest()}\n\n"
-        "2026-09-11T12:00:00+00:00\n\n"
+        "# Plain\n\n2026-09-11T12:00:00+00:00\n\n"
         f"[Plain text]({domain}.txt)\n\n"
         "{% raw %}\n"
     )
@@ -398,19 +395,16 @@ def test_invalid_domain_writes_nothing(tmp_path):
     assert not [p for p in tmp_path.iterdir() if p.is_dir() and p.name != "__pycache__"]
 
 
-def test_read_entry_date_skips_hash_tag_line(tmp_path):
+def test_read_entry_date_reads_first_line_after_heading(tmp_path):
     md = tmp_path / "x.md"
-    md.write_text(
-        f"# X\n\n#{hashlib.md5(b'X').hexdigest()}\n\n2026-09-11T12:00:00+00:00\n\nbody\n",
-        encoding="utf-8",
-    )
+    md.write_text("# X\n\n2026-09-11T12:00:00+00:00\n\nbody\n", encoding="utf-8")
 
     assert read_entry_date(md).isoformat() == "2026-09-11T12:00:00+00:00"
 
 
 def test_read_entry_date_none_for_no_date_fallback(tmp_path):
     md = tmp_path / "x.md"
-    md.write_text("# X\n\n#abc123\n\n(no date)\n", encoding="utf-8")
+    md.write_text("# X\n\n(no date)\n", encoding="utf-8")
 
     assert read_entry_date(md) is None
 

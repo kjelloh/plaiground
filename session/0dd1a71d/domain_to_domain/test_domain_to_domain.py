@@ -13,12 +13,8 @@ SOURCE = "inbox"
 TARGET = "todo"
 
 
-def full_hash(heading: str) -> str:
-    return hashlib.md5(heading.encode("utf-8")).hexdigest()
-
-
 def short_hash(heading: str) -> str:
-    return full_hash(heading)[:8]
+    return hashlib.md5(heading.encode("utf-8")).hexdigest()[:8]
 
 
 @pytest.fixture
@@ -34,7 +30,7 @@ def make_entry(repo: Path, domain: str, heading: str, body: str = "body", with_t
     """An entry laid out like eml_to_domain writes it."""
     folder = repo / domain / short_hash(heading)
     folder.mkdir(parents=True)
-    md = f"# {heading}\n\n#{full_hash(heading)}\n\n2026-09-11T12:00:00+00:00\n\n"
+    md = f"# {heading}\n\n2026-09-11T12:00:00+00:00\n\n"
     if with_txt:
         md += f"[Plain text]({domain}.txt)\n\n"
         (folder / f"{domain}.txt").write_text(f"{body}\n", encoding="utf-8")
@@ -91,7 +87,7 @@ def test_copy_is_renamed_to_target_domain(repo, tmp_path):
     dest = target_dir(repo, "A")
     assert sorted(p.name for p in dest.iterdir()) == ["pic.png", f"{TARGET}.md", f"{TARGET}.txt"]
     md = (dest / f"{TARGET}.md").read_text(encoding="utf-8")
-    assert md.startswith(f"# A\n\n#{full_hash('A')}\n\n")  # same tag across domains
+    assert md.startswith("# A\n\n2026-09-11T12:00:00+00:00\n\n")
     assert f"[Plain text]({TARGET}.txt)" in md
     assert f"{SOURCE}.txt" not in md
     assert "![pic](pic.png)" in md
@@ -208,26 +204,17 @@ def test_dry_run_into_new_target_creates_no_folder(repo, tmp_path):
     assert not (repo / TARGET).exists()
 
 
-def test_source_entry_with_wrong_hash_tag_fails(repo, tmp_path):
+def test_source_entry_whose_heading_doesnt_match_folder_fails(repo, tmp_path):
     src = make_entry(repo, SOURCE, "A")
     md = src / f"{SOURCE}.md"
-    md.write_text(md.read_text(encoding="utf-8").replace(full_hash("A"), full_hash("B")), encoding="utf-8")
+    md.write_text(md.read_text(encoding="utf-8").replace("# A\n", "# A edited\n", 1), encoding="utf-8")
 
-    result = run(repo, write_pick(tmp_path, index_line(SOURCE, "A")))
+    result = run(repo, write_pick(tmp_path, f"* [A]({short_hash('A')}/{SOURCE}.md)"))
 
-    assert f"FAIL: {SOURCE}/{short_hash('A')}  A" in result.stdout
+    assert f"FAIL: {SOURCE}/{short_hash('A')}  A edited" in result.stdout
+    assert "hashes to" in result.stdout
     assert "0 added, 0 updated, 0 removed, 0 unchanged, 1 failed" in result.stdout
     assert not (repo / TARGET).exists()
-
-
-def test_source_entry_without_hash_tag_fails(repo, tmp_path):
-    src = make_entry(repo, SOURCE, "A")
-    (src / f"{SOURCE}.md").write_text("# A\n\nbody\n", encoding="utf-8")
-
-    result = run(repo, write_pick(tmp_path, index_line(SOURCE, "A")))
-
-    assert "no #<hash> tag line" in result.stdout
-    assert "1 failed" in result.stdout
 
 
 def test_non_entry_folders_in_target_are_left_alone(repo, tmp_path):

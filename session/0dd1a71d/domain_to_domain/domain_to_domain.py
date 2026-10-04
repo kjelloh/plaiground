@@ -27,9 +27,9 @@ After a run the target domain holds exactly the picked source entries:
 A copy is the whole entry folder (images, attachments, ...) with
 <source>.md / <source>.txt renamed to <target>.md / <target>.txt and links
 to <source>.txt rewritten. The hash is computed from the heading only, so
-an entry keeps its folder hash and its "#<full hash>" tag line across
-domains; a source entry whose tag doesn't match its heading and folder is
-reported as FAIL and not copied.
+an entry keeps its folder hash across domains; a source entry whose heading
+doesn't hash to its folder name (e.g. a hand-edited heading) is reported as
+FAIL and not copied.
 """
 
 import argparse
@@ -48,9 +48,6 @@ sys.stdout.reconfigure(line_buffering=True)
 
 # Greedy heading up to the last "](" so a "]" inside the heading survives.
 ENTRY_RE = re.compile(r"^\s*[*+-]\s+\[(?P<heading>.*)\]\((?P<target>[^()]*)\)\s*$")
-
-# A whole line holding just "#<32 hex digits>" (init_new.py's hash tag).
-HASH_TAG_RE = re.compile(r"^#(?P<full_hash>[0-9a-f]{32})$")
 
 
 @dataclass
@@ -149,14 +146,6 @@ def heading_of(md: Path) -> str:
         return f.readline().strip().lstrip("#").strip()
 
 
-def hash_tag_of(md: Path) -> str | None:
-    for line in md.read_text(encoding="utf-8").splitlines():
-        match = HASH_TAG_RE.match(line.strip())
-        if match is not None:
-            return match["full_hash"]
-    return None
-
-
 def picked_hashes(picks: list[Pick], source_entries: dict[str, Path], compute_hash) -> set[str]:
     """Source entry hashes the picks refer to (marking picks that hit)."""
     picked = set()
@@ -170,17 +159,11 @@ def picked_hashes(picks: list[Pick], source_entries: dict[str, Path], compute_ha
     return picked
 
 
-def check_hash_tag(md: Path, compute_full_hash) -> None:
-    """Raise ValueError unless md's "#<hash>" tag is the full hash of its
-    heading and starts with its folder name."""
-    full_hash = hash_tag_of(md)
-    if full_hash is None:
-        raise ValueError(f"{md} has no #<hash> tag line")
-    expected = compute_full_hash(heading_of(md))
-    if full_hash != expected:
-        raise ValueError(f"{md} is tagged #{full_hash}, but its heading hashes to #{expected}")
-    if not full_hash.startswith(md.parent.name):
-        raise ValueError(f"{md} is tagged #{full_hash}, which doesn't match its folder name")
+def check_folder_hash(md: Path, compute_hash) -> None:
+    """Raise ValueError unless md's heading hashes to its folder name."""
+    expected = compute_hash(heading_of(md))
+    if expected != md.parent.name:
+        raise ValueError(f"its heading hashes to {expected}, not to its folder name")
 
 
 def build_copy(source_dir: Path, dest_dir: Path, source: str, target: str) -> None:
@@ -221,7 +204,7 @@ def sync(
         source_md = source_entries[key]
         heading = heading_of(source_md)
         try:
-            check_hash_tag(source_md, init_new.compute_full_hash)
+            check_folder_hash(source_md, init_new.compute_hash)
         except ValueError as e:
             report.failed.append((key, f"{heading} ({e})"))
             continue

@@ -21,7 +21,6 @@ eml_to_domain folder usable, unmodified, against any of those repos.
 import argparse
 import email
 import importlib.util
-import re
 import shutil
 import subprocess
 import sys
@@ -33,10 +32,6 @@ from eml_to_html import extract as eml_to_html_extract
 from eml_to_html import sanitize
 from eml_to_txt import plain_text_of, write_plain_text
 from html_to_markdown import convert as html_to_markdown_convert
-
-# init_new.py's hash tag line ("#" + hex digest) between heading and date.
-HASH_TAG_LINE_RE = re.compile(r"^#[0-9a-f]+$")
-
 
 class EntrySupersededError(Exception):
     """Raised when an existing entry for this mail's Subject already
@@ -137,13 +132,13 @@ def is_newer(candidate_date, current_date) -> bool:
 
 def read_entry_date(entry_path: Path):
     """Read back the date eml_file_to_entry wrote into an existing entry:
-    after the "# heading" line, the first non-blank line that isn't
-    init_new.py's "#<hash>" tag line. Returns None if there is no such line
-    or it isn't a parseable ISO date (e.g. the "(no date)" fallback)."""
+    the first non-blank line after the "# heading" line. Returns None if
+    there is no such line or it isn't a parseable ISO date (e.g. the
+    "(no date)" fallback)."""
     lines = entry_path.read_text(encoding="utf-8").splitlines()[1:]
     for line in lines:
         line = line.strip()
-        if not line or HASH_TAG_LINE_RE.match(line):
+        if not line:
             continue
         try:
             return datetime.fromisoformat(line)

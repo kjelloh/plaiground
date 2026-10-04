@@ -1,0 +1,166 @@
+Return-Path: <kjell-olov.hogdahl@itfied.se>
+Delivered-To: <kjell-olov.hogdahl@itfied.se>
+Received: from localhost ([195.74.38.29])
+	by bin-mail-backend-07.atm.binero.net (Dovecot) with LMTP id stiRK9wPnlf7fgAA0J78UA
+	for <kjell-olov.hogdahl@itfied.se>; Sun, 31 Jul 2016 16:49:00 +0200
+Received: from bin-mail-mx-new-05.localdomain ([195.74.38.29])
+	by localhost (Dovecot) with LMTP id BaOyC2EPnlcwVQAA0J78UA
+	; Sun, 31 Jul 2016 16:49:00 +0200
+Received: from vsp-inbound-03-02.binero.net (lb-vsp01.binero.net [195.74.38.202])
+	by bin-mail-mx-new-05.localdomain (Postfix) with SMTP id 9602BC0633
+	for <kjell-olov.hogdahl@itfied.se>; Sun, 31 Jul 2016 16:49:00 +0200 (CEST)
+X-SPG-Loopback-Protection: 1
+X-AV-RPD: 0
+X-Spam-Version: Binero Spamfilter
+X-Spam-SA: 0
+X-Spam-RPD: 0
+Received: from bin-vsp-out-04.atm.binero.net (unknown [195.74.38.227])
+	by vsp-inbound-03-02.binero.net (Halon Mail Gateway) with ESMTPS
+	for <kjell-olov.hogdahl@itfied.se>; Sun, 31 Jul 2016 16:48:58 +0200 (CEST)
+X-Halon-ID: e991bf1d-572d-11e6-a383-005056914375
+Authorized-sender: kjell-olov.hogdahl@itfied.se
+Received: from [10.0.1.4] (unknown [83.251.137.44])
+	by bin-vsp-out-04.atm.binero.net (Halon Mail Gateway) with ESMTPA
+	for <kjell-olov.hogdahl@itfied.se>; Sun, 31 Jul 2016 16:48:52 +0200 (CEST)
+From: =?utf-8?Q?Kjell-Olov_H=C3=B6gdahl?= <kjell-olov.hogdahl@itfied.se>
+Content-Type: multipart/alternative; boundary="Apple-Mail=_0526BC17-A4E2-4791-AAC7-7DAC0BA6110E"
+Subject: Todo: Programming - Consider to learn and document about regular expression coding?
+Message-Id: <9BBE6EB6-C84F-4B61-88FE-5C1CBEC72E7C@itfied.se>
+Date: Sun, 31 Jul 2016 16:48:56 +0200
+To: =?utf-8?Q?Kjell-Olov_H=C3=B6gdahl?= <kjell-olov.hogdahl@itfied.se>
+Mime-Version: 1.0 (Mac OS X Mail 9.3 \(3124\))
+X-Mailer: Apple Mail (2.3124)
+
+
+--Apple-Mail=_0526BC17-A4E2-4791-AAC7-7DAC0BA6110E
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain;
+	charset=utf-8
+
+Could it be a good idea to understand and document how regular =
+expressions work and may be used?
+
+1) Consider ages that are good resources to understand regular =
+expressions?
+
+	=3D=3D> Consider this one as a good tutorial on regular =
+expressions (http://www.regular-expressions.info/tutorial.html)?
+
+=E2=80=9Cthere are 12 characters with special meanings: the backslash \, =
+the caret ^, the dollar sign $, the period or dot ., the vertical bar or =
+pipe symbol |, the question mark ?, the asterisk or star *, the plus =
+sign +, the opening parenthesis (, the closing parenthesis ), the =
+opening square bracket [, and the opening curly brace {, These special =
+characters are often called "metacharacters". Most of them are errors =
+when used alone.=E2=80=9D
+
+		=3D=3D> Shorthand character classes seems good to know =
+(http://www.regular-expressions.info/shorthand.html =
+<http://www.regular-expressions.info/shorthand.html>)?
+
+		=E2=80=9C\d" is short for [0-9]
+		=E2=80=9C\w" stands for "word character". It always =
+matches the ASCII characters [A-Za-z0-9_].=20
+
+
+	=09
+
+2) Consider good online regular expression testers?
+
+	=3D=3D> This seem to be a good one to text javascript regular =
+expressions (http://www.regexpal.com/ <http://www.regexpal.com/>)?
+
+		=3D=3D> Note: It does not support look-behind?
+
+
+3) Consider to understand how to design a regular expression that =
+matches the file name (without extension) in a file path?
+
+	Given: =
+=E2=80=9CC:\Users\kjell-olovhogdahl\Documents\GitHub\Darwinet\build\src\He=
+llo.exe=E2=80=9D
+
+	=E2=80=9C.*=E2=80=9D - matches everything (=E2=80=98.=E2=80=99 =
+matches any character and =E2=80=98*=E2=80=99 means zero-or-more)
+	=E2=80=9C\\[^\\]+$=E2=80=9D - Matches =E2=80=9C\Hello.exe=E2=80=9D=
+
+	=E2=80=9C\w*(?=3D.exe$)=E2=80=9D - matches =E2=80=9CHello=E2=80=9D=
+ (matches any word character before excluded =E2=80=9C.exe=E2=80=9D at =
+end of line =E2=80=98$=E2=80=99)
+
+=E2=80=A6
+
+Consider to update this documentation when appropriate for new =
+good-to-know regular expression knowledge?
+...=
+
+--Apple-Mail=_0526BC17-A4E2-4791-AAC7-7DAC0BA6110E
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html;
+	charset=utf-8
+
+<html><head><meta http-equiv=3D"Content-Type" content=3D"text/html =
+charset=3Dutf-8"></head><body style=3D"word-wrap: break-word; =
+-webkit-nbsp-mode: space; -webkit-line-break: after-white-space;" =
+class=3D"">Could it be a good idea to understand and document how =
+regular expressions work and may be used?<div class=3D""><br =
+class=3D""></div><div class=3D"">1) Consider ages that are good =
+resources to understand regular expressions?</div><div class=3D""><br =
+class=3D""></div><div class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>=3D=3D&gt; Consider this one as a =
+good tutorial on regular expressions (<a =
+href=3D"http://www.regular-expressions.info/tutorial.html" =
+class=3D"">http://www.regular-expressions.info/tutorial.html</a>)?</div><d=
+iv class=3D""><br class=3D""></div><div class=3D"">=E2=80=9Cthere are 12 =
+characters with special meanings: the backslash \, the caret ^, the =
+dollar sign $, the period or dot ., the vertical bar or pipe symbol |, =
+the question mark ?, the asterisk or star *, the plus sign +, the =
+opening parenthesis (, the closing parenthesis ), the opening square =
+bracket [, and the opening curly&nbsp;brace {, These special characters =
+are often called "metacharacters". Most of them are errors when used =
+alone.=E2=80=9D</div><div class=3D""><br class=3D""></div><div =
+class=3D""><span class=3D"Apple-tab-span" style=3D"white-space:pre">		=
+</span>=3D=3D&gt; Shorthand character classes seems good to know (<a =
+href=3D"http://www.regular-expressions.info/shorthand.html" =
+class=3D"">http://www.regular-expressions.info/shorthand.html</a>)?</div><=
+div class=3D""><br class=3D""></div><div class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">		=
+</span>=E2=80=9C\d" is short for [0-9]</div><div class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">		=
+</span>=E2=80=9C\w" stands for "word character". It always matches the =
+ASCII characters [A-Za-z0-9_].&nbsp;</div><br class=3D""><br =
+class=3D""><div class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">		</span></div><div class=3D""><br =
+class=3D""></div><div class=3D"">2) Consider good online regular =
+expression testers?</div><div class=3D""><br class=3D""></div><div =
+class=3D""><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>=3D=3D&gt; This seem to be a good one to text javascript regular =
+expressions (<a href=3D"http://www.regexpal.com/" =
+class=3D"">http://www.regexpal.com/</a>)?</div><div class=3D""><br =
+class=3D""></div><div class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">		</span>=3D=3D&gt; Note: It does =
+not support look-behind?</div><div class=3D""><b class=3D""><br =
+class=3D""></b></div><div class=3D""><b class=3D""><br =
+class=3D""></b></div><div class=3D"">3) Consider to understand how to =
+design a regular expression that matches the file name (without =
+extension) in a file path?</div><div class=3D""><br class=3D""></div><div =
+class=3D""><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>Given: =
+=E2=80=9CC:\Users\kjell-olovhogdahl\Documents\GitHub\Darwinet\build\src\He=
+llo.exe=E2=80=9D</div><div class=3D""><br class=3D""></div><div =
+class=3D""><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>=E2=80=9C.*=E2=80=9D - matches everything (=E2=80=98.=E2=80=99 =
+matches any character and =E2=80=98*=E2=80=99 means =
+zero-or-more)</div><div class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>=E2=80=9C<a href=3D"smb://[^//" =
+class=3D"">\\[^\\</a>]+$=E2=80=9D - Matches =E2=80=9C\Hello.exe=E2=80=9D</=
+div><div class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>=E2=80=9C\w*(?=3D.exe$)=E2=80=9D =
+- matches =E2=80=9CHello=E2=80=9D (matches any word character before =
+excluded =E2=80=9C.exe=E2=80=9D at end of line =E2=80=98$=E2=80=99)</div><=
+div class=3D""><br class=3D""></div><div class=3D"">=E2=80=A6</div><div =
+class=3D""><br class=3D""></div><div class=3D"">Consider to update this =
+documentation when appropriate for new good-to-know regular expression =
+knowledge?</div><div class=3D"">...</div></body></html>=
+
+--Apple-Mail=_0526BC17-A4E2-4791-AAC7-7DAC0BA6110E--
