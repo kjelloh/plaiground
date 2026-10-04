@@ -1,0 +1,5 @@
+# Ignore domain folders generated in this session's site_repo
+# (everything except the tracked repo files below)
+site_repo/*/
+__pycache__/
+.pytest_cache/

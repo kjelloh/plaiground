@@ -5,6 +5,27 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20261004
+
+I now want to tweak the creation of chime,note,todo etc. ANd also tweak the eml-to-chime process.
+
+* I want the init_new to use a .longer hash for its 'cas' identifier.
+* I want an eml-to-mail uning 'init_new mail \<subject\>'
+* I want an opt-in mail-to-chime (or whatever we want to create from existing heading-cas 'mail' things)
+
+It also seems I need a name for what init_new actually creates?
+
+* For now init_new takes a label and a heading text
+* And it creates a folder named as the hash of the heading
+* And in that folder it creates a markdown file with the heading and the label as the file name
+
+So what have the init_new actually created?
+
+* Are they all 'chimes'?
+* Are they something 'cas' (content adressable storage)?
+* I anything they are 'content adressable headings'? (cah?)
+* Or what is a good name for something indexed by a heading-to-hash id?
+
 ## 20260930
 
 It seems I now have a working emls-to-chimes in [Consider take 2 on eml-to-chime python mechanism?](../session/aa98c723/session.md)?
