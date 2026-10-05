@@ -6,7 +6,16 @@ Pipeline: eml_to_html (extract the HTML body + inline images) -> html_to_markdow
 (convert to markdown, copy images) -> merge the result into <domain>.md
 scaffolded by init_new. The mail's original text/plain body (if any) is also
 kept verbatim as <domain>.txt (via eml_to_txt), linked from <domain>.md
-right after the date line.
+right after the metadata.
+
+The mail's date is kept as invisible metadata, an HTML comment right after
+the heading:
+
+    # <Subject>
+
+    <!-- mail-date: 2019-07-20T14:31:20+02:00 -->
+
+It is what decides whether a later mail with the same Subject is newer.
 
 There is no default domain: the caller always names it (e.g. "mail"), so
 the same mechanism can fill any namespace of the target repo.
@@ -21,6 +30,7 @@ eml_to_domain folder usable, unmodified, against any of those repos.
 import argparse
 import email
 import importlib.util
+import re
 import shutil
 import subprocess
 import sys
@@ -32,6 +42,15 @@ from eml_to_html import extract as eml_to_html_extract
 from eml_to_html import sanitize
 from eml_to_txt import plain_text_of, write_plain_text
 from html_to_markdown import convert as html_to_markdown_convert
+
+# The metadata line holding the mail's date (see module docstring).
+MAIL_DATE_TAG = "mail-date"
+MAIL_DATE_RE = re.compile(rf"^<!-- {MAIL_DATE_TAG}: (?P<date>.*) -->$")
+
+# First line of the mail body; metadata is only looked for above it, so a
+# mail that itself contains a "mail-date" comment can't be mistaken for it.
+BODY_START = "{% raw %}"
+
 
 class EntrySupersededError(Exception):
     """Raised when an existing entry for this mail's Subject already
@@ -106,12 +125,18 @@ def parsed_date_of(msg):
         return None
 
 
-def date_line_of(msg) -> str:
+def mail_date_tag_of(msg) -> str | None:
+    """The "<!-- mail-date: ... -->" metadata line for msg: its Date header
+    in ISO 8601 if parsable, else verbatim (kept for reference; it reads
+    back as no date). None if the mail has no usable Date header."""
     parsed = parsed_date_of(msg)
     if parsed is not None:
-        return parsed.isoformat()
-    date = msg.get("date")
-    return str(date) if date is not None else "(no date)"
+        value = parsed.isoformat()
+    else:
+        value = " ".join(str(msg.get("date") or "").split())
+        if not value or "-->" in value:  # "-->" would end the comment early
+            return None
+    return f"<!-- {MAIL_DATE_TAG}: {value} -->"
 
 
 def is_newer(candidate_date, current_date) -> bool:
@@ -132,18 +157,18 @@ def is_newer(candidate_date, current_date) -> bool:
 
 def read_entry_date(entry_path: Path):
     """Read back the date eml_file_to_entry wrote into an existing entry:
-    the first non-blank line after the "# heading" line. Returns None if
-    there is no such line or it isn't a parseable ISO date (e.g. the
-    "(no date)" fallback)."""
-    lines = entry_path.read_text(encoding="utf-8").splitlines()[1:]
-    for line in lines:
+    its "<!-- mail-date: ... -->" line above the mail body. Returns None if
+    there is no such line or its value isn't a parseable ISO date."""
+    for line in entry_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
-        if not line:
-            continue
-        try:
-            return datetime.fromisoformat(line)
-        except ValueError:
-            return None
+        if line == BODY_START:
+            break
+        match = MAIL_DATE_RE.match(line)
+        if match is not None:
+            try:
+                return datetime.fromisoformat(match["date"])
+            except ValueError:
+                return None
     return None
 
 
@@ -185,9 +210,10 @@ def eml_file_to_entry(eml_path: Path, base_dir: Path, domain: str) -> Path:
         if plain_text is not None:
             write_plain_text(entry_dir / txt_name, plain_text)
 
-        date_line = date_line_of(msg)
+        date_tag = mail_date_tag_of(msg)
         with entry_path.open("a", encoding="utf-8") as f:
-            f.write(f"{date_line}\n\n")
+            if date_tag is not None:
+                f.write(f"{date_tag}\n\n")
             if plain_text is not None:
                 f.write(f"[Plain text]({txt_name})\n\n")
             # Mail content routinely contains "{{" / "{%" (C++ brace-init,
@@ -197,7 +223,7 @@ def eml_file_to_entry(eml_path: Path, base_dir: Path, domain: str) -> Path:
             # is Liquid's own mechanism for "don't parse this", built to
             # survive exactly this case (verified: scans for the literal
             # {% endraw %} token rather than tokenizing the content).
-            f.write("{% raw %}\n")
+            f.write(f"{BODY_START}\n")
             f.write(markdown_body)
             f.write("\n{% endraw %}\n")
     finally:

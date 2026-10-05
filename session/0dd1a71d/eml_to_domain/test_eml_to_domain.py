@@ -61,7 +61,7 @@ def test_eml_file_to_entry_creates_entry(tmp_path, domain):
     assert entry_path == tmp_path / domain / entry_path.parent.name / f"{domain}.md"
     content = entry_path.read_text(encoding="utf-8")
     assert content.startswith("# Hello\n\n")  # from the mail's Subject, not the filename
-    assert content.startswith("# Hello\n\n2026-09-11T12:00:00+00:00\n\n")
+    assert content.startswith("# Hello\n\n<!-- mail-date: 2026-09-11T12:00:00+00:00 -->\n\n")
     assert entry_path.parent.name == hashlib.md5(b"Hello").hexdigest()[:8]
     assert "Body **text**" in content
 
@@ -281,7 +281,7 @@ def test_eml_file_to_entry_writes_and_links_plain_text(tmp_path, domain):
     )
     content = entry_path.read_text(encoding="utf-8")
     assert content.startswith(
-        "# Plain\n\n2026-09-11T12:00:00+00:00\n\n"
+        "# Plain\n\n<!-- mail-date: 2026-09-11T12:00:00+00:00 -->\n\n"
         f"[Plain text]({domain}.txt)\n\n"
         "{% raw %}\n"
     )
@@ -395,18 +395,95 @@ def test_invalid_domain_writes_nothing(tmp_path):
     assert not [p for p in tmp_path.iterdir() if p.is_dir() and p.name != "__pycache__"]
 
 
-def test_read_entry_date_reads_first_line_after_heading(tmp_path):
+def test_read_entry_date_reads_mail_date_tag(tmp_path):
     md = tmp_path / "x.md"
-    md.write_text("# X\n\n2026-09-11T12:00:00+00:00\n\nbody\n", encoding="utf-8")
+    md.write_text(
+        "# X\n\n<!-- mail-date: 2026-09-11T12:00:00+00:00 -->\n\n{% raw %}\nbody\n{% endraw %}\n",
+        encoding="utf-8",
+    )
 
     assert read_entry_date(md).isoformat() == "2026-09-11T12:00:00+00:00"
 
 
-def test_read_entry_date_none_for_no_date_fallback(tmp_path):
+def test_read_entry_date_none_without_tag(tmp_path):
+    # e.g. an entry in the earlier layout, with a visible date line: it
+    # reads as undated, so the next dated mail rewrites it in this layout.
     md = tmp_path / "x.md"
-    md.write_text("# X\n\n(no date)\n", encoding="utf-8")
+    md.write_text("# X\n\n2026-09-11T12:00:00+00:00\n\nbody\n", encoding="utf-8")
 
     assert read_entry_date(md) is None
+
+
+def test_read_entry_date_none_for_unparsable_value(tmp_path):
+    md = tmp_path / "x.md"
+    md.write_text("# X\n\n<!-- mail-date: someday -->\n", encoding="utf-8")
+
+    assert read_entry_date(md) is None
+
+
+def test_read_entry_date_ignores_tag_inside_mail_body(tmp_path):
+    md = tmp_path / "x.md"
+    md.write_text(
+        "# X\n\n{% raw %}\n<!-- mail-date: 2026-09-11T12:00:00+00:00 -->\n{% endraw %}\n",
+        encoding="utf-8",
+    )
+
+    assert read_entry_date(md) is None
+
+
+def test_mail_date_is_an_html_comment_not_visible_text(tmp_path, domain):
+    eml_path = write_eml(tmp_path, "test.eml", SIMPLE_HTML_EML)
+
+    content = eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain).read_text(encoding="utf-8")
+
+    visible = [line for line in content.splitlines() if "2026-09-11" in line]
+    assert visible == ["<!-- mail-date: 2026-09-11T12:00:00+00:00 -->"]
+
+
+def test_mail_without_date_header_gets_no_tag_and_is_replaced_by_dated_one(tmp_path, domain):
+    undated = write_eml(
+        tmp_path, "todo.eml", SIMPLE_HTML_EML.replace("Date: Fri, 11 Sep 2026 12:00:00 +0000\r\n", "")
+    )
+    dated = write_eml(
+        tmp_path, "todo 2.eml", SIMPLE_HTML_EML.replace("Body <strong>text</strong>", "Dated <strong>text</strong>")
+    )
+
+    entry_path = eml_file_to_entry(undated, base_dir=tmp_path, domain=domain)
+    assert "mail-date" not in entry_path.read_text(encoding="utf-8")
+
+    eml_file_to_entry(dated, base_dir=tmp_path, domain=domain)
+    assert "Dated **text**" in entry_path.read_text(encoding="utf-8")
+    with pytest.raises(EntrySupersededError):
+        eml_file_to_entry(undated, base_dir=tmp_path, domain=domain)
+
+
+def test_unparsable_date_header_is_kept_verbatim_but_reads_as_undated(tmp_path, domain):
+    eml_path = write_eml(
+        tmp_path,
+        "odd.eml",
+        SIMPLE_HTML_EML.replace("Date: Fri, 11 Sep 2026 12:00:00 +0000", "Date: sometime  last week"),
+    )
+
+    entry_path = eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)
+
+    assert "<!-- mail-date: sometime last week -->" in entry_path.read_text(encoding="utf-8")
+    assert read_entry_date(entry_path) is None
+
+
+def test_entry_in_earlier_layout_is_rewritten_by_same_mail(tmp_path, domain):
+    eml_path = write_eml(tmp_path, "test.eml", SIMPLE_HTML_EML)
+    entry_path = eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)
+    # Turn it into the earlier layout: visible date line instead of the tag.
+    old = entry_path.read_text(encoding="utf-8").replace(
+        "<!-- mail-date: 2026-09-11T12:00:00+00:00 -->", "2026-09-11T12:00:00+00:00"
+    )
+    entry_path.write_text(old, encoding="utf-8")
+
+    eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)  # not superseded
+
+    assert "<!-- mail-date: 2026-09-11T12:00:00+00:00 -->" in entry_path.read_text(encoding="utf-8")
+    with pytest.raises(EntrySupersededError):
+        eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)
 
 
 def test_cli_requires_domain(tmp_path):

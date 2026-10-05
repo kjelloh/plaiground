@@ -1,5 +1,7 @@
 # Consider a two step mail eml to domain and then some domain to domain mechanism?
 
+* [eml_to_domain/README.md](./eml_to_domain/README.md)
+
 ## 20261005
 
 Time to try the eml processing on my todo mails.
@@ -41,6 +43,25 @@ Come to think about it. The eml processing pipe already implements an incrementa
     * This date does not change if I edit the makrdown later in the target domain.
 
 GOSH!!
+
+Anyhow, I now asked Claude to change how the date is written to the mardown for imported eml-files.
+
+* It is now written as an html-comment ( E.g. ``` <!-- mail-date: 2015-12-19T18:08:05+01:00 --> ```)
+* An eml-file with a date superseeds a markdown that does not have the 'new' date tagging.
+* So I re-ran on my todo-mails and got all updated
+
+```sh
+# ...
+4433 mail files -> mail: 0 added, 3691 updated, 742 skipped (superseded), 0 failed
+Updated 'mail/index.md' with 3204 entries.
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % 
+```
+
+This feels good for now.
+
+* Now it is clear that the 'date' thing for entries that comes from emails.
+* So we now have no date in the markdown to be treated as having anything to do with edits of the markdown.
+* And the eml-file processing can still pick out the latest mail with the same subject.
 
 ## 20261004
 

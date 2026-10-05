@@ -111,7 +111,8 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 * **Newest wins.** Of several mails with the same Subject, the one with the
   latest `Date:` header is kept, whatever order the files are processed in
   and across runs. A mail without a parsable date never replaces one that
-  has one.
+  has one. The date is read back from the entry's `mail-date` metadata (see
+  [Entry layout](#entry-layout)).
 * **Incremental.** Re-running on the same folder, or on a folder with a few
   new exports added, only adds or updates what changed. You never need to
   clear the domain first.
@@ -130,7 +131,7 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 ```
 # Todo: Build House - Consider to use google maps ...
 
-2019-07-20T14:31:20+02:00
+<!-- mail-date: 2019-07-20T14:31:20+02:00 -->
 
 [Plain text](mail.txt)
 
@@ -144,13 +145,19 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 | Line | Content |
 |---|---|
 | 1 | `# ` + the mail's Subject (`update_index.py` uses it as the link text; the folder name is the first 8 characters of its md5 hash). Don't edit it: the folder is found by hashing it. |
-| 3 | The mail's date (ISO 8601). Used to decide whether a later mail is newer. Don't edit it. |
+| 3 | Metadata: the mail's `Date:` header (ISO 8601) in an HTML comment tagged `mail-date`. Invisible on the rendered page (it stays in the page's HTML source). Used to decide whether a later mail is newer. Don't edit it. Mails without a `Date:` header have no such line. |
 | 5 | Link to `<domain>.txt`, only present when the mail had a plain-text body. |
 | rest | The body, wrapped in Liquid `raw` … `endraw` tags so that brace sequences in mail text (C++ code, templates, ...) can't break a Jekyll site build. |
 
 `<domain>.txt` is the mail's own `text/plain` part, kept verbatim (UTF-8
 with BOM so browsers show non-ASCII characters correctly). HTML-only mails
 have no `.txt`. Inline images and attachments are saved next to the `.md`.
+
+> **Upgrading entries from the earlier layout** (a visible date line instead
+> of the `mail-date` comment): no action needed. Such entries read as undated,
+> so the next import of their mails rewrites each one once in the new layout
+> (expect every entry to be reported as `UPDATE` that one time). The newest
+> mail per Subject still wins.
 
 ## Next step: pick entries into another domain
 
