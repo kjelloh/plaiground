@@ -1,5 +1,41 @@
 # Consider a two step mail eml to domain and then some domain to domain mechanism?
 
+## 20261005
+
+Time to try the eml processing on my todo mails.
+
+```sh
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % ./eml_to_domain/emls_to_domain.py ~/Downloads/mail_export/eml site_repo --domain mail
+# ...
+4433 mail files -> mail: 3196 added, 485 updated, 752 skipped (superseded), 0 failed
+Updated 'mail/index.md' with 3204 entries.
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d %
+```
+
+* [site_repo/mail/index](./site_repo/mail/index.md)
+
+I now chatted with Claude about adding an --exclude option too?
+
+* I quickly realised we now enter the complexity of 'synchronization'?
+* Should the domain_to_domain be an update operation or a sync operation?
+* An update operation allows for incremental runs to apply changes
+    * But then the question is if removal from target should be allowed as an update?
+    * Or if update should only allow for adding entries missing in target?
+* A sync operation applies a harder control to ensure target is exactly as defined by the operation
+    * For --include any entry in target not in the listed entries shall be REMOVED
+    * And if we add --exclude, then target shall still be as defined by ALL - exclude.
+
+It all gets trycky fast!
+
+* For my current needs I can just implement something to get my chimes and publish on the web.
+* But then I have problems later if or when I want to add more entries later?
+    * How should domain_to_domain behave if I later whant to add entries I did not add the first time?
+    * It seems I kind-of want an incremental mechanism?
+    * But one that protects any edits I do to the chimes already imported?
+
+
+
+
 ## 20261004
 
 So I have [Consider to vibe code a working emls-to-chimes and to_site integration?](../afaa732d/session.md) that now works seemingly well.
