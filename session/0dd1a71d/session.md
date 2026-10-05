@@ -33,8 +33,14 @@ It all gets trycky fast!
     * It seems I kind-of want an incremental mechanism?
     * But one that protects any edits I do to the chimes already imported?
 
+Come to think about it. The eml processing pipe already implements an incremental update for 'same entry' as in 'entry with same subject and latest date' is the one that prevails.
 
+* So if I update a todo-mail I can import emls again and have the target update to the entry with the latest date.
+* Problem is that domain_to_domain have no date to compare.
+    * That is, the date in the marldown file is the mail date.
+    * This date does not change if I edit the makrdown later in the target domain.
 
+GOSH!!
 
 ## 20261004
 
