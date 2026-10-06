@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Synchronize picked entries of a source domain into a target domain.
+"""Add picked entries of a source domain to a target domain.
 
-    domain_to_domain.py <base_dir> <source> <target> --pick <pick.md> [--dry-run]
+    domain_to_domain.py {init,add} <base_dir> <source> <target>
+                        --pick <pick.md> [--dry-run]
 
 Both domains are required; there are no defaults. An entry of a domain is
 the folder <base_dir>/<domain>/<hash>/ holding <domain>.md, as created by
@@ -17,12 +18,23 @@ An entry is picked by the folder hash in its link target, or — for a
 hand-written "* [Some heading]()" — by the hash of its heading. Lines that
 aren't list-item links (headings, notes, blank lines) are ignored.
 
-After a run the target domain holds exactly the picked source entries:
+Modes (the required first argument):
+
+- init: create the target domain. Fails if <base_dir>/<target>/ already
+  exists — use add for that.
+- add:  add to an existing target domain. Fails if <base_dir>/<target>/
+  doesn't exist — use init for that.
+
+Either way the target is only ever added to; nothing in it is replaced or
+removed, so edits made in the target are safe:
 
 - ADD: picked, not yet in the target -> copied
-- UPDATE: picked, but the source entry changed since it was copied -> replaced
-- REMOVE: in the target, but no longer picked (or gone from the source)
+- SKIP: picked, already in the target -> left as is ("source differs"
+  if the source entry no longer matches the target copy)
+- FAIL: picked source entry that can't be copied (see below)
 - UNMATCHED: pick list entry that refers to no source entry
+
+The exit status is 1 if any pick FAILed or was UNMATCHED.
 
 A copy is the whole entry folder (images, attachments, ...) with
 <source>.md / <source>.txt renamed to <target>.md / <target>.txt and links
@@ -59,17 +71,15 @@ class Pick:
 
 
 @dataclass
-class SyncReport:
+class Report:
     added: list[tuple[str, str]] = field(default_factory=list)
-    updated: list[tuple[str, str]] = field(default_factory=list)
-    removed: list[tuple[str, str]] = field(default_factory=list)
-    unchanged: list[tuple[str, str]] = field(default_factory=list)
+    skipped: list[tuple[str, str, bool]] = field(default_factory=list)  # (key, heading, source differs)
     failed: list[tuple[str, str]] = field(default_factory=list)
     unmatched: list[Pick] = field(default_factory=list)
 
     @property
-    def changed(self) -> bool:
-        return bool(self.added or self.updated or self.removed)
+    def ok(self) -> bool:
+        return not (self.failed or self.unmatched)
 
 
 def load_init_new(base_dir: Path):
@@ -189,15 +199,15 @@ def same_tree(a: Path, b: Path) -> bool:
     return all(same_tree(a / sub, b / sub) for sub in cmp.common_dirs)
 
 
-def sync(
+def add(
     base_dir: Path, source: str, target: str, picks: list[Pick], dry_run: bool = False
-) -> SyncReport:
+) -> Report:
     init_new = load_init_new(base_dir)
     hash_length = len(init_new.compute_hash(""))
     source_entries = entries_of(base_dir, source, hash_length)
     target_entries = entries_of(base_dir, target, hash_length)
     wanted = picked_hashes(picks, source_entries, init_new.compute_hash)
-    report = SyncReport(unmatched=[pick for pick in picks if not pick.hit])
+    report = Report(unmatched=[pick for pick in picks if not pick.hit])
     target_root = base_dir / target
 
     for key in sorted(wanted):
@@ -216,39 +226,33 @@ def sync(
         target_root.mkdir(parents=True, exist_ok=True)
         build_copy(source_md.parent, staging, source, target)
 
-        if key not in target_entries:
-            report.added.append((key, heading))
-        elif same_tree(staging, dest_dir):
-            report.unchanged.append((key, heading))
+        if key in target_entries:
+            report.skipped.append((key, heading, not same_tree(staging, dest_dir)))
             shutil.rmtree(staging)
             continue
-        else:
-            report.updated.append((key, heading))
 
+        report.added.append((key, heading))
         if dry_run:
             shutil.rmtree(staging)
             continue
-        if dest_dir.exists():
-            shutil.rmtree(dest_dir)
         staging.rename(dest_dir)
 
-    for key in sorted(target_entries.keys() - wanted):
-        report.removed.append((key, heading_of(target_entries[key])))
-        if not dry_run:
-            shutil.rmtree(target_entries[key].parent)
-
     if target_root.is_dir() and not any(target_root.iterdir()):
-        target_root.rmdir()  # don't leave an empty folder behind a dry run
+        target_root.rmdir()  # don't leave an empty folder behind a dry run or failed init
 
     return report
 
 
-def report_lines(report: SyncReport, source: str, target: str, picks: int, dry_run: bool) -> list[str]:
+def report_lines(
+    report: Report, source: str, target: str, mode: str, picks: int, dry_run: bool
+) -> list[str]:
     would = "WOULD " if dry_run else ""
     lines = []
-    for label, items in (("ADD", report.added), ("UPDATE", report.updated), ("REMOVE", report.removed)):
-        for key, heading in items:
-            lines.append(f"{would}{label}: {target}/{key}  {heading}")
+    for key, heading in report.added:
+        lines.append(f"{would}ADD: {target}/{key}  {heading}")
+    for key, heading, differs in report.skipped:
+        note = "already in target; source differs" if differs else "already in target"
+        lines.append(f"SKIP: {target}/{key}  {heading} ({note})")
     for key, detail in report.failed:
         lines.append(f"FAIL: {source}/{key}  {detail}")
     for pick in report.unmatched:
@@ -256,12 +260,26 @@ def report_lines(report: SyncReport, source: str, target: str, picks: int, dry_r
     lines.append("")
     prefix = "DRY RUN — nothing changed. " if dry_run else ""
     lines.append(
-        f"{prefix}{source} -> {target}, {picks} pick entries: "
-        f"{len(report.added)} added, {len(report.updated)} updated, "
-        f"{len(report.removed)} removed, {len(report.unchanged)} unchanged, "
+        f"{prefix}{source} -> {target} ({mode}), {picks} pick entries: "
+        f"{len(report.added)} added, {len(report.skipped)} skipped, "
         f"{len(report.failed)} failed, {len(report.unmatched)} unmatched"
     )
     return lines
+
+
+def check_target_for_mode(base_dir: Path, target: str, mode: str) -> None:
+    """Exit unless the target domain's existence fits the mode."""
+    target_root = base_dir / target
+    if mode == "init" and target_root.exists():
+        sys.exit(
+            f"Target domain {target!r} already exists ({target_root}) — "
+            f"use 'add' to add entries to it."
+        )
+    if mode == "add" and not target_root.is_dir():
+        sys.exit(
+            f"Target domain {target!r} does not exist ({target_root}) — "
+            f"use 'init' to create it."
+        )
 
 
 def domain_name(text: str) -> str:
@@ -277,9 +295,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
+    parser.add_argument(
+        "mode",
+        choices=("init", "add"),
+        help="init: create the target domain; add: add to an existing one",
+    )
     parser.add_argument("base_dir", type=Path, help="base directory of the target repo")
     parser.add_argument("source", type=domain_name, help="domain to pick entries from")
-    parser.add_argument("target", type=domain_name, help="domain to synchronize into")
+    parser.add_argument("target", type=domain_name, help="domain to add entries to")
     parser.add_argument(
         "--pick", type=Path, required=True, help="pick list (index.md line format)"
     )
@@ -294,22 +317,25 @@ def main() -> None:
         sys.exit(f"Not a file: {args.pick}")
     if not (args.base_dir / args.source).is_dir():
         sys.exit(f"Source domain folder {args.base_dir / args.source} does not exist")
+    check_target_for_mode(args.base_dir, args.target, args.mode)
 
     try:
         hash_length = len(load_init_new(args.base_dir).compute_hash(""))
         picks = load_picks(args.pick, hash_length)
-        report = sync(args.base_dir, args.source, args.target, picks, dry_run=args.dry_run)
+        report = add(args.base_dir, args.source, args.target, picks, dry_run=args.dry_run)
     except FileNotFoundError as e:
         sys.exit(str(e))
 
-    print("\n".join(report_lines(report, args.source, args.target, len(picks), args.dry_run)))
+    print(
+        "\n".join(
+            report_lines(report, args.source, args.target, args.mode, len(picks), args.dry_run)
+        )
+    )
 
-    if report.changed and not args.dry_run:
-        if (args.base_dir / args.target).is_dir():
-            update_domain_index(args.base_dir, args.target)
-        else:
-            print(f"{args.target}/ is now empty and was removed.")
-
+    if report.added and not args.dry_run:
+        update_domain_index(args.base_dir, args.target)
+    if not report.ok:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

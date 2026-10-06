@@ -162,42 +162,44 @@ have no `.txt`. Inline images and attachments are saved next to the `.md`.
 ## Next step: pick entries into another domain
 
 [domain_to_domain/domain_to_domain.py](../domain_to_domain/domain_to_domain.py)
-synchronizes a hand-picked subset of one domain into another:
+adds a hand-picked subset of one domain to another. It only ever **adds**:
+entries already in the target are never replaced or removed, so edits you
+make in the target domain are safe.
 
 ```sh
 # 1. Copy the lines you want from site_repo/mail/index.md into a pick file
 grep -i "testbench" ../site_repo/mail/index.md > pick.md
 
-# 2. Preview, then sync
-python3 ../domain_to_domain/domain_to_domain.py ../site_repo mail todo --pick pick.md --dry-run
-python3 ../domain_to_domain/domain_to_domain.py ../site_repo mail todo --pick pick.md
+# 2. First time: create the target domain (preview first)
+python3 ../domain_to_domain/domain_to_domain.py init ../site_repo mail todo --pick pick.md --dry-run
+python3 ../domain_to_domain/domain_to_domain.py init ../site_repo mail todo --pick pick.md
+
+# 3. Later: add more picks to it
+python3 ../domain_to_domain/domain_to_domain.py add ../site_repo mail todo --pick pick.md
 ```
 
 | Argument | Meaning |
 |---|---|
+| `init` \| `add` | **Required first argument.** `init` creates the target domain and fails if it already exists (use `add`). `add` adds to an existing target domain and fails if it doesn't exist (use `init`). |
 | `repo` | Base folder of the target repo. |
 | `source` | Domain to pick from. **Required.** |
-| `target` | Domain to sync into. **Required.** Must differ from `source`. |
+| `target` | Domain to add to. **Required.** Must differ from `source`. |
 | `--pick` | **Required.** Pick list in `index.md` line format: `* [Heading](<hash>/<source>.md)`. A hand-written `* [Exact heading]()` also works. Other lines (headings, notes, blank lines) are ignored. |
 | `--dry-run` | Only report what would change. |
-
-After a sync the target domain holds **exactly** the picked entries:
 
 | Status | Meaning |
 |---|---|
 | `ADD` | Picked and not yet in the target, so copied. |
-| `UPDATE` | Picked, but the source entry changed since it was copied (e.g. a newer mail was imported), so replaced. |
-| `REMOVE` | In the target but no longer picked, or gone from the source, so **deleted** from the target. |
+| `SKIP` | Picked but already in the target, so left as is. `source differs` means the source entry has changed since (e.g. a newer mail was imported); the target copy is still kept. |
 | `UNMATCHED` | Pick list line that matches no source entry (typo, stale line). |
 | `FAIL` | Source entry whose heading doesn't hash to its folder name (e.g. a hand-edited heading). Not copied. |
+
+The exit status is 1 if any pick is `UNMATCHED` or `FAIL`. Target entries
+you didn't pick are left alone.
 
 A copy is the whole entry folder with `<source>.md` / `<source>.txt` renamed
 to `<target>.md` / `<target>.txt` and the plain-text link rewritten. The
 source domain is never modified.
-
-> ⚠️ The target domain belongs to the sync: hand edits to entries there are
-> overwritten, and unpicked entries are deleted. Edit in the source domain
-> (or the mail) instead, and use `--dry-run` before changing the pick list.
 
 ## Typical workflow
 
@@ -208,9 +210,13 @@ mkdir -p ~/my_site && cp ../site_repo/init_new.py ../site_repo/update_index.py ~
 # Whenever you have exported new mails
 python3 emls_to_domain.py ~/Desktop/exported_mails ~/my_site --domain mail
 
-# Whenever you want to change what is published
+# Once: create the published domain from a first pick list
 $EDITOR ~/my_site/pick.md          # paste lines from ~/my_site/mail/index.md
-python3 ../domain_to_domain/domain_to_domain.py ~/my_site mail todo --pick ~/my_site/pick.md
+python3 ../domain_to_domain/domain_to_domain.py init ~/my_site mail todo --pick ~/my_site/pick.md
+
+# Whenever you want to publish more
+$EDITOR ~/my_site/pick.md          # add lines (lines already added are just skipped)
+python3 ../domain_to_domain/domain_to_domain.py add ~/my_site mail todo --pick ~/my_site/pick.md
 ```
 
 ## Running the tests

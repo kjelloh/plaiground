@@ -1,6 +1,11 @@
 # Consider a two step mail eml to domain and then some domain to domain mechanism?
 
 * [eml_to_domain/README.md](./eml_to_domain/README.md)
+* [domain_to_domain/README.md](./domain_to_domain/README.md)
+
+## 20261006
+
+I have now asked claude to implement domain_to_domain init/add.
 
 ## 20261005
 
