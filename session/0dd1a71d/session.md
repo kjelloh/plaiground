@@ -7,6 +7,12 @@
 
 I have now asked claude to implement domain_to_domain init/add.
 
+This seems promising.
+
+* I now made domain_to_domain init allow for no --pick and then cerate an empty target domain.
+* I also added exclude.md from session where we developed the first eml-to-chime mechanism.
+    * My plan is to turn this into a pick list by comparing with source domain index.
+
 ## 20261005
 
 Time to try the eml processing on my todo mails.

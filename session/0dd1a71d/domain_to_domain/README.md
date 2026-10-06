@@ -24,7 +24,8 @@ and still add more picks later without losing your edits.
 ## Usage
 
 ```sh
-python3 domain_to_domain.py {init,add} <repo> <source> <target> --pick <pick.md> [--dry-run]
+python3 domain_to_domain.py init <repo> <source> <target> [--pick <pick.md>] [--dry-run]
+python3 domain_to_domain.py add  <repo> <source> <target>  --pick <pick.md>  [--dry-run]
 ```
 
 | Argument | Meaning |
@@ -33,18 +34,21 @@ python3 domain_to_domain.py {init,add} <repo> <source> <target> --pick <pick.md>
 | `repo` | Base folder of the target repo. |
 | `source` | Domain to pick from. **Required.** Must exist. |
 | `target` | Domain to add to. **Required.** Must differ from `source`. |
-| `--pick` | **Required.** The pick list (see below). |
+| `--pick` | The pick list (see below). **Required for `add`**, optional for `init`. |
 | `--dry-run` | Only report what would happen; change nothing. |
 
 ### Modes
 
 | Mode | Use it when | Fails if |
 |---|---|---|
-| `init` | Creating the target domain for the first time. | `<repo>/<target>/` already exists, and suggests `add`. |
+| `init` | Creating the target domain for the first time, with or without a pick list. | `<repo>/<target>/` already exists, and suggests `add`. |
 | `add` | Adding more entries to an existing target domain. | `<repo>/<target>/` doesn't exist, and suggests `init`. |
 
 Apart from that check, both modes do the same thing: copy the picked entries
 that aren't in the target yet and leave everything else alone.
+
+`init` **without** `--pick` creates an empty target domain: just the folder
+`<repo>/<target>/` and an empty `index.md`. Fill it later with `add`.
 
 If an `init` run ends up adding nothing (e.g. every pick was a typo), the
 empty target folder is removed again, so you can fix the pick list and simply
@@ -117,6 +121,8 @@ python3 ../eml_to_domain/emls_to_domain.py ~/Desktop/exported_mails ~/my_site --
 grep -i "testbench" ~/my_site/mail/index.md > ~/my_site/pick.md
 python3 domain_to_domain.py init ~/my_site mail todo --pick ~/my_site/pick.md --dry-run
 python3 domain_to_domain.py init ~/my_site mail todo --pick ~/my_site/pick.md
+#   ...or start with an empty target domain instead
+python3 domain_to_domain.py init ~/my_site mail todo
 
 # Later: add more lines to the pick list and add them
 $EDITOR ~/my_site/pick.md

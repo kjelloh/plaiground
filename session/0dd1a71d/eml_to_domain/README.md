@@ -184,7 +184,7 @@ python3 ../domain_to_domain/domain_to_domain.py add ../site_repo mail todo --pic
 | `repo` | Base folder of the target repo. |
 | `source` | Domain to pick from. **Required.** |
 | `target` | Domain to add to. **Required.** Must differ from `source`. |
-| `--pick` | **Required.** Pick list in `index.md` line format: `* [Heading](<hash>/<source>.md)`. A hand-written `* [Exact heading]()` also works. Other lines (headings, notes, blank lines) are ignored. |
+| `--pick` | **Required for `add`**; optional for `init`, which without it creates an empty target domain. Pick list in `index.md` line format: `* [Heading](<hash>/<source>.md)`. A hand-written `* [Exact heading]()` also works. Other lines (headings, notes, blank lines) are ignored. |
 | `--dry-run` | Only report what would change. |
 
 | Status | Meaning |

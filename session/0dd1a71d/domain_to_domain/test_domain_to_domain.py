@@ -156,6 +156,59 @@ def test_init_where_nothing_could_be_added_leaves_no_target(repo, tmp_path):
     assert not (repo / TARGET).exists()  # so init can simply be rerun
 
 
+def run_without_pick(repo, mode, *extra):
+    return subprocess.run(
+        [sys.executable, str(DOMAIN_TO_DOMAIN), mode, str(repo), SOURCE, TARGET, *extra],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_init_without_pick_creates_empty_domain(repo):
+    make_entry(repo, SOURCE, "A")
+
+    result = run_without_pick(repo, "init")
+
+    assert result.returncode == 0, result.stderr
+    assert f"Created empty target domain '{TARGET}'" in result.stdout
+    assert sorted(p.name for p in (repo / TARGET).iterdir()) == ["index.md"]
+    assert (repo / TARGET / "index.md").read_text(encoding="utf-8") == "\n"
+
+
+def test_init_without_pick_into_existing_target_fails(repo):
+    make_entry(repo, SOURCE, "A")
+    (repo / TARGET).mkdir()
+
+    result = run_without_pick(repo, "init")
+
+    assert result.returncode != 0
+    assert "already exists" in result.stderr
+    assert "use 'add'" in result.stderr
+    assert not any((repo / TARGET).iterdir())
+
+
+def test_dry_run_init_without_pick_creates_nothing(repo):
+    make_entry(repo, SOURCE, "A")
+
+    result = run_without_pick(repo, "init", "--dry-run")
+
+    assert result.returncode == 0, result.stderr
+    assert "WOULD CREATE empty target domain" in result.stdout
+    assert not (repo / TARGET).exists()
+
+
+def test_add_after_empty_init(repo, tmp_path):
+    make_entry(repo, SOURCE, "A")
+    run_without_pick(repo, "init")
+
+    result = run(repo, write_pick(tmp_path, index_line(SOURCE, "A")), "add")
+
+    assert result.returncode == 0, result.stderr
+    assert "1 added" in result.stdout
+    index = (repo / TARGET / "index.md").read_text(encoding="utf-8")
+    assert index == index_line(TARGET, "A") + "\n"
+
+
 # --- add ----------------------------------------------------------------
 
 def test_add_into_missing_target_fails_and_recommends_init(repo, tmp_path):
@@ -298,7 +351,8 @@ def test_source_entry_whose_heading_doesnt_match_folder_fails(repo, tmp_path):
         (["init", "repo", "inbox", "--pick", "pick.md"], "required"),  # target missing
         (["init", "repo", "inbox", "inbox", "--pick", "pick.md"], "both 'inbox'"),
         (["init", "repo", "inbox", "a/b", "--pick", "pick.md"], "invalid domain"),
-        (["init", "repo", "inbox", "todo"], "--pick"),
+        (["add", "repo", "inbox", "todo"], "add requires --pick"),
+        (["init", "repo", "inbox", "todo", "--pick", "nosuch.md"], "Not a file"),
         (["init", "repo", "nosuch", "todo", "--pick", "pick.md"], "does not exist"),
         (["repo", "inbox", "todo", "--pick", "pick.md"], "invalid choice: 'repo'"),  # mode missing
         (["sync", "repo", "inbox", "todo", "--pick", "pick.md"], "invalid choice: 'sync'"),

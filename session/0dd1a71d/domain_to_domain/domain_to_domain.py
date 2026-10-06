@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Add picked entries of a source domain to a target domain.
 
-    domain_to_domain.py {init,add} <base_dir> <source> <target>
-                        --pick <pick.md> [--dry-run]
+    domain_to_domain.py init <base_dir> <source> <target> [--pick <pick.md>] [--dry-run]
+    domain_to_domain.py add  <base_dir> <source> <target>  --pick <pick.md>  [--dry-run]
 
 Both domains are required; there are no defaults. An entry of a domain is
 the folder <base_dir>/<domain>/<hash>/ holding <domain>.md, as created by
@@ -21,9 +21,10 @@ aren't list-item links (headings, notes, blank lines) are ignored.
 Modes (the required first argument):
 
 - init: create the target domain. Fails if <base_dir>/<target>/ already
-  exists — use add for that.
+  exists — use add for that. Without --pick it creates an empty domain
+  (just the folder and its index.md).
 - add:  add to an existing target domain. Fails if <base_dir>/<target>/
-  doesn't exist — use init for that.
+  doesn't exist — use init for that. --pick is required.
 
 Either way the target is only ever added to; nothing in it is replaced or
 removed, so edits made in the target are safe:
@@ -282,6 +283,17 @@ def check_target_for_mode(base_dir: Path, target: str, mode: str) -> None:
         )
 
 
+def create_empty_domain(base_dir: Path, target: str, dry_run: bool = False) -> None:
+    """init without a pick list: just the target folder and its index.md."""
+    target_root = base_dir / target
+    if dry_run:
+        print(f"DRY RUN — nothing changed. WOULD CREATE empty target domain {target!r} ({target_root})")
+        return
+    target_root.mkdir(parents=True)
+    print(f"Created empty target domain {target!r} ({target_root})")
+    update_domain_index(base_dir, target)
+
+
 def domain_name(text: str) -> str:
     domain = text.strip().lower()
     if not domain.isidentifier():
@@ -304,7 +316,10 @@ def main() -> None:
     parser.add_argument("source", type=domain_name, help="domain to pick entries from")
     parser.add_argument("target", type=domain_name, help="domain to add entries to")
     parser.add_argument(
-        "--pick", type=Path, required=True, help="pick list (index.md line format)"
+        "--pick",
+        type=Path,
+        help="pick list (index.md line format); required for add, "
+        "optional for init (without it, init creates an empty domain)",
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="only report what would change; change nothing"
@@ -313,11 +328,17 @@ def main() -> None:
 
     if args.source == args.target:
         sys.exit(f"source and target domain are both {args.source!r}")
-    if not args.pick.is_file():
+    if args.pick is None and args.mode == "add":
+        parser.error("add requires --pick")
+    if args.pick is not None and not args.pick.is_file():
         sys.exit(f"Not a file: {args.pick}")
     if not (args.base_dir / args.source).is_dir():
         sys.exit(f"Source domain folder {args.base_dir / args.source} does not exist")
     check_target_for_mode(args.base_dir, args.target, args.mode)
+
+    if args.pick is None:
+        create_empty_domain(args.base_dir, args.target, dry_run=args.dry_run)
+        return
 
     try:
         hash_length = len(load_init_new(args.base_dir).compute_hash(""))
