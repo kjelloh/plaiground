@@ -3,6 +3,7 @@
 
     domain_to_domain.py init <base_dir> <source> <target> [--pick <pick.md>] [--dry-run]
     domain_to_domain.py add  <base_dir> <source> <target>  --pick <pick.md>  [--dry-run]
+    domain_to_domain.py diff <base_dir> <source> <target> [--exclude <exclude.md>]
 
 Both domains are required; there are no defaults. An entry of a domain is
 the folder <base_dir>/<domain>/<hash>/ holding <domain>.md, as created by
@@ -25,8 +26,10 @@ Modes (the required first argument):
   (just the folder and its index.md).
 - add:  add to an existing target domain. Fails if <base_dir>/<target>/
   doesn't exist — use init for that. --pick is required.
+- diff: change nothing; print the source entries not yet in the (existing)
+  target as a pick list on stdout (see below).
 
-Either way the target is only ever added to; nothing in it is replaced or
+init and add only ever add to the target; nothing in it is replaced or
 removed, so edits made in the target are safe:
 
 - ADD: picked, not yet in the target -> copied
@@ -43,6 +46,25 @@ to <source>.txt rewritten. The hash is computed from the heading only, so
 an entry keeps its folder hash across domains; a source entry whose heading
 doesn't hash to its folder name (e.g. a hand-edited heading) is reported as
 FAIL and not copied.
+
+diff prints every source entry that is not in the target — and, with
+--exclude, not in the exclude list either — on stdout, one pick list line
+each in index order, so the output can be used as a pick list as is:
+
+    domain_to_domain.py diff <base_dir> mail chime --exclude exclude.md > pick.md
+    domain_to_domain.py add  <base_dir> mail chime --pick pick.md
+
+The exclude list has the pick list format (entries matched the same way,
+other lines ignored) and only filters what diff shows: add never reads it.
+Notes and a summary go to stderr, never into the pick list:
+
+- EXCLUDED BUT IN TARGET: exclude list entry that is already in the target
+- STALE EXCLUDE: exclude list entry that refers to no source entry
+- TARGET ONLY: target entry with no source entry
+- WILL FAIL: pending source entry whose heading doesn't hash to its folder
+  name, so add would FAIL it
+
+Notes don't change the exit status.
 """
 
 import argparse
@@ -276,11 +298,67 @@ def check_target_for_mode(base_dir: Path, target: str, mode: str) -> None:
             f"Target domain {target!r} already exists ({target_root}) — "
             f"use 'add' to add entries to it."
         )
-    if mode == "add" and not target_root.is_dir():
+    if mode in ("add", "diff") and not target_root.is_dir():
         sys.exit(
             f"Target domain {target!r} does not exist ({target_root}) — "
             f"use 'init' to create it."
         )
+
+
+@dataclass
+class DiffReport:
+    pending: list[tuple[str, str]] = field(default_factory=list)
+    excluded: int = 0
+    in_target: int = 0
+    excluded_in_target: list[tuple[str, str]] = field(default_factory=list)
+    stale_excludes: list[Pick] = field(default_factory=list)
+    target_only: list[tuple[str, str]] = field(default_factory=list)
+    will_fail: list[tuple[str, str]] = field(default_factory=list)
+
+
+def diff(base_dir: Path, source: str, target: str, excludes: list[Pick]) -> DiffReport:
+    init_new = load_init_new(base_dir)
+    hash_length = len(init_new.compute_hash(""))
+    source_entries = entries_of(base_dir, source, hash_length)
+    target_entries = entries_of(base_dir, target, hash_length)
+    excluded = picked_hashes(excludes, source_entries, init_new.compute_hash)
+    report = DiffReport(stale_excludes=[pick for pick in excludes if not pick.hit])
+
+    for key, source_md in source_entries.items():
+        heading = heading_of(source_md)
+        if key in target_entries:
+            report.in_target += 1
+            if key in excluded:
+                report.excluded_in_target.append((key, heading))
+        elif key in excluded:
+            report.excluded += 1
+        else:
+            report.pending.append((key, heading))
+            try:
+                check_folder_hash(source_md, init_new.compute_hash)
+            except ValueError as e:
+                report.will_fail.append((key, f"{heading} ({e})"))
+    for key in target_entries.keys() - source_entries.keys():
+        report.target_only.append((key, heading_of(target_entries[key])))
+    report.target_only.sort()
+    return report
+
+
+def diff_note_lines(report: DiffReport, source: str, target: str) -> list[str]:
+    lines = []
+    for key, heading in report.excluded_in_target:
+        lines.append(f"EXCLUDED BUT IN TARGET: {target}/{key}  {heading}")
+    for pick in report.stale_excludes:
+        lines.append(f"STALE EXCLUDE: {pick.line}")
+    for key, heading in report.target_only:
+        lines.append(f"TARGET ONLY: {target}/{key}  {heading}")
+    for key, detail in report.will_fail:
+        lines.append(f"WILL FAIL: {source}/{key}  {detail}")
+    lines.append(
+        f"{source} -> {target} (diff): {len(report.pending)} pending, "
+        f"{report.excluded} excluded, {report.in_target} in target"
+    )
+    return lines
 
 
 def create_empty_domain(base_dir: Path, target: str, dry_run: bool = False) -> None:
@@ -309,8 +387,9 @@ def main() -> None:
     )
     parser.add_argument(
         "mode",
-        choices=("init", "add"),
-        help="init: create the target domain; add: add to an existing one",
+        choices=("init", "add", "diff"),
+        help="init: create the target domain; add: add to an existing one; "
+        "diff: list source entries not yet in the target",
     )
     parser.add_argument("base_dir", type=Path, help="base directory of the target repo")
     parser.add_argument("source", type=domain_name, help="domain to pick entries from")
@@ -324,10 +403,24 @@ def main() -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help="only report what would change; change nothing"
     )
+    parser.add_argument(
+        "--exclude",
+        type=Path,
+        help="diff only: exclude list (pick list format) of source entries not to list",
+    )
     args = parser.parse_args()
 
     if args.source == args.target:
         sys.exit(f"source and target domain are both {args.source!r}")
+    if args.mode == "diff":
+        if args.pick is not None:
+            parser.error("diff takes no --pick (use --exclude to leave entries out)")
+        if args.dry_run:
+            parser.error("diff takes no --dry-run (it never changes anything)")
+    elif args.exclude is not None:
+        parser.error(f"{args.mode} takes no --exclude (only diff does)")
+    if args.exclude is not None and not args.exclude.is_file():
+        sys.exit(f"Not a file: {args.exclude}")
     if args.pick is None and args.mode == "add":
         parser.error("add requires --pick")
     if args.pick is not None and not args.pick.is_file():
@@ -335,6 +428,22 @@ def main() -> None:
     if not (args.base_dir / args.source).is_dir():
         sys.exit(f"Source domain folder {args.base_dir / args.source} does not exist")
     check_target_for_mode(args.base_dir, args.target, args.mode)
+
+    if args.mode == "diff":
+        try:
+            hash_length = len(load_init_new(args.base_dir).compute_hash(""))
+            excludes = load_picks(args.exclude, hash_length) if args.exclude else []
+            report = diff(args.base_dir, args.source, args.target, excludes)
+        except FileNotFoundError as e:
+            sys.exit(str(e))
+        try:
+            for key, heading in report.pending:
+                print(f"* [{heading}]({key}/{args.source}.md)")
+        except BrokenPipeError:  # e.g. piped into head
+            sys.stdout = None
+            sys.exit(0)
+        print("\n".join(diff_note_lines(report, args.source, args.target)), file=sys.stderr)
+        return
 
     if args.pick is None:
         create_empty_domain(args.base_dir, args.target, dry_run=args.dry_run)

@@ -13,6 +13,52 @@ This seems promising.
 * I also added exclude.md from session where we developed the first eml-to-chime mechanism.
     * My plan is to turn this into a pick list by comparing with source domain index.
 
+After having discussed with Claude and thought about it I have some ideas on how to porceed.
+
+* I want to be able to use an exclude.md for cases where what to pick far outweights what to exclude.
+* But I still want the domain_to_domain to only support opt-in for what to copy.
+* One way could be to define a 'diff' mode that outputs 'pending' or 'orphans' in the source
+* Question is how we can apply exclude.md?
+    * It could be an argument to the diff mode?
+    * A 'diff' with an --exclude listing could mean 'ignore source orphans in exclude listing'?
+
+That seems promising?
+
+* The user can first do 'domain_to_domain init ./site_repo/ mail chime' to ge an empty chime domain?
+* Then do 'domain_to_domain diff ./site_repo/ mail chime' to see all in source but not in target?
+* Then do 'domain_to_domain diff ./site_repo/ mail chime --exclude exclude.md' to see all in source but not in target but that is also not already excluded?
+    * The result of this operation can be used as a pick list!
+    * 'domain_to_domain diff ./site_repo/ mail chime --exclude exclude.md > pick.md'
+    * 'domain_to_domain add ./site_repo/ mail chime --pick pick.md'
+
+I chatted with Claude and Claude ended up implementing a diff mode.
+
+I tried it out and it seems to work just fine?
+
+```sh
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % ./domain_to_domain/domain_to_domain.py init site_repo mail chime
+Created empty target domain 'chime' (site_repo/chime)
+Updated 'chime/index.md' with 0 entries.
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % 
+
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % ./domain_to_domain/domain_to_domain.py diff site_repo mail chime > pick.md
+mail -> chime (diff): 3204 pending, 0 excluded, 0 in target
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % 
+
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % ./domain_to_domain/domain_to_domain.py diff site_repo mail chime --exclude exclude.md > pick.md 
+mail -> chime (diff): 2942 pending, 262 excluded, 0 in target
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % 
+
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % ./domain_to_domain/domain_to_domain.py add site_repo mail chime --pick pick.md
+# ...
+mail -> chime (add), 2942 pick entries: 2942 added, 0 skipped, 0 failed, 0 unmatched
+Updated 'chime/index.md' with 2942 entries.
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d %
+
+```
+
+So far so good?
+
 ## 20261005
 
 Time to try the eml processing on my todo mails.
