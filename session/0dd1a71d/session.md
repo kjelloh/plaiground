@@ -3,6 +3,17 @@
 * [eml_to_domain/README.md](./eml_to_domain/README.md)
 * [domain_to_domain/README.md](./domain_to_domain/README.md)
 
+## 20261007
+
+I now added to_site from session/afaa732d.
+
+* I updated site_repo/index.md to link to chimes index.
+* I then generated the site with 'to_site.py site_repo' ok.
+
+From what I can see all chimes I viwed in the browser matches the original mail ok?
+
+* But I now want some info about where the chime originated.
+
 ## 20261006
 
 I have now asked claude to implement domain_to_domain init/add.
@@ -58,6 +69,29 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d %
 ```
 
 So far so good?
+
+No. Our mechanism folders are littered with test files and scripts?
+
+* I want a clean eml_to_domain to share with clients.
+
+```sh
+eml_to_domain
+├── README.md
+├── eml_to_domain.py
+├── eml_to_html.py
+├── eml_to_txt.py
+├── emls_to_domain.py
+└── html_to_markdown.py
+```
+
+* I want a clean 
+
+```sh
+domain_to_domain
+├── README.md
+└── domain_to_domain.py
+```
+
 
 ## 20261005
 
