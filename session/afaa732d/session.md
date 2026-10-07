@@ -5,8 +5,8 @@
 At the end of the day I chased Jekyll site generator Liquid template macro errors!
 
 * If I have two '{', two '}' or the combination '{' followed by '%' or '%' followed by '}' this will trigger a liquid macro!
-* So I had patsed in the report from Claude on how it had fixed this error in markdown created from mail text (where the mail text contained C++ code where such text occurrted)
-* So the report of the ficx of the error in mail processing caused this session.md to trigger the liquid macro errors!
+* So I had pasted in the report from Claude on how it had fixed this error in markdown created from mail text (where the mail text contained C++ code where such text occurred)
+* So the report of the fix of the error in mail processing caused this session.md to trigger the liquid macro errors!
 
 MY GOOOOD!! THIS IS SOOOO BAAAAD!!
 
@@ -31,11 +31,11 @@ What was wrong in html_to_markdown.py, and the fixes:
 
 * Now, I don't know how confident I am with the code Claude has generated until now.
 * I am vibe coding here and I only want an output that is usable.
-* I am betting though that the cirrent code is not the best?
+* I am betting though that the current code is not the best?
 
-I now asked Claude to try and adress that the chime.txt does not render correctly in the browser as UTF8 encoded text.
+I now asked Claude to try and address that the chime.txt does not render correctly in the browser as UTF8 encoded text.
 
-* Claude beleived a BOM could do the trick.
+* Claude believed a BOM could do the trick.
 * I asked it to generate chime.txt with a BOM
 * But when I tried it the chime.txt still rendered 'as ASCII' or something else (strange glyphs in the rendered text)
 
@@ -474,7 +474,7 @@ I tried current mechanism in my chime repo.
 
 * It turns out I now seem to succeed to create chimes from ALL todo-mails.
 * But jekyll (or something called Liquid?) complains on some chime.md?
-* First it wants for some.
+* First it warns for some.
 * Then it hard fails on a file and gives up.
 
 Maybe Claude can help me figure out what to do next?
