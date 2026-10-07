@@ -10,9 +10,29 @@ I now added to_site from session/afaa732d.
 * I updated site_repo/index.md to link to chimes index.
 * I then generated the site with 'to_site.py site_repo' ok.
 
-From what I can see all chimes I viwed in the browser matches the original mail ok?
+From what I can see all chimes I viewed in the browser matches the original mail ok?
 
 * But I now want some info about where the chime originated.
+* I chatted with Claude but did not get convinced by any design.
+    * Claude proposed an elaborated front-matter
+    * I hesitate about this (it is too convoluted and vague?)
+    * I mean, I want some way to see where the domain entry came from
+
+At this stage I came to think about all my 'Also see ...' that refers to other todo-mails.
+
+* Maybe I should design a way to turn those into navigable links?
+* This kind-of resembles ('based on', 'originates from')?
+* Or at least is a reference mechanism in the same way as 'from-mail' is one?
+* But the information that the entry started as a mail is a reference to something unreachable!
+* While 'Also see' can be expected to be reachable (in the same domain even)
+
+I have to think about this.
+
+* I want a date that the reader can se that informs about when the entry state was 'created'
+* And I want the 'Also see' links to be markdown (and then also html) links for inter-entry navigation.
+* And, I would like to AVOID having machine-only meta-data in the mix!
+
+If I let this marinate I can maybe come up with a feasible next step?
 
 ## 20261006
 
@@ -24,9 +44,9 @@ This seems promising.
 * I also added exclude.md from session where we developed the first eml-to-chime mechanism.
     * My plan is to turn this into a pick list by comparing with source domain index.
 
-After having discussed with Claude and thought about it I have some ideas on how to porceed.
+After having discussed with Claude and thought about it I have some ideas on how to proceed.
 
-* I want to be able to use an exclude.md for cases where what to pick far outweights what to exclude.
+* I want to be able to use an exclude.md for cases where what to pick far outweighs what to exclude.
 * But I still want the domain_to_domain to only support opt-in for what to copy.
 * One way could be to define a 'diff' mode that outputs 'pending' or 'orphans' in the source
 * Question is how we can apply exclude.md?
@@ -109,7 +129,7 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d %
 
 I now chatted with Claude about adding an --exclude option too?
 
-* I quickly realised we now enter the complexity of 'synchronization'?
+* I quickly realized we now enter the complexity of 'synchronization'?
 * Should the domain_to_domain be an update operation or a sync operation?
 * An update operation allows for incremental runs to apply changes
     * But then the question is if removal from target should be allowed as an update?
@@ -118,11 +138,11 @@ I now chatted with Claude about adding an --exclude option too?
     * For --include any entry in target not in the listed entries shall be REMOVED
     * And if we add --exclude, then target shall still be as defined by ALL - exclude.
 
-It all gets trycky fast!
+It all gets tricky fast!
 
 * For my current needs I can just implement something to get my chimes and publish on the web.
 * But then I have problems later if or when I want to add more entries later?
-    * How should domain_to_domain behave if I later whant to add entries I did not add the first time?
+    * How should domain_to_domain behave if I later want to add entries I did not add the first time?
     * It seems I kind-of want an incremental mechanism?
     * But one that protects any edits I do to the chimes already imported?
 
@@ -130,15 +150,15 @@ Come to think about it. The eml processing pipe already implements an incrementa
 
 * So if I update a todo-mail I can import emls again and have the target update to the entry with the latest date.
 * Problem is that domain_to_domain have no date to compare.
-    * That is, the date in the marldown file is the mail date.
-    * This date does not change if I edit the makrdown later in the target domain.
+    * That is, the date in the markdown file is the mail date.
+    * This date does not change if I edit the markdown later in the target domain.
 
 GOSH!!
 
-Anyhow, I now asked Claude to change how the date is written to the mardown for imported eml-files.
+Anyhow, I now asked Claude to change how the date is written to the markdown for imported eml-files.
 
 * It is now written as an html-comment ( E.g. ``` <!-- mail-date: 2015-12-19T18:08:05+01:00 --> ```)
-* An eml-file with a date superseeds a markdown that does not have the 'new' date tagging.
+* An eml-file with a date supersedes a markdown that does not have the 'new' date tagging.
 * So I re-ran on my todo-mails and got all updated
 
 ```sh
@@ -172,11 +192,11 @@ So Claude seems to have done a good job of creating the new eml to 'domain' mech
 
 * [eml_to_domain/README.md](./eml_to_domain/README.md)
 
-I now realise I actually think the created markdown from eml file (email) should be without the hash tag?
+I now realize I actually think the created markdown from eml file (email) should be without the hash tag?
 
 * I can invent some UUID later?
 
-I askeed Claude to apply this change and it did.
+I asked Claude to apply this change and it did.
 
 I now added the example_eml from session/afaa732d to use in this one.
 
