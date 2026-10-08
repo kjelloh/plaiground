@@ -78,9 +78,9 @@ def test_imports_all_emls_and_writes_index(eml_dir, repo, domain):
     assert f"* [B]({short_hash('B')}/{domain}.md)" in index
 
 
-def test_exclude_md_in_eml_dir_has_no_effect(eml_dir, repo, domain):
+def test_ignore_md_in_eml_dir_has_no_effect(eml_dir, repo, domain):
     write(eml_dir, "a.eml", eml("A", OLD, "alpha"))
-    (eml_dir / "exclude.md").write_text(f"* [A]({short_hash('A')}/{domain}.md)\n", encoding="utf-8")
+    (eml_dir / "ignore.md").write_text(f"* [A]({short_hash('A')}/{domain}.md)\n", encoding="utf-8")
 
     result = run(eml_dir, repo, "--domain", domain)
 

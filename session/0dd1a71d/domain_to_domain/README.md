@@ -14,8 +14,8 @@ and still add more picks later without losing your edits.
 
 What gets copied is always opt-in: only entries named in a pick list. To get
 a pick list, `diff` shows what is in the source but not yet in the target,
-optionally leaving out an exclude list of entries you never want. The tool
-writes no files of its own; the only file worth keeping is your exclude list.
+optionally leaving out an ignore list of entries you never want. The tool
+writes no files of its own; the only file worth keeping is your ignore list.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ writes no files of its own; the only file worth keeping is your exclude list.
 ```sh
 python3 domain_to_domain.py init <repo> <source> <target> [--pick <pick.md>] [--dry-run]
 python3 domain_to_domain.py add  <repo> <source> <target>  --pick <pick.md>  [--dry-run]
-python3 domain_to_domain.py diff <repo> <source> <target> [--exclude <exclude.md>]
+python3 domain_to_domain.py diff <repo> <source> <target> [--ignore <ignore.md>]
 ```
 
 | Argument | Meaning |
@@ -42,7 +42,7 @@ python3 domain_to_domain.py diff <repo> <source> <target> [--exclude <exclude.md
 | `target` | Domain to add to. **Required.** Must differ from `source`. |
 | `--pick` | The pick list (see below). **Required for `add`**, optional for `init`. |
 | `--dry-run` | `init` / `add` only: report what would happen; change nothing. |
-| `--exclude` | `diff` only: exclude list of source entries not to show (see below). |
+| `--ignore` | `diff` only: ignore list of source entries not to show (see below). |
 
 ### Modes
 
@@ -104,7 +104,7 @@ mail -> todo (add), 3 pick entries: 1 added, 1 skipped, 0 failed, 1 unmatched
   that did work are still added.
 * `<target>/index.md` is refreshed only when something was actually added.
 
-## diff and the exclude list
+## diff and the ignore list
 
 `diff` prints every source entry that isn't in the target yet as a pick list
 line on **stdout**, in index order. So its output can be used as a pick list
@@ -114,7 +114,7 @@ as is:
 python3 domain_to_domain.py diff ~/my_site mail chime > pick.md
 ```
 
-With `--exclude`, entries in the exclude list are left out too. The exclude
+With `--ignore`, entries in the ignore list are left out too. The ignore
 list has the same format as a pick list: entries are matched by the hash in
 their link (so `…/chime.md` links work against `mail`), and headings, notes
 and blank lines are ignored. Use it when what you want far outweighs what you
@@ -125,21 +125,21 @@ don't:
 * [Todo: Brf Ekbladet - mail från Åke om beträda gräsmattor](31605a2f/chime.md)
 ```
 
-The exclude list only filters what `diff` shows. `add` never reads it, so it
+The ignore list only filters what `diff` shows. `add` never reads it, so it
 can never cause anything to be copied. Keep it wherever you like; the tool
 never writes it.
 
 Notes and a summary go to **stderr**, so they never end up in the pick list:
 
 ```
-STALE EXCLUDE: * [Todo: Something long gone]()
-mail -> chime (diff): 2942 pending, 262 excluded, 0 in target
+STALE IGNORE: * [Todo: Something long gone]()
+mail -> chime (diff): 2942 pending, 262 ignored, 0 in target
 ```
 
 | Note | Meaning |
 |---|---|
-| `EXCLUDED BUT IN TARGET` | Exclude list entry that is already in the target, so the two disagree. |
-| `STALE EXCLUDE` | Exclude list line that matches no source entry (typo, entry gone). |
+| `IGNORED BUT IN TARGET` | Ignore list entry that is already in the target, so the two disagree. |
+| `STALE IGNORE` | Ignore list line that matches no source entry (typo, entry gone). |
 | `TARGET ONLY` | Target entry with no matching source entry. |
 | `WILL FAIL` | Pending source entry whose heading doesn't hash to its folder name, so `add` would report `FAIL`. |
 
@@ -182,13 +182,13 @@ Or, when you want most of the source and keep a list of what you don't:
 
 ```sh
 python3 domain_to_domain.py init ~/my_site mail chime
-python3 domain_to_domain.py diff ~/my_site mail chime --exclude exclude.md > pick.md
-$EDITOR pick.md                    # optional: review; move unwanted lines to exclude.md
+python3 domain_to_domain.py diff ~/my_site mail chime --ignore ignore.md > pick.md
+$EDITOR pick.md                    # optional: review; move unwanted lines to ignore.md
 python3 domain_to_domain.py add  ~/my_site mail chime --pick pick.md --dry-run
 python3 domain_to_domain.py add  ~/my_site mail chime --pick pick.md
 
 # Any time later, e.g. after importing new mails: see what is left to decide on
-python3 domain_to_domain.py diff ~/my_site mail chime --exclude exclude.md
+python3 domain_to_domain.py diff ~/my_site mail chime --ignore ignore.md
 ```
 
 `pick.md` is throwaway: `diff` recreates it from the domains whenever you need

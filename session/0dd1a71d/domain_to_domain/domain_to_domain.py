@@ -3,7 +3,7 @@
 
     domain_to_domain.py init <base_dir> <source> <target> [--pick <pick.md>] [--dry-run]
     domain_to_domain.py add  <base_dir> <source> <target>  --pick <pick.md>  [--dry-run]
-    domain_to_domain.py diff <base_dir> <source> <target> [--exclude <exclude.md>]
+    domain_to_domain.py diff <base_dir> <source> <target> [--ignore <ignore.md>]
 
 Both domains are required; there are no defaults. An entry of a domain is
 the folder <base_dir>/<domain>/<hash>/ holding <domain>.md, as created by
@@ -48,18 +48,18 @@ doesn't hash to its folder name (e.g. a hand-edited heading) is reported as
 FAIL and not copied.
 
 diff prints every source entry that is not in the target — and, with
---exclude, not in the exclude list either — on stdout, one pick list line
+--ignore, not in the ignore list either — on stdout, one pick list line
 each in index order, so the output can be used as a pick list as is:
 
-    domain_to_domain.py diff <base_dir> mail chime --exclude exclude.md > pick.md
+    domain_to_domain.py diff <base_dir> mail chime --ignore ignore.md > pick.md
     domain_to_domain.py add  <base_dir> mail chime --pick pick.md
 
-The exclude list has the pick list format (entries matched the same way,
+The ignore list has the pick list format (entries matched the same way,
 other lines ignored) and only filters what diff shows: add never reads it.
 Notes and a summary go to stderr, never into the pick list:
 
-- EXCLUDED BUT IN TARGET: exclude list entry that is already in the target
-- STALE EXCLUDE: exclude list entry that refers to no source entry
+- IGNORED BUT IN TARGET: ignore list entry that is already in the target
+- STALE IGNORE: ignore list entry that refers to no source entry
 - TARGET ONLY: target entry with no source entry
 - WILL FAIL: pending source entry whose heading doesn't hash to its folder
   name, so add would FAIL it
@@ -308,30 +308,30 @@ def check_target_for_mode(base_dir: Path, target: str, mode: str) -> None:
 @dataclass
 class DiffReport:
     pending: list[tuple[str, str]] = field(default_factory=list)
-    excluded: int = 0
+    ignored: int = 0
     in_target: int = 0
-    excluded_in_target: list[tuple[str, str]] = field(default_factory=list)
-    stale_excludes: list[Pick] = field(default_factory=list)
+    ignored_in_target: list[tuple[str, str]] = field(default_factory=list)
+    stale_ignores: list[Pick] = field(default_factory=list)
     target_only: list[tuple[str, str]] = field(default_factory=list)
     will_fail: list[tuple[str, str]] = field(default_factory=list)
 
 
-def diff(base_dir: Path, source: str, target: str, excludes: list[Pick]) -> DiffReport:
+def diff(base_dir: Path, source: str, target: str, ignores: list[Pick]) -> DiffReport:
     init_new = load_init_new(base_dir)
     hash_length = len(init_new.compute_hash(""))
     source_entries = entries_of(base_dir, source, hash_length)
     target_entries = entries_of(base_dir, target, hash_length)
-    excluded = picked_hashes(excludes, source_entries, init_new.compute_hash)
-    report = DiffReport(stale_excludes=[pick for pick in excludes if not pick.hit])
+    ignored = picked_hashes(ignores, source_entries, init_new.compute_hash)
+    report = DiffReport(stale_ignores=[pick for pick in ignores if not pick.hit])
 
     for key, source_md in source_entries.items():
         heading = heading_of(source_md)
         if key in target_entries:
             report.in_target += 1
-            if key in excluded:
-                report.excluded_in_target.append((key, heading))
-        elif key in excluded:
-            report.excluded += 1
+            if key in ignored:
+                report.ignored_in_target.append((key, heading))
+        elif key in ignored:
+            report.ignored += 1
         else:
             report.pending.append((key, heading))
             try:
@@ -346,17 +346,17 @@ def diff(base_dir: Path, source: str, target: str, excludes: list[Pick]) -> Diff
 
 def diff_note_lines(report: DiffReport, source: str, target: str) -> list[str]:
     lines = []
-    for key, heading in report.excluded_in_target:
-        lines.append(f"EXCLUDED BUT IN TARGET: {target}/{key}  {heading}")
-    for pick in report.stale_excludes:
-        lines.append(f"STALE EXCLUDE: {pick.line}")
+    for key, heading in report.ignored_in_target:
+        lines.append(f"IGNORED BUT IN TARGET: {target}/{key}  {heading}")
+    for pick in report.stale_ignores:
+        lines.append(f"STALE IGNORE: {pick.line}")
     for key, heading in report.target_only:
         lines.append(f"TARGET ONLY: {target}/{key}  {heading}")
     for key, detail in report.will_fail:
         lines.append(f"WILL FAIL: {source}/{key}  {detail}")
     lines.append(
         f"{source} -> {target} (diff): {len(report.pending)} pending, "
-        f"{report.excluded} excluded, {report.in_target} in target"
+        f"{report.ignored} ignored, {report.in_target} in target"
     )
     return lines
 
@@ -404,9 +404,9 @@ def main() -> None:
         "--dry-run", action="store_true", help="only report what would change; change nothing"
     )
     parser.add_argument(
-        "--exclude",
+        "--ignore",
         type=Path,
-        help="diff only: exclude list (pick list format) of source entries not to list",
+        help="diff only: ignore list (pick list format) of source entries not to list",
     )
     args = parser.parse_args()
 
@@ -414,13 +414,13 @@ def main() -> None:
         sys.exit(f"source and target domain are both {args.source!r}")
     if args.mode == "diff":
         if args.pick is not None:
-            parser.error("diff takes no --pick (use --exclude to leave entries out)")
+            parser.error("diff takes no --pick (use --ignore to leave entries out)")
         if args.dry_run:
             parser.error("diff takes no --dry-run (it never changes anything)")
-    elif args.exclude is not None:
-        parser.error(f"{args.mode} takes no --exclude (only diff does)")
-    if args.exclude is not None and not args.exclude.is_file():
-        sys.exit(f"Not a file: {args.exclude}")
+    elif args.ignore is not None:
+        parser.error(f"{args.mode} takes no --ignore (only diff does)")
+    if args.ignore is not None and not args.ignore.is_file():
+        sys.exit(f"Not a file: {args.ignore}")
     if args.pick is None and args.mode == "add":
         parser.error("add requires --pick")
     if args.pick is not None and not args.pick.is_file():
@@ -432,8 +432,8 @@ def main() -> None:
     if args.mode == "diff":
         try:
             hash_length = len(load_init_new(args.base_dir).compute_hash(""))
-            excludes = load_picks(args.exclude, hash_length) if args.exclude else []
-            report = diff(args.base_dir, args.source, args.target, excludes)
+            ignores = load_picks(args.ignore, hash_length) if args.ignore else []
+            report = diff(args.base_dir, args.source, args.target, ignores)
         except FileNotFoundError as e:
             sys.exit(str(e))
         try:

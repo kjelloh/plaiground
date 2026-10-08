@@ -367,7 +367,7 @@ def test_diff_lists_source_entries_not_in_target_as_pick_list(repo, tmp_path):
     assert result.returncode == 0, result.stderr
     expected = sorted([index_line(SOURCE, "A"), index_line(SOURCE, "C")], key=lambda l: l.split("](")[1])
     assert result.stdout == "".join(line + "\n" for line in expected)
-    assert f"{SOURCE} -> {TARGET} (diff): 2 pending, 0 excluded, 1 in target" in result.stderr
+    assert f"{SOURCE} -> {TARGET} (diff): 2 pending, 0 ignored, 1 in target" in result.stderr
     assert sorted(p.relative_to(repo) for p in repo.rglob("*")) == before
 
 
@@ -384,27 +384,27 @@ def test_diff_output_works_as_pick_list(repo, tmp_path):
     assert "2 added" in result.stdout
     after = run_diff(repo)
     assert after.stdout == ""
-    assert "0 pending, 0 excluded, 2 in target" in after.stderr
+    assert "0 pending, 0 ignored, 2 in target" in after.stderr
 
 
-def test_diff_exclude_leaves_entries_out(repo, tmp_path):
+def test_diff_ignore_leaves_entries_out(repo, tmp_path):
     make_entry(repo, SOURCE, "A")
     make_entry(repo, SOURCE, "B")
     make_entry(repo, SOURCE, "C")
     run_without_pick(repo, "init")
-    exclude = tmp_path / "exclude.md"
-    exclude.write_text(
+    ignore = tmp_path / "ignore.md"
+    ignore.write_text(
         "# Not for publishing\n"
         f"* [B]({short_hash('B')}/chime.md)\n"  # link from another domain: matched by hash
         "* [C]()\n",  # hand-written heading
         encoding="utf-8",
     )
 
-    result = run_diff(repo, "--exclude", str(exclude))
+    result = run_diff(repo, "--ignore", str(ignore))
 
     assert result.returncode == 0, result.stderr
     assert result.stdout == index_line(SOURCE, "A") + "\n"
-    assert "1 pending, 2 excluded, 0 in target" in result.stderr
+    assert "1 pending, 2 ignored, 0 in target" in result.stderr
 
 
 def test_diff_notes_go_to_stderr(repo, tmp_path):
@@ -415,17 +415,17 @@ def test_diff_notes_go_to_stderr(repo, tmp_path):
     md.write_text(md.read_text(encoding="utf-8").replace("# C\n", "# C edited\n", 1), encoding="utf-8")
     run(repo, write_pick(tmp_path, index_line(SOURCE, "A")), "init")
     make_entry(repo, TARGET, "Only in target")
-    exclude = tmp_path / "exclude.md"
-    exclude.write_text(f"{index_line(SOURCE, 'A')}\n* [Gone]()\n", encoding="utf-8")
+    ignore = tmp_path / "ignore.md"
+    ignore.write_text(f"{index_line(SOURCE, 'A')}\n* [Gone]()\n", encoding="utf-8")
 
-    result = run_diff(repo, "--exclude", str(exclude))
+    result = run_diff(repo, "--ignore", str(ignore))
 
     assert result.returncode == 0, result.stderr
-    assert f"EXCLUDED BUT IN TARGET: {TARGET}/{short_hash('A')}  A" in result.stderr
-    assert "STALE EXCLUDE: * [Gone]()" in result.stderr
+    assert f"IGNORED BUT IN TARGET: {TARGET}/{short_hash('A')}  A" in result.stderr
+    assert "STALE IGNORE: * [Gone]()" in result.stderr
     assert f"TARGET ONLY: {TARGET}/{short_hash('Only in target')}  Only in target" in result.stderr
     assert f"WILL FAIL: {SOURCE}/{short_hash('C')}  C edited" in result.stderr
-    assert "2 pending, 0 excluded, 1 in target" in result.stderr
+    assert "2 pending, 0 ignored, 1 in target" in result.stderr
     assert result.stdout.splitlines() == sorted(
         [index_line(SOURCE, "B"), f"* [C edited]({short_hash('C')}/{SOURCE}.md)"],
         key=lambda l: l.split("](")[1],
@@ -456,9 +456,9 @@ def test_diff_into_missing_target_fails_and_recommends_init(repo):
         (["sync", "repo", "inbox", "todo", "--pick", "pick.md"], "invalid choice: 'sync'"),
         (["diff", "repo", "inbox", "todo", "--pick", "pick.md"], "diff takes no --pick"),
         (["diff", "repo", "inbox", "todo", "--dry-run"], "diff takes no --dry-run"),
-        (["diff", "repo", "inbox", "todo", "--exclude", "nosuch.md"], "Not a file"),
-        (["add", "repo", "inbox", "todo", "--pick", "pick.md", "--exclude", "pick.md"], "add takes no --exclude"),
-        (["init", "repo", "inbox", "todo", "--exclude", "pick.md"], "init takes no --exclude"),
+        (["diff", "repo", "inbox", "todo", "--ignore", "nosuch.md"], "Not a file"),
+        (["add", "repo", "inbox", "todo", "--pick", "pick.md", "--ignore", "pick.md"], "add takes no --ignore"),
+        (["init", "repo", "inbox", "todo", "--ignore", "pick.md"], "init takes no --ignore"),
         (["--pick", "pick.md"], "required: mode"),
     ],
 )
