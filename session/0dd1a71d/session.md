@@ -12,6 +12,14 @@ I decided to change how the date in a domain entry from a mail is presented in t
 
 I made Claude vibe code it and it seems ok.
 
+I now made Claude rename the '--exclude' mechanism to '--ignore' ok.
+
+* Claude applied the term 'IGNORE' across the board (which I think is ok?)
+
+I now asked Claude to create a 'test_on_todo_mails.py' and it did.
+
+* Great! Now I have it easier to remember the scripts to call to perform the whole pipe line as I design it. 
+
 ## 20261007
 
 * [site_repo/chime/index.md](./site_repo/chime/index.md)
