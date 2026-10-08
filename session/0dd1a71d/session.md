@@ -3,7 +3,18 @@
 * [eml_to_domain/README.md](./eml_to_domain/README.md)
 * [domain_to_domain/README.md](./domain_to_domain/README.md)
 
+## 20261008
+
+I decided to change how the date in a domain entry from a mail is presented in the text.
+
+* It is now a readable text on the form 'As of yyyy-mm-dd hh:mm´
+* The eml-to-domain-entry now creates and parses this date to have newest mail with same subject prevail ok.
+
+I made Claude vibe code it and it seems ok.
+
 ## 20261007
+
+* [site_repo/chime/index.md](./site_repo/chime/index.md)
 
 I now added to_site from session/afaa732d.
 

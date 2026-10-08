@@ -8,14 +8,15 @@ scaffolded by init_new. The mail's original text/plain body (if any) is also
 kept verbatim as <domain>.txt (via eml_to_txt), linked from <domain>.md
 right after the metadata.
 
-The mail's date is kept as invisible metadata, an HTML comment right after
-the heading:
+The date of the entry's state is a visible line right after the heading:
 
     # <Subject>
 
-    <!-- mail-date: 2019-07-20T14:31:20+02:00 -->
+    *As of 2019-07-20 14:31*
 
-It is what decides whether a later mail with the same Subject is newer.
+On import it is the mail's Date header (the time as written in the mail,
+without seconds or timezone). It is what decides whether a later mail with
+the same Subject is newer, so whoever edits the entry by hand updates it.
 
 There is no default domain: the caller always names it (e.g. "mail"), so
 the same mechanism can fill any namespace of the target repo.
@@ -43,12 +44,12 @@ from eml_to_html import sanitize
 from eml_to_txt import plain_text_of, write_plain_text
 from html_to_markdown import convert as html_to_markdown_convert
 
-# The metadata line holding the mail's date (see module docstring).
-MAIL_DATE_TAG = "mail-date"
-MAIL_DATE_RE = re.compile(rf"^<!-- {MAIL_DATE_TAG}: (?P<date>.*) -->$")
+# The line holding the date of the entry's state (see module docstring).
+AS_OF_FORMAT = "%Y-%m-%d %H:%M"
+AS_OF_RE = re.compile(r"^\*As of (?P<date>\d{4}-\d{2}-\d{2} \d{2}:\d{2})\*$")
 
-# First line of the mail body; metadata is only looked for above it, so a
-# mail that itself contains a "mail-date" comment can't be mistaken for it.
+# First line of the mail body; the "As of" line is only looked for above it,
+# so a mail that itself contains such a line can't be mistaken for it.
 BODY_START = "{% raw %}"
 
 
@@ -114,59 +115,50 @@ def read_subject(eml_path: Path) -> str:
     return subject_of(msg)
 
 
-def parsed_date_of(msg):
-    """The mail's Date header as a datetime, or None if absent/unparsable."""
+def as_of_date_of(msg):
+    """The mail's Date header as the entry's "As of" date: its wall-clock
+    time as written in the mail, to the minute, timezone dropped. None if
+    the header is absent or unparsable."""
     date = msg.get("date")
     if date is None:
         return None
     try:
-        return date.datetime
+        parsed = date.datetime
     except AttributeError:
         return None
+    if parsed is None:
+        return None
+    return parsed.replace(tzinfo=None, second=0, microsecond=0)
 
 
-def mail_date_tag_of(msg) -> str | None:
-    """The "<!-- mail-date: ... -->" metadata line for msg: its Date header
-    in ISO 8601 if parsable, else verbatim (kept for reference; it reads
-    back as no date). None if the mail has no usable Date header."""
-    parsed = parsed_date_of(msg)
-    if parsed is not None:
-        value = parsed.isoformat()
-    else:
-        value = " ".join(str(msg.get("date") or "").split())
-        if not value or "-->" in value:  # "-->" would end the comment early
-            return None
-    return f"<!-- {MAIL_DATE_TAG}: {value} -->"
+def as_of_line(date) -> str:
+    """The visible "*As of yyyy-mm-dd hh:mm*" line for date."""
+    return f"*As of {date.strftime(AS_OF_FORMAT)}*"
 
 
 def is_newer(candidate_date, current_date) -> bool:
     """True if candidate_date should replace current_date as the entry's
-    source mail. A missing date always loses to a present one; between two
-    present dates the later one wins; dates that aren't directly comparable
-    (e.g. one naive, one aware) keep the current one rather than crash the
-    whole batch over one odd header."""
+    state. A missing date always loses to a present one; between two
+    present dates the later one wins (the same minute is not later)."""
     if candidate_date is None:
         return False
     if current_date is None:
         return True
-    try:
-        return candidate_date > current_date
-    except TypeError:
-        return False
+    return candidate_date > current_date
 
 
 def read_entry_date(entry_path: Path):
-    """Read back the date eml_file_to_entry wrote into an existing entry:
-    its "<!-- mail-date: ... -->" line above the mail body. Returns None if
-    there is no such line or its value isn't a parseable ISO date."""
+    """Read back an existing entry's "*As of yyyy-mm-dd hh:mm*" line above
+    the mail body. Returns None if there is no such line or its value isn't
+    a valid date."""
     for line in entry_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if line == BODY_START:
             break
-        match = MAIL_DATE_RE.match(line)
+        match = AS_OF_RE.match(line)
         if match is not None:
             try:
-                return datetime.fromisoformat(match["date"])
+                return datetime.strptime(match["date"], AS_OF_FORMAT)
             except ValueError:
                 return None
     return None
@@ -180,7 +172,7 @@ def eml_file_to_entry(eml_path: Path, base_dir: Path, domain: str) -> Path:
     ensure_entry_folder = init_new.ensure_entry_folder
     msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
     subject = subject_of(msg)
-    candidate_date = parsed_date_of(msg)
+    candidate_date = as_of_date_of(msg)
 
     entry_path, created = ensure_entry_folder(domain, subject, base_dir=base_dir)
     entry_dir = entry_path.parent
@@ -210,10 +202,9 @@ def eml_file_to_entry(eml_path: Path, base_dir: Path, domain: str) -> Path:
         if plain_text is not None:
             write_plain_text(entry_dir / txt_name, plain_text)
 
-        date_tag = mail_date_tag_of(msg)
         with entry_path.open("a", encoding="utf-8") as f:
-            if date_tag is not None:
-                f.write(f"{date_tag}\n\n")
+            if candidate_date is not None:
+                f.write(f"{as_of_line(candidate_date)}\n\n")
             if plain_text is not None:
                 f.write(f"[Plain text]({txt_name})\n\n")
             # Mail content routinely contains "{{" / "{%" (C++ brace-init,

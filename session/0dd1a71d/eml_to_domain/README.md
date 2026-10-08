@@ -70,8 +70,8 @@ Updated 'mail/index.md' with 8 entries.
 | Status | Meaning |
 |---|---|
 | `ADD` | First mail with this Subject, so a new entry was created. |
-| `UPDATE` | An entry for this Subject existed, and this mail is **newer** (by its `Date:` header), so the entry was replaced. |
-| `SKIP` | An entry for this Subject already reflects an equal-or-newer mail. Nothing changed. |
+| `UPDATE` | An entry for this Subject existed, and this mail's `Date:` header is **later** than the entry's `*As of ...*` date, so the entry was replaced. |
+| `SKIP` | An entry for this Subject already has an `*As of ...*` date as late as this mail's, or later (from a newer mail or from your own edit). Nothing changed. |
 | `FAIL` | The mail could not be converted (e.g. it has no text, HTML or image content). The run continues with the next mail. FAIL lines go to stderr. |
 
 `index.md` is only rewritten when something was added or updated, so a
@@ -109,8 +109,12 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 * **Newest wins.** Of several mails with the same Subject, the one with the
   latest `Date:` header is kept, whatever order the files are processed in
   and across runs. A mail without a parsable date never replaces one that
-  has one. The date is read back from the entry's `mail-date` metadata (see
-  [Entry layout](#entry-layout)).
+  has one. The entry's date is read back from its `*As of ...*` line (see
+  [Entry layout](#entry-layout)), to the minute: a mail from the same minute
+  is not newer.
+* **Hand edits are protected by their date.** If you edit an entry, set its
+  `*As of ...*` line to the time of your edit. Only a mail dated later than
+  that replaces the entry (and your edit).
 * **Incremental.** Re-running on the same folder, or on a folder with a few
   new exports added, only adds or updates what changed. You never need to
   clear the domain first.
@@ -129,7 +133,7 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 ```
 # Todo: Build House - Consider to use google maps ...
 
-<!-- mail-date: 2019-07-20T14:31:20+02:00 -->
+*As of 2019-07-20 14:31*
 
 [Plain text](mail.txt)
 
@@ -143,7 +147,7 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 | Line | Content |
 |---|---|
 | 1 | `# ` + the mail's Subject (`update_index.py` uses it as the link text; the folder name is the first 8 characters of its md5 hash). Don't edit it: the folder is found by hashing it. |
-| 3 | Metadata: the mail's `Date:` header (ISO 8601) in an HTML comment tagged `mail-date`. Invisible on the rendered page (it stays in the page's HTML source). Used to decide whether a later mail is newer. Don't edit it. Mails without a `Date:` header have no such line. |
+| 3 | `*As of yyyy-mm-dd hh:mm*`: the date of the entry's state, shown in italics on the page. On import it is the mail's `Date:` header, the time as written in the mail, without seconds or timezone. Used to decide whether a later mail is newer, so update it when you edit the entry. Mails without a parsable `Date:` header get no such line. |
 | 5 | Link to `<domain>.txt`, only present when the mail had a plain-text body. |
 | rest | The body, wrapped in Liquid `raw` … `endraw` tags so that brace sequences in mail text (C++ code, templates, ...) can't break a Jekyll site build. |
 
@@ -151,8 +155,9 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 with BOM so browsers show non-ASCII characters correctly). HTML-only mails
 have no `.txt`. Inline images and attachments are saved next to the `.md`.
 
-> **Upgrading entries from the earlier layout** (a visible date line instead
-> of the `mail-date` comment): no action needed. Such entries read as undated,
+> **Upgrading entries from earlier layouts** (an invisible
+> `<!-- mail-date: ... -->` comment, or an even older bare date line, instead
+> of the `*As of ...*` line): no action needed. Such entries read as undated,
 > so the next import of their mails rewrites each one once in the new layout
 > (expect every entry to be reported as `UPDATE` that one time). The newest
 > mail per Subject still wins.
