@@ -3,7 +3,8 @@
 
     1. eml_to_domain:    all .eml files -> site_repo/mail
     2. domain_to_domain: mail entries not in ignore.md -> site_repo/chime
-    3. to_site:          site_repo -> public_html, served for preview
+    3. update_domain:    link "==> Also see" references between chimes
+    4. to_site:          site_repo -> public_html, served for preview
 
 Only files reachable by links from site_repo/index.md end up on the site.
 It links to chime/index.md but not to mail/, so 'mail' stays off the site.
@@ -24,6 +25,7 @@ PICK = SESSION / "pick.md"
 
 EMLS_TO_DOMAIN = SESSION / "eml_to_domain" / "emls_to_domain.py"
 DOMAIN_TO_DOMAIN = SESSION / "domain_to_domain" / "domain_to_domain.py"
+UPDATE_DOMAIN = SESSION / "update_domain" / "update_domain.py"
 TO_SITE = SESSION / "to_site" / "to_site.py"
 
 
@@ -47,6 +49,8 @@ def main() -> None:
         run(DOMAIN_TO_DOMAIN, "add", SITE_REPO, "mail", "chime", "--pick", PICK)
     else:
         print("Nothing new to add to chime.")
+
+    run(UPDATE_DOMAIN, "intralink", SITE_REPO, "chime")
 
     run(TO_SITE, SITE_REPO)  # serves the site until you press Ctrl-C
 

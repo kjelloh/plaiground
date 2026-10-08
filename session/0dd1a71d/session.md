@@ -20,6 +20,14 @@ I now asked Claude to create a 'test_on_todo_mails.py' and it did.
 
 * Great! Now I have it easier to remember the scripts to call to perform the whole pipe line as I design it. 
 
+I now chatted with Claude about how to make the generated site 'nicer' to navigate.
+
+* It suggested some godd enhancement.
+* I went with adding links between entries in the same domain.
+* I asked to name the mechanism 'update_domain intralink ...' [update_domain/README.md](./update_domain/README.md) 
+
+I tested it on my large set of chimes from todo-mails and what I could see it works quite well?
+
 ## 20261007
 
 * [site_repo/chime/index.md](./site_repo/chime/index.md)
