@@ -26,17 +26,19 @@ def repo(tmp_path):
     return repo
 
 
-def make_entry(repo: Path, domain: str, heading: str, body: str = "body", with_txt: bool = True) -> Path:
-    """An entry laid out like eml_to_domain writes it."""
+def make_entry(repo: Path, domain: str, heading: str, body: str = "body", with_files: bool = True) -> Path:
+    """An entry with a linked text file and an image (with_files)."""
     folder = repo / domain / short_hash(heading)
     folder.mkdir(parents=True)
     md = f"# {heading}\n\n2026-09-11T12:00:00+00:00\n\n"
-    if with_txt:
-        md += f"[Plain text]({domain}.txt)\n\n"
-        (folder / f"{domain}.txt").write_text(f"{body}\n", encoding="utf-8")
-    md += f"{body}\n\n![pic](pic.png)\n"
+    if with_files:
+        md += "[some notes](notes.txt)\n\n"
+        (folder / "notes.txt").write_text(f"{body}\n", encoding="utf-8")
+    md += f"{body}\n"
+    if with_files:
+        md += "\n![pic](pic.png)\n"
+        (folder / "pic.png").write_bytes(b"\x89PNG")
     (folder / f"{domain}.md").write_text(md, encoding="utf-8")
-    (folder / "pic.png").write_bytes(b"\x89PNG")
     return folder
 
 
@@ -93,20 +95,31 @@ def test_init_into_existing_target_fails_and_recommends_add(repo, tmp_path):
     assert not any((repo / TARGET).iterdir())
 
 
-def test_copy_is_renamed_to_target_domain(repo, tmp_path):
-    make_entry(repo, SOURCE, "A", body="alpha")
+def test_copy_renames_only_the_entry_markdown(repo, tmp_path):
+    src = make_entry(repo, SOURCE, "A", body="alpha")
     pick = write_pick(tmp_path, index_line(SOURCE, "A"))
 
     run(repo, pick, "init")
 
     dest = target_dir(repo, "A")
-    assert sorted(p.name for p in dest.iterdir()) == ["pic.png", f"{TARGET}.md", f"{TARGET}.txt"]
-    md = (dest / f"{TARGET}.md").read_text(encoding="utf-8")
-    assert md.startswith("# A\n\n2026-09-11T12:00:00+00:00\n\n")
-    assert f"[Plain text]({TARGET}.txt)" in md
-    assert f"{SOURCE}.txt" not in md
-    assert "![pic](pic.png)" in md
-    assert (dest / f"{TARGET}.txt").read_text(encoding="utf-8") == "alpha\n"
+    assert sorted(p.name for p in dest.iterdir()) == ["notes.txt", "pic.png", f"{TARGET}.md"]
+    md = (dest / f"{TARGET}.md").read_bytes()
+    assert md == (src / f"{SOURCE}.md").read_bytes()
+    assert (dest / "notes.txt").read_text(encoding="utf-8") == "alpha\n"
+
+
+def test_files_named_after_source_domain_are_not_renamed(repo, tmp_path):
+    src = make_entry(repo, SOURCE, "A")
+    (src / f"{SOURCE}.txt").write_text("own file\n", encoding="utf-8")
+    md = src / f"{SOURCE}.md"
+    md.write_text(md.read_text(encoding="utf-8") + f"[own]({SOURCE}.txt)\n", encoding="utf-8")
+
+    run(repo, write_pick(tmp_path, index_line(SOURCE, "A")), "init")
+
+    dest = target_dir(repo, "A")
+    assert (dest / f"{SOURCE}.txt").read_text(encoding="utf-8") == "own file\n"
+    assert not (dest / f"{TARGET}.txt").exists()
+    assert f"[own]({SOURCE}.txt)" in (dest / f"{TARGET}.md").read_text(encoding="utf-8")
 
 
 def test_source_is_left_untouched(repo, tmp_path):
@@ -129,12 +142,12 @@ def test_pick_by_hand_written_heading(repo, tmp_path):
     assert target_dir(repo, "Some [odd] heading?").is_dir()
 
 
-def test_entry_without_txt_is_copied(repo, tmp_path):
-    make_entry(repo, SOURCE, "A", with_txt=False)
+def test_entry_of_only_markdown_is_copied(repo, tmp_path):
+    make_entry(repo, SOURCE, "A", with_files=False)
 
     run(repo, write_pick(tmp_path, index_line(SOURCE, "A")), "init")
 
-    assert sorted(p.name for p in target_dir(repo, "A").iterdir()) == ["pic.png", f"{TARGET}.md"]
+    assert sorted(p.name for p in target_dir(repo, "A").iterdir()) == [f"{TARGET}.md"]
 
 
 def test_dry_run_init_creates_no_folder(repo, tmp_path):
@@ -244,14 +257,14 @@ def test_add_keeps_edited_target_entry_and_notes_changed_source(repo, tmp_path):
     run(repo, pick, "init")
     edited = target_dir(repo, "A") / f"{TARGET}.md"
     edited.write_text("# A\n\nmy edits\n", encoding="utf-8")
-    (src / f"{SOURCE}.txt").write_text("alpha revised\n", encoding="utf-8")
+    (src / "notes.txt").write_text("alpha revised\n", encoding="utf-8")
 
     result = run(repo, pick, "add")
 
     assert result.returncode == 0, result.stderr
     assert f"SKIP: {TARGET}/{short_hash('A')}  A (already in target; source differs)" in result.stdout
     assert edited.read_text(encoding="utf-8") == "# A\n\nmy edits\n"
-    assert (target_dir(repo, "A") / f"{TARGET}.txt").read_text(encoding="utf-8") == "alpha\n"
+    assert (target_dir(repo, "A") / "notes.txt").read_text(encoding="utf-8") == "alpha\n"
 
 
 def test_add_with_nothing_new_leaves_index_alone(repo, tmp_path):

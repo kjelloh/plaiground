@@ -26,17 +26,20 @@ def sanitize(name: str) -> str:
 
 
 def unique_name(filename: str, claimed: set[str]) -> str:
-    if filename not in claimed:
-        claimed.add(filename)
+    """filename, or filename with a "-1", "-2", ... suffix if it's already
+    claimed. claimed holds casefolded names: on a case-insensitive file
+    system (macOS' default) "Mail.TXT" would overwrite "mail.txt"."""
+    if filename.casefold() not in claimed:
+        claimed.add(filename.casefold())
         return filename
     stem, dot, suffix = filename.rpartition(".")
     stem = stem or filename
     suffix = f".{suffix}" if dot else ""
     i = 1
-    while f"{stem}-{i}{suffix}" in claimed:
+    while f"{stem}-{i}{suffix}".casefold() in claimed:
         i += 1
     name = f"{stem}-{i}{suffix}"
-    claimed.add(name)
+    claimed.add(name.casefold())
     return name
 
 
@@ -142,7 +145,11 @@ def insert_h1(html: str, subject: str) -> str:
     return heading + html
 
 
-def extract(eml_path: Path, out_dir: Path, inject_h1: bool = True) -> None:
+def extract(
+    eml_path: Path, out_dir: Path, inject_h1: bool = True, reserved: tuple[str, ...] = ()
+) -> None:
+    """reserved: file names the caller will itself write next to the
+    extracted files — attachments and images never take these names."""
     msg = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -151,7 +158,7 @@ def extract(eml_path: Path, out_dir: Path, inject_h1: bool = True) -> None:
     # there's no text/html or text/plain part) needs their final local
     # filenames to embed/link them.
     cid_to_file: dict[str, str] = {}
-    claimed: set[str] = set()
+    claimed: set[str] = {name.casefold() for name in reserved}
 
     image_names: list[str] = []
     for idx, part in enumerate(image_parts(msg), start=1):

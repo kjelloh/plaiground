@@ -275,7 +275,7 @@ def test_eml_file_to_entry_writes_and_links_plain_text(tmp_path, domain):
 
     entry_path = eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)
 
-    txt_path = entry_path.parent / f"{domain}.txt"
+    txt_path = entry_path.parent / "mail.txt"
     assert txt_path.read_bytes().startswith(b"\xef\xbb\xbf")  # UTF-8 BOM, for browsers
     assert txt_path.read_text(encoding="utf-8-sig") == (
         "First paragraph.\n\nSecond paragraph,\nwith a line break.\n"
@@ -283,7 +283,7 @@ def test_eml_file_to_entry_writes_and_links_plain_text(tmp_path, domain):
     content = entry_path.read_text(encoding="utf-8")
     assert content.startswith(
         "# Plain\n\n*As of 2026-09-11 12:00*\n\n"
-        f"[Plain text]({domain}.txt)\n\n"
+        "[mail plain/text](mail.txt)\n\n"
         "{% raw %}\n"
     )
 
@@ -293,8 +293,8 @@ def test_eml_file_to_entry_no_plain_text_part_writes_no_txt(tmp_path, domain):
 
     entry_path = eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)
 
-    assert not (entry_path.parent / f"{domain}.txt").exists()
-    assert f"{domain}.txt" not in entry_path.read_text(encoding="utf-8")
+    assert not (entry_path.parent / "mail.txt").exists()
+    assert "mail.txt" not in entry_path.read_text(encoding="utf-8")
 
 
 def test_eml_file_to_entry_ignores_attached_txt_file(tmp_path, domain):
@@ -318,7 +318,57 @@ def test_eml_file_to_entry_ignores_attached_txt_file(tmp_path, domain):
 
     entry_path = eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)
 
-    assert not (entry_path.parent / f"{domain}.txt").exists()
+    assert not (entry_path.parent / "mail.txt").exists()
+
+
+def attachments_eml(*filenames: str) -> str:
+    """A mail with a text/plain body and a (non-text, so it's kept)
+    attachment per filename."""
+    parts = "".join(
+        "--B\r\n"
+        "Content-Type: application/octet-stream\r\n"
+        f"Content-Disposition: attachment; filename={name}\r\n"
+        "\r\n"
+        f"Attached {name}.\r\n"
+        for name in filenames
+    )
+    return (
+        "Subject: Clashing attachments\r\n"
+        "From: foo@bar.se\r\n"
+        'Content-Type: multipart/mixed; boundary="B"\r\n'
+        "\r\n"
+        "--B\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "\r\n"
+        "The body.\r\n"
+        f"{parts}"
+        "--B--\r\n"
+    )
+
+
+@pytest.mark.parametrize("attached", ["mail.txt", "Mail.TXT"])
+def test_attachment_never_takes_the_plain_text_name(tmp_path, domain, attached):
+    eml_path = write_eml(tmp_path, "att.eml", attachments_eml(attached))
+
+    entry_path = eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)
+
+    stem, suffix = attached.split(".")
+    renamed = entry_path.parent / f"{stem}-1.{suffix}"
+    assert renamed.read_bytes() == f"Attached {attached}.".encode()
+    assert f"]({stem}-1.{suffix})" in entry_path.read_text(encoding="utf-8")
+    assert (entry_path.parent / "mail.txt").read_text(encoding="utf-8-sig") == "The body."
+
+
+def test_attachment_never_takes_the_entry_markdown_name(tmp_path, domain):
+    eml_path = write_eml(tmp_path, "att.eml", attachments_eml(f"{domain}.md"))
+
+    entry_path = eml_file_to_entry(eml_path, base_dir=tmp_path, domain=domain)
+
+    content = entry_path.read_text(encoding="utf-8")
+    assert content.startswith("# Clashing attachments\n")
+    assert (entry_path.parent / f"{domain}-1.md").read_bytes() == (
+        f"Attached {domain}.md.".encode()
+    )
 
 
 def test_eml_file_to_entry_newer_revision_replaces_plain_text(tmp_path, domain):
@@ -332,7 +382,7 @@ def test_eml_file_to_entry_newer_revision_replaces_plain_text(tmp_path, domain):
     eml_file_to_entry(older, base_dir=tmp_path, domain=domain)
     entry_path = eml_file_to_entry(newer, base_dir=tmp_path, domain=domain)
 
-    text = (entry_path.parent / f"{domain}.txt").read_text(encoding="utf-8-sig")
+    text = (entry_path.parent / "mail.txt").read_text(encoding="utf-8-sig")
     assert "Updated paragraph." in text
     assert "First paragraph." not in text
 
@@ -384,7 +434,8 @@ def test_same_mail_into_two_domains_gives_same_hash_folder(tmp_path):
     assert mail == tmp_path / "mail" / mail.parent.name / "mail.md"
     assert note == tmp_path / "note" / mail.parent.name / "note.md"
     assert (mail.parent / "mail.txt").is_file()
-    assert (note.parent / "note.txt").is_file()
+    assert (note.parent / "mail.txt").is_file()
+    assert not (note.parent / "note.txt").exists()
 
 
 def test_invalid_domain_writes_nothing(tmp_path):

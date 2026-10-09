@@ -3,6 +3,45 @@
 * [eml_to_domain/README.md](./eml_to_domain/README.md)
 * [domain_to_domain/README.md](./domain_to_domain/README.md)
 
+## 20261009
+
+I think I now want support for tagging domain entries with their hash and a better index?
+
+* What about tagging each domain entry with e.g., '#chime/004bf692 as of 2015-08-19 15:07'?
+    * That is '#' + domain + '/' + hash?
+* What about an index with links stating heading and as-of date?
+    * But where to put the as-od date?
+    * [Todo: Write about a more general concept of "Religion" that encompasses also political, economical and new-age approach to life - as of 2015-08-19 15:07](004bf692/chime.md)
+    * [Todo: Write about a more general concept of "Religion" that encompasses also political, economical and new-age approach to life](004bf692/chime.md) as of 2015-08-19 15:07
+    * As of 2015-08-19 15:07: [Todo: Write about a more general concept of "Religion" that encompasses also political, economical and new-age approach to life](004bf692/chime.md)
+    * Do we have other options?
+
+I asked Claude to propose a 'tagging' of a domain entry with something containing the hash.
+
+* I decided to NOT use the '#' prefix.
+* And to use 'domain/hash as-of date time'
+* But I now discovered a BUG!
+    * The domain_to_domain on entries from mail also renames the txt file with the plain/text part of the mail.
+
+I think I need to adress this issue before I continue?
+
+* The eml-to-domain should ALWAYS create a mail.txt with any plain/text part of the mail.
+* Then domain_to_domain should just clone this file as-is to the new domain
+    * That is, the mail.txt should NOT bea treated as a domain-named file.
+
+I asked Claude to fix this and it did.
+
+* But it also added some comments.
+    * Worth knowing - Attached text files are dropped: mail attachments of type text/plain (e.g. an attached notes.txt) are never saved as attachments, so they are lost. This was already the case before my change and I left it alone, but you may want to look at it.
+    * So the downside of vibe coding keeps showing up!
+    * If I don't 'understand' the code. I also don't know if it actually works the way I want it to?
+    * I mean, I assumed ALL attachments  would be handled 'the same way'?
+
+Oh well!
+
+* [site_repo/mail/index.md](./site_repo/mail/index.md)
+* [site_repo/chime/index.md](./site_repo/chime/index.md)
+
 ## 20261008
 
 I decided to change how the date in a domain entry from a mail is presented in the text.

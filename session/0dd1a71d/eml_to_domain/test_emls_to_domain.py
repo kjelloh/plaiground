@@ -122,7 +122,7 @@ def test_same_subject_in_one_run_keeps_newest(eml_dir, repo, domain):
     result = run(eml_dir, repo, "--domain", domain)
 
     assert "1 added, 0 updated, 1 skipped (superseded), 0 failed" in result.stdout
-    txt = (repo / domain / short_hash("A") / f"{domain}.txt").read_text(encoding="utf-8-sig")
+    txt = (repo / domain / short_hash("A") / "mail.txt").read_text(encoding="utf-8-sig")
     assert "new body" in txt
 
 

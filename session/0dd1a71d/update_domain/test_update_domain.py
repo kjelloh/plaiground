@@ -28,7 +28,7 @@ def make_entry(repo: Path, heading: str, *body_lines: str) -> Path:
     body = "".join(line + "\n" for line in body_lines)
     md = folder / f"{DOMAIN}.md"
     md.write_text(
-        f"# {heading}\n\n*As of 2026-10-08 12:00*\n\n[Plain text]({DOMAIN}.txt)\n\n"
+        f"# {heading}\n\n*As of 2026-10-08 12:00*\n\n[mail plain/text](mail.txt)\n\n"
         f"{{% raw %}}\n{body}\n{{% endraw %}}\n",
         encoding="utf-8",
     )

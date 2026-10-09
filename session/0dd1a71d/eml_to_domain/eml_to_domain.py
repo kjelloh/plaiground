@@ -5,8 +5,10 @@
 Pipeline: eml_to_html (extract the HTML body + inline images) -> html_to_markdown
 (convert to markdown, copy images) -> merge the result into <domain>.md
 scaffolded by init_new. The mail's original text/plain body (if any) is also
-kept verbatim as <domain>.txt (via eml_to_txt), linked from <domain>.md
-right after the metadata.
+kept verbatim as mail.txt (via eml_to_txt) — the same name whatever the
+domain — linked from <domain>.md right after the "As of" line as
+"[mail plain/text](mail.txt)". No attachment or image is ever given that
+name (nor <domain>.md).
 
 The date of the entry's state is a visible line right after the heading:
 
@@ -48,6 +50,12 @@ from html_to_markdown import convert as html_to_markdown_convert
 AS_OF_FORMAT = "%Y-%m-%d %H:%M"
 AS_OF_RE = re.compile(r"^\*As of (?P<date>\d{4}-\d{2}-\d{2} \d{2}:\d{2})\*$")
 
+# The mail's text/plain body, kept verbatim next to the entry. Not named
+# after the domain: once written it is an ordinary file linked from the
+# entry, like an image or attachment.
+MAIL_PLAIN_TEXT_FILE_NAME = "mail.txt"
+MAIL_PLAIN_TEXT_LINK = f"[mail plain/text]({MAIL_PLAIN_TEXT_FILE_NAME})"
+
 # First line of the mail body; the "As of" line is only looked for above it,
 # so a mail that itself contains such a line can't be mistaken for it.
 BODY_START = "{% raw %}"
@@ -67,10 +75,6 @@ class EntrySupersededError(Exception):
 
 def entry_md_name(domain: str) -> str:
     return f"{domain}.md"
-
-
-def plain_text_name(domain: str) -> str:
-    return f"{domain}.txt"
 
 
 def load_init_new(base_dir: Path):
@@ -189,10 +193,14 @@ def eml_file_to_entry(eml_path: Path, base_dir: Path, domain: str) -> Path:
 
     scratch_dir = entry_dir / "_html_scratch"
     md_path = entry_dir / (sanitize(eml_path.stem) + ".md")
-    txt_name = plain_text_name(domain)
 
     try:
-        eml_to_html_extract(eml_path, scratch_dir, inject_h1=False)
+        eml_to_html_extract(
+            eml_path,
+            scratch_dir,
+            inject_h1=False,
+            reserved=(MAIL_PLAIN_TEXT_FILE_NAME, entry_path.name),
+        )
         html_to_markdown_convert(scratch_dir, entry_dir)
 
         markdown_body = md_path.read_text(encoding="utf-8")
@@ -200,13 +208,13 @@ def eml_file_to_entry(eml_path: Path, base_dir: Path, domain: str) -> Path:
 
         plain_text = plain_text_of(msg)
         if plain_text is not None:
-            write_plain_text(entry_dir / txt_name, plain_text)
+            write_plain_text(entry_dir / MAIL_PLAIN_TEXT_FILE_NAME, plain_text)
 
         with entry_path.open("a", encoding="utf-8") as f:
             if candidate_date is not None:
                 f.write(f"{as_of_line(candidate_date)}\n\n")
             if plain_text is not None:
-                f.write(f"[Plain text]({txt_name})\n\n")
+                f.write(f"{MAIL_PLAIN_TEXT_LINK}\n\n")
             # Mail content routinely contains "{{" / "{%" (C++ brace-init,
             # JSON-ish notes, ...) which Jekyll/Liquid treats as template
             # syntax regardless of front matter settings — a malformed one

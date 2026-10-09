@@ -96,7 +96,7 @@ mail -> todo (add), 3 pick entries: 1 added, 1 skipped, 0 failed, 1 unmatched
 | Status | Meaning |
 |---|---|
 | `ADD` | Picked and not yet in the target, so copied. With `--dry-run`: `WOULD ADD`. |
-| `SKIP` | Picked but already in the target, so left as is. `source differs` means the source entry has changed since it was copied (e.g. a newer mail was imported); the target copy is still kept. |
+| `SKIP` | Picked but already in the target, so left as is. `source differs` means the source entry has changed since it was copied (e.g. it was edited or re-imported); the target copy is still kept. |
 | `UNMATCHED` | Pick list line that matches no source entry (typo, stale line). |
 | `FAIL` | Source entry whose heading doesn't hash to its folder name (e.g. a hand-edited heading). Not copied. |
 
@@ -147,11 +147,13 @@ Notes don't affect the exit status.
 
 ## What a copy is
 
-The whole entry folder (markdown, plain text, images, attachments) is copied
-to `<repo>/<target>/<hash>/`, with:
-
-* `<source>.md` / `<source>.txt` renamed to `<target>.md` / `<target>.txt`
-* the `[...](<source>.txt)` link in the markdown rewritten to `<target>.txt`
+The whole entry folder is copied to `<repo>/<target>/<hash>/`, with
+`<source>.md` renamed to `<target>.md`. Nothing else changes: every other
+file in the folder (images, attachments, text files, ...) keeps its name,
+and the markdown is copied as is, so its links to those files still work.
+Every entry is treated the same, whatever created it (e.g. an entry
+[eml_to_domain](../eml_to_domain/README.md) made from a mail, with its
+`mail.txt`, is copied like any other).
 
 The folder hash depends only on the heading, so an entry keeps the same hash
 in every domain. The source domain is never modified, and folders in the target

@@ -135,7 +135,7 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 
 *As of 2019-07-20 14:31*
 
-[Plain text](mail.txt)
+[mail plain/text](mail.txt)
 
 (Liquid "raw" tag)
 ...the mail body as markdown, image links pointing to files in the folder...
@@ -148,12 +148,18 @@ for debugging (`python3 <script> --help`). You don't need them for normal use.
 |---|---|
 | 1 | `# ` + the mail's Subject (`update_index.py` uses it as the link text; the folder name is the first 8 characters of its md5 hash). Don't edit it: the folder is found by hashing it. |
 | 3 | `*As of yyyy-mm-dd hh:mm*`: the date of the entry's state, shown in italics on the page. On import it is the mail's `Date:` header, the time as written in the mail, without seconds or timezone. Used to decide whether a later mail is newer, so update it when you edit the entry. Mails without a parsable `Date:` header get no such line. |
-| 5 | Link to `<domain>.txt`, only present when the mail had a plain-text body. |
+| 5 | `[mail plain/text](mail.txt)`, only present when the mail had a plain-text body. |
 | rest | The body, wrapped in Liquid `raw` … `endraw` tags so that brace sequences in mail text (C++ code, templates, ...) can't break a Jekyll site build. |
 
-`<domain>.txt` is the mail's own `text/plain` part, kept verbatim (UTF-8
-with BOM so browsers show non-ASCII characters correctly). HTML-only mails
-have no `.txt`. Inline images and attachments are saved next to the `.md`.
+`mail.txt` is the mail's own `text/plain` part, kept verbatim (UTF-8
+with BOM so browsers show non-ASCII characters correctly). It is always
+named `mail.txt`, whatever the domain, so it is just another file linked
+from the entry, and other mechanisms (e.g.
+[domain_to_domain](../domain_to_domain/README.md)) need not know it came
+from a mail. HTML-only mails have no `mail.txt`. Inline images and
+attachments are saved next to the `.md`; an attachment that would clash
+with `mail.txt` or `<domain>.md` (case-insensitively) gets a `-1`, `-2`, ...
+suffix instead, e.g. `mail-1.txt`.
 
 > **Upgrading entries from earlier layouts** (an invisible
 > `<!-- mail-date: ... -->` comment, or an even older bare date line, instead

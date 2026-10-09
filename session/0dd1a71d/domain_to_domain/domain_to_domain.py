@@ -40,9 +40,10 @@ removed, so edits made in the target are safe:
 
 The exit status is 1 if any pick FAILed or was UNMATCHED.
 
-A copy is the whole entry folder (images, attachments, ...) with
-<source>.md / <source>.txt renamed to <target>.md / <target>.txt and links
-to <source>.txt rewritten. The hash is computed from the heading only, so
+A copy is the whole entry folder with <source>.md renamed to <target>.md.
+Everything else in the folder (images, attachments, text files, ...) and
+the markdown's content are copied as they are: every entry is treated the
+same, whatever created it. The hash is computed from the heading only, so
 an entry keeps its folder hash across domains; a source entry whose heading
 doesn't hash to its folder name (e.g. a hand-edited heading) is reported as
 FAIL and not copied.
@@ -202,13 +203,7 @@ def check_folder_hash(md: Path, compute_hash) -> None:
 def build_copy(source_dir: Path, dest_dir: Path, source: str, target: str) -> None:
     """Copy a source entry folder to dest_dir as a target entry."""
     shutil.copytree(source_dir, dest_dir)
-    for ext in ("md", "txt"):
-        src_file = dest_dir / f"{source}.{ext}"
-        if src_file.is_file():
-            src_file.rename(dest_dir / f"{target}.{ext}")
-    md = dest_dir / f"{target}.md"
-    text = md.read_text(encoding="utf-8")
-    md.write_text(text.replace(f"]({source}.txt)", f"]({target}.txt)"), encoding="utf-8")
+    (dest_dir / f"{source}.md").rename(dest_dir / f"{target}.md")
 
 
 def same_tree(a: Path, b: Path) -> bool:
