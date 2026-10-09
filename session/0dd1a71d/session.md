@@ -42,6 +42,40 @@ Oh well!
 * [site_repo/mail/index.md](./site_repo/mail/index.md)
 * [site_repo/chime/index.md](./site_repo/chime/index.md)
 
+Now back to the 'tagging' thing.
+
+* I still think 'chime/004bf692 as of 2015-08-19 15:07' could be good enough for now?
+* But I also think each domain should apply it's own hashing function?
+* So domain_to_domain should engage the target domain hash function to index the copied domain entry.
+
+At this stage I took a step back and thought some more about what I need to do before publishing from my todo-mails.
+
+* Claude pointed out that I may consider copyright violations and sensitive information.
+* So it seems I have my Swedish personal id number in some pdf file names (from my documentation of how to do Swedish tax returns reports)
+* I also have some private letters that I may need to be sure does not leak to the public?
+    * Although I have already listed them in the ignore.md listing?
+
+I let Claude create a 'scan' script that used a white list of attachment file types to allow and pattern matching on text for sensitive information.
+
+* Question now is how I shall evaluate this?
+* Also, I have still leaked headings of mails to exclude in ignore.md?
+    * But maybe for these the heading does not in fact hold the actual sensitive data?
+
+I looked through the detected matches from a scan of my current chimes created from filtered todo-mails.
+
+* There are many false positives (triggered by 'password', 'lösenord', 'personnummer',...)
+    * From my initial scan these are examples or logging with no actual sensitive data present.
+* I have my Swedish personal number exposed in file names from Swedish Tax agency receipts and reports.
+    * But the Swedish personal number seems to be just as 'public' as my name?
+    * It is NOT considered 'sensitive' (although also considered 'worth protecting' - vague? ) 
+    * From what I understand anyone can request it from the Swedish Tax Agency?
+    * And it should NOT be usable to impersonate me in juridical context?
+    * So how open should I allow myself to be?
+
+You know what! This is NOT the right approach. I will reverse what Claude did and take another approach.
+
+
+
 ## 20261008
 
 I decided to change how the date in a domain entry from a mail is presented in the text.
