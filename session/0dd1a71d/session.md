@@ -74,6 +74,42 @@ I looked through the detected matches from a scan of my current chimes created f
 
 You know what! This is NOT the right approach. I will reverse what Claude did and take another approach.
 
+I now aimed to make index.md to sort the entries in 'heading order' rather than folder-name-order (i.e., hash value order)
+
+* I now ran into the crux of sorting my Swedish text headings!
+    * Sorting the UTF-8 text will give the wrong sorting order
+    * For one, the extended encoding of unicode code points for Swedish 'åäö','ÅÄÖ' will NOT line them up in the correct order.
+    * Also, if we first decode into a unicode code point string they still come in the wrong order!
+* It seems the consensus is to apply ICU 
+    * ICU defines something called 'Unicode Common Locale Data Repository' (CLDR)
+
+```text 
+CLDR (the Unicode Common Locale Data Repository) holds the tailoring. It is the shared, community-maintained database of how each language sorts. It also covers number and date formats and much else.
+```
+    * The Python ecosystem seems to provide a library for this?
+
+At this stage I gave up.
+
+* The pyICU requires a C library for ICU and a local rebuild to work!
+    * Really! No native support?
+    * Is this not 2026 or what?!
+* I had my own brilliant idea to create local files with names after headings.
+    * But macOS does NOT apply correct locale text sorting on file names!
+    * So my Swedish file names will NOT be sorted correctly apparently?
+    * Again - is this 2026 or not?
+
+I ended up asking Claude to implement a plain UTF-8 text sorting and hope this is good enough for now?
+
+* I asked Claude to put the site scripts in a folder and implement the change there.
+* Applying the new update_index seems to work?
+* [site_repo/chime/index.md](./site_repo/chime/index.md)
+
+But now I need to transfer this behavior to all git repos where it is applied!
+
+* Nothing comes for free does it?!!
+* At least I have planted the seed to develop 'init_new' and 'update_index' in a grouping defined by the folder 'repo_scripts'
+    * Not the best name but I am too tired to come up with a better name for now.
+    * [repo_scripts/update_index.py](./repo_scripts/update_index.py)
 
 
 ## 20261008
