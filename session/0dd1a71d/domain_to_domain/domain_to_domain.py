@@ -83,8 +83,7 @@ from pathlib import Path
 sys.stdout.reconfigure(line_buffering=True)
 
 # Greedy heading up to the last "](" so a "]" inside the heading survives.
-ENTRY_RE = re.compile(r"^\s*[*+-]\s+\[(?P<heading>.*)\]\((?P<target>[^()]*)\)\s*$")
-
+ENTRY_RE = re.compile(r"^.*\[(?P<heading>.*)\]\((?P<target>[^()]*)\)\s*$")
 
 @dataclass
 class Pick:

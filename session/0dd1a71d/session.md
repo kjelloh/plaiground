@@ -17,6 +17,13 @@ After some fiddling I think I 'fixed' the rendering of markdown and html for '|'
 * domain_to_domain now 'un-escapes' the heading again for the hash-check to pass
     * the hash is still generated from the raw heading provided to the ensure_folder function.
 
+Now I discovered that --ignore stopped working for ignore.md with numbered index entries.
+
+* So I could no longer cut-and-paste from index.md that is now generated as a numbered list
+* So I updated domain_to_domain to use a regex that ignores anything before an entry link.
+
+Seems to work now?
+
 ## 20261010
 
 So I think it is time to apply the existing pipe line to actually publish the todo-mails I what to.
