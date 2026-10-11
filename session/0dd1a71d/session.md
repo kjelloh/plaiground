@@ -3,6 +3,56 @@
 * [eml_to_domain/README.md](./eml_to_domain/README.md)
 * [domain_to_domain/README.md](./domain_to_domain/README.md)
 
+## 20261011
+
+I have now reviewed to '1733. [Todo: Functional Programming - Consider if Monad T-square, T and value maps to C++ Functor Template F, Functor type F<T> and value T?](279bdfdb/chime.md)'
+
+* Here the '<' and '>' in the header breaks the pipe line and makes the entry in index.md to NOT be a html link.
+    * I tried to process the heading in update_index to escape the text used as the label.
+    * I already had the '|' escaped so I extended that code.
+
+After some fiddling I think I 'fixed' the rendering of markdown and html for '|','<' and '>' in headings.
+
+* init_new now escapes those the same way as the eml_to_markdown dos it.
+* domain_to_domain now 'un-escapes' the heading again for the hash-check to pass
+    * the hash is still generated from the raw heading provided to the ensure_folder function.
+
+## 20261010
+
+So I think it is time to apply the existing pipe line to actually publish the todo-mails I what to.
+
+* I used find and grep to manually find chimes that potentially contain sensitive information.
+
+    * ```find site_repo/chime -name "*.md"```finds all md-files
+    * And I can add ``` -exec grep -l "some pattern" {} +``` to feed those file names to grep
+    * Find will insert the found file path into '{}'
+    * The '+' sign is the syntax to find to 'append' each new file path to a resulting list
+    * E.g.,
+
+```sh
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/0dd1a71d % find site_repo/chime -name "*.md" -exec grep -l "123456" {} +
+site_repo/chime/54fa6bb8/chime.md
+site_repo/chime/722482b4/chime.md
+site_repo/chime/c4f4495d/chime.md
+site_repo/chime/a61d6754/chime.md
+site_repo/chime/d3a25b29/chime.md
+site_repo/chime/70b1abe1/chime.md
+```
+
+* I can now add relevant links to my [ignore.md](ignore.md)
+* From [site_repo/chime/index.md](./site_repo/chime/index.md)
+
+I have now been able to update the ignore.md to filter out more entries.
+
+* We have a bug where an '|' in heading or in text causes markdown renderer to render a table row.
+    * I fixed update_index to escape '|' in heading text
+    * But the error still occurs in document text.
+    * Seems expensive to pass all text through an 'text escaper'?
+* But html_to_markdown already have an 'escaper'!
+
+    * Consider ```MD_ESCAPE[ord("|")] = "&#124;"```?
+    * Test on 'Todo: Consider the ‘perfect wall’ physics for my house build?' text?
+
 ## 20261009
 
 I think I now want support for tagging domain entries with their hash and a better index?

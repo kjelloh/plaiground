@@ -37,7 +37,13 @@ def ensure_entry_folder(
     file_path = folder_path / f"{entry_type}.md"
     created = not file_path.exists()
     if created:
-        file_path.write_text(f"# {heading}\n\n", encoding="utf-8")
+        escaped_heading = (
+            heading
+            .replace("|", r"\|")
+            .replace("<", r"&lt;")
+            .replace(">", r"&gt;")
+        )        
+        file_path.write_text(f"# {escaped_heading}\n\n", encoding="utf-8")
 
     return file_path, created
 

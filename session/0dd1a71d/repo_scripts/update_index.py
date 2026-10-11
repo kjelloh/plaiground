@@ -16,7 +16,6 @@ Example:
 import sys
 from pathlib import Path
 
-
 def extract_heading(md_file: Path) -> str:
     """
     Read first line of markdown and extract heading text.
@@ -43,14 +42,14 @@ def index_lines(root: Path, namespace: str) -> list[str]:
             continue
 
         try:
-            heading = extract_heading(target_md)
+            escaped_heading = extract_heading(target_md)
         except Exception:
-            heading = target_md.stem
+            escaped_heading = target_md.stem
 
-        entries.append((heading, f"{folder.name}/{namespace}.md"))
+        entries.append((escaped_heading, f"{folder.name}/{namespace}.md"))
 
     entries.sort()
-    return [f"* [{heading}]({rel_path})" for heading, rel_path in entries]
+    return [f"1. [{heading}]({rel_path})" for heading, rel_path in entries]
 
 
 def main():

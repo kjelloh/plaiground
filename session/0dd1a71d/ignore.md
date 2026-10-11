@@ -16,7 +16,7 @@
 * [Todo: Ekbladet IT - Överväg att hitta ett alternativ till att drifts eget webb-hotell (sida)?](f04f3ffa/chime.md)
 * [Todo: Ekbladet IT - Scan 23 nov. 2017 15.02](f7cf7526/chime.md)
 * [Todo: Ekbladet IT - Hemsida hos Borätterna  - Överväg att dokumentera kontaktpersoner och uppgifter för framtida underhåll?](fe259eff/chime.md)
-kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % touch site_repo/chime/exclude.md
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % touch exclude.md
 
 # Testbench
 * [Todo: Testbench - Consider to implement Presentment-file generation as a proof-of-concept of DSL-based Protocol-message-encoding engine?](01f9199b/chime.md)
@@ -151,6 +151,10 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: Swedbank](b5638aa3/chime.md)
 * [Todo: Swedbank Test - Consider to update the latest credentials (login) and URLs for Testcase access?](da9745a0/chime.md)
 
+# Uppdrag (ägs av kunden)
+1. [Todo: Consider to use also the SPDHFramework files in Xcode UKPT refactoring attempt?](223a6fe5/chime.md)
+1. [Todo: Consider to use also the UKPTFramework files in Xcode UKPT refactoring attempt?](56cc4911/chime.md)
+
 # KOH-Innovation
 * [Todo: Avsluta KOH-Innovation, dess avtal och flytta domäner till mig/ITfied?](116fb2b0/chime.md)
 * [Todo: Deklarera Privat (KOH-Innovation) 2016](179b6837/chime.md)
@@ -238,6 +242,15 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: Eget AB - Överväg att förstå hur bokföra inköp (även import) till elektroniklabb baserat på i vilka poster i Årsredovisningen labbet skall redovisas?](faaa4d33/chime.md)
 * [Todo: Eget AB - Överväg att förstå Importregler och avgifter för inköp från China?](fe05def9/chime.md)
 
+# Känsligt IT
+* [Todo: Configure info@itfied.se at my ordinary MAC](6c7579b5/chime.md)
+* [TODO: Add all mail accounts correctly to MAC mail client](3902af41/chime.md)
+1. [TODO: Lägg till alla brevlådor på min nya MAC](9eeaaa70/chime.md)
+1. [TODO: Lägg upp kjell-olov.privat@koh-innovation.se på min MAC](e9b9480d/chime.md)
+1. [Todo:  Skriv ut - Dina kunduppgifter hos Bahnhof / Your Bahnhof customer account](45ebd6e5/chime.md)
+1. [Todo: Bytte kod på Kallhälls bibliotek](d9aa9a5e/chime.md)
+1. [Todo: Consider to try out and evaluate the online service "Årsredovisning Online" to use SIE file to generate and digitally send in Annual Report to Bolagsverket and Tax Declaration to the Swedish Tax Agency?](5c3b47cd/chime.md)
+
 # AB
 * [Todo: Bokföring - Överväg att lista de hur de vanligaste verifikationerna bokförs i mitt AB?](538babaa/chime.md)
 * [Todo: Årsredovisning eget AB - Överväg att dokumentera mappningen mellan BAS kontoplan konton och årsredovisning ÅR enligt svensk lagstiftning (från boken BOKSLUTSBOKEN)?](9e55894e/chime.md)
@@ -250,6 +263,16 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 # Anja
 * [Todo: Överväg att gå på Anjas workshop i akvarell?](a63ae49e/chime.md)
 * [Todo: Skriv om kopplingen mellan Anja och min Mor (varför blir jag så besviken)?](bcb0b465/chime.md)
+
+# Åsa
+* [Todo: Överväg att ta upp kontakten med Åsa Haglund?](9de95756/chime.md)
+
+# Pernilla
+* [# Todo: Present Pernilla](d8a86b60/chime.md)
+* [# Todo: Överväg att fördjupa min självbild kring att jag är godhjärtad men inte kärleksfull?](83159637/chime.md)
+* [# Todo: Överväg att göra en lista på låtar att sjunga som jag har inspelade stämmor på (För Trudelutt, Quartett, sjunga med Pernilla, Linda, Elin, fler...)](d0342041/chime.md)
+* [# Todo: Consider a live music jamming software for internet distributed clients that works like "karaoke" but feels like "live" by recursive distribution of tracks?](f719b7ac/chime.md)
+k
 
 # Renamed / Corrected
 * [Todo: Consider if there are already any V2L adapters from my Tesla Y?](5e620071/chime.md)
@@ -265,7 +288,25 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: Fallromanen - Skriv om vackra kassörskan på Konsum i Kungsängen](94262135/chime.md)
 * [Todo: Fallromanen - Överväg att skriva på "fallromanen" som Todo-mail?](51d18346/chime.md)
 
+# md innehåller '641217'
+* [Todo: Deklarera Privat 2017](a61d6754/chime.md)
+* [Todo: Deklarera Privat 2018 (Räkenskapsår 2017)](54fa6bb8/chime.md)
+* [Todo: Deklarera Privat 2019 (Räkenskapsår 2018)](d3a25b29/chime.md)
+* [Todo: Deklarera Privat 2020 (Räkenskapsår 2019)](c4f4495d/chime.md)
+* [Todo: Deklarera Privat 2021 (Räkenskapsår 2020)](722482b4/chime.md)
+* [Todo: Deklarera Privat 2023 (Räkenskapsår 2022)](70b1abe1/chime.md)
+
+# md innehpller '556782'
+* [Todo: Deklarera Privat 2018 (Räkenskapsår 2017)](54fa6bb8/chime.md)
+* [Todo: Deklarera Privat 2021 (Räkenskapsår 2020)](722482b4/chime.md)
+* [Todo: Consider the file format to send for a VAT Returns (Momsrapport) to Swedish Tax Agency?](394f1543/chime.md)
+* [Todo: Git and VSCode - Consider to document how to "untrack" (delete, remove) files added to Git by VSCode (or possibly also Visual Studio Code or other IDE automating git adds)?](2a6a9598/chime.md)
+* [Todo: Deklarera Privat 2023 (Räkenskapsår 2022)](70b1abe1/chime.md)
+
 # Övrigt Privat
+1. [Todo: Flyttkartonger - Överväg att dokumentera i vilka kartonger saker är packade?](8167fa77/chime.md)
+1. [Todo: Extra bolagsstämma 20260215](6cd9c415/chime.md)
+* [Todo: Consider to analyse my living costs using the csv-file export of my personal bank accounts from Nordea?](63a10fbb/chime.md)
 * [Todo: Hitta någon att leva med NU!](066b0c4b/chime.md)
 * [Todo: Min inre biograf visar sällan någon bra film?](c9b62988/chime.md)
 * [Todo: Skapa nya identiteter för konton på nätet att följa olika politiska strömningar](7455260f/chime.md)
@@ -279,8 +320,16 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: Visingsö 2017 - Överväg att kontakta "ambassadörer" och andra intresserade för att sätta bollen i rullning?](facf4112/chime.md)
 * [Todo: Visingsö P&S 2017 - Överväg att samla ihop input till "Drömveckan"?](955afa97/chime.md)
 
+# Dubletter - omdöpta
+1. [Todo: Consider to check out Yamaha PSR-SX900 keyboard](37fb5955/chime.md)
+1. [Todo: Consider to script "A case for “Freedom is the gate drug to hell”?"](427342e9/chime.md)
+1. [Todo: Consider to use Tactilus pressure matrix to build alpine ski boot sole pressure monitors to record and visualise alpine skiing techniques?](aa886e94/chime.md)
+1. [Todo: Cosnider to understand how to copy folders in Linux shell?](359f6672/chime.md)
 
 # Inte egentlig Todo (ta bort helt)
+1. [Todo: Följ upp order 15280 från Alega Skolmaterial](89694bf4/chime.md)
+1. [Todo: Demand that Order 9808 (Hobby Sweden) made 8-september 2018 is actually delivered!](81006095/chime.md)
+* [Todo: Boka tid för kallhälls vårdcentral för min axel](84dcacc4/chime.md)
 * [Todo: Mini Cooper D blocket annons](26022694/chime.md)
 * [Todo: Notera mätarställning 151123](a808e7f8/chime.md)
 * [Todo: Pernilla - I can let go now](b1e9d85a/chime.md)

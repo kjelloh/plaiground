@@ -175,10 +175,16 @@ def entries_of(base_dir: Path, domain: str, hash_length: int) -> dict[str, Path]
     return entries
 
 
-def heading_of(md: Path) -> str:
+def unescaped_heading_of(md: Path) -> str:
     with md.open(encoding="utf-8") as f:
-        return f.readline().strip().lstrip("#").strip()
-
+        heading = f.readline().strip().lstrip("#").strip()
+        un_escaped_heading = (
+            heading
+            .replace(r"\|", "|")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+        )        
+        return un_escaped_heading
 
 def picked_hashes(picks: list[Pick], source_entries: dict[str, Path], compute_hash) -> set[str]:
     """Source entry hashes the picks refer to (marking picks that hit)."""
@@ -195,7 +201,7 @@ def picked_hashes(picks: list[Pick], source_entries: dict[str, Path], compute_ha
 
 def check_folder_hash(md: Path, compute_hash) -> None:
     """Raise ValueError unless md's heading hashes to its folder name."""
-    expected = compute_hash(heading_of(md))
+    expected = compute_hash(unescaped_heading_of(md))
     if expected != md.parent.name:
         raise ValueError(f"its heading hashes to {expected}, not to its folder name")
 
@@ -230,7 +236,7 @@ def add(
 
     for key in sorted(wanted):
         source_md = source_entries[key]
-        heading = heading_of(source_md)
+        heading = unescaped_heading_of(source_md)
         try:
             check_folder_hash(source_md, init_new.compute_hash)
         except ValueError as e:
@@ -320,7 +326,7 @@ def diff(base_dir: Path, source: str, target: str, ignores: list[Pick]) -> DiffR
     report = DiffReport(stale_ignores=[pick for pick in ignores if not pick.hit])
 
     for key, source_md in source_entries.items():
-        heading = heading_of(source_md)
+        heading = unescaped_heading_of(source_md)
         if key in target_entries:
             report.in_target += 1
             if key in ignored:
@@ -334,7 +340,7 @@ def diff(base_dir: Path, source: str, target: str, ignores: list[Pick]) -> DiffR
             except ValueError as e:
                 report.will_fail.append((key, f"{heading} ({e})"))
     for key in target_entries.keys() - source_entries.keys():
-        report.target_only.append((key, heading_of(target_entries[key])))
+        report.target_only.append((key, unescaped_heading_of(target_entries[key])))
     report.target_only.sort()
     return report
 
