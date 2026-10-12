@@ -59,7 +59,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
-CUES = ("also see", "see also", "se också", "se även")
+CUES = ("also see", "see also", "see", "se också", "se även")
 QUOTES = "\"“”„«»'‘’"
 ARROW = r"=+\s*(?:&gt;|>)=?"
 

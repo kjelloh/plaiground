@@ -3,6 +3,165 @@
 * [eml_to_domain/README.md](./eml_to_domain/README.md)
 * [domain_to_domain/README.md](./domain_to_domain/README.md)
 
+## 20261012
+
+I have now reviewed all todo mails!
+
+```sh
+mail -> chime (add), 2857 pick entries: 2857 added, 0 skipped, 0 failed, 0 unmatched
+Updated 'chime/index.md' with 2857 entries.
+
+$ /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/update_domain/update_domain.py intralink /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo chime
+FUZZY (1.00): chime/2927db2a/chime.md:40  "Todo: C++ Tha - What can we learn by applying Set +,\* and Exponential on each meta-level of the Tha meta model?" -> ab703745  Todo: C++ Tha - What can we learn by applying Set +,* and Exponential on each meta-level of the Tha meta model?
+FUZZY (0.99): chime/3187c1e1/chime.md:10  "Todo: Power Feeder - Consider to use a cycloidal gear box and multicopter brushless motor as for high torque robotic actuators to drive wood through a table saw?" -> cc8427d2  Todo: Power Feeder - Consider to use a cycloidal gear box and multicopter brushless motor for high torque robotic actuators to drive wood through a table saw?
+FUZZY (1.00): chime/34607bde/chime.md:10  "Todo: Consider the "best" way to buy a Mafell Milling motor FM 1000 PV-WS (1000W with PV control and quick tool changer)?" -> 22cf1801  Todo: Consider the "best" way to buy a Mafell Milling motor FM 1000 PV-WS (1000 W with PV control and quick tool changer)?
+FUZZY (0.96): chime/36d4c8ae/chime.md:75  "**Todo: Programming - Consider to use Boost config headers as a "standard" pre-processor library for build environment identification?**" -> 4625fc93  Todo: Programming - Consider to use Boost config headers as a "standard" pre-processor library for build environment identification?
+FUZZY (0.94): chime/36d4c8ae/chime.md:83  "**Todo: Programming - Consider ways to identify and adapt to Host build environment in C++ code?**" -> 57b1d0ec  Todo: Programming - Consider ways to identify and adapt to Host build environment in C++ code?
+FUZZY (1.00): chime/4ca21428/chime.md:16  "Todo: Meta Value Model - Consider to remember how it was Captain Picard that put me on track to Elm Repl and generic function modelling?" -> 4adcd5f4  Todo: Meta Value Model - Consider to remember how it was Captain Picard that put me on track to Elm Repl and generic function modeling?
+FUZZY (0.99): chime/5f7240ed/chime.md:44  "Todo: Darwinet - Cosnider to use bitcoin authorization mechanism for Node authentication" -> 21c62611  Todo: Darwinet - Consider to use bitcoin authorization mechanism for Node authentication
+FUZZY (0.99): chime/5f7240ed/chime.md:57  "Todo: Darwinet - Cosnider to use bitcoin authorization mechanism for Node authentication" -> 21c62611  Todo: Darwinet - Consider to use bitcoin authorization mechanism for Node authentication
+FUZZY (0.99): chime/9e3bde05/chime.md:12  "Todo: Consider the Peter Millard youtube video on Blüm concealed 35 mm hinges?" -> c5e7ad98  Todo: Consider the Peter Millard youtube video on Blum concealed 35 mm hinges?
+FUZZY (0.99): chime/d565333f/chime.md:12  "Todo: C++ - Consider to try out the GPL Licensed IMAP capable C++ library Mime?" -> d09ea834  Todo: C++ - Consider to try out the GPL Licensed IMAP capable C++ library VMime?
+FUZZY (0.95): chime/dd94bc79/chime.md:21  "**Todo: Programming - Consider to understand the Linux File modes and how to set them appropriately using the chmod command?**" -> 261aa90d  Todo: Programming - Consider to understand the Linux File modes and how to set them appropriately using the chmod command?
+UNRESOLVED: chime/008ee028/chime.md:24  "Todo: Testbench - Consider to prepare the Testbench for different build-environments and possibly targets?"
+UNRESOLVED: chime/010d093b/chime.md:10  "Orderbekräftelse från [Ljusihem.se](http://Ljusihem.se) : 15134"
+UNRESOLVED: chime/0694d434/chime.md:16  "Todo: Testbench - Consider to implement Presentment-file generation as a proof-of-concept of DSL-based Protocol-message-encoding engine?"
+UNRESOLVED: chime/0694d434/chime.md:30  "Todo: TestBench - Consider to model protocols as levels of transformations both in view and processing?"
+UNRESOLVED: chime/0694d434/chime.md:36  "Todo: Programming - Consider to try out if a REST interface may a facade to any protocol (FTP, SPDH, ISO 8583…)"
+UNRESOLVED: chime/12d655ad/chime.md:37  "Todo: Manifets - Consider to write a manifest for ITfied - Smart IT for a Shared Planet?"
+UNRESOLVED: chime/19e55456/chime.md:10  "TestBench - Consider to try out Git using TortoiseGit and beanstalapp git repository?"
+UNRESOLVED: chime/1a3287ab/chime.md:10  "Todo: Eget AB - Överväg att dokumentera hur formatera ÅR.rtf fil till Årsredovisning i egen mall?"
+UNRESOLVED: chime/1c67d70d/chime.md:10  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyClosureModelPlayground"
+UNRESOLVED: chime/1c67d70d/chime.md:319  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyTestAnything"
+UNRESOLVED: chime/2034404b/chime.md:22  "/Users/kjell-olovhogdahl/BitTorrent Sync/XCode/MyCppStringPlayground/MyCppStringPlayground"
+UNRESOLVED: chime/2061479d/chime.md:12  "Todo: C++ - Consider we should aim at starting to add transpires that generates C++ code for us (extend the asm mechanism for inline assembly)?"
+UNRESOLVED: chime/2061479d/chime.md:40  "Todo: C++ - Consider we should aim at starting to add transpires that generates C++ code for us (extend the asm mechanism for inline assembly)?"
+UNRESOLVED: chime/21499aa0/chime.md:12  "brute_force"
+UNRESOLVED: chime/2162694c/chime.md:35  "Todo: TestBench - Consider to make a Firemonkey add-on that records and playbacks sequence diagrams?"
+UNRESOLVED: chime/2927db2a/chime.md:58  "Todo: Tha Meh Repl - Consider what immutable (persistent) C++ data structure to use for the Tha instance?"
+UNRESOLVED: chime/2b512b4c/chime.md:24  "Todo: Programming - Consider to design a Clang AST based Source Code Editor, IDE or GUI?"
+UNRESOLVED: chime/2c5b6d08/chime.md:10  "Todo: Consider to learn Elm in VSCode by writing application to access ITfied accounting through FortKnox REST and Json API?"
+UNRESOLVED: chime/2d6a3691/chime.md:10  "Kjell-Olov efterfrågar eventuella referenser till det meningsfulla och öppna utforskande samtalet om vår grumliga nutid och den förlorade andligheten (mystiken)"
+UNRESOLVED: chime/308aee14/chime.md:22  "REPL does not support typing in type annotations #113"
+UNRESOLVED: chime/31cac2c7/chime.md:106  "/Users/kjell-olovhogdahl/BitTorrent Sync/XCode/MyCompilerDefaultClassMemberPlayGround/MyCompilerDefaultClassMemberPlayGround"
+UNRESOLVED: chime/31d41888/chime.md:10  "Todo: Eget AB - Gör bokslut för ITfied 2015-2016 baserat på bifogade SIE-filer"
+UNRESOLVED: chime/39248095/chime.md:10  "Todo: Consider to try out and evaluate the online service "Årsredovisning Online" to use SIE file to generate and digitally send in Annual Report to Bolagsverket and Tax Declaration to the Swedish Tax Agency?"
+UNRESOLVED: chime/397c768b/chime.md:12  "Todo: Resilio Sync Pro/Home - Consider to consolidate my private Resilio Sync Home cloud of files?"
+UNRESOLVED: chime/397c768b/chime.md:14  "Todo: Sync Pro - Consider to document the administration experience of creating my private cloud of shared files using Sync Pro?"
+UNRESOLVED: chime/397c768b/chime.md:81  "Todo: Mac Pro - Consider to document the migration of my license and virtual machines for Parallels from my Macbook Pro 2014 Retina to my Mac Pro?"
+UNRESOLVED: chime/397c768b/chime.md:99  "Todo: Mac Pro - Consider to document the migration of my license and virtual machines for Parallels from my Macbook Pro 2014 Retina to my Mac Pro?"
+UNRESOLVED: chime/3b78fd47/chime.md:18  "/home/kjell-olovhogdahl/MyDefaultLinuxQtWizardsApplication"
+UNRESOLVED: chime/3b78fd47/chime.md:152  "/Users/kjell-olovhogdahl/MyFirstMacOsQtWidgetsApplication"
+UNRESOLVED: chime/3b78fd47/chime.md:205  "/Users/kjell-olovhogdahl/MyDefaultWindows10QtWizardsApplication"
+UNRESOLVED: chime/3b78fd47/chime.md:256  "C:\\Users\\kjell-olovhogdahl\\Documents\\Visual Studio 2017\\Projects\\MyDefaultWin32Application"
+UNRESOLVED: chime/3b78fd47/chime.md:302  "C:\\Users\\kjell-olovhogdahl\\Documents\\Embarcadero\\Studio\\Projects\\MyDefaultRADStudioVCLCppApp"
+UNRESOLVED: chime/3c9f09f2/chime.md:112  "Todo: Testbench - Consider to use the icu-project C++ library for UTF string conversions?"
+UNRESOLVED: chime/491640f5/chime.md:22  "Todo: <http://www.pianocenter.se>"
+UNRESOLVED: chime/4a4c1803/chime.md:92  "/Users/kjell-olovhogdahl/BitTorrent Sync/XCode/MyNordeaWebBankTextParser"
+UNRESOLVED: chime/4e880192/chime.md:10  "Todo: Bokföring - Överväg att dokumentera Momsredovisning jan-mar 2018 för ITfied?"
+UNRESOLVED: chime/4e880192/chime.md:12  "Todo: Eget AB - Notera att Skattedeklaration och Momsdeklaration är de två löpande under året"
+UNRESOLVED: chime/4e880192/chime.md:14  "Todo: Eget AB - Överväg att förstå process (tull, moms, skatt och avgifter) och genomföra import av varor från utom EU till Sverige?"
+UNRESOLVED: chime/4e880192/chime.md:16  "Todo: Eget AB - Överväg att ta reda på hur jag bokför och begär återbetalning av betalad EU moms (Jag glömt be om momsfritt köp)?"
+UNRESOLVED: chime/4f856394/chime.md:10  "Mobile Solar Power"
+UNRESOLVED: chime/52b0d95e/chime.md:262  "<http://llvm.org/releases/3.7.0/LLVM-3.7.0-win32.exe>"
+UNRESOLVED: chime/52b0d95e/chime.md:264  "<http://llvm.org/releases/3.7.0/LLVM-3.7.0-win64.exe>"
+UNRESOLVED: chime/534f618f/chime.md:10  "odo: Consider to learn Elm in VSCode by writing application to access ITfied accounting through FortKnox REST and Json API?"
+UNRESOLVED: chime/5717cacb/chime.md:100  "Todo: Darwinet - Consider a design that allows parts of the Confluent Persistent MIV to distributed on nodes in the network (storing locally only whats locally required pr fits in memory)?"
+UNRESOLVED: chime/5b5d7589/chime.md:10  "Todo: Darwinet - Consider distributed computing on Darwinet may be used for easy scalability and stability baed on the motivation behind Erlang design?"
+UNRESOLVED: chime/62a03f0d/chime.md:46  "Conjugate Acid"
+UNRESOLVED: chime/6a6173c5/chime.md:37  "/Users/kjell-olovhogdahl/BitTorrent Sync/XCode/MyClosureModelPlayground/MyClosureModelPlayground"
+UNRESOLVED: chime/6ca73600/chime.md:36  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyDataModelPlayground/MyDataModelPlayground/MetaValueTopDownPlayGround.cpp"
+UNRESOLVED: chime/714507a2/chime.md:56  "Todo: Programming - Consider to implement Message Encoding/Decoding as a C++ template grammar that looks like the Element Tables used in Swedbank Specifications?"
+UNRESOLVED: chime/76d04894/chime.md:141  "Sorotec - Order Confirmation/ Order: A18-88388"
+UNRESOLVED: chime/777764dd/chime.md:12  "Todo: Consider to examine all the battery adapters I have to see if and how I can use them as Power Supplies in ITfied electronic lab?"
+UNRESOLVED: chime/7c6907a4/chime.md:14  "Todo: Fortknox API - Consider to experiment with the Fortknox API so that I may automate the book keeping of The ITfied AB?"
+UNRESOLVED: chime/81985046/chime.md:24  "Larry Temkin on Transitivity"
+UNRESOLVED: chime/867a9d79/chime.md:10  "Todo: Consider a live music jamming software for internet distributed clients that works like "karaoke" but feels like "live" by recursive distribution of tracks?"
+UNRESOLVED: chime/867a9d79/chime.md:12  "Todo: Överväg att göra en lista på låtar att sjunga som jag har inspelade stämmor på (För Trudelutt, Quartett, sjunga med Pernilla, Linda, Elin, fler...)"
+UNRESOLVED: chime/867a9d79/chime.md:14  "PernOlov Trudelutt - Sånggodis för träffen nu på Onsdag 22 Feb :)"
+UNRESOLVED: chime/871e8ee0/chime.md:28  "Todo: Programming - Consider to write Swedbank iPOS Terminal iPOS, SPDH, PPL and Clearing encoder/decoder open source libraries of interest to new iPOS Terminal Vendor?"
+UNRESOLVED: chime/87b55061/chime.md:285  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyIRealProURLReader/MyIRealProURLReader"
+UNRESOLVED: chime/89148a0f/chime.md:12  "/Users/kjell-olovhogdahl/Resilio Sync/KeyNote/C++ Nested Loops Enumeration"
+UNRESOLVED: chime/89148a0f/chime.md:71  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MySetCombinationEnumerators/MySetCombinationEnumerators"
+UNRESOLVED: chime/8d0b368f/chime.md:41  "Microphone stand"
+UNRESOLVED: chime/8e6a668d/chime.md:72  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyTestAnything/MyTestAnything"
+UNRESOLVED: chime/91e9ca9b/chime.md:38  "W:\\workplace\\RAD_Studio\\MyMailTodoSynchronizer"
+UNRESOLVED: chime/91e9ca9b/chime.md:42  "W:\\workplace\\RAD_Studio\\MyMailTodoSynchronizer"
+UNRESOLVED: chime/96bae485/chime.md:109  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyCppRestDSKPlayGround"
+UNRESOLVED: chime/99e28304/chime.md:12  "Gödel's Incompleteness Theorems - In Our Time"
+UNRESOLVED: chime/9b252462/chime.md:16  "/Users/kjell-olovhogdahl/BitTorrent Sync/XCode/MyRxCppWebCrawler"
+UNRESOLVED: chime/9edb20dd/chime.md:18  "Todo: Testbench - Consider to implement Presentment-file generation as a proof-of-concept of DSL-based Protocol-message-encoding engine?"
+UNRESOLVED: chime/9edb20dd/chime.md:32  "Todo: TestBench - Consider to model protocols as levels of transformations both in view and processing?"
+UNRESOLVED: chime/9edb20dd/chime.md:38  "Todo: Programming - Consider to try out if a REST interface may a facade to any protocol (FTP, SPDH, ISO 8583…)"
+UNRESOLVED: chime/9f70a081/chime.md:10  "Todo: Programming - Consider to talk/blog on all "layers" C++ source code goes through before becoming in-memory…"
+UNRESOLVED: chime/a2ba14c4/chime.md:10  "Files ready for download — Online Store"
+UNRESOLVED: chime/a2ba14c4/chime.md:12  "Project Update #3: Twin Turbo Vise by Inkleind llc"
+UNRESOLVED: chime/a2ba14c4/chime.md:14  "Yes! Twin Turbo Vise has been successfully funded."
+UNRESOLVED: chime/a2ba14c4/chime.md:16  "Yes! Twin Turbo Vise has been successfully funded."
+UNRESOLVED: chime/a2ba14c4/chime.md:18  "Project Update #2: Twin Turbo Vise by Inkleind llc"
+UNRESOLVED: chime/a2ba14c4/chime.md:20  "You just backed Twin Turbo Vise"
+UNRESOLVED: chime/a38aa183/chime.md:12  "V:\\workplace\\RAD_Studio\\MyFmxPandoraPlayground"
+UNRESOLVED: chime/a8fddf0f/chime.md:10  "Peterson vs Zizek Live Stream Pass"
+UNRESOLVED: chime/a9d89368/chime.md:109  "Using jupyter notebooks with a virtual environment"
+UNRESOLVED: chime/a9d89368/chime.md:168  "notebook 6.3.0"
+UNRESOLVED: chime/ab703745/chime.md:18  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyCppTypeSystemInCppTypeSystem"
+UNRESOLVED: chime/b133ed19/chime.md:10  "Todo: Consider to document if I can build Freecad from source on macOS apple silicone?"
+UNRESOLVED: chime/b35ce423/chime.md:10  "Todo: Consider possible waste water logistic solutions for my paint"
+UNRESOLVED: chime/b659bc6b/chime.md:10  "Kjell-Olov säger hej och undrar om en web-teknikgrej :)"
+UNRESOLVED: chime/b9f4df60/chime.md:174  "Polyakrylamid" in "Todo: Rena Penselvatten - Överväg sätt att hemma kunna rena vatten från färgrester efter penseltvätt?"
+UNRESOLVED: chime/ba28d3a5/chime.md:16  "Todo: Testbench - Consider to use the icu-project C++ library for UTF string conversions?"
+UNRESOLVED: chime/c2c18e21/chime.md:42  "Todo: Testbench - Consider to prepare the Testbench for different build-environments and possibly targets?"
+UNRESOLVED: chime/c5182ffb/chime.md:40  "Todo: Consider to document how (and where) my brew upgrade gcc to gcc14 went?"
+UNRESOLVED: chime/ca0cdb46/chime.md:18  "Todo: <http://www.pianocenter.se>"
+UNRESOLVED: chime/ca665b2e/chime.md:14  "**Skyddsutrustning brändes upp i somras**"
+UNRESOLVED: chime/ca665b2e/chime.md:15  "**Andningsskydd för alla svenskar brändes upp – utan protester**"
+UNRESOLVED: chime/ca665b2e/chime.md:16  "**Trots stora bristen – utrustning brändes**"
+UNRESOLVED: chime/ca665b2e/chime.md:17  "**Kaliber avslöjar: Skyddsutrustning eldades upp under pandemin**"
+UNRESOLVED: chime/ca665b2e/chime.md:21  "**Advokaten: Bortgallringen är allvarlig**"
+UNRESOLVED: chime/ca665b2e/chime.md:22  "**Bortgallrade dna-spår i NFC:s källare – hade kunnat fälla brottslingar**"
+UNRESOLVED: chime/cbd8252c/chime.md:74  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyTestAnything/MyTestAnything"
+UNRESOLVED: chime/d09ea834/chime.md:20  "==&gt; Also see explicit “Todo: Programming - Consider to study the POCO C++ standard Internet protocol library (ftp, pop3)”"
+UNRESOLVED: chime/de307f3c/chime.md:16  "Todo: Deklarera Privat (KOH-Innovation) 2016"
+UNRESOLVED: chime/de307f3c/chime.md:18  "Todo: Eget AB - Dokumentera process för ekonomiska transaktioner och bokföring"
+UNRESOLVED: chime/de307f3c/chime.md:20  "Todo: Eget AB - Överväg att gå över till elektronisk bokföring?"
+UNRESOLVED: chime/df108e46/chime.md:14  "Todo: Consider to learn about the Mobile Modem APN settings and its relevance to Swedbank Mobile Connection for test?"
+UNRESOLVED: chime/e617ed29/chime.md:27  "Cetus3D Online Store - Order 2651"
+UNRESOLVED: chime/ec963a37/chime.md:608  "/Users/kjell-olovhogdahl/BitTorrent Sync/XCode/MyThaCppPlayground/MyThaCppPlayground"
+UNRESOLVED: chime/ed219c8c/chime.md:62  "Todo: Tha and C++ value categories - Consider we can express C++ value categories (rvalue, lvalue, xvalue, prvalue) as Tha identifiers bound in different ways (no name, no value)?"
+UNRESOLVED: chime/f03f3b43/chime.md:58  "/Users/kjell-olovhogdahl/Resilio Sync/XCode/MyCppTypeSystemInCppTypeSystem/MyCppTypeSystemInCppTypeSystem"
+UNRESOLVED: chime/f2b721c7/chime.md:8  "Todo: Video - Ordering from China through Alibaba web-site"
+UNRESOLVED: chime/f2c489a5/chime.md:10  "Your [Amazon.com](http://amazon.com/) order (#112-4791974-0141854)"
+UNRESOLVED: chime/f2c489a5/chime.md:12  "Your [Amazon.com](http://amazon.com/) order of "12 Rules for Life: An..."."
+UNRESOLVED: chime/fa1f3850/chime.md:56  "<http://llvm.org/releases/3.7.0/LLVM-3.7.0-win32.exe>"
+UNRESOLVED: chime/fa1f3850/chime.md:58  "<http://llvm.org/releases/3.7.0/LLVM-3.7.0-win64.exe>"
+UNRESOLVED: chime/fbd06a51/chime.md:41  "/Users/kjell-olovhogdahl/BitTorrent Sync/XCode/MyThaCppPlayground/MyThaCppPlayground"
+SELF: chime/1e7868eb/chime.md:10  "Todo: Front-end Programming - Consider to list and try out different GUI front-end mechanisms that we can also turn into the elm-idiom unidirectional single-atom idiom?"
+SELF: chime/276b4374/chime.md:10  "Todo: Consider to document different ways to capture or grab screenshots in OS X, Linux and Windows 10?"
+SELF: chime/308aee14/chime.md:32  "Todo: Meta Value Model - Consider what we can learn from the Elm language for Meta Value Model design, REPL application and scripting abilities?"
+SELF: chime/3b78fd47/chime.md:12  "Todo: GUI Programming - Consider to document the different IDE created entry points of default applications on different platforms and User Interface frameworks?"
+SELF: chime/96b1a120/chime.md:10  "Todo: Design an exercise tool to charge batteries for electrical appliances"
+SELF: chime/de7df97a/chime.md:12  "Todo: Consider to study and try out the Open Source 2D CAD application QCAD (NOT CuteCAD as a companion to 3D CAD FreeCAD)?"
+
+chime (intralink): 1644 references: 1526 linked (1464 exact, 46 normalized, 5 loose, 11 fuzzy), 0 already linked, 112 unresolved, 6 self; 534 entries changed.
+
+$ /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/to_site/to_site.py /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo
+Staged reachable files into '/Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo/_staged_site'.
+Bundle complete! 1 Gemfile dependency, 98 gems now installed.
+Use `bundle info [gemname]` to see where a bundled gem is installed.
+Configuration file: /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo/_staged_site/_config.yml
+To use retry middleware with Faraday v2.0+, install `faraday-retry` gem
+            Source: /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo/_staged_site
+       Destination: /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo/.jekyll/_site
+ Incremental build: disabled. Enable with --incremental
+      Generating... 
+   GitHub Metadata: No GitHub API authentication could be found. Some fields may be missing or have incorrect data.
+                    done in 341.026 seconds.
+ Auto-regeneration: disabled. Use --watch to enable.
+Site built to '/Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo/.jekyll/_site'.
+Published '/Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo/.jekyll/_site' to '/Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo/public_html'.
+Serving '/Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/0dd1a71d/site_repo/public_html' at http://127.0.0.1:8000/ (press Ctrl-C to stop)...
+```
+
 ## 20261011
 
 I have now reviewed to '1733. [Todo: Functional Programming - Consider if Monad T-square, T and value maps to C++ Functor Template F, Functor type F<T> and value T?](279bdfdb/chime.md)'
@@ -23,6 +182,26 @@ Now I discovered that --ignore stopped working for ignore.md with numbered index
 * So I updated domain_to_domain to use a regex that ignores anything before an entry link.
 
 Seems to work now?
+
+Working along I found in "Todo: Programming - Consider to design a Protocol Stack Messaging View..." that I have links prefixed with just 'See '.
+
+* So I tried to update 'CUES' in update_domain top pick up on those too.
+
+My first try did not work.
+
+```chime (intralink): 1413 references: 1343 linked (1292 exact, 42 normalized, 5 loose, 4 fuzzy), 0 already linked, 64 unresolved, 6 self; 486 entries changed.```
+
+* I fixed and error (missing ',') and tried again
+
+```chime (intralink): 1447 references: 33 linked (31 exact, 2 normalized, 0 loose, 0 fuzzy), 1343 already linked, 65 unresolved, 6 self; 6 entries changed.```
+
+No, that did not work either. At least not on "Todo: Programming - Consider to design a Protocol Stack Messaging View..."?
+
+I tweaked the code again.
+
+```chime (intralink): 1647 references: 159 linked (146 exact, 4 normalized, 0 loose, 9 fuzzy), 1376 already linked, 106 unresolved, 6 self; 74 entries changed.```
+
+Now the "Todo: Programming - Consider to design a Protocol Stack Messaging View" See-links actually got turned into markdown links ok.
 
 ## 20261010
 

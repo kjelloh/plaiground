@@ -58,7 +58,6 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: TestBench - Consider it is only Reading from protocols that needs to be threaded to make TB totally event driven (no polling)?](20a0df1a/chime.md)
 * [Todo: iPosLog - Consider to enable interprocess synchronisation with TestBench](2bcc5dc7/chime.md)
 * [Todo: TestBench - Consider to check visa presentment view mechanism now when it seems to work?](2d53d15c/chime.md)
-* [Todo: Zepos and TestBench - Consider to add Epas (or xml) message live logging?](2dcc2b41/chime.md)
 * [Todo: TestBench - Consider to use the TestBench code as the "patient" to apply good design patterns and C++11 and higher language features?](30356007/chime.md)
 * [Todo: TestBench - Consider to fix Clang build run-time Issues?](351097d2/chime.md)
 * [Todo: Consider to develop free TestBench stand-alone tools and provide for free to T-vendors?](3f607ac1/chime.md)
@@ -110,6 +109,10 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: TestBench - Consider to try out Animations of controls?](fd5b126d/chime.md)
 * [Todo: C++ Lecture - Consider my naming conventions as applied in the TestBench code (and compare with Kate Gregory “Naming is Hard: Let's Do Better” cppcon 2019 talk)?](fe110379/chime.md)
 
+# testbench
+1. [Todo: testBench - Consider how to convert between c_StringValue and the different iPos tag types?](274fd725/chime.md)
+1. [Todo: testBench - Consider to allow logging of more protocols that SPDH?](966f79e5/chime.md)
+
 # iPOS
 * [Todo: iPOS - Try out the EPUB format on an iPad](03e4025e/chime.md)
 * [Todo: Överväg att komma ihåg hur låsa upp iPOS-dokument till Swedbank?](14dc2d15/chime.md)
@@ -128,8 +131,12 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: iPosLog - Consider to study and understand the filter mechanism design?](81bd1be5/chime.md)
 * [Todo: iPosLog.dll - Consider to attend to VS 2015 build warnings](d64b570e/chime.md)
 
-# zepos
+# zepos / Zepos
+* [Todo: Zepos and TestBench - Consider to add Epas (or xml) message live logging?](2dcc2b41/chime.md)
 * [Todo: zepos - Consider to test out the ipos::msg::get(path) mechanism on real iPos messages?](38f9a610/chime.md)
+1. [Todo: Zepos - Consider to understand how to correctly clone and update repository AND all submodules and their submodules?](220397ed/chime.md)
+1. [Todo: Zepos - Consider to use XML Component class of MyXMLComponent in open_epas as part of Zepos?](05e39189/chime.md)
+
 
 # Zepas
 * [Todo: Zepas - Consider to expand captured TCP/IP log to xml messages?](99d8bfb6/chime.md)
@@ -152,10 +159,13 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: Swedbank Test - Consider to update the latest credentials (login) and URLs for Testcase access?](da9745a0/chime.md)
 
 # Uppdrag (ägs av kunden)
+1. [Todo: Programming - Consider to try out if a REST interface may a facade to any protocol (FTP, SPDH, ISO 8583...)](dab2b3a2/chime.md)
 * [Todo: Consider to use also the SPDHFramework files in Xcode UKPT refactoring attempt?](223a6fe5/chime.md)
-* [Todo: Consider to use also the UKPTFramework files in Xcode UKPT refactoring attempt?](56cc4911/chime.md)
+1. [Todo: SPDH S&F-not-empty problem - Discussion input](ae9a187a/chime.md)
+
 
 # KOH-Innovation
+1. [Todo: Överväg att dokumentera och planera avveckling av enskild firma Koh-Innovation?](e7072fae/chime.md)
 * [Todo: Avsluta KOH-Innovation, dess avtal och flytta domäner till mig/ITfied?](116fb2b0/chime.md)
 * [Todo: Deklarera Privat (KOH-Innovation) 2016](179b6837/chime.md)
 * [Todo: KOH-Innovation Domäner - Överväg att använda detta som komplett lista (och rensa vilka jag skall ha kvar)?](2549325c/chime.md)
@@ -243,6 +253,9 @@ kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/afaa732d % t
 * [Todo: Eget AB - Överväg att förstå Importregler och avgifter för inköp från China?](fe05def9/chime.md)
 
 # Känsligt IT
+1. [Todo: Överväg att dokumentera Binero kundnummer (så jag vet vilken fakturan som hör till vem)?](b2b2ee91/chime.md)
+1. [Todo: Video - Ordering from China through Alibaba web-site](bbea4a7a/chime.md)
+1. [Todo: Self Authoring - Consider to document and securely store my two user names and accompanying passwords?](f6f00ec7/chime.md)
 1. [Todo: It seems my spur@koh-innovation.se is hacked (used for spam) - Consider to do something about it?](03018166/chime.md)
 * [Todo: Configure info@itfied.se at my ordinary MAC](6c7579b5/chime.md)
 * [TODO: Add all mail accounts correctly to MAC mail client](3902af41/chime.md)
@@ -310,6 +323,11 @@ k
 
 
 # Övrigt Privat
+1. [Todo: Överväg att dokumentera hur jag rättade missat fält 'föregående års fastställda underskott' i inkomstdeklaration 2 från Juli 2024?](a4962c14/chime.md)
+1. [Todo: Resilio Sync - Consider to link my devices to the same license?](c7f9d32b/chime.md)
+1. [Todo: Resilio Sync - Consider to setup my RaspBerry Pi 3 as a 24/7 Resilio Sync storage node](1181af75/chime.md)
+1. [Todo: Resilio Sync Macbook Air XCode folder](80d0bf51/chime.md)
+1. [Todo: Resilio Sync Pro/Home - Consider to consolidate my private Resilio Sync Home cloud of files?](5b469f00/chime.md)
 1. [Todo: Print skyfall.pdf rev 2](373c081e/chime.md)
 1. [Todo: Privat - Kom ihåg och administrera SSSK kort och Kod](c965988e/chime.md)
 1. [Todo: Privat - Posta räkenskap för nyår 2015 i tråd på messenger](03ef0b27/chime.md)
@@ -340,7 +358,22 @@ k
 * [Todo: Consider to use Tactilus pressure matrix to build alpine ski boot sole pressure monitors to record and visualise alpine skiing techniques?](aa886e94/chime.md)
 * [Todo: Cosnider to understand how to copy folders in Linux shell?](359f6672/chime.md)
 
-# Inte egentlig Todo (ta bort helt)
+# Inte egentlig Todo (ta bort helt?)
+1. [Todo: Överväg att säga upp (och avregistera mitt kort) hos Easypark](b15357a8/chime.md)
+1. [Todo: Överväg att säga upp EasyPark och ta bort mitt parkerade kort?](7dfe4d49/chime.md)
+1. [Todo: Överväg att säga upp mina web-hotell (Jag kan lika gärna använda någon gratistjänst)?](6f8d08ab/chime.md)
+1. [Todo: Överväg att sälja Mammas rörstrands-servis](3c4d0c28/chime.md)
+1. [Todo: Överväg att sälja bilen?](dbf5bae4/chime.md)
+1. [Todo: Överväg bästa sättet att hämta upp beställning rån - Orderbekräftelse från Sunwind.se](b16e60f8/chime.md)
+1. [Todo: Överväg ett bra sätt att dokumentera kontouppgifter hos SunWind e-shop?](196d5fc0/chime.md)
+1. [Todo: Programming - Consider to attend the 8'th September 2016 LLVM Cauldron](40df870c/chime.md)
+1. [Todo: Dropbox Action required before 7 April 2016: Your credit card is about to expire](4a9c9b49/chime.md)
+1. [Todo: Överväg att hålla koll på SSSK Israpporter?](cd3acb53/chime.md)
+1. [Todo: Överväg att besöka SSSK Vårmöte nu på 15 Maj 2016 kl. 14-19 i Skateboet!](ce44e75a/chime.md)
+1. [Todo: Överväg att använda dessa bilder i krönika om 2016 års julskyltning (Förekomma Göran Everdahls spaning)?](334223df/chime.md)
+1. [Todo: http://www.pianocenter.se](de5df75a/chime.md)
+1. [Todo: Trysil 2016 med Maquet](dda24bc6/chime.md)
+1. [Todo: Rönisch piano](6dc6ff67/chime.md)
 1. [Todo: Nytt kontor slottsbacken 8](32f43e2d/chime.md)
 1. [Todo: Mälarbåtar från Kallhäll](8131ae05/chime.md)
 1. [Todo: Må-Wed 28-30 Dec 2015](12b16573/chime.md)
