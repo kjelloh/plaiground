@@ -3,6 +3,29 @@
 * [eml_to_domain/README.md](./eml_to_domain/README.md)
 * [domain_to_domain/README.md](./domain_to_domain/README.md)
 
+## 20261015
+
+I have now applied the mail-to-chime pipeline in sharedplanet git repo.
+
+* The scripts have been tweaked
+* The eml-files have been processed to _mail domain
+* The _mail domain have been 'picked' to chime domain
+* The chime domain has been intralinked.
+
+I am super unsatisfied ans STRESSED though!
+
+* The pipe-line is SOO FRAGILE!
+* I have garbage files all over the system.
+* I have NOT decided where to back-up the _mail domain?
+* I have NOT decided where to back-up the ignore.md!
+
+So I now cleaned up and tried to finalise current work.
+
+* I have cleaned out generated files, sites and cashes.
+* I copied latest ignore.md to arkiv git repo
+
+This repo is mot 84 MB in size.
+
 ## 20261012
 
 I have now reviewed all todo mails!
