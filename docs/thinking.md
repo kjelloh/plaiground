@@ -7,9 +7,11 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 
 ## 20261016
 
-I have now initiated session 62c6984e 1. [Consider vibe coded book keeping app cratchit take 1?](../session/62c6984e/session.md) to vibe code on my book keeping app cratchit.
+I have now initiated session 62c6984e [Consider vibe coded book keeping app cratchit take 1?](../session/62c6984e/session.md) to vibe code on my book keeping app cratchit.
 
 * Should I go for the 'full' $200 Claude code for one month to see what all the fuzz is about?
+
+I also initiated session 771ae935 1. [Consider how to have a github push trigger social media postings - take 1?](../session/771ae935/session.md) to have my github pushes trigger social media publishing. So I can 'chime in' with my daily writings and creations?
 
 ## 20261004
 
