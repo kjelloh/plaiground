@@ -5,6 +5,12 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20261016
+
+I have now initiated session 62c6984e 1. [Consider vibe coded book keeping app cratchit take 1?](../session/62c6984e/session.md) to vibe code on my book keeping app cratchit.
+
+* Should I go for the 'full' $200 Claude code for one month to see what all the fuzz is about?
+
 ## 20261004
 
 I now want to tweak the creation of chime,note,todo etc. ANd also tweak the eml-to-chime process.
