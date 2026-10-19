@@ -2,4 +2,5 @@
 _eskd_irl
 _sie_in
 _sie_out
-_to_skv
+_to_skvbuild
+CMakeUserPresets.json

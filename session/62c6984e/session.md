@@ -56,6 +56,8 @@ So going through and editing the context documents I already see some rain cloud
 
 So it seems I may not be able to rely on Claude to figure this out for me?
 
+* I asked claude to make small steps and let me review and commit as we go.
+
 ## 20261018
 
 I have now copied real SIE-files and eskd-files as a base for implementing SIE file processing to VAT-returns report in eskd-file format.

@@ -18,6 +18,13 @@ cratchit shall eventually be able to:
 - VAT reporting period: From app setting - quarterly (Period = last month of quarter, e.g. `202409`)
 - Current bookkeeping software: Fortnox (source of SIE exports)
 - Use app settings for data required to amend / complete VAT returns report
+  - Settings file: `.cratchit/settings` (plain text, one `name = value` per line)
+  - Org number is read from SIE `#ORGNR`, not stored in settings
+
+## 2b. User interface
+
+- Command line tool, e.g. `cratchit vat --period 202409`
+  (reads `_sie_in/`, writes the eskd file to `_to_skv/`)
 
 ## 3. Inputs and outputs
 
@@ -52,6 +59,8 @@ equal to the one that was actually filed.
 - `MomsBetala` (ruta 49) = output VAT − input VAT; negative means refund.
 - Boxes are provided as required by SKV (probably when value is available?)
 - Vouchers with dates in a period counts.
+- A VAT quarter can span two financial years (Apr–Jun when the FY starts 1 May),
+  so cratchit must combine vouchers from several SIE files by date.
 - Voucher corrections applies to the period of the correction date.
 - Vat returns sign determine if posted to BAS 2650 or BAS 1650.
 

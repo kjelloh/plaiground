@@ -20,11 +20,17 @@ Reference material (file format specs, SKV rules) lives in `_docs/` — see `_do
 ## Build and test
 
 ```sh
-# TODO: fill in once the CMake skeleton exists
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build
+# once (or when conanfile.txt changes)
+conan install . --build=missing -s compiler.cppstd=23
+cmake --preset conan-release
+
+# every change
+cmake --build --preset conan-release
+ctest --preset conan-release
 ```
+
+Layout: `src/` (library `cratchit_core` + `main.cpp` for the `cratchit` CLI), `tests/` (GoogleTest).
+Must build with zero warnings.
 
 ## Code conventions
 
