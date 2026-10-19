@@ -18,39 +18,39 @@ TEST(ReadSieFile, ExampleFile) {
   ASSERT_TRUE(result.has_value()) << result.error();
   auto const& doc = *result;
 
-  EXPECT_EQ(doc.org_nr, "556000-0175");
+  EXPECT_EQ(doc.m_org_nr, "556000-0175");
 
-  ASSERT_EQ(doc.financial_years.size(), 2u);
-  EXPECT_EQ(doc.financial_years[0].index, 0);
-  EXPECT_EQ(doc.financial_years[0].start, 2024y / May / 1d);
-  EXPECT_EQ(doc.financial_years[0].end, 2025y / April / 30d);
-  EXPECT_EQ(doc.financial_years[1].index, -1);
+  ASSERT_EQ(doc.m_financial_years.size(), 2u);
+  EXPECT_EQ(doc.m_financial_years[0].m_index, 0);
+  EXPECT_EQ(doc.m_financial_years[0].m_start, 2024y / May / 1d);
+  EXPECT_EQ(doc.m_financial_years[0].m_end, 2025y / April / 30d);
+  EXPECT_EQ(doc.m_financial_years[1].m_index, -1);
 
-  EXPECT_EQ(doc.accounts.size(), 5u);
-  EXPECT_EQ(doc.accounts.at(2641), "Debiterad ingående moms");
+  EXPECT_EQ(doc.m_accounts.size(), 5u);
+  EXPECT_EQ(doc.m_accounts.at(2641), "Debiterad ingående moms");
 
-  ASSERT_EQ(doc.vouchers.size(), 2u);
-  auto const& first = doc.vouchers[0];
-  EXPECT_EQ(first.series, "A");
-  EXPECT_EQ(first.number, "1");
-  EXPECT_EQ(first.date, 2024y / July / 15d);
-  EXPECT_EQ(first.text, "Inköp \"molntjänst\"");
-  ASSERT_EQ(first.postings.size(), 3u);
-  EXPECT_EQ(first.postings[0].account, 6540);
-  EXPECT_EQ(first.postings[0].amount, Amount::from_cents(10'000));
-  EXPECT_EQ(first.postings[0].text, "Molntjänst");
-  EXPECT_FALSE(first.postings[0].date.has_value());
-  EXPECT_EQ(first.postings[2].amount, Amount::from_cents(-12'500));
+  ASSERT_EQ(doc.m_vouchers.size(), 2u);
+  auto const& first = doc.m_vouchers[0];
+  EXPECT_EQ(first.m_series, "A");
+  EXPECT_EQ(first.m_number, "1");
+  EXPECT_EQ(first.m_date, 2024y / July / 15d);
+  EXPECT_EQ(first.m_text, "Inköp \"molntjänst\"");
+  ASSERT_EQ(first.m_postings.size(), 3u);
+  EXPECT_EQ(first.m_postings[0].m_account, 6540);
+  EXPECT_EQ(first.m_postings[0].m_amount, Amount::from_cents(10'000));
+  EXPECT_EQ(first.m_postings[0].m_text, "Molntjänst");
+  EXPECT_FALSE(first.m_postings[0].m_date.has_value());
+  EXPECT_EQ(first.m_postings[2].m_amount, Amount::from_cents(-12'500));
 }
 
 TEST(ReadSieFile, CorrectionHistoryIsIgnored) {
   auto const doc = read_sie_file(source_dir / "testdata" / "example.se").value();
-  auto const& second = doc.vouchers[1];
-  ASSERT_EQ(second.postings.size(), 2u);  // #BTRANS and #RTRANS are skipped
-  EXPECT_EQ(second.postings[0].account, 1920);
-  EXPECT_EQ(second.postings[1].account, 1610);
-  EXPECT_EQ(second.postings[1].amount, Amount::from_cents(31'840));
-  EXPECT_EQ(second.postings[1].date, 2024y / August / 2d);
+  auto const& second = doc.m_vouchers[1];
+  ASSERT_EQ(second.m_postings.size(), 2u);  // #BTRANS and #RTRANS are skipped
+  EXPECT_EQ(second.m_postings[0].m_account, 1920);
+  EXPECT_EQ(second.m_postings[1].m_account, 1610);
+  EXPECT_EQ(second.m_postings[1].m_amount, Amount::from_cents(31'840));
+  EXPECT_EQ(second.m_postings[1].m_date, 2024y / August / 2d);
 }
 
 TEST(ReadSieFile, MissingFile) {
@@ -74,5 +74,5 @@ TEST(ParseSie, RejectsBrokenVoucherBlocks) {
 
 TEST(ParseSie, UnknownRecordsAreIgnored) {
   auto const doc = parse_sie("#PSALDO 0 202405 1920 {} 100\n#KSUMMA\n").value();
-  EXPECT_TRUE(doc.vouchers.empty());
+  EXPECT_TRUE(doc.m_vouchers.empty());
 }

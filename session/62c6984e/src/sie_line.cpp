@@ -29,22 +29,22 @@ std::expected<std::vector<SieField>, std::string> split_sie_line(std::string_vie
           break;
         }
         if (c == '\\' && pos < line.size()) {
-          field.text += line[pos++];
+          field.m_text += line[pos++];
         } else {
-          field.text += c;
+          field.m_text += c;
         }
       }
       if (!closed) return std::unexpected("Unterminated quoted string");
     } else if (line[pos] == '{') {
-      field.is_object_list = true;
+      field.m_is_object_list = true;
       ++pos;
       bool in_quotes = false;
       bool closed = false;
       while (pos < line.size()) {
         char const c = line[pos++];
         if (c == '\\' && in_quotes && pos < line.size()) {
-          field.text += c;
-          field.text += line[pos++];
+          field.m_text += c;
+          field.m_text += line[pos++];
           continue;
         }
         if (c == '"') in_quotes = !in_quotes;
@@ -52,11 +52,11 @@ std::expected<std::vector<SieField>, std::string> split_sie_line(std::string_vie
           closed = true;
           break;
         }
-        field.text += c;
+        field.m_text += c;
       }
       if (!closed) return std::unexpected("Unterminated object list");
     } else {
-      while (pos < line.size() && !is_space(line[pos])) field.text += line[pos++];
+      while (pos < line.size() && !is_space(line[pos])) field.m_text += line[pos++];
     }
     fields.push_back(std::move(field));
   }

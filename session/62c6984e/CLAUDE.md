@@ -34,7 +34,7 @@ Must build with zero warnings.
 
 ## Code conventions
 
-- Naming: snake_case for variables and functions. CamelCase for types. Member 'm_' prefixed
+- Naming: snake_case for variables and functions. CamelCase for types. All member variables are `m_` prefixed, public (struct fields) and private alike.
 - Use English identifiers; map Swedish domain terms via `GLOSSARY.md`.
 - Money: Use dedicated Amount type that is integer 'cents' based
 - Error handling: Use std::expected or error codes where appropriate. Exceptions for exceptional results.

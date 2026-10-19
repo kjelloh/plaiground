@@ -35,19 +35,19 @@ TEST(RealSieFiles, AllParseAndVouchersBalance) {
     auto const doc = read_sie_file(path);
     ASSERT_TRUE(doc.has_value()) << doc.error();
 
-    EXPECT_FALSE(doc->org_nr.empty());
-    EXPECT_FALSE(doc->accounts.empty());
+    EXPECT_FALSE(doc->m_org_nr.empty());
+    EXPECT_FALSE(doc->m_accounts.empty());
 
     auto const current_year =
-        std::ranges::find(doc->financial_years, 0, &cratchit::FinancialYear::index);
-    ASSERT_NE(current_year, doc->financial_years.end()) << "no #RAR 0";
+        std::ranges::find(doc->m_financial_years, 0, &cratchit::FinancialYear::m_index);
+    ASSERT_NE(current_year, doc->m_financial_years.end()) << "no #RAR 0";
 
-    for (auto const& voucher : doc->vouchers) {
+    for (auto const& voucher : doc->m_vouchers) {
       Amount sum;
-      for (auto const& posting : voucher.postings) sum += posting.amount;
-      EXPECT_EQ(sum, Amount{}) << "unbalanced voucher " << voucher.series << voucher.number;
-      EXPECT_TRUE(voucher.date >= current_year->start && voucher.date <= current_year->end)
-          << "voucher " << voucher.series << voucher.number << " outside #RAR 0";
+      for (auto const& posting : voucher.m_postings) sum += posting.m_amount;
+      EXPECT_EQ(sum, Amount{}) << "unbalanced voucher " << voucher.m_series << voucher.m_number;
+      EXPECT_TRUE(voucher.m_date >= current_year->m_start && voucher.m_date <= current_year->m_end)
+          << "voucher " << voucher.m_series << voucher.m_number << " outside #RAR 0";
     }
   }
 }

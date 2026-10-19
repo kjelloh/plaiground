@@ -9,8 +9,8 @@ namespace cratchit {
 
 // One field of a SIE record line.
 struct SieField {
-  std::string text;             // unquoted and unescaped; for an object list: the content between { and }
-  bool is_object_list = false;  // true for a {...} field
+  std::string m_text;             // unquoted and unescaped; for an object list: the content between { and }
+  bool m_is_object_list = false;  // true for a {...} field
 };
 
 // Splits one SIE record line (e.g. `#TRANS 1920 {} -200 "" "privat inköp" 0`) into fields.

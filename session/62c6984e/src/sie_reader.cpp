@@ -33,46 +33,46 @@ using Fields = std::vector<SieField>;
 
 std::expected<void, std::string> require_fields(Fields const& fields, std::size_t count) {
   if (fields.size() < count) {
-    return std::unexpected(fields.front().text + " needs at least " + std::to_string(count - 1) + " values");
+    return std::unexpected(fields.front().m_text + " needs at least " + std::to_string(count - 1) + " values");
   }
   return {};
 }
 
 std::expected<FinancialYear, std::string> parse_rar(Fields const& f) {
   if (auto ok = require_fields(f, 4); !ok) return std::unexpected(ok.error());
-  auto const index = parse_int(f[1].text);
+  auto const index = parse_int(f[1].m_text);
   if (!index) return std::unexpected(index.error());
-  auto const start = parse_date(f[2].text);
+  auto const start = parse_date(f[2].m_text);
   if (!start) return std::unexpected(start.error());
-  auto const end = parse_date(f[3].text);
+  auto const end = parse_date(f[3].m_text);
   if (!end) return std::unexpected(end.error());
   return FinancialYear{*index, *start, *end};
 }
 
 std::expected<Voucher, std::string> parse_ver(Fields const& f) {
   if (auto ok = require_fields(f, 4); !ok) return std::unexpected(ok.error());
-  auto const date = parse_date(f[3].text);
+  auto const date = parse_date(f[3].m_text);
   if (!date) return std::unexpected(date.error());
-  Voucher voucher{.series = f[1].text, .number = f[2].text, .date = *date};
-  if (f.size() > 4) voucher.text = f[4].text;
+  Voucher voucher{.m_series = f[1].m_text, .m_number = f[2].m_text, .m_date = *date};
+  if (f.size() > 4) voucher.m_text = f[4].m_text;
   return voucher;
 }
 
 std::expected<Posting, std::string> parse_trans(Fields const& f) {
   if (auto ok = require_fields(f, 4); !ok) return std::unexpected(ok.error());
-  if (!f[2].is_object_list) return std::unexpected("#TRANS is missing its object list {}");
-  auto const account = parse_int(f[1].text);
+  if (!f[2].m_is_object_list) return std::unexpected("#TRANS is missing its object list {}");
+  auto const account = parse_int(f[1].m_text);
   if (!account) return std::unexpected(account.error());
-  auto const amount = parse_amount(f[3].text);
+  auto const amount = parse_amount(f[3].m_text);
   if (!amount) return std::unexpected(amount.error());
 
-  Posting posting{.account = *account, .amount = *amount};
-  if (f.size() > 4 && !f[4].text.empty()) {
-    auto const date = parse_date(f[4].text);
+  Posting posting{.m_account = *account, .m_amount = *amount};
+  if (f.size() > 4 && !f[4].m_text.empty()) {
+    auto const date = parse_date(f[4].m_text);
     if (!date) return std::unexpected(date.error());
-    posting.date = *date;
+    posting.m_date = *date;
   }
-  if (f.size() > 5) posting.text = f[5].text;
+  if (f.size() > 5) posting.m_text = f[5].m_text;
   return posting;
 }
 
@@ -106,7 +106,7 @@ private:
     }
     if (line == "}") {
       if (m_state != State::InBlock) return std::unexpected("'}' without an open #VER block");
-      m_document.vouchers.push_back(std::move(*m_voucher));
+      m_document.m_vouchers.push_back(std::move(*m_voucher));
       m_voucher.reset();
       m_state = State::Records;
       return {};
@@ -115,37 +115,54 @@ private:
     auto const fields = split_sie_line(line);
     if (!fields) return std::unexpected(fields.error());
     if (fields->empty()) return {};
-    auto const& label = fields->front().text;
+    auto const& label = fields->front().m_text;
 
     if (m_state == State::InBlock) {
       if (label == "#TRANS") {
         auto posting = parse_trans(*fields);
         if (!posting) return std::unexpected(posting.error());
-        m_voucher->postings.push_back(std::move(*posting));
+        m_voucher->m_postings.push_back(std::move(*posting));
         return {};
       }
-      if (label == "#BTRANS" || label == "#RTRANS") return {};
+      if (label == "#BTRANS" || label == "#RTRANS") return handle_correction_record(*fields);
       return std::unexpected("Unexpected " + label + " inside a #VER block");
     }
+    // Records outside #VER blocks that cratchit does not use yet (#IB, #UB, #RES, #PSALDO,
+    // #SRU, #DIM, ...) fall through below and are ignored, as the SIE spec allows.
 
     if (label == "#ORGNR") {
       if (auto ok = require_fields(*fields, 2); !ok) return ok;
-      m_document.org_nr = (*fields)[1].text;
+      m_document.m_org_nr = (*fields)[1].m_text;
     } else if (label == "#RAR") {
       auto year = parse_rar(*fields);
       if (!year) return std::unexpected(year.error());
-      m_document.financial_years.push_back(*year);
+      m_document.m_financial_years.push_back(*year);
     } else if (label == "#KONTO") {
       if (auto ok = require_fields(*fields, 3); !ok) return ok;
-      auto const account = parse_int((*fields)[1].text);
+      auto const account = parse_int((*fields)[1].m_text);
       if (!account) return std::unexpected(account.error());
-      m_document.accounts[*account] = (*fields)[2].text;
+      m_document.m_accounts[*account] = (*fields)[2].m_text;
     } else if (label == "#VER") {
       auto voucher = parse_ver(*fields);
       if (!voucher) return std::unexpected(voucher.error());
       m_voucher = std::move(*voucher);
       m_state = State::ExpectBlockStart;
     }
+    return {};
+  }
+
+  // STUB: #BTRANS / #RTRANS (correction history, SIE 4) are validated but not stored.
+  //
+  // - #BTRANS is a posting that was removed from the voucher after registration.
+  // - #RTRANS is a posting that was added after registration. The SIE spec requires it to be
+  //   followed by an identical #TRANS, so readers that only know #TRANS still get the result.
+  //
+  // Skipping both therefore gives the voucher's final posted state, which is all the VAT
+  // return needs. Store them here (e.g. as Voucher::m_removed / m_added postings) if cratchit
+  // ever needs the audit trail, or must write it back out to a SIE file.
+  std::expected<void, std::string> handle_correction_record(Fields const& fields) {
+    auto const posting = parse_trans(fields);
+    if (!posting) return std::unexpected(posting.error());
     return {};
   }
 
