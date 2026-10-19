@@ -1,0 +1,88 @@
+# Which BAS accounts feed which VAT return box
+#
+# BAS does not publish a free account-to-box table, and neither does SKV.
+# So this is cratchit's own mapping. It was proven by reproducing three filed
+# returns (202409, 202412, 202503) in take 1 (session 62c6984e).
+#
+# box.<NN>.accounts  account list (see docs/cspec_format.md)
+# box.<NN>.sign      credit: box = -(sum of postings), debit: box = +(sum of postings)
+# box.<NN>.status    verified (reproduced filed returns) | unverified
+#
+# Account meanings in BAS have changed over the years. In 2016 our books used
+# 2615 for EU goods purchases, but BAS 2026 uses 2615 for import VAT.
+# Which mapping applies depends on the financial year. See open question Q4 in docs/interfaces.md.
+
+spec.id = vat.bas_to_vat_box
+spec.kind = mapping
+spec.version = 1
+spec.status = verified
+spec.title = BAS account to VAT box mapping used by cratchit
+spec.derived_by = hand
+spec.source.01.title = take 1 SPEC.md, BAS account to VAT box table (reproduced filed returns)
+spec.source.01.local = ../62c6984e/SPEC.md
+spec.source.02.title = BAS kontoplan 2026 (account names, group 26)
+spec.source.02.url = https://www.bas.se/kontoplaner/
+spec.source.02.local = ../62c6984e/_docs/BAS_kontoplan_2026_v2.xlsx
+spec.source.03.title = Todo mail 6d2ccfb3: own accounts 9021, 9022 and 9099 for EU and import values (created 2018-08-01)
+
+applies.from = 20160501
+
+box.05.accounts = 3001-3003
+box.05.sign = credit
+box.05.status = unverified
+box.05.note = BAS 3001-3003 are sales in Sweden at 25, 12 and 6 %. No sales in the test periods
+
+box.10.accounts = 2610-2613
+box.10.sign = credit
+box.10.status = verified
+box.11.accounts = 2620-2623
+box.11.sign = credit
+box.11.status = verified
+box.12.accounts = 2630-2633
+box.12.sign = credit
+box.12.status = verified
+
+box.20.accounts = 9021
+box.20.sign = debit
+box.20.status = verified
+box.20.note = Own account outside the business accounts, set up in Fortnox. Its counter-account is 9099
+
+box.30.accounts = 2614, 2617
+box.30.sign = credit
+box.30.status = verified
+box.31.accounts = 2624, 2627
+box.31.sign = credit
+box.31.status = verified
+box.32.accounts = 2634, 2637
+box.32.sign = credit
+box.32.status = verified
+
+box.39.accounts = 3308
+box.39.sign = credit
+box.39.status = unverified
+
+box.48.accounts = 2640-2642, 2645-2647
+box.48.sign = debit
+box.48.status = verified
+box.48.note = Not 2648 (vilande ingående moms)
+
+box.50.accounts = 9022
+box.50.sign = debit
+box.50.status = verified
+box.50.note = Own account, see box 20
+
+box.60.accounts = 2615
+box.60.sign = credit
+box.60.status = verified
+box.61.accounts = 2625
+box.61.sign = credit
+box.61.status = verified
+box.62.accounts = 2635
+box.62.sign = credit
+box.62.status = verified
+
+# A posting on a VAT account (vat_accounts) that no box maps is an error,
+# unless the account is in unmapped_allowed.
+vat_accounts = 2600-2699
+unmapped_allowed = 2648, 2650, 2651
+unmapped_allowed.note = 2650 and 2651 hold the settled VAT debt. 2648 holds vilande moms until the invoice is paid

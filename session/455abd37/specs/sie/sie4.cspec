@@ -1,0 +1,207 @@
+# SIE type 4 file format, as cratchit reads and writes it
+#
+# record.<LABEL>.field.NN = <name> <type> <required|optional>
+#   Fields come in this order after the #LABEL on the line.
+#   Types:
+#     string       quoted "…" (with \" escapes) or a bare word
+#     word         bare token
+#     int          integer
+#     year_index   0 = current financial year, -1 = previous, …
+#     account      BAS account number
+#     amount       decimal with '.' as decimal point, optional '-'
+#     decimal      decimal number (quantities)
+#     date         YYYYMMDD
+#     period       YYYYMM
+#     object_list  { dim "obj" … } (may be empty: {})
+#
+# record.<LABEL>.use = read | ignore | read-write
+#   read: cratchit builds domain data from it. ignore: parsed and kept, not used.
+# record.<LABEL>.block = yes  when the record is followed by { … } with sub-records
+# record.<LABEL>.in_block = <LABEL>  for records that live inside a block
+#
+# Labels not listed here are kept as unknown records (the SIE spec says to ignore them).
+
+spec.id = sie.sie4
+spec.kind = format
+spec.version = 1
+spec.status = draft
+spec.title = SIE 4 file format (subset used by cratchit)
+spec.derived_by = hand
+spec.source.01.title = SIE filformat version 4C (2025-08-06), SIE-Gruppen
+spec.source.01.url = https://sie.se/wp-content/uploads/2026/02/SIE_filformat_ver_4C_2025-08-06.pdf
+spec.source.01.local = ../62c6984e/_docs/SIE_filformat_ver_4C_2025-08-06.pdf
+spec.source.02.title = SIE filformat version 4B (2008-09-30)
+spec.source.02.url = https://sie.se/wp-content/uploads/2020/05/SIE_filformat_ver_4B_080930.pdf
+spec.source.02.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/sie_specs/doc/SIE_filformat_ver_4B_080930.pdf
+spec.note = Field lists written from the 4B spec and the take 1 reader. Check each record against the 4C PDF, then set spec.status = checked
+
+file.encoding = cp437
+file.encoding.note = #FORMAT PC8 means IBM PC 8-bit extended ASCII (code page 437)
+file.line_end = crlf
+file.line_end.read = lf or crlf
+file.decimal_point = .
+file.amount_max_decimals = 2
+
+# --------------------------------------------------------- identification
+
+record.FLAGGA.field.01 = flag int required
+record.FLAGGA.use = ignore
+record.FORMAT.field.01 = format word required
+record.FORMAT.use = read
+record.SIETYP.field.01 = type int required
+record.SIETYP.use = read
+record.PROGRAM.field.01 = name string required
+record.PROGRAM.field.02 = version string optional
+record.PROGRAM.use = ignore
+record.GEN.field.01 = date date required
+record.GEN.field.02 = signature string optional
+record.GEN.use = ignore
+record.KSUMMA.field.01 = checksum int optional
+record.KSUMMA.use = ignore
+record.KSUMMA.note = CRC-32 over the file. Not checked yet
+
+# --------------------------------------------------------------- company
+
+record.FNR.field.01 = company_id string required
+record.FNR.use = ignore
+record.FNAMN.field.01 = company_name string required
+record.FNAMN.use = read
+record.ORGNR.field.01 = org_nr word required
+record.ORGNR.field.02 = acquisition_nr int optional
+record.ORGNR.field.03 = activity_nr int optional
+record.ORGNR.use = read
+record.ADRESS.field.01 = contact string required
+record.ADRESS.field.02 = street string required
+record.ADRESS.field.03 = postal string required
+record.ADRESS.field.04 = phone string required
+record.ADRESS.use = ignore
+record.BKOD.field.01 = sni_code int required
+record.BKOD.use = ignore
+record.FTYP.field.01 = company_type word required
+record.FTYP.use = ignore
+record.RAR.field.01 = year_index year_index required
+record.RAR.field.02 = start date required
+record.RAR.field.03 = end date required
+record.RAR.use = read
+record.TAXAR.field.01 = tax_year int required
+record.TAXAR.use = ignore
+record.OMFATTN.field.01 = date date required
+record.OMFATTN.use = ignore
+record.KPTYP.field.01 = chart_type word required
+record.KPTYP.use = ignore
+record.VALUTA.field.01 = currency word required
+record.VALUTA.use = ignore
+
+# --------------------------------------------------------------- accounts
+
+record.KONTO.field.01 = account account required
+record.KONTO.field.02 = name string required
+record.KONTO.use = read
+record.KTYP.field.01 = account account required
+record.KTYP.field.02 = type word required
+record.KTYP.use = read
+record.KTYP.note = T asset, S equity or liability, I income, K cost. Fortnox exports omit it, see bas/account_types.cspec
+record.ENHET.field.01 = account account required
+record.ENHET.field.02 = unit string required
+record.ENHET.use = ignore
+record.SRU.field.01 = account account required
+record.SRU.field.02 = sru_code int required
+record.SRU.use = read
+record.DIM.field.01 = dimension int required
+record.DIM.field.02 = name string required
+record.DIM.use = ignore
+record.UNDERDIM.field.01 = dimension int required
+record.UNDERDIM.field.02 = name string required
+record.UNDERDIM.field.03 = parent int required
+record.UNDERDIM.use = ignore
+record.OBJEKT.field.01 = dimension int required
+record.OBJEKT.field.02 = object string required
+record.OBJEKT.field.03 = name string required
+record.OBJEKT.use = ignore
+
+# --------------------------------------------------------------- balances
+
+record.IB.field.01 = year_index year_index required
+record.IB.field.02 = account account required
+record.IB.field.03 = balance amount required
+record.IB.field.04 = quantity decimal optional
+record.IB.use = read
+record.UB.field.01 = year_index year_index required
+record.UB.field.02 = account account required
+record.UB.field.03 = balance amount required
+record.UB.field.04 = quantity decimal optional
+record.UB.use = read
+record.OIB.field.01 = year_index year_index required
+record.OIB.field.02 = account account required
+record.OIB.field.03 = objects object_list required
+record.OIB.field.04 = balance amount required
+record.OIB.field.05 = quantity decimal optional
+record.OIB.use = ignore
+record.OUB.field.01 = year_index year_index required
+record.OUB.field.02 = account account required
+record.OUB.field.03 = objects object_list required
+record.OUB.field.04 = balance amount required
+record.OUB.field.05 = quantity decimal optional
+record.OUB.use = ignore
+record.RES.field.01 = year_index year_index required
+record.RES.field.02 = account account required
+record.RES.field.03 = balance amount required
+record.RES.field.04 = quantity decimal optional
+record.RES.use = read
+record.PSALDO.field.01 = year_index year_index required
+record.PSALDO.field.02 = period period required
+record.PSALDO.field.03 = account account required
+record.PSALDO.field.04 = objects object_list required
+record.PSALDO.field.05 = balance amount required
+record.PSALDO.field.06 = quantity decimal optional
+record.PSALDO.use = ignore
+record.PBUDGET.field.01 = year_index year_index required
+record.PBUDGET.field.02 = period period required
+record.PBUDGET.field.03 = account account required
+record.PBUDGET.field.04 = objects object_list required
+record.PBUDGET.field.05 = balance amount required
+record.PBUDGET.field.06 = quantity decimal optional
+record.PBUDGET.use = ignore
+
+# --------------------------------------------------------------- vouchers
+
+record.VER.field.01 = series string required
+record.VER.field.02 = number string required
+record.VER.field.03 = date date required
+record.VER.field.04 = text string optional
+record.VER.field.05 = registration_date date optional
+record.VER.field.06 = signature string optional
+record.VER.use = read
+record.VER.block = yes
+
+record.TRANS.field.01 = account account required
+record.TRANS.field.02 = objects object_list required
+record.TRANS.field.03 = amount amount required
+record.TRANS.field.04 = transaction_date date optional
+record.TRANS.field.05 = text string optional
+record.TRANS.field.06 = quantity decimal optional
+record.TRANS.field.07 = signature string optional
+record.TRANS.use = read
+record.TRANS.in_block = VER
+
+record.RTRANS.field.01 = account account required
+record.RTRANS.field.02 = objects object_list required
+record.RTRANS.field.03 = amount amount required
+record.RTRANS.field.04 = transaction_date date optional
+record.RTRANS.field.05 = text string optional
+record.RTRANS.field.06 = quantity decimal optional
+record.RTRANS.field.07 = signature string optional
+record.RTRANS.use = ignore
+record.RTRANS.in_block = VER
+record.RTRANS.note = Added by a later correction. An identical #TRANS follows it, so cratchit reads only the #TRANS
+
+record.BTRANS.field.01 = account account required
+record.BTRANS.field.02 = objects object_list required
+record.BTRANS.field.03 = amount amount required
+record.BTRANS.field.04 = transaction_date date optional
+record.BTRANS.field.05 = text string optional
+record.BTRANS.field.06 = quantity decimal optional
+record.BTRANS.field.07 = signature string optional
+record.BTRANS.use = ignore
+record.BTRANS.in_block = VER
+record.BTRANS.note = Removed by a later correction. Not part of the voucher's balance. Keep it for behandlingshistorik (planned)

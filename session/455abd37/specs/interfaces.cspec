@@ -1,0 +1,279 @@
+# cratchit interface registry
+#
+# Every way data enters, leaves or is transformed inside cratchit is listed here.
+# Human-readable view: docs/interfaces.md
+#
+# Per interface:
+#   title       one line
+#   direction   in | out | internal
+#   counterpart who or what is on the other side
+#   format      the external format
+#   spec        comma-separated spec files (relative to specs/) that pin the interface down
+#   code        comma-separated source files (relative to the session root) that implement it
+#   status      skeleton (code exists, partly done) | planned (near term) | future | listed (named only)
+#   milestone   M1 = VAT return, M2 = SIE round trip, M3 = statements to vouchers,
+#               M4 = Bokslut, M5 = Årsredovisning, M6 = INK2, M7+ = later
+#   legal       comma-separated requirement ids from legal/requirements.cspec
+#
+# tests/specs_test.cpp checks that every listed spec and code file exists,
+# and that every legal id is defined.
+
+spec.id = cratchit.interfaces
+spec.kind = registry
+spec.version = 1
+spec.status = draft
+spec.title = All interfaces of cratchit
+spec.derived_by = hand
+
+# ---------------------------------------------------------------- inbound
+
+interface.sie4_import.title = Read books as SIE type 4 files (e.g. Fortnox export)
+interface.sie4_import.direction = in
+interface.sie4_import.counterpart = Bookkeeping software (Fortnox), accountant
+interface.sie4_import.format = SIE 4 (4C), #FORMAT PC8 (CP437), CRLF
+interface.sie4_import.spec = sie/sie4.cspec
+interface.sie4_import.code = src/sie/sie_reader.hpp, src/sie/sie_reader.cpp, src/sie/cp437.hpp, src/sie/cp437.cpp
+interface.sie4_import.status = skeleton
+interface.sie4_import.milestone = M1
+interface.sie4_import.legal = BFL-5-1, BFL-5-11
+
+interface.bank_statement_import.title = Read bank account statements
+interface.bank_statement_import.direction = in
+interface.bank_statement_import.counterpart = Bank (Nordea)
+interface.bank_statement_import.format = CSV exported from the internet bank
+interface.bank_statement_import.spec = statements/nordea_csv.cspec
+interface.bank_statement_import.code = src/statements/csv_statement_reader.hpp, src/statements/csv_statement_reader.cpp
+interface.bank_statement_import.status = skeleton
+interface.bank_statement_import.milestone = M3
+interface.bank_statement_import.legal = BFL-5-2, BFL-5-6
+
+interface.skv_account_statement_import.title = Read the tax account (skattekonto) statement
+interface.skv_account_statement_import.direction = in
+interface.skv_account_statement_import.counterpart = Skatteverket
+interface.skv_account_statement_import.format = CSV from the e-service (later: Skattekonto API)
+interface.skv_account_statement_import.spec = statements/skv_account_csv.cspec
+interface.skv_account_statement_import.code = src/statements/csv_statement_reader.hpp, src/statements/csv_statement_reader.cpp
+interface.skv_account_statement_import.status = skeleton
+interface.skv_account_statement_import.milestone = M3
+interface.skv_account_statement_import.legal = BFL-5-6
+
+interface.financial_event_listing.title = Financial event listing (date, amount, heading) that seeds vouchers
+interface.financial_event_listing.direction = in
+interface.financial_event_listing.counterpart = User, statement imports, receipts and invoices
+interface.financial_event_listing.format = cspec listing, one event per event.NNNN branch
+interface.financial_event_listing.spec = events/financial_event.cspec
+interface.financial_event_listing.code = src/core/financial_event.hpp, src/core/financial_event.cpp
+interface.financial_event_listing.status = skeleton
+interface.financial_event_listing.milestone = M3
+interface.financial_event_listing.legal = BFL-5-6, BFL-5-7
+
+interface.voucher_documents.title = Underlying documents for vouchers (receipts, invoices as PDF or image)
+interface.voucher_documents.direction = in
+interface.voucher_documents.counterpart = Suppliers, customers, mail, scanner
+interface.voucher_documents.format = Files in the archive folder, referenced by content hash
+interface.voucher_documents.status = listed
+interface.voucher_documents.milestone = M3
+interface.voucher_documents.legal = BFL-5-6, BFL-5-7, BFL-7-1, BFL-7-2
+
+interface.bas_chart_of_accounts.title = BAS chart of accounts as reference data
+interface.bas_chart_of_accounts.direction = in
+interface.bas_chart_of_accounts.counterpart = BAS-kontogruppen (bas.se)
+interface.bas_chart_of_accounts.format = Free xlsx download, converted once to cspec. Names also come from SIE #KONTO
+interface.bas_chart_of_accounts.spec = bas/account_types.cspec
+interface.bas_chart_of_accounts.code = src/core/account_types.hpp, src/core/account_types.cpp
+interface.bas_chart_of_accounts.status = skeleton
+interface.bas_chart_of_accounts.milestone = M2
+
+interface.bas_sru_mapping.title = BAS account to SRU field code mapping for INK2
+interface.bas_sru_mapping.direction = in
+interface.bas_sru_mapping.counterpart = BAS-kontogruppen (bas.se/kontoplaner/sru)
+interface.bas_sru_mapping.format = Free xlsx/pdf "INK2 P1 intervall", converted to cspec
+interface.bas_sru_mapping.status = planned
+interface.bas_sru_mapping.milestone = M6
+
+interface.skv_sru_field_definitions.title = SKV field definitions for SRU forms (INK2R, INK2S, …)
+interface.skv_sru_field_definitions.direction = in
+interface.skv_sru_field_definitions.counterpart = Skatteverket (SKV 269)
+interface.skv_sru_field_definitions.format = xls per form and year, converted to cspec
+interface.skv_sru_field_definitions.status = planned
+interface.skv_sru_field_definitions.milestone = M6
+
+interface.settings.title = Company settings that the books do not hold
+interface.settings.direction = in
+interface.settings.counterpart = User
+interface.settings.format = cspec file .cratchit/settings.cspec
+interface.settings.spec = settings/settings.cspec
+interface.settings.code = src/app/settings.hpp, src/app/settings.cpp
+interface.settings.status = skeleton
+interface.settings.milestone = M1
+
+interface.user_cli.title = Command line for bookkeeping operations and reports
+interface.user_cli.direction = in
+interface.user_cli.counterpart = User
+interface.user_cli.format = cratchit <command> [options]
+interface.user_cli.code = src/main.cpp
+interface.user_cli.status = skeleton
+interface.user_cli.milestone = M1
+interface.user_cli.legal = BFL-5-11
+
+# --------------------------------------------------------------- outbound
+
+interface.sie4_export.title = Write books as SIE type 4 (back to Fortnox, accountant, archive)
+interface.sie4_export.direction = out
+interface.sie4_export.counterpart = Bookkeeping software, accountant, archive
+interface.sie4_export.format = SIE 4 (4C)
+interface.sie4_export.spec = sie/sie4.cspec
+interface.sie4_export.status = planned
+interface.sie4_export.milestone = M2
+interface.sie4_export.legal = BFL-7-1
+
+interface.vat_return_eskd.title = VAT return (momsdeklaration) as eSKD upload file
+interface.vat_return_eskd.direction = out
+interface.vat_return_eskd.counterpart = Skatteverket e-service "Lämna momsdeklaration via fil"
+interface.vat_return_eskd.format = eSKDUpload 6.0 XML, ISO-8859-1
+interface.vat_return_eskd.spec = vat/eskd_6p0.cspec, vat/vat_boxes.cspec
+interface.vat_return_eskd.code = src/vat/eskd_writer.hpp, src/vat/eskd_writer.cpp
+interface.vat_return_eskd.status = skeleton
+interface.vat_return_eskd.milestone = M1
+interface.vat_return_eskd.legal = SFL-26, ML-VAT
+
+interface.filed_vat_return_import.title = Read filed VAT returns (eSKD files) to reconcile with the books
+interface.filed_vat_return_import.direction = in
+interface.filed_vat_return_import.counterpart = Earlier filings (Fortnox, SKV web form, old cratchit)
+interface.filed_vat_return_import.format = eSKDUpload 6.0 XML, ISO-8859-1
+interface.filed_vat_return_import.spec = vat/eskd_6p0.cspec, vat/vat_boxes.cspec
+interface.filed_vat_return_import.code = src/vat/eskd_reader.hpp, src/vat/eskd_reader.cpp
+interface.filed_vat_return_import.status = skeleton
+interface.filed_vat_return_import.milestone = M1
+interface.filed_vat_return_import.legal = SFL-26
+
+interface.vat_return_api.title = VAT return via Skatteverket Momsdeklaration API (drafts)
+interface.vat_return_api.direction = out
+interface.vat_return_api.counterpart = Skatteverket API (utvecklarportalen), live since November 2025
+interface.vat_return_api.format = REST/JSON, needs agreement and e-ID based authorisation
+interface.vat_return_api.status = future
+interface.vat_return_api.milestone = M7
+interface.vat_return_api.legal = SFL-26
+
+interface.ec_sales_list.title = EC sales list (periodisk sammanställning)
+interface.ec_sales_list.direction = out
+interface.ec_sales_list.counterpart = Skatteverket e-service Filöverföring
+interface.ec_sales_list.format = Semicolon separated text file starting with SKV574008
+interface.ec_sales_list.spec = vat/ec_sales_list.cspec
+interface.ec_sales_list.status = future
+interface.ec_sales_list.milestone = M7
+interface.ec_sales_list.legal = SFL-26
+
+interface.employer_declaration.title = Employer declaration (arbetsgivardeklaration, AGI), including zero salary months
+interface.employer_declaration.direction = out
+interface.employer_declaration.counterpart = Skatteverket (file upload or API)
+interface.employer_declaration.format = XML file per SKV specification, or API
+interface.employer_declaration.status = listed
+interface.employer_declaration.milestone = M7
+
+interface.year_end_closing.title = Year-end closing (bokslut): closing vouchers, balance checks
+interface.year_end_closing.direction = out
+interface.year_end_closing.counterpart = The books themselves (I series vouchers), user checklist
+interface.year_end_closing.format = Vouchers as SIE 4 plus a checklist report
+interface.year_end_closing.code = src/reports/report.hpp, src/reports/planned_reports.cpp
+interface.year_end_closing.status = planned
+interface.year_end_closing.milestone = M4
+interface.year_end_closing.legal = BFL-6-1
+
+interface.annual_report_ixbrl.title = Annual report (årsredovisning) K2 to Bolagsverket
+interface.annual_report_ixbrl.direction = out
+interface.annual_report_ixbrl.counterpart = Bolagsverket digital submission
+interface.annual_report_ixbrl.format = Inline XBRL using the Swedish K2 taxonomy, plus fastställelseintyg
+interface.annual_report_ixbrl.spec = annual_report/k2_ixbrl.cspec
+interface.annual_report_ixbrl.code = src/reports/report.hpp, src/reports/planned_reports.cpp
+interface.annual_report_ixbrl.status = planned
+interface.annual_report_ixbrl.milestone = M5
+interface.annual_report_ixbrl.legal = BFL-6-1, ARL-2-1, ARL-8-3
+
+interface.ink2_sru.title = Corporate income tax return (INK2, INK2R, INK2S) as SRU files
+interface.ink2_sru.direction = out
+interface.ink2_sru.counterpart = Skatteverket e-service Filöverföring
+interface.ink2_sru.format = INFO.SRU and BLANKETTER.SRU per SKV 269
+interface.ink2_sru.spec = ink2/sru_files.cspec
+interface.ink2_sru.code = src/reports/report.hpp, src/reports/planned_reports.cpp
+interface.ink2_sru.status = planned
+interface.ink2_sru.milestone = M6
+interface.ink2_sru.legal = SFL-INK
+
+interface.ledger_reports.title = Journal (grundbok), general ledger (huvudbok) and voucher listings
+interface.ledger_reports.direction = out
+interface.ledger_reports.counterpart = User, auditor, Skatteverket on request
+interface.ledger_reports.format = Text or Markdown files
+interface.ledger_reports.status = listed
+interface.ledger_reports.milestone = M2
+interface.ledger_reports.legal = BFL-5-1
+
+interface.audit_trail.title = Processing history (behandlingshistorik) of every change cratchit makes
+interface.audit_trail.direction = out
+interface.audit_trail.counterpart = User, auditor
+interface.audit_trail.format = Append-only cspec log in .cratchit/history/
+interface.audit_trail.status = listed
+interface.audit_trail.milestone = M2
+interface.audit_trail.legal = BFL-5-11
+
+# --------------------------------------------------- internal transformations
+
+interface.sie_to_journal.title = SIE records to the in-memory journal (vouchers, postings, accounts)
+interface.sie_to_journal.direction = internal
+interface.sie_to_journal.counterpart = sie4_import
+interface.sie_to_journal.format = Generic SIE records to domain types
+interface.sie_to_journal.spec = sie/sie4.cspec
+interface.sie_to_journal.code = src/sie/sie_to_journal.hpp, src/sie/sie_to_journal.cpp
+interface.sie_to_journal.status = skeleton
+interface.sie_to_journal.milestone = M1
+
+interface.statement_to_events.title = Statement rows to financial events
+interface.statement_to_events.direction = internal
+interface.statement_to_events.counterpart = bank_statement_import, skv_account_statement_import
+interface.statement_to_events.format = Column mapping from the statement spec
+interface.statement_to_events.spec = statements/nordea_csv.cspec, statements/skv_account_csv.cspec, events/financial_event.cspec
+interface.statement_to_events.code = src/statements/csv_statement_reader.cpp
+interface.statement_to_events.status = skeleton
+interface.statement_to_events.milestone = M3
+
+interface.event_to_voucher.title = Financial event plus a template (earlier similar voucher) to a voucher candidate
+interface.event_to_voucher.direction = internal
+interface.event_to_voucher.counterpart = financial_event_listing, journal
+interface.event_to_voucher.format = Template matching on accounts, debit/credit pattern and heading words
+interface.event_to_voucher.status = planned
+interface.event_to_voucher.milestone = M3
+interface.event_to_voucher.legal = BFL-5-7
+
+interface.journal_to_vat_boxes.title = Journal postings in a VAT period to VAT return boxes
+interface.journal_to_vat_boxes.direction = internal
+interface.journal_to_vat_boxes.counterpart = journal, vat_return_eskd
+interface.journal_to_vat_boxes.format = BAS account to box mapping plus calculation rules
+interface.journal_to_vat_boxes.spec = vat/bas_to_vat_box.cspec, vat/vat_rules.cspec, vat/vat_boxes.cspec
+interface.journal_to_vat_boxes.code = src/vat/vat_calculation.hpp, src/vat/vat_calculation.cpp, src/vat/vat_spec.hpp, src/vat/vat_spec.cpp
+interface.journal_to_vat_boxes.status = skeleton
+interface.journal_to_vat_boxes.milestone = M1
+interface.journal_to_vat_boxes.legal = ML-VAT, SFL-26
+
+interface.journal_to_k2.title = Account balances to annual report (K2) line items
+interface.journal_to_k2.direction = internal
+interface.journal_to_k2.counterpart = journal, annual_report_ixbrl
+interface.journal_to_k2.format = BAS account ranges to K2 taxonomy elements, many to many with signs
+interface.journal_to_k2.spec = annual_report/k2_ixbrl.cspec
+interface.journal_to_k2.status = planned
+interface.journal_to_k2.milestone = M5
+
+interface.journal_to_sru.title = Account balances to INK2 SRU fields
+interface.journal_to_sru.direction = internal
+interface.journal_to_sru.counterpart = journal, ink2_sru
+interface.journal_to_sru.format = BAS account ranges to SRU field codes (SIE #SRU or BAS table)
+interface.journal_to_sru.spec = ink2/sru_files.cspec
+interface.journal_to_sru.status = planned
+interface.journal_to_sru.milestone = M6
+
+interface.sign_convention.title = Natural signs for the user (income +, cost −) to and from BAS debit/credit
+interface.sign_convention.direction = internal
+interface.sign_convention.counterpart = user_cli, journal
+interface.sign_convention.format = Account type decides the sign shown to the user
+interface.sign_convention.spec = bas/account_types.cspec
+interface.sign_convention.status = future
+interface.sign_convention.milestone = M7

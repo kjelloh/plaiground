@@ -1,0 +1,36 @@
+# EC sales list (periodisk sammanställning) as a file for Skatteverket's Filöverföring
+#
+# status future: not used by the company yet (no EU sales), pinned down so the
+# VAT return code can warn when box 35, 38 or 39 is non-zero.
+
+spec.id = vat.ec_sales_list
+spec.kind = format
+spec.version = 1
+spec.status = draft
+spec.title = Periodisk sammanställning file (SKV574008)
+spec.derived_by = hand
+spec.source.01.title = Skatteverket: Lämna periodisk sammanställning via e-tjänsten Filöverföring
+spec.source.01.url = https://www.skatteverket.se/foretag/moms/deklareramoms/periodisksammanstallning/lamnaperiodisksammanstallningmedfiloverforing.4.7eada0316ed67d72822104.html
+spec.source.02.title = Todo mail f11ad335 (notes on the format, 2022-04-28)
+
+file.encoding = iso-8859-1
+file.encoding.status = unverified
+file.extension = .txt or .csv
+csv.separator = ;
+
+row.01.content = SKV574008;
+row.01.note = Marks the file as a periodisk sammanställning
+
+row.02.field.01 = vat_number, 12 digits, with or without SE
+row.02.field.02 = period, YYMM for a month (2101) or YY-Q for a quarter (21-1)
+row.02.field.03 = responsible person name, max 35 characters (setting reporting.responsible_name)
+row.02.field.04 = phone, digits with '-' after the area code or leading '+', max 17 characters
+row.02.field.05 = e-mail, optional
+
+row.NN.field.01 = buyer VAT number with country code
+row.NN.field.02 = value of goods (max 12 digits including '-'), or X/Y/Z for call-off stock
+row.NN.field.03 = value of triangulation (trepartshandel)
+row.NN.field.04 = value of services (main rule)
+row.NN.note = SKV's own examples end rows with 3 or 4 separators. Test both with the SKV file test service
+
+triggers.vat_boxes = 35, 38, 39

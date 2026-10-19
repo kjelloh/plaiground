@@ -1,0 +1,42 @@
+# How cratchit computes a VAT return from the journal
+
+spec.id = vat.rules
+spec.kind = rules
+spec.version = 1
+spec.status = verified
+spec.title = VAT return calculation rules
+spec.derived_by = hand
+spec.source.01.title = take 1 SPEC.md section 4 (rules proven by three filed returns)
+spec.source.01.local = ../62c6984e/SPEC.md
+spec.source.02.title = take 1 findings on quarters that differ
+spec.source.02.local = ../62c6984e/_local/vat_findings.md
+
+period.selection = voucher_date
+period.selection.note = A voucher counts when its date is in the period. A correction counts in the period of its own date
+period.spans_financial_years = yes
+period.spans_financial_years.note = With FY 1 May - 30 April, the quarter April-June spans two SIE files
+
+settlement.exclude = yes
+settlement.series.setting = vat.settlement_series
+settlement.note = The settlement voucher (Fortnox series M, "Momsrapport") moves the period's VAT to 1650/2650. Counting it would cancel everything
+
+rounding.box = truncate
+rounding.box.note = Each box is cut to whole kronor (öre dropped). The öre difference is booked on 3740 by the settlement voucher
+rounding.box.status = verified
+
+box_49.output_vat_kinds = output_vat
+box_49.input_vat_kinds = input_vat
+box_49.formula = sum of truncated output_vat boxes - sum of truncated input_vat boxes
+box_49.always_present = yes
+box_49.negative.note = Negative means VAT to get back. Booked on 1650 (claim) instead of 2650 (debt)
+
+# Due dates for a company with turnover up to 40 MSEK and quarterly VAT.
+# Key: last month of the quarter. Value: MMDD of the due date in the following year (+1)
+# or the same year (+0).
+# A due date on a weekend or a public holiday moves to the next working day.
+deadline.quarterly.03 = +0 0512
+deadline.quarterly.06 = +0 0817
+deadline.quarterly.09 = +0 1112
+deadline.quarterly.12 = +1 0212
+deadline.status = unverified
+deadline.source = https://www.skatteverket.se/foretag/skatterochavdrag/viktigadatum

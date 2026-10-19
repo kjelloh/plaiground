@@ -1,0 +1,61 @@
+#FLAGGA 0
+#FORMAT PC8
+#SIETYP 4
+#PROGRAM "cratchit testdata" 1.0
+#GEN 20250101
+#FNAMN "Exempelbolaget AB"
+#ORGNR 556000-0175
+#RAR 0 20240501 20250430
+#RAR -1 20230501 20240430
+#KONTO 1650 "Momsfordran"
+#KONTO 1920 "PlusGiro"
+#KONTO 2614 "Utg†ende moms omv„nd skattskyldighet, 25 %"
+#KONTO 2641 "Debiterad ing†ende moms"
+#KONTO 2645 "Ber„knad ing†ende moms p† f”rv„rv fr†n utlandet"
+#KONTO 2893 "Skulder till n„rst†ende personer, kortfristig del"
+#KONTO 4010 "Ink”p av material och varor"
+#KONTO 6110 "Kontorsmateriel"
+#KONTO 6540 "IT-tj„nster"
+#KONTO 9021 "Varuv„rde ink”p annat EG-land"
+#KONTO 9099 "Motkonto varuv„rde"
+#SRU 1920 7281
+#IB 0 1920 1000.00
+#IB -1 1920 500.00
+#UB 0 1920 224.00
+
+#VER A 1 20240715 "Ink”p \"molntj„nst\"" 20240720
+{
+#TRANS 6540 {} 100.40 "" "Molntj„nst" 0
+#TRANS 2641 {} 25.10 "" "" 0
+#TRANS 1920 {} -125.50 "" "" 0
+}
+#VER A 2 20240801 "EU-ink”p varor" 20240805
+{
+#TRANS 4010 {} 400.00
+#TRANS 1920 {} -400.00
+#TRANS 9021 {} 400.00
+#TRANS 9099 {} -400.00
+#TRANS 2645 {} 100.00
+#TRANS 2614 {} -100.00
+}
+#VER A 3 20240810 "Utl„gg kontorsmaterial" 20240812
+{
+#TRANS 1920 {} -250.50 "" "Kontorsmaterial" 0
+#BTRANS 2893 {} 250.50 "" "Felkonterat" 0 "Signatur"
+#RTRANS 6110 {} 200.40 "" "" 0 "Signatur"
+#TRANS 6110 {} 200.40 "" "" 0
+#TRANS 2641 {} 50.10
+}
+#VER M 1 20240930 "Momsrapport jul-sep" 20241010
+{
+#TRANS 2641 {} -75.20
+#TRANS 2645 {} -100.00
+#TRANS 2614 {} 100.00
+#TRANS 1650 {} 75.20
+}
+#VER A 4 20241002 "Utanf”r perioden" 20241002
+{
+#TRANS 6540 {} 80.00
+#TRANS 2641 {} 20.00
+#TRANS 1920 {} -100.00
+}

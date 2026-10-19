@@ -1,0 +1,48 @@
+# Skatteverket tax account (skattekonto) statement CSV
+#
+# Exported from the e-service "Skattekonto" as "Bokförda transaktioner".
+# The rows are of different kinds: the first row holds company name and org number,
+# then come opening balance, transactions and closing balance rows.
+# Only transaction rows have a date in the first column.
+# Keys: see statements/nordea_csv.cspec.
+#
+# Later: the Skattekonto API on Skatteverket's developer portal returns the same data
+# (balance and transactions). See interface skv_account_statement_import.
+
+spec.id = statements.skv_account_csv
+spec.kind = format
+spec.version = 1
+spec.status = draft
+spec.title = Skatteverket tax account statement CSV
+spec.derived_by = hand
+spec.source.01.title = Example rows in the old cratchit issue #ISSUE20260114_SKV_CSV
+spec.source.01.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/issues/
+spec.source.02.title = Skatteverket API Skattekonto, service description
+spec.source.02.url = https://www7.skatteverket.se/portal-wapi/open/apier-och-oppna-data/utvecklarportalen/v1/getFile/tjanstebeskrivning-skattekonto
+
+file.encoding = iso-8859-1
+file.encoding.status = unverified
+
+csv.separator = ;
+csv.quote = "\""
+csv.header_rows = 0
+csv.trailing_separator = no
+
+column.01 = Datum
+column.02 = Text
+column.03 = Belopp
+column.04 = Saldo
+
+amount.decimal_separator = ,
+amount.thousands_separator = " "
+amount.thousands_separator.note = May also be a no-break space (U+00A0). The reader accepts both
+
+event.date.column = Datum
+event.date.format = YYYY-MM-DD
+event.amount.column = Belopp
+event.heading.columns = Text
+event.heading.join = " | "
+event.balance.column = Saldo
+event.account.setting = statements.skv.account
+
+row.require_date = yes

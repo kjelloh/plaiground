@@ -1,0 +1,70 @@
+# BAS account type (T asset, S equity/liability, I income, K cost)
+#
+# Needed for SIE #KTYP (Fortnox exports omit it), for closing the year, and for
+# showing natural signs to the user.
+#
+# Lookup order, first match wins:
+#   1. #KTYP in the SIE file
+#   2. account.<NNNN>.type  (single account)
+#   3. group.<NN>.type      (first two digits)
+#   4. class.<N>.type       (first digit)
+#
+# normal_balance: debit for T and K, credit for S and I.
+
+spec.id = bas.account_types
+spec.kind = mapping
+spec.version = 1
+spec.status = draft
+spec.title = BAS account types by class, group and account
+spec.derived_by = hand
+spec.source.01.title = BAS kontoplan 2026 (free xlsx, no type column)
+spec.source.01.url = https://www.bas.se/kontoplaner/
+spec.source.01.local = ../62c6984e/_docs/BAS_kontoplan_2026_v2.xlsx
+spec.source.02.title = BAS Kontoplan dataformat (describes the paid JSON, which has normalBalance)
+spec.source.02.local = ../62c6984e/_docs/Kontoplan-Dataformat.pdf
+spec.note = Class 8 is mixed. Group types below are a first guess and must be checked against the BAS group headings
+
+type.T.title = Tillgång (asset)
+type.T.normal_balance = debit
+type.S.title = Skuld eller eget kapital (liability or equity)
+type.S.normal_balance = credit
+type.I.title = Intäkt (income)
+type.I.normal_balance = credit
+type.K.title = Kostnad (cost)
+type.K.normal_balance = debit
+
+class.1.type = T
+class.2.type = S
+class.3.type = I
+class.4.type = K
+class.5.type = K
+class.6.type = K
+class.7.type = K
+class.8.type = mixed
+
+group.80.type = I
+group.80.status = unverified
+group.80.note = Resultat från andelar i koncernföretag. Has both income and write-downs
+group.81.type = I
+group.81.status = unverified
+group.81.note = Resultat från andelar i intresseföretag. Mixed like 80
+group.82.type = I
+group.82.status = unverified
+group.82.note = Resultat från övriga värdepapper och långfristiga fordringar. Mixed like 80
+group.83.type = I
+group.83.status = unverified
+group.83.note = Övriga ränteintäkter. Our books use 8310 and 8314 (tax-free interest from the tax account)
+group.84.type = K
+group.84.status = unverified
+group.84.note = Räntekostnader
+group.88.type = K
+group.88.status = unverified
+group.88.note = Bokslutsdispositioner. Can go both ways (periodiseringsfond set up or reversed)
+group.89.type = K
+group.89.status = unverified
+group.89.note = Skatter och årets resultat
+
+# Accounts outside the business accounts (class 9 in our books, e.g. 9021, 9022, 9099)
+class.9.type = K
+class.9.status = unverified
+class.9.note = Own statistical accounts for VAT boxes 20 and 50. They always cancel out against 9099

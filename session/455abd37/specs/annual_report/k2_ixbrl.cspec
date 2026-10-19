@@ -1,0 +1,39 @@
+# Annual report (årsredovisning) for a smaller AB under K2, filed digitally (planned, M5)
+#
+# The K2 taxonomy gives every line of the annual report a name (an XBRL element).
+# Those names are the "codes" that todo mail 94d5fe3e (2019) found missing.
+# Plan: generate k2.element.<name>.* from the taxonomy files, and keep cratchit's own
+#   bas_to_k2.<element>.accounts = 1220-1229
+#   bas_to_k2.<element>.sign = debit
+# The mapping is many-to-many and uses BAS ranges like "54xx" (todo mail 9e55894e).
+
+spec.id = annual_report.k2_ixbrl
+spec.kind = format
+spec.version = 1
+spec.status = draft
+spec.title = K2 annual report as Inline XBRL for Bolagsverket
+spec.derived_by = hand
+spec.source.01.title = Bolagsverket: digital inlämning av årsredovisning (API for software vendors)
+spec.source.01.url = https://bolagsverket.se/omoss/utvecklingavdigitalatjanster/digitalinlamning
+spec.source.02.title = Swedish XBRL taxonomies (K2 annual report, fastställelseintyg)
+spec.source.02.url = https://www.taxonomier.se/
+spec.source.03.title = BFNAR 2016:10 K2 (structure of the report)
+spec.source.03.url = https://www.bfn.se/redovisningsregler/vagledningar/arsredovisning-i-mindre-foretag/
+spec.source.04.title = Old cratchit text templates for the five parts
+spec.source.04.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/resources/annual_report/
+spec.note = The URLs of sources 01 and 02 are not checked yet
+
+format = Inline XBRL (XHTML with XBRL tags)
+submission = Machine to machine API, the signer confirms with e-ID
+
+part.01 = fastställelseintyg
+part.01.note = Signed by a board member or the managing director. Says the AGM adopted the report
+part.02 = förvaltningsberättelse
+part.02.note = Includes flerårsöversikt (in tkr), förändringar i eget kapital and resultatdisposition
+part.03 = resultaträkning
+part.04 = balansräkning
+part.05 = noter
+
+lesson.01 = Soliditet = justerat eget kapital / totala tillgångar (todo mail a1851123)
+lesson.02 = Förändringar i eget kapital uses the opening and closing balances of 2091 and 2099 (todo mail a1851123)
+lesson.03 = Fortnox did not carry forward opening balances; check IB = last year's UB before closing (todo mails a809a814, a74f47ba)

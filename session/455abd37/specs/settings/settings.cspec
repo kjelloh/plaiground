@@ -1,0 +1,24 @@
+# Company settings: the schema and default values
+#
+# The user's own file is .cratchit/settings.cspec with lines like
+#   vat.settlement_series = M
+# Paths not listed here are an error. Missing paths take the default.
+# The org number and financial years come from the SIE files, not from settings.
+
+spec.id = settings
+spec.kind = settings
+spec.version = 1
+spec.status = draft
+spec.title = cratchit settings schema with defaults
+spec.derived_by = hand
+
+setting.vat.period_length.default = quarter
+setting.vat.period_length.allowed = month, quarter, year
+setting.vat.settlement_series.default = M
+setting.vat.settlement_series.note = Voucher series of the VAT settlement voucher. Fortnox uses M
+setting.statements.nordea.account.default = 1920
+setting.statements.skv.account.default = 1630
+setting.archive.dir.default = .cratchit/archive
+setting.reporting.responsible_name.default = ""
+setting.reporting.responsible_name.note = Needed for the EC sales list (max 35 characters)
+setting.reporting.responsible_phone.default = ""

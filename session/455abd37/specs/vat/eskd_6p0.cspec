@@ -1,0 +1,80 @@
+# eSKDUpload 6.0: the VAT return file uploaded to Skatteverket
+#
+# The DTD URL in filed files returns 404 (checked 2026-10-19 in take 1).
+# Element order is therefore taken from SKV's complete example 6.
+# take 2 reproduces all 14 local filed files (2020-2025) value for value,
+# and 11 of them byte for byte (tests/real_files_test.cpp).
+
+spec.id = vat.eskd_6p0
+spec.kind = format
+spec.version = 1
+spec.status = verified
+spec.title = eSKDUpload version 6.0 file layout
+spec.derived_by = hand
+spec.source.01.title = Skatteverket: Lämna momsdeklaration via fil
+spec.source.01.url = https://www.skatteverket.se/foretag/moms/deklareramoms/skapaochskickainmomsdeklarationviafil.4.2fb39afe18dabf1e4d223cc.html
+spec.source.02.title = SKV example 6 (all boxes)
+spec.source.02.local = testdata/skv_example_6.eskd
+spec.source.03.title = Three filed files (local only, not in git)
+spec.source.03.local = ../62c6984e/_eskd_irl/
+
+file.encoding = iso-8859-1
+file.xml_declaration = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>"
+file.doctype = "<!DOCTYPE eSKDUpload PUBLIC \"-//Skatteverket, Sweden//DTD Skatteverket eSKDUpload-DTD Version 6.0//SV\" \"https://www1.skatteverket.se/demoeskd/eSKDUpload_6p0.dtd\">"
+file.include_doctype = yes
+file.include_doctype.note = Filed files have the DOCTYPE. SKV's examples do not. Both are accepted
+file.body_on_one_line = yes
+file.body_on_one_line.note = Filed files have everything after the DOCTYPE on one line. SKV's examples have one element per line
+file.final_newline = yes
+
+root.element = eSKDUpload
+root.attribute.Version = 6.0
+org_nr.element = OrgNr
+org_nr.format = NNNNNN-NNNN
+org_nr.source = SIE #ORGNR
+moms.element = Moms
+period.element = Period
+period.format = YYYYMM
+period.note = The last month of the reporting period, e.g. 202409 for July-September 2024
+
+amount.format = whole kronor, digits only, optional leading '-'
+amount.omit_zero = yes
+amount.omit_zero.note = Box 49 is always written, also when zero
+amount.omit_zero.history = Filed files from 2020-07 and 2021-02 (and the old cratchit) write every box, zeros included. Values are the same. From 2021-11 on, zero boxes are left out
+
+# Element order inside <Moms>, after <Period>. Values are box numbers from vat_boxes.cspec,
+# except 'note' which is the free text element below.
+order.01 = 05
+order.02 = 06
+order.03 = 07
+order.04 = 08
+order.05 = 20
+order.06 = 21
+order.07 = 22
+order.08 = 23
+order.09 = 24
+order.10 = 50
+order.11 = 35
+order.12 = 36
+order.13 = 37
+order.14 = 38
+order.15 = 39
+order.16 = 40
+order.17 = 41
+order.18 = 42
+order.19 = 10
+order.20 = 11
+order.21 = 12
+order.22 = 30
+order.23 = 31
+order.24 = 32
+order.25 = 60
+order.26 = 61
+order.27 = 62
+order.28 = 48
+order.29 = 49
+order.30 = note
+
+note.element = TextUpplysningMoms
+note.max_length = 300
+note.escape = xml

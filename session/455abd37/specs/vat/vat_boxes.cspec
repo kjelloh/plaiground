@@ -1,0 +1,146 @@
+# The boxes (rutor) of the Swedish VAT return (momsdeklaration)
+#
+# box.<NN>.element  eSKD 6.0 XML element name
+# box.<NN>.title    box text on the form (Swedish)
+# box.<NN>.kind     base (an amount the VAT is computed from, or a statistical value)
+#                   | output_vat | input_vat | result
+# box.<NN>.section  section letter on the form
+
+spec.id = vat.boxes
+spec.kind = mapping
+spec.version = 1
+spec.status = checked
+spec.title = VAT return boxes and their eSKD element names
+spec.derived_by = hand
+spec.source.01.title = Skatteverket: Lämna momsdeklaration via fil (eSKDUpload 6.0, examples 1-6)
+spec.source.01.url = https://www.skatteverket.se/foretag/moms/deklareramoms/skapaochskickainmomsdeklarationviafil.4.2fb39afe18dabf1e4d223cc.html
+spec.source.01.local = testdata/skv_example_6.eskd
+spec.source.02.title = Skatteverket: VAT items box by box (English)
+spec.source.02.url = https://www.skatteverket.se/servicelankar/otherlanguages/inenglish/businessesandemployers/startingandrunningaswedishbusiness/declaringtaxesbusinesses/vat/vatitemsboxbybox.4.3dfca4f410f4fc63c8680004502.html
+spec.note = Element names are checked against SKV example 6. Titles are written from notes and still need checking (status unverified)
+
+box.05.element = ForsMomsEjAnnan
+box.05.title = Momspliktig försäljning som inte ingår i ruta 06, 07 eller 08
+box.05.kind = base
+box.05.section = A
+box.06.element = UttagMoms
+box.06.title = Momspliktiga uttag
+box.06.kind = base
+box.06.section = A
+box.07.element = UlagMargbesk
+box.07.title = Beskattningsunderlag vid vinstmarginalbeskattning
+box.07.kind = base
+box.07.section = A
+box.08.element = HyrinkomstFriv
+box.08.title = Hyresinkomster vid frivillig skattskyldighet
+box.08.kind = base
+box.08.section = A
+
+box.10.element = MomsUtgHog
+box.10.title = Utgående moms 25 %
+box.10.kind = output_vat
+box.10.section = B
+box.11.element = MomsUtgMedel
+box.11.title = Utgående moms 12 %
+box.11.kind = output_vat
+box.11.section = B
+box.12.element = MomsUtgLag
+box.12.title = Utgående moms 6 %
+box.12.kind = output_vat
+box.12.section = B
+
+box.20.element = InkopVaruAnnatEg
+box.20.title = Inköp av varor från ett annat EU-land
+box.20.kind = base
+box.20.section = C
+box.21.element = InkopTjanstAnnatEg
+box.21.title = Inköp av tjänster från ett annat EU-land enligt huvudregeln
+box.21.kind = base
+box.21.section = C
+box.22.element = InkopTjanstUtomEg
+box.22.title = Inköp av tjänster från ett land utanför EU
+box.22.kind = base
+box.22.section = C
+box.23.element = InkopVaruSverige
+box.23.title = Inköp av varor i Sverige som köparen är skattskyldig för
+box.23.kind = base
+box.23.section = C
+box.24.element = InkopTjanstSverige
+box.24.title = Övriga inköp av tjänster
+box.24.kind = base
+box.24.section = C
+
+box.30.element = MomsInkopUtgHog
+box.30.title = Utgående moms 25 % på inköp i ruta 20-24
+box.30.kind = output_vat
+box.30.section = D
+box.31.element = MomsInkopUtgMedel
+box.31.title = Utgående moms 12 % på inköp i ruta 20-24
+box.31.kind = output_vat
+box.31.section = D
+box.32.element = MomsInkopUtgLag
+box.32.title = Utgående moms 6 % på inköp i ruta 20-24
+box.32.kind = output_vat
+box.32.section = D
+
+box.35.element = ForsVaruAnnatEg
+box.35.title = Försäljning av varor till ett annat EU-land
+box.35.kind = base
+box.35.section = E
+box.35.note = Must also be reported in the EC sales list (periodisk sammanställning)
+box.36.element = ForsVaruUtomEg
+box.36.title = Försäljning av varor utanför EU
+box.36.kind = base
+box.36.section = E
+box.37.element = InkopVaruMellan3p
+box.37.title = Mellanmans inköp av varor vid trepartshandel
+box.37.kind = base
+box.37.section = E
+box.38.element = ForsVaruMellan3p
+box.38.title = Mellanmans försäljning av varor vid trepartshandel
+box.38.kind = base
+box.38.section = E
+box.39.element = ForsTjSkskAnnatEg
+box.39.title = Försäljning av tjänster till en näringsidkare i ett annat EU-land enligt huvudregeln
+box.39.kind = base
+box.39.section = E
+box.40.element = ForsTjOvrUtomEg
+box.40.title = Övrig försäljning av tjänster omsatta utanför Sverige
+box.40.kind = base
+box.40.section = E
+box.41.element = ForsKopareSkskSverige
+box.41.title = Försäljning när köparen är skattskyldig i Sverige
+box.41.kind = base
+box.41.section = E
+box.42.element = ForsOvrigt
+box.42.title = Övrig försäljning m.m.
+box.42.kind = base
+box.42.section = E
+
+box.48.element = MomsIngAvdr
+box.48.title = Ingående moms att dra av
+box.48.kind = input_vat
+box.48.section = F
+
+box.49.element = MomsBetala
+box.49.title = Moms att betala eller få tillbaka
+box.49.kind = result
+box.49.section = G
+
+box.50.element = MomsUlagImport
+box.50.title = Beskattningsunderlag vid import
+box.50.kind = base
+box.50.section = H
+
+box.60.element = MomsImportUtgHog
+box.60.title = Utgående moms 25 % på import i ruta 50
+box.60.kind = output_vat
+box.60.section = I
+box.61.element = MomsImportUtgMedel
+box.61.title = Utgående moms 12 % på import i ruta 50
+box.61.kind = output_vat
+box.61.section = I
+box.62.element = MomsImportUtgLag
+box.62.title = Utgående moms 6 % på import i ruta 50
+box.62.kind = output_vat
+box.62.section = I

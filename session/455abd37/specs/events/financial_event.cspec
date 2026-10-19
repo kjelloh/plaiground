@@ -1,0 +1,54 @@
+# Financial event listing: the seed for booking a voucher
+#
+# A financial event is what happened, before it is booked: a date, an amount and a heading.
+# The old cratchit called it a HAD (Heading, Amount, Date).
+# Events come from statement imports, from receipts and invoices, or from the user.
+# One or more events (e.g. an invoice and its payment) are later booked as vouchers.
+#
+# A listing is itself a cspec file:
+#
+#   event.0001.date = 20251229
+#   event.0001.amount = -1158.75
+#   event.0001.heading = "LOOPIA AB (WEBSUPPORT) | 62500016901740"
+#   event.0001.account = 1920
+#   event.0001.source.interface = bank_statement_import
+#   event.0001.source.file = nordea_2025q4.csv
+#   event.0001.source.row = 2
+#
+# This file is the schema of that listing.
+
+spec.id = events.financial_event
+spec.kind = schema
+spec.version = 1
+spec.status = draft
+spec.title = Financial event (HAD) listing
+spec.derived_by = hand
+spec.source.01.title = Old cratchit todo 04292213 (HAD aggregation into one financial event)
+spec.source.01.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/todo/04292213/todo.md
+spec.source.02.title = Todo mail 789d1d1b (fix date, amount and heading first) and cff894eb (anticipate vouchers from history)
+
+field.date.type = date
+field.date.required = yes
+field.amount.type = amount
+field.amount.required = yes
+field.amount.note = Seen from the account in field 'account': + money in, - money out
+field.heading.type = string
+field.heading.required = yes
+field.account.type = account
+field.account.required = no
+field.account.note = The BAS account the statement belongs to (1920 bank, 1630 tax account). Empty for receipts
+field.source.interface.type = word
+field.source.interface.required = yes
+field.source.file.type = string
+field.source.file.required = no
+field.source.row.type = int
+field.source.row.required = no
+field.document.type = string
+field.document.required = no
+field.document.note = sha256 of the underlying document in the archive (planned)
+field.voucher.type = string
+field.voucher.required = no
+field.voucher.note = Series and number, e.g. A-39, once the event is booked
+field.group.type = string
+field.group.required = no
+field.group.note = Events with the same group are one business event (e.g. invoice and payment) (planned)

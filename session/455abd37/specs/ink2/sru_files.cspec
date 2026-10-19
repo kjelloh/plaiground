@@ -1,0 +1,36 @@
+# INK2 income tax return as SRU files (planned, milestone M6)
+#
+# This file only pins down what is known so far. The field lists are generated
+# later from SKV's xls files (one per form and year) by a converter tool:
+#   ink2r.field.<code>.title / .type / .required / .rule
+#   bas_to_sru.<code>.accounts  from BAS "INK2 P1 intervall" (free from bas.se)
+
+spec.id = ink2.sru_files
+spec.kind = format
+spec.version = 1
+spec.status = draft
+spec.title = INK2 via SRU files (INFO.SRU and BLANKETTER.SRU)
+spec.derived_by = hand
+spec.source.01.title = Skatteverket SKV 269: technical description of SRU files, per tax year
+spec.source.01.url = https://www.skatteverket.se/foretag/etjansterochblanketter/blanketterbroschyrer/broschyrer/info/269.4.39f16f103821c58f680007305.html
+spec.source.01.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/skv_specs/_Nyheter_from_beskattningsperiod_2024P4 (2)/
+spec.source.02.title = BAS: SRU koppling INK2 (intervall)
+spec.source.02.url = https://www.bas.se/kontoplaner/sru/
+spec.source.02.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/resources/BAS/INK2_P1_intervall-241119.csv
+spec.source.03.title = SIE #SRU records (Fortnox puts an SRU code on every account)
+
+files.01 = INFO.SRU
+files.01.note = Who sends the files (the sender's identity and contact)
+files.02 = BLANKETTER.SRU
+files.02.note = One block per form: INK2 (main), INK2R (balance and income statement), INK2S (tax adjustments)
+
+forms.01 = INK2
+forms.02 = INK2R
+forms.03 = INK2S
+
+field_definitions.INK2R.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/skv_specs/_Nyheter_from_beskattningsperiod_2024P4 (2)/INK2R_SKV2002-33-01-24-04.xls
+field_definitions.INK2S.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/skv_specs/_Nyheter_from_beskattningsperiod_2024P4 (2)/INK2S_SKV2002-33-01-24-04.xls
+field_definitions.INK2.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/skv_specs/_Nyheter_from_beskattningsperiod_2024P4 (2)/INK2_SKV2002-33-01-24-04.xls
+
+lesson.01 = INK2S 4.14a: deduct last year's confirmed deficit (föregående års fastställda underskott). Missed in 2024 (todo mail a4962c14)
+lesson.02 = The INK2R amounts match the annual report except for one item that SKV wants split in two (todo mail 94d5fe3e)

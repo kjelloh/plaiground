@@ -1,0 +1,172 @@
+# Legal requirements that cratchit must adhere to, and how
+#
+# Per requirement:
+#   law        statute or norm
+#   ref        chapter and section
+#   summary    what it requires, in our own words (not a quote)
+#   mechanism  comma-separated cratchit mechanism ids (see mechanism.* below)
+#   status     unverified (written from notes or memory, check against the source)
+#              | checked (compared to the source text)
+#
+# Every mechanism has a status: implemented | partial | planned.
+# src/legal/compliance.cpp has the code-side list of mechanisms.
+# tests/specs_test.cpp checks that the two agree.
+#
+# NOTE: This is scaffolding for a bookkeeping tool, not legal advice.
+#       Each summary must be checked against the current law text before
+#       cratchit is relied on.
+
+spec.id = cratchit.legal.requirements
+spec.kind = legal
+spec.version = 1
+spec.status = draft
+spec.title = Legal requirements and cratchit adherence mechanisms
+spec.derived_by = hand
+spec.source.01.title = Bokföringslag (1999:1078)
+spec.source.01.url = https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/bokforingslag-19991078_sfs-1999-1078/
+spec.source.02.title = Årsredovisningslag (1995:1554)
+spec.source.02.url = https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/arsredovisningslag-19951554_sfs-1995-1554/
+spec.source.03.title = Skatteförfarandelag (2011:1244)
+spec.source.03.url = https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/skatteforfarandelag-20111244_sfs-2011-1244/
+spec.source.04.title = Mervärdesskattelag (2023:200)
+spec.source.04.url = https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/mervardesskattelag-2023200_sfs-2023-200/
+spec.source.05.title = BFNAR 2013:2 Bokföring (Bokföringsnämndens allmänna råd)
+spec.source.05.url = https://www.bfn.se/redovisningsregler/vagledningar/bokforing/
+spec.source.06.title = BFNAR 2016:10 Årsredovisning i mindre företag (K2)
+spec.source.06.url = https://www.bfn.se/redovisningsregler/vagledningar/arsredovisning-i-mindre-foretag/
+
+# ------------------------------------------------------- Bokföringslagen
+
+requirement.BFL-4-1.law = Bokföringslag (1999:1078)
+requirement.BFL-4-1.ref = 4 kap. 1 §
+requirement.BFL-4-1.summary = Record business events continuously, keep vouchers, close each year (for an AB with an annual report) and archive the accounting records
+requirement.BFL-4-1.mechanism = voucher_balances, voucher_required_fields, append_only_journal, archive_retention
+requirement.BFL-4-1.status = unverified
+
+requirement.BFL-5-1.law = Bokföringslag (1999:1078)
+requirement.BFL-5-1.ref = 5 kap. 1 §
+requirement.BFL-5-1.summary = Business events must be presentable both in registration order (grundbokföring) and in account order (huvudbokföring)
+requirement.BFL-5-1.mechanism = registration_order, ledger_listing
+requirement.BFL-5-1.status = unverified
+
+requirement.BFL-5-2.law = Bokföringslag (1999:1078)
+requirement.BFL-5-2.ref = 5 kap. 2 §
+requirement.BFL-5-2.summary = Cash payments must be booked no later than the next working day, other events as soon as possible
+requirement.BFL-5-2.mechanism = booking_lag_warning
+requirement.BFL-5-2.status = unverified
+requirement.BFL-5-2.note = BFNAR 2013:2 allows later booking for non-cash events in small businesses. Check the details
+
+requirement.BFL-5-5.law = Bokföringslag (1999:1078)
+requirement.BFL-5-5.ref = 5 kap. 5 §
+requirement.BFL-5-5.summary = A wrong entry is corrected, never erased. The correction shows when it was made and by whom
+requirement.BFL-5-5.mechanism = append_only_journal, correction_by_voucher, audit_log
+requirement.BFL-5-5.status = unverified
+
+requirement.BFL-5-6.law = Bokföringslag (1999:1078)
+requirement.BFL-5-6.ref = 5 kap. 6 §
+requirement.BFL-5-6.summary = Every business event has a voucher (verifikation)
+requirement.BFL-5-6.mechanism = voucher_required_fields, document_link
+requirement.BFL-5-6.status = unverified
+
+requirement.BFL-5-7.law = Bokföringslag (1999:1078)
+requirement.BFL-5-7.ref = 5 kap. 7 §
+requirement.BFL-5-7.summary = A voucher shows when it was made, when the event happened, what it is about, the amount, the counterparty, and an identifying number
+requirement.BFL-5-7.mechanism = voucher_required_fields, document_link
+requirement.BFL-5-7.status = unverified
+requirement.BFL-5-7.note = SIE #VER has date, text, series and number. The counterparty and the document usually live in the underlying document
+
+requirement.BFL-5-11.law = Bokföringslag (1999:1078)
+requirement.BFL-5-11.ref = 5 kap. 11 §
+requirement.BFL-5-11.summary = Keep a description of how the bookkeeping system is organised (systemdokumentation) and a record of the processing done (behandlingshistorik)
+requirement.BFL-5-11.mechanism = spec_files_as_system_documentation, output_provenance, audit_log
+requirement.BFL-5-11.status = unverified
+
+requirement.BFL-6-1.law = Bokföringslag (1999:1078)
+requirement.BFL-6-1.ref = 6 kap. 1 §
+requirement.BFL-6-1.summary = An aktiebolag closes the bookkeeping of each financial year with an annual report
+requirement.BFL-6-1.mechanism = year_end_checklist
+requirement.BFL-6-1.status = unverified
+
+requirement.BFL-7-1.law = Bokföringslag (1999:1078)
+requirement.BFL-7-1.ref = 7 kap. 1 §
+requirement.BFL-7-1.summary = Accounting records (räkenskapsinformation: vouchers, ledgers, system documentation, annual reports …) must be preserved
+requirement.BFL-7-1.mechanism = archive_retention, document_link
+requirement.BFL-7-1.status = unverified
+
+requirement.BFL-7-2.law = Bokföringslag (1999:1078)
+requirement.BFL-7-2.ref = 7 kap. 2 §
+requirement.BFL-7-2.summary = Keep the accounting records until the end of the seventh year after the calendar year in which the financial year ended, in a durable and accessible form
+requirement.BFL-7-2.mechanism = archive_retention
+requirement.BFL-7-2.status = unverified
+requirement.BFL-7-2.note = Rules about destroying paper originals after scanning changed in 2024. Check 7 kap. 6 § (?)
+
+# ------------------------------------------------- Årsredovisningslagen
+
+requirement.ARL-2-1.law = Årsredovisningslag (1995:1554)
+requirement.ARL-2-1.ref = 2 kap. 1 §
+requirement.ARL-2-1.summary = The annual report has a balance sheet, an income statement, notes and a directors' report
+requirement.ARL-2-1.mechanism = annual_report_structure
+requirement.ARL-2-1.status = unverified
+
+requirement.ARL-8-3.law = Årsredovisningslag (1995:1554)
+requirement.ARL-8-3.ref = 8 kap. 3 §
+requirement.ARL-8-3.summary = A copy of the adopted annual report with a fastställelseintyg is filed with Bolagsverket after the annual general meeting
+requirement.ARL-8-3.mechanism = deadline_calendar
+requirement.ARL-8-3.status = unverified
+requirement.ARL-8-3.note = Bolagsverket charges a late fee if the report arrives later than seven months after the end of the financial year (?)
+
+# ------------------------------------------------------------ tax
+
+requirement.SFL-26.law = Skatteförfarandelag (2011:1244)
+requirement.SFL-26.ref = 26 kap.
+requirement.SFL-26.summary = VAT is declared in a momsdeklaration for each reporting period, by the due date
+requirement.SFL-26.mechanism = vat_rules_from_spec, deadline_calendar, output_provenance
+requirement.SFL-26.status = unverified
+requirement.SFL-26.note = Quarterly VAT: due on the 12th of the second month after the quarter (17 August and 12 February in some cases). See vat/vat_rules.cspec
+
+requirement.ML-VAT.law = Mervärdesskattelag (2023:200)
+requirement.ML-VAT.ref = whole law
+requirement.ML-VAT.summary = What is taxable, the rates (25, 12, 6 %), reverse charge on EU and import purchases, and the right to deduct input VAT
+requirement.ML-VAT.mechanism = vat_rules_from_spec
+requirement.ML-VAT.status = unverified
+
+requirement.SFL-INK.law = Skatteförfarandelag (2011:1244)
+requirement.SFL-INK.ref = 30 kap. (?)
+requirement.SFL-INK.summary = An aktiebolag files an income tax return (INK2) for each financial year, by a due date that depends on when the financial year ends
+requirement.SFL-INK.mechanism = deadline_calendar
+requirement.SFL-INK.status = unverified
+
+# ------------------------------------------------------------ mechanisms
+
+mechanism.voucher_balances.title = A voucher's postings sum to zero
+mechanism.voucher_balances.status = implemented
+mechanism.voucher_required_fields.title = A voucher has series, number, date and text, and at least two postings
+mechanism.voucher_required_fields.status = implemented
+mechanism.output_provenance.title = Every generated file gets a provenance record: inputs with hashes, spec ids and versions, vouchers used
+mechanism.output_provenance.status = partial
+mechanism.spec_files_as_system_documentation.title = The spec files and docs/ describe how cratchit processes data. They are versioned in git
+mechanism.spec_files_as_system_documentation.status = partial
+mechanism.vat_rules_from_spec.title = VAT boxes, account mapping and rounding come from spec files, not from code
+mechanism.vat_rules_from_spec.status = partial
+mechanism.append_only_journal.title = Posted vouchers are never changed or deleted. Unposted (staged) vouchers can be edited
+mechanism.append_only_journal.status = planned
+mechanism.correction_by_voucher.title = A correction is a new voucher that references the voucher it corrects
+mechanism.correction_by_voucher.status = planned
+mechanism.audit_log.title = Every command that changes data appends who, when and what to .cratchit/history/
+mechanism.audit_log.status = planned
+mechanism.registration_order.title = Vouchers keep their registration order and date (SIE regdatum)
+mechanism.registration_order.status = planned
+mechanism.ledger_listing.title = Print journal and general ledger
+mechanism.ledger_listing.status = planned
+mechanism.booking_lag_warning.title = Warn when an event is booked long after its date
+mechanism.booking_lag_warning.status = planned
+mechanism.document_link.title = A voucher links to its underlying document by content hash
+mechanism.document_link.status = planned
+mechanism.archive_retention.title = Archived files carry a keep-until date and cratchit refuses to delete them before it
+mechanism.archive_retention.status = planned
+mechanism.year_end_checklist.title = Year-end checklist: reconcile bank, tax account, VAT accounts and opening balances
+mechanism.year_end_checklist.status = planned
+mechanism.annual_report_structure.title = The annual report is generated from the K2 taxonomy structure
+mechanism.annual_report_structure.status = planned
+mechanism.deadline_calendar.title = Due dates for declarations and filings are computed from rules in spec files
+mechanism.deadline_calendar.status = planned

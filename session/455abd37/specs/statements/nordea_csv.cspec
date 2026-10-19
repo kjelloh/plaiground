@@ -1,0 +1,54 @@
+# Nordea account statement CSV, as exported from the internet bank
+#
+# Shared statement keys (also used by skv_account_csv.cspec):
+#   csv.*                  how to split the file into rows and fields
+#   column.NN              column names in file order (NN = position, 01 = first)
+#   amount.*               how amounts are written
+#   event.date.column      which column holds the event date, and event.date.format
+#   event.amount.column    which column holds the amount (+ money in, - money out)
+#   event.heading.columns  columns joined into the event heading
+#   event.balance.column   optional running balance
+#   row.require_date       rows whose date column is not a valid date are skipped
+#                          (header rows, opening and closing balance rows)
+
+spec.id = statements.nordea_csv
+spec.kind = format
+spec.version = 1
+spec.status = draft
+spec.title = Nordea account statement CSV
+spec.derived_by = hand
+spec.source.01.title = Example rows in the old cratchit issue about the CSV import pipeline
+spec.source.01.local = /Users/kjell-olovhogdahl/Documents/GitHub/cratchit/issues/
+spec.note = Written from one real export (2025-12). Check the encoding and whether a BOM is present
+
+file.encoding = utf-8
+file.encoding.status = unverified
+
+csv.separator = ;
+csv.quote = "\""
+csv.header_rows = 1
+csv.trailing_separator = yes
+
+column.01 = Bokföringsdag
+column.02 = Belopp
+column.03 = Avsändare
+column.04 = Mottagare
+column.05 = Namn
+column.06 = Ytterligare detaljer
+column.07 = Meddelande
+column.08 = Egna anteckningar
+column.09 = Saldo
+column.10 = Valuta
+
+amount.decimal_separator = ,
+amount.thousands_separator = ""
+
+event.date.column = Bokföringsdag
+event.date.format = YYYY/MM/DD
+event.amount.column = Belopp
+event.heading.columns = Namn, Meddelande
+event.heading.join = " | "
+event.balance.column = Saldo
+event.account.setting = statements.nordea.account
+
+row.require_date = yes
