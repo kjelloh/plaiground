@@ -1,4 +1,5 @@
 1. [Consider a two step mail eml to domain and then some domain to domain mechanism?](0dd1a71d/session.md)
+1. [Consider a vibe coded book keeping app 'cratchit' take 2?](455abd37/session.md)
 1. [Consider a way to filter out all files that is reachable from a site with an index.md root document?](805fef21/session.md)
 1. [Consider how to have a github push trigger social media postings - take 1?](771ae935/session.md)
 1. [Consider take 2 on eml-to-chime python mechanism?](aa98c723/session.md)

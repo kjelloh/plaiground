@@ -133,3 +133,121 @@ Sources:
 ※ recap: I built the cratchit take 2 baseline: spec files, legal scaffolding and a C++ skeleton that reproduces all 14 of your filed VAT returns, with all tests passing. Next, I need your answers to the five open questions in docs/interfaces.md. (disable recaps in /config)
 ```
 
+OK. So I don'ät think this was such a good approach either?
+
+* Claude has implemented an obscure mechanism to parse and apply 'specification checking'?
+* Or I have to read the code more thoroughly to understand what this mess is?
+
+For now - my initial hunch is that I need to keep the road map in my head and guide claude in small steps towards the goal?
+
+* If I want code I can read and that has an architecture to my taste I just can't let it loose like this?
+
+```sh
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/455abd37 % tree        
+.
+├── CLAUDE.md                         # Instructions for Claude in this session (rules, conventions, privacy)
+├── CMakeLists.txt                    # Build: library cratchit_core, the cratchit CLI and cratchit_tests
+├── CMakeUserPresets.json             # Points cmake to the presets that conan generates
+├── README.md                         # Overview, layout, build commands and status
+├── conanfile.txt                     # Conan dependencies (only GoogleTest)
+├── docs                              # Human-readable documents
+│   ├── cspec_format.md               # Defines the 'path = value' spec file format (.cspec)
+│   ├── hints_from_previous_work.md   # Findings from Todo mails, old cratchit and take 1, and where each was used
+│   ├── interfaces.md                 # All interfaces as tables, data flow sketch and open questions
+│   └── legal.md                      # Legal requirements (BFL, ÅRL, SFL, ML) and what cratchit does about each
+├── session.md                        # This file
+├── specs                             # Machine-readable spec files that the code reads or is checked against
+│   ├── annual_report                 # Planned (M5): annual report
+│   │   └── k2_ixbrl.cspec            # What is known so far about the K2 annual report as iXBRL to Bolagsverket
+│   ├── bas                           # BAS chart of accounts
+│   │   └── account_types.cspec       # Account type (asset/liability/income/cost) by class, group or account
+│   ├── events                        # Financial events (HAD: heading, amount, date)
+│   │   └── financial_event.cspec     # Schema for a listing of financial events that seed vouchers
+│   ├── ink2                          # Planned (M6): income tax return
+│   │   └── sru_files.cspec           # What is known so far about INK2 as INFO.SRU + BLANKETTER.SRU files
+│   ├── interfaces.cspec              # Registry of every interface: direction, format, spec, code, status, milestone
+│   ├── legal                         # Legal requirements
+│   │   └── requirements.cspec        # Requirements (law + section) mapped to cratchit mechanisms and their status
+│   ├── settings                      # Company settings
+│   │   └── settings.cspec            # Allowed settings and their default values
+│   ├── sie                           # SIE file format
+│   │   └── sie4.cspec                # SIE 4 records: field names, types and which records cratchit uses
+│   ├── statements                    # Account statement CSV layouts
+│   │   ├── nordea_csv.cspec          # Nordea bank CSV: columns, separators, date and amount formats
+│   │   └── skv_account_csv.cspec     # Skatteverket tax account CSV: columns and formats
+│   └── vat                           # VAT return
+│       ├── bas_to_vat_box.cspec      # Which BAS accounts go into which VAT box, with sign
+│       ├── ec_sales_list.cspec       # EC sales list (periodisk sammanställning) file format, future
+│       ├── eskd_6p0.cspec            # eSKD 6.0 file layout: encoding, DOCTYPE, element order
+│       ├── vat_boxes.cspec           # VAT boxes: number, XML element name, title, kind
+│       └── vat_rules.cspec           # Calculation rules: period, settlement series, rounding, box 49, due dates
+├── src                               # C++ source
+│   ├── app                           # Application level
+│   │   ├── settings.cpp              # Implementation
+│   │   ├── settings.hpp              # Loads defaults from settings.cspec, overrides from .cratchit/settings.cspec
+│   │   ├── spec_check.cpp            # Implementation
+│   │   └── spec_check.hpp            # check-specs: verifies spec files exist, parse and agree with the code
+│   ├── core                          # Domain types used everywhere
+│   │   ├── account.cpp               # Implementation
+│   │   ├── account.hpp               # AccountNo and AccountList (parses '2610-2613, 2617')
+│   │   ├── account_types.cpp         # Implementation
+│   │   ├── account_types.hpp         # Looks up an account's type using account_types.cspec
+│   │   ├── amount.cpp                # Implementation (parsing, formatting)
+│   │   ├── amount.hpp                # Amount: money as integer öre, parse, truncate to whole kronor
+│   │   ├── books.cpp                 # Implementation
+│   │   ├── books.hpp                 # Books (one financial year), Voucher, Posting, AccountInfo
+│   │   ├── date.cpp                  # Implementation
+│   │   ├── date.hpp                  # Date (std::chrono), parse with formats like YYYYMMDD, DateRange
+│   │   ├── financial_event.cpp       # Implementation
+│   │   ├── financial_event.hpp       # FinancialEvent and reading/writing event listings as cspec
+│   │   ├── text.cpp                  # Implementation
+│   │   └── text.hpp                  # Text helpers: trim, split lines/lists, Latin-1 <-> UTF-8
+│   ├── cspec                         # Spec file parser
+│   │   ├── spec_tree.cpp             # Implementation
+│   │   └── spec_tree.hpp             # SpecTree: parses a .cspec file, value()/require()/children() lookups
+│   ├── legal                         # Code side of the legal requirements
+│   │   ├── compliance.cpp            # Implementation and the code-side list of mechanisms
+│   │   └── compliance.hpp            # Legal mechanisms in code and voucher checks (balance, required fields)
+│   ├── main.cpp                      # CLI: interfaces, check-specs, reports, report <id>, events
+│   ├── reports                       # Reports for authorities
+│   │   ├── planned_reports.cpp       # Placeholders for bokslut, arsredovisning, ink2, and the report list
+│   │   ├── provenance.cpp            # Implementation
+│   │   ├── provenance.hpp            # Provenance record written next to each output (inputs, specs, vouchers)
+│   │   ├── report.hpp                # ReportGenerator interface that every report implements
+│   │   └── vat_return_report.cpp     # The VAT return report: compute, write eskd and provenance
+│   ├── sie                           # SIE file format
+│   │   ├── cp437.cpp                 # Implementation (code page table)
+│   │   ├── cp437.hpp                 # Decodes CP437 (SIE #FORMAT PC8) to UTF-8
+│   │   ├── sie_reader.cpp            # Implementation (tokenizer, type checks)
+│   │   ├── sie_reader.hpp            # Reads SIE lines into generic records using the fields in sie4.cspec
+│   │   ├── sie_to_journal.cpp        # Implementation
+│   │   └── sie_to_journal.hpp        # Turns SIE records into Books (vouchers, accounts, balances)
+│   ├── statements                    # Account statement CSV layouts
+│   │   ├── csv_statement_reader.cpp  # Implementation
+│   │   └── csv_statement_reader.hpp  # Reads a statement CSV into FinancialEvents using a statement spec
+│   └── vat                           # VAT return
+│       ├── eskd_reader.cpp           # Implementation
+│       ├── eskd_reader.hpp           # Reads box values from a filed eskd file, to compare with cratchit
+│       ├── eskd_writer.cpp           # Implementation
+│       ├── eskd_writer.hpp           # Writes a VatReturn as an eskd file, layout from eskd_6p0.cspec
+│       ├── vat_calculation.cpp       # Implementation
+│       ├── vat_calculation.hpp       # VatPeriod, VatReturn and compute_vat_return (postings -> boxes)
+│       ├── vat_spec.cpp              # Implementation
+│       └── vat_spec.hpp              # Loads vat_boxes, bas_to_vat_box and vat_rules specs into structs
+├── testdata                          # Test input files (fictional, or public SKV examples)
+│   ├── example.se                    # Fictional SIE 4 file (CP437, CRLF) with vouchers and corrections
+│   ├── nordea_example.csv            # Fictional Nordea statement
+│   ├── skv_account_example.csv       # Fictional tax account statement (ISO-8859-1)
+│   └── skv_example_6.eskd            # SKV's public eskd example 6 with every box
+└── tests                             # GoogleTest tests
+    ├── amount_date_test.cpp          # Amount, Date and AccountList parsing
+    ├── cspec_test.cpp                # Spec file format rules
+    ├── real_files_test.cpp           # Your real SIE files and filed returns (local only, skips if absent)
+    ├── sie_test.cpp                  # SIE reading and the spec-driven field/type checks
+    ├── specs_test.cpp                # Runs check-specs, settings defaults, account type lookup
+    ├── statement_test.cpp            # Nordea and SKV CSV to events, event listing round trip
+    └── vat_test.cpp                  # VAT calculation, unmapped VAT account error, eskd output vs SKV example
+
+23 directories, 80 files
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/455abd37 % 
+```

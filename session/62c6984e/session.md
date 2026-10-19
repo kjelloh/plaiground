@@ -71,6 +71,14 @@ I have now reviewed and committed initial tool chain and code.
 
 Now Claude has compared the VAT Returns booked in all my provided SIE-files and concluded how rounding shall be done! Impressive!
 
+So far Claude really produces code that seems to get the stuff done.
+
+* I can't shake the feeling of insecurity though?
+* Does the code really comply with SKV requirements?
+* Do we really map BAS accounts correctly to VAT Returns boxes and eskd-files?
+
+So I started over in [Consider a vibe coded book keeping app 'cratchit' take 2?](../455abd37/session.md)
+
 ## 20261018
 
 I have now copied real SIE-files and eskd-files as a base for implementing SIE file processing to VAT-returns report in eskd-file format.
