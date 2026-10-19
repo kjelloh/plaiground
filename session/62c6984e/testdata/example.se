@@ -1,0 +1,29 @@
+#FLAGGA 0
+#FORMAT PC8
+#SIETYP 4
+#PROGRAM "cratchit testdata" 1.0
+#GEN 20250101
+#FNAMN "Exempelbolaget AB"
+#ORGNR 556000-0175
+#RAR 0 20240501 20250430
+#RAR -1 20230501 20240430
+#KONTO 1610 "Kortfristiga fordringar hos anst„llda"
+#KONTO 1920 "PlusGiro"
+#KONTO 2641 "Debiterad ing†ende moms"
+#KONTO 2893 "Skulder till n„rst†ende personer, kortfristig del"
+#KONTO 6540 "IT-tj„nster"
+#IB 0 1920 1000.00
+
+#VER A 1 20240715 "Ink”p \"molntj„nst\"" 20240720
+{
+#TRANS 6540 {} 100 "" "Molntj„nst" 0
+#TRANS 2641 {} 25 "" "" 0
+#TRANS 1920 {} -125 "" "" 0
+}
+#VER A 2 20240801 "Privat ink”p" 20240805
+{
+#TRANS 1920 {} -318.4 "" "privat ink”p" 0
+#BTRANS 2893 {} 318.4 "" "Privat ink”p" 0 "Signatur"
+#RTRANS 1610 {} 318.4 "" "" 0 "Signatur"
+#TRANS 1610 {} 318.4 20240802 "" 0
+}

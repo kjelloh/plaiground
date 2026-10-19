@@ -58,6 +58,17 @@ So it seems I may not be able to rely on Claude to figure this out for me?
 
 * I asked claude to make small steps and let me review and commit as we go.
 
+I have now reviewed and committed initial tool chain and code.
+
+* I now start to think I may need to define some template mappings between BAS, SKV and eskd?
+* I need a full template that specifies BAS account types asset,equity and liabilities,income, costs.
+    * Especially for account lass 8 where they are mixed?
+    * How can we obtain, define and have cratchit apply such a template?
+* I need a full template that maps BAS accounts to VAT Return boxes?
+    * Can we do this with an SRU-code mapping?
+    * Do we need to parse some SKV excel or csv-files to obtain this mapping?
+    * Do we need to define our own as a template?
+
 ## 20261018
 
 I have now copied real SIE-files and eskd-files as a base for implementing SIE file processing to VAT-returns report in eskd-file format.

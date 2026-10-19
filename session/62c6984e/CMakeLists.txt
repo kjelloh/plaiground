@@ -7,6 +7,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(cratchit_core
   src/amount.cpp
+  src/cp437.cpp
+  src/date.cpp
+  src/sie_line.cpp
+  src/sie_reader.cpp
 )
 target_include_directories(cratchit_core PUBLIC src)
 target_compile_options(cratchit_core PRIVATE -Wall -Wextra -Wpedantic)
@@ -18,7 +22,14 @@ enable_testing()
 find_package(GTest REQUIRED)
 add_executable(cratchit_tests
   tests/amount_test.cpp
+  tests/cp437_test.cpp
+  tests/date_test.cpp
+  tests/sie_line_test.cpp
+  tests/sie_reader_test.cpp
+  tests/sie_real_files_test.cpp
 )
 target_link_libraries(cratchit_tests PRIVATE cratchit_core GTest::gtest_main)
+target_compile_definitions(cratchit_tests PRIVATE CRATCHIT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_options(cratchit_tests PRIVATE -Wall -Wextra -Wpedantic)
 include(GoogleTest)
 gtest_discover_tests(cratchit_tests)
