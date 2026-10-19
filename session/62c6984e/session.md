@@ -2,6 +2,60 @@
 
 ```#62c6984e```
 
+## 20261019
+
+So, HERE WE GO! I am going to purchase a Claude Code $200 monthly subscription.
+
+* What would I get?
+* What will Claude Code be able to do for me?
+* What can I learn about prompting to get the code I want?
+
+OK, So the Claude MAx plan was €180 per month. I now have it!
+
+* Claude Code lists a set of avaibale models. What is this about?
+
+```text
+1.  Default (recommended) ✔  Opus 5.5 · Best for everyday, complex tasks
+2.  Opus 5.5                 For complex work and everyday tasks
+3.  Fable 5.1                For your toughest challenges
+4.  Sonnet 5.5               Most efficient for simpler tasks
+5.  Haiku 4.5                Fastest for quick answers
+6.  Sonnet 5                 Efficient for routine tasks
+7.  Opus 5                   Best for everyday, complex tasks
+8.  Fable 5                  Most capable for your hardest and longest-running tasks
+9.  Opus 4.8                 Best for everyday, complex tasks
+10. Opus 4.7                 Best for everyday, complex tasks
+```
+
+I will go with the default for now.
+
+I have now started a session with Claude Code.
+
+* I decided to ask it for advice on how it want to do things.
+* I asked if it wanted guiding docs and it said yes.
+* I asked it to scaffold these documents and it did.
+    * CLAUDE.md - Project instructions for Claude Code:
+    * SPEC.md - The four goals, company facts, inputs/outputs, and Milestone 1 (from this sesssion doc)
+    * GLOSSARY.md - Swedish ↔ English ↔ code names, with the matching SIE tags
+
+I was tempted to go in and control in detail.
+
+* I decided to resist the temptation and see what Claude produce if given to its own accord.
+* I did specify naming scheme, build tool chain, conan package manager if appropriate etc.
+* I did mention cross platform through cmake.
+
+So going through and editing the context documents I already see some rain clouds on the horizon.
+
+* Claude has yet to find a way to fully determine BAS account types (e.g., 1 = asset, 2 = equity and liabilities, 3 = income, 4–7 = costs. )
+    * It found proposed JSon files but they cost money!
+    * It seems the BAS account plan is in fact not 'free'?
+* Claude discovered that BAS account class 8 defines mixed accounts.
+    * This was impressive
+    * And I have struggled with this myself.
+    * Also, Fortnox SIE files did NOT provide the T/S/I/K in a #KTYP.
+
+So it seems I may not be able to rely on Claude to figure this out for me?
+
 ## 20261018
 
 I have now copied real SIE-files and eskd-files as a base for implementing SIE file processing to VAT-returns report in eskd-file format.
