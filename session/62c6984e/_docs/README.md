@@ -13,6 +13,9 @@
   https://www.skatteverket.se/foretag/moms/deklareramoms/skapaochskickainmomsdeklarationviafil.4.2fb39afe18dabf1e4d223cc.html
 - The DTD URL in our filed eskd files (`https://www1.skatteverket.se/demoeskd/eSKDUpload_6p0.dtd`)
   returns 404 as of 2026-10-19. **Missing:** the DTD itself (defines element order).
+  Element order is instead taken from SKV's complete example (example 6, saved as
+  `testdata/skv_example_6.eskd`); its MomsBetala adds up, and cratchit's writer reproduces the
+  three filed files in `_eskd_irl/` byte for byte. The table below is in box-number order, not file order.
 
 **Caution:** the summary below was extracted by a web tool, not copied by hand.
 Check it against the SKV page before relying on it.

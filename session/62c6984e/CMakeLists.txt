@@ -9,8 +9,13 @@ add_library(cratchit_core
   src/amount.cpp
   src/cp437.cpp
   src/date.cpp
+  src/eskd_reader.cpp
+  src/eskd_writer.cpp
+  src/latin1.cpp
   src/sie_line.cpp
   src/sie_reader.cpp
+  src/vat_box.cpp
+  src/vat_period.cpp
 )
 target_include_directories(cratchit_core PUBLIC src)
 target_compile_options(cratchit_core PRIVATE -Wall -Wextra -Wpedantic)
@@ -24,9 +29,14 @@ add_executable(cratchit_tests
   tests/amount_test.cpp
   tests/cp437_test.cpp
   tests/date_test.cpp
+  tests/eskd_real_files_test.cpp
+  tests/eskd_test.cpp
+  tests/latin1_test.cpp
   tests/sie_line_test.cpp
   tests/sie_reader_test.cpp
   tests/sie_real_files_test.cpp
+  tests/vat_box_test.cpp
+  tests/vat_period_test.cpp
 )
 target_link_libraries(cratchit_tests PRIVATE cratchit_core GTest::gtest_main)
 target_compile_definitions(cratchit_tests PRIVATE CRATCHIT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
