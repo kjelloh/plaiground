@@ -49,7 +49,7 @@ TEST(ReadSieFile, CorrectionHistoryIsIgnored) {
   ASSERT_EQ(second.m_postings.size(), 2u);  // #BTRANS and #RTRANS are skipped
   EXPECT_EQ(second.m_postings[0].m_account, 1920);
   EXPECT_EQ(second.m_postings[1].m_account, 1610);
-  EXPECT_EQ(second.m_postings[1].m_amount, Amount::from_cents(31'840));
+  EXPECT_EQ(second.m_postings[1].m_amount, Amount::from_cents(25'050));
   EXPECT_EQ(second.m_postings[1].m_date, 2024y / August / 2d);
 }
 

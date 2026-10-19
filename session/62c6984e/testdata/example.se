@@ -20,10 +20,10 @@
 #TRANS 2641 {} 25 "" "" 0
 #TRANS 1920 {} -125 "" "" 0
 }
-#VER A 2 20240801 "Privat ink”p" 20240805
+#VER A 2 20240801 "Utl„gg kontorsmaterial" 20240805
 {
-#TRANS 1920 {} -318.4 "" "privat ink”p" 0
-#BTRANS 2893 {} 318.4 "" "Privat ink”p" 0 "Signatur"
-#RTRANS 1610 {} 318.4 "" "" 0 "Signatur"
-#TRANS 1610 {} 318.4 20240802 "" 0
+#TRANS 1920 {} -250.5 "" "Kontorsmaterial" 0
+#BTRANS 2893 {} 250.5 "" "Felkonterat" 0 "Signatur"
+#RTRANS 1610 {} 250.5 "" "" 0 "Signatur"
+#TRANS 1610 {} 250.5 20240802 "" 0
 }

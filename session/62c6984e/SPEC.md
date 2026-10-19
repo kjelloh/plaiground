@@ -54,26 +54,40 @@ equal to the one that was actually filed.
 
 ### Rules (known so far)
 
-- Amounts in the eskd file are whole kronor. Whole SEK provided as defined by SKV.
-  - Observed: 2025Q1 input VAT 1997.50 was reported as 1997.
-- `MomsBetala` (ruta 49) = output VAT − input VAT; negative means refund.
-- Boxes are provided as required by SKV (probably when value is available?)
-- Vouchers with dates in a period counts.
+Implemented in `src/vat_calculation.cpp` and `src/vat_account_mapping.cpp`.
+
+- Amounts in the eskd file are whole kronor. Each box is **truncated** (öre dropped), as the
+  settlement vouchers in our books show (öre difference posted to 3740).
+- `MomsBetala` (ruta 49) = output VAT boxes (10–12, 30–32, 60–62) − box 48, computed from the
+  truncated box values; negative means refund. Always present (SKV requires it).
+- Boxes that are zero are left out.
+- Vouchers with dates in a period count.
 - A VAT quarter can span two financial years (Apr–Jun when the FY starts 1 May),
   so cratchit must combine vouchers from several SIE files by date.
-- Voucher corrections applies to the period of the correction date.
+- Voucher corrections apply to the period of the correction date.
+- The VAT settlement vouchers ("Momsrapport", Fortnox series `M`) are left out: they only move
+  the period's VAT to 1650/2650. Setting: settlement series, default `M`.
 - Vat returns sign determine if posted to BAS 2650 or BAS 1650.
+- A posting on a 26xx account without a box mapping is an error (except 2650, 2651).
 
-### BAS account → VAT box mapping (draft)
+Verified: reproduces the three filed returns (202409, 202412, 202503) exactly. Box 49 also
+matches the settlement vouchers for 27 of 35 quarters 2017Q4–2026Q2 (see open questions).
 
-| Box (ruta) | eskd element | BAS accounts (?) |
-|---|---|---|
-| 05 | `ForsMomsEjAnnan` | 3001, 30xx … |
-| 10 | `MomsUtgHog` | 2610–2619 |
-| 11 | `MomsUtgMedel` | 2620–2629 |
-| 12 | `MomsUtgLag` | 2630–2639 |
-| 48 | `MomsIngAvdr` | 2640–2649 |
-| 49 | `MomsBetala` | computed |
+### BAS account → VAT box mapping
+
+| Box (ruta) | eskd element | Accounts | Sign |
+|---|---|---|---|
+| 05 | `ForsMomsEjAnnan` | 3001, 3002, 3003 **(?)** | credit |
+| 10 | `MomsUtgHog` | 2610–2613 | credit |
+| 11 | `MomsUtgMedel` | 2620–2623 | credit |
+| 12 | `MomsUtgLag` | 2630–2633 | credit |
+| 20 | `InkopVaruAnnatEg` | 9021 (Fortnox) | debit |
+| 30 / 31 / 32 | `MomsInkopUtg…` | 2614, 2617 / 2624, 2627 / 2634, 2637 | credit |
+| 39 | `ForsTjSkskAnnatEg` | 3308 **(?)** | credit |
+| 48 | `MomsIngAvdr` | 2640–2642, 2645–2647 (not 2648 vilande) | debit |
+| 49 | `MomsBetala` | computed | |
+| 50 | `MomsUlagImport` | 9022 (Fortnox) | debit |
+| 60 / 61 / 62 | `MomsImportUtg…` | 2615 / 2625 / 2635 | credit |
 
 ## 5. Later milestones (sketch)
 
@@ -88,3 +102,9 @@ equal to the one that was actually filed.
   - The BAS org may have csv-file that cratchit can parse?
 - Vat Returns Box to eskd-file members needs to be established by online spec or stated locally by specified template.
   - SKV may have excel or csv-file that cratchit can parse?
+- **202506:** a year-end voucher (series I) that corrects 2641 is dated in the quarter, so cratchit
+  counts it; the Fortnox settlement voucher did not. Should it count? Details: `_local/vat_findings.md`.
+- **202606:** Fortnox split the quarter at the FY boundary into two settlement vouchers, each truncated
+  separately; cratchit truncates the quarter total once (1 kr difference). Which is right?
+- Older quarters that differ from their settlement voucher: 201712, 201803, 201806, 202112, 202203, 202212.
+  Not investigated.

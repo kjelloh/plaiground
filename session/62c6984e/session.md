@@ -69,6 +69,8 @@ I have now reviewed and committed initial tool chain and code.
     * Do we need to parse some SKV excel or csv-files to obtain this mapping?
     * Do we need to define our own as a template?
 
+Now Claude has compared the VAT Returns booked in all my provided SIE-files and concluded how rounding shall be done! Impressive!
+
 ## 20261018
 
 I have now copied real SIE-files and eskd-files as a base for implementing SIE file processing to VAT-returns report in eskd-file format.

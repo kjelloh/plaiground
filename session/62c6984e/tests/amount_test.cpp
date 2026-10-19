@@ -18,13 +18,13 @@ TEST(Amount, Arithmetic) {
 
 TEST(ParseAmount, WholeKronor) {
   EXPECT_EQ(parse_amount("0").value().cents(), 0);
-  EXPECT_EQ(parse_amount("9810").value().cents(), 981'000);
-  EXPECT_EQ(parse_amount("-180").value().cents(), -18'000);
+  EXPECT_EQ(parse_amount("4321").value().cents(), 432'100);
+  EXPECT_EQ(parse_amount("-150").value().cents(), -15'000);
 }
 
 TEST(ParseAmount, Decimals) {
-  EXPECT_EQ(parse_amount("105.8").value().cents(), 10'580);
-  EXPECT_EQ(parse_amount("1798.75").value().cents(), 179'875);
+  EXPECT_EQ(parse_amount("123.4").value().cents(), 12'340);
+  EXPECT_EQ(parse_amount("5678.25").value().cents(), 567'825);
   EXPECT_EQ(parse_amount("-0.05").value().cents(), -5);
 }
 

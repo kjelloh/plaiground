@@ -14,7 +14,9 @@ add_library(cratchit_core
   src/latin1.cpp
   src/sie_line.cpp
   src/sie_reader.cpp
+  src/vat_account_mapping.cpp
   src/vat_box.cpp
+  src/vat_calculation.cpp
   src/vat_period.cpp
 )
 target_include_directories(cratchit_core PUBLIC src)
@@ -36,7 +38,9 @@ add_executable(cratchit_tests
   tests/sie_reader_test.cpp
   tests/sie_real_files_test.cpp
   tests/vat_box_test.cpp
+  tests/vat_calculation_test.cpp
   tests/vat_period_test.cpp
+  tests/vat_real_files_test.cpp
 )
 target_link_libraries(cratchit_tests PRIVATE cratchit_core GTest::gtest_main)
 target_compile_definitions(cratchit_tests PRIVATE CRATCHIT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

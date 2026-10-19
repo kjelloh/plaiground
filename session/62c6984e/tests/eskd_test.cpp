@@ -81,7 +81,7 @@ TEST(EskdWriter, Rejects) {
   EXPECT_FALSE(check([](VatReturn& r) { r.m_org_nr = "556000-017X"; }));
   EXPECT_FALSE(check([](VatReturn& r) { r.m_boxes.erase(49); }));
   EXPECT_FALSE(check([](VatReturn& r) { r.m_boxes[9] = kronor(1); }));
-  EXPECT_FALSE(check([](VatReturn& r) { r.m_boxes[48] = Amount::from_cents(199750); }));
+  EXPECT_FALSE(check([](VatReturn& r) { r.m_boxes[48] = Amount::from_cents(123450); }));
   EXPECT_FALSE(check([](VatReturn& r) { r.m_note = std::string(301, 'x'); }));
   EXPECT_FALSE(check([](VatReturn& r) { r.m_note = "€"; }));
   EXPECT_TRUE(check([](VatReturn& r) { r.m_note = std::string(300, 'x'); }));

@@ -38,7 +38,7 @@ private:
 };
 
 // Parses an amount as written in SIE files: optional '-', digits,
-// optional '.' followed by at most two decimals (e.g. "-180", "105.8", "1798.75").
+// optional '.' followed by at most two decimals (e.g. "-150", "123.4", "5678.25").
 std::expected<Amount, std::string> parse_amount(std::string_view text);
 
 } // namespace cratchit
