@@ -16,6 +16,8 @@ endif()
 
 # All application logic lives in the core library
 add_library(cratchit_core
+  src/core/repl.cpp
+  src/core/terminal.cpp
   src/core/version.cpp
 )
 target_include_directories(cratchit_core PUBLIC src)

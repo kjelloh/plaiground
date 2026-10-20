@@ -10,6 +10,7 @@ Loaded automatically when Claude is started in this folder.
 - Do NOT edit session.md (this is the documentation edited by the developer)
 - Do not assume Swedish bookkeeping facts. Ask if something needed is missing or ambiguous.
 - Keep `progress.md` current so work can resume after a break.
+- Whenever a task adds or changes something the user can do (a key, command, option, input or output file), update `cratchit/MANUAL.md` in the same task, along with the in-app help. A task is not done until the manual matches the app.
 
 ## About cratchit
 

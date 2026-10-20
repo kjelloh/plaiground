@@ -14,3 +14,7 @@ ctest --preset conan-debug
 Run: `./build/Debug/cratchit` (Windows/multi-config generators: `build/Debug/cratchit.exe` or as reported by CMake).
 
 For a release build, replace `Debug`/`debug` with `Release`/`release`.
+
+## Use
+
+See [MANUAL.md](MANUAL.md).
