@@ -16,8 +16,8 @@ int main() {
     std::println(stderr, "Error: {}", folder.error());
     return 1;
   }
-  for (auto const& file : folder->initiated) {
-    std::println("Initiated {} in {}", file.generic_string(), cwd.string());
+  for (auto const& entry : folder->initiated) {
+    std::println("Initiated {} in {}", entry.file.generic_string(), entry.folder.string());
   }
   cratchit::RawTerminal terminal;
   auto const manual = cratchit::parse_manual(cratchit::manual_text());

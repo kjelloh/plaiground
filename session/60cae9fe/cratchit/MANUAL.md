@@ -24,24 +24,56 @@ cratchit keeps its data in a folder named `.cratchit` in the folder you start
 it from. Each set of books is a folder of its own: go to that folder and run
 cratchit there.
 
-If `.cratchit` does not exist (a fresh start), cratchit creates it with the
-file `framework.txt`. For each new file it reports
+### Fresh start
+
+If `.cratchit` does not exist, cratchit creates it with two files,
+`framework.txt` and `runtime.txt`, and reports each new file:
 
 ```
 Initiated .cratchit/framework.txt in <folder>
+Initiated .cratchit/runtime.txt in <folder>
 ```
 
-cratchit never changes an existing `.cratchit`. It must hold `framework.txt`.
+### The files
 
-A new `framework.txt` holds the date it was created:
+Each file holds lines of `path = value`. Spaces around `=` do not matter, and
+a value may contain spaces. Blank lines are ignored. A line without `=`, or a
+path given twice, is an error.
+
+`framework.txt` holds the date it was created and where the runtime is:
+
+```
+created = 2026-10-20
+runtime = .
+```
+
+`runtime` names the folder whose `.cratchit` holds `runtime.txt`. `.` means
+the same folder as `framework.txt`, which is the default and also what a
+missing `runtime` line means. A relative folder is taken from the folder
+holding `.cratchit`, for example `runtime = ../shared`. A full path such as
+`runtime = /Users/me/shared` works too.
+
+`runtime.txt` holds the date it was created:
 
 ```
 created = 2026-10-20
 ```
 
-cratchit prints an error and stops when `.cratchit` is a file rather than a
-folder, when it lacks `framework.txt`, or when cratchit cannot create it. To
-start over, remove or rename the `.cratchit` folder.
+### When something is missing
+
+cratchit never changes an existing file. It adds a missing `runtime.txt` to
+its own `.cratchit` (when `runtime` is `.`) and reports it as `Initiated`. It
+never creates a runtime in another folder.
+
+cratchit prints an error and stops when:
+
+- `.cratchit` is a file rather than a folder, or lacks `framework.txt`
+- a file has a line that is not `path = value`
+- the `runtime` folder does not exist
+- a `runtime` folder other than `.` has no `.cratchit/runtime.txt`
+- cratchit cannot create a file it needs
+
+To start over, remove or rename the `.cratchit` folder.
 
 ## Using the prompt
 

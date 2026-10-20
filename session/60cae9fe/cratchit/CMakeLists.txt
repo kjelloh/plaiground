@@ -25,6 +25,7 @@ add_library(cratchit_core
   src/core/data_folder.cpp
   src/core/help.cpp
   src/core/manual.cpp
+  src/core/path_value.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
   src/core/repl.cpp
   src/core/terminal.cpp
