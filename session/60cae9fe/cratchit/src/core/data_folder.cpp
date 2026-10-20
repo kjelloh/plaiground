@@ -5,7 +5,6 @@
 #include <ctime>
 #include <format>
 #include <fstream>
-#include <sstream>
 
 namespace cratchit {
 
@@ -20,20 +19,6 @@ std::expected<void, std::string> write_new_file(fs::path const& file, std::strin
     return std::unexpected(std::format("Cannot write {}", file.string()));
   }
   return {};
-}
-
-std::expected<PathValues, std::string> read_path_values(fs::path const& file) {
-  std::ifstream in(file);
-  std::ostringstream text;
-  text << in.rdbuf();
-  if (!in) {
-    return std::unexpected(std::format("Cannot read {}", file.string()));
-  }
-  auto entries = parse_path_values(text.str());
-  if (!entries) {
-    return std::unexpected(std::format("{}: {}", file.string(), entries.error()));
-  }
-  return entries;
 }
 
 } // namespace

@@ -3,6 +3,7 @@
 #include "core/repl.hpp"
 #include "core/terminal.hpp"
 #include "core/version.hpp"
+#include "core/workspace.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -11,7 +12,8 @@
 int main() {
   std::println("cratchit {}. Press h for help, q to quit.", cratchit::version());
   auto const cwd = std::filesystem::current_path();
-  auto const folder = cratchit::open_data_folder(cwd, cratchit::today_iso());
+  auto const today = cratchit::today_iso();
+  auto const folder = cratchit::open_data_folder(cwd, today);
   if (!folder) {
     std::println(stderr, "Error: {}", folder.error());
     return 1;
@@ -21,6 +23,9 @@ int main() {
   }
   cratchit::RawTerminal terminal;
   auto const manual = cratchit::parse_manual(cratchit::manual_text());
-  cratchit::run_repl([&terminal] { return terminal.read_key(); }, std::cout, manual, cratchit::page_lines());
+  cratchit::Repl repl(manual, cratchit::page_lines(),
+                      {folder->runtime_file, cwd, cratchit::default_workspace_folder(), today});
+  repl.open_workspace(std::cout);
+  cratchit::run_repl(repl, [&terminal] { return terminal.read_key(); }, std::cout);
   return 0;
 }

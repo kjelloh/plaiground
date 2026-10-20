@@ -22,6 +22,14 @@ runtime.txt is added only to the own `.cratchit`; a runtime elsewhere must exist
 folder is an error. New `core/path_value` parser (trimmed `path = value`, blank lines skipped, no comments,
 malformed line or repeated path is an error). 64 tests pass, no warnings, checked in a scratch folder. In review.
 
+Task 7: Workspace (`core/workspace`, `core/path_editor`). On start and on `w`, cratchit opens the folder named by
+`workspace = <folder>` in runtime.txt (`workspace>` prompt: `h`, `-` back, `q` quits). Not set or missing folder:
+choose 1) `<Documents>/cratchit` (per platform) 2) start folder 3) type a path in cratchit's own buffer, starting at the
+root, Tab completes folders like a shell, a missing folder asks `Create it? (y/n)`. The choice is saved as a full path
+in runtime.txt (`Updated ...`). A fresh location gets `.cratchit/workspace.txt` (`created = <date>`); a saved
+workspace whose `.cratchit` lacks it is an error (stays at `cratchit>`). 107 tests pass, no warnings, checked in a pty
+and with piped input. Windows Documents lookup (SHGetKnownFolderPath) not built yet. In review.
+
 ## Next
 
 To be given in chat.
@@ -43,8 +51,14 @@ To be given in chat.
   except that cratchit may add missing files to its own `.cratchit` (e.g. runtime.txt when `runtime = .`).
   Creating a runtime elsewhere is not done on start; it needs a fresh start or a future special operation.
 
+- 2026-10-20: cratchit may change an existing file when the user asks for it (choosing a workspace updates runtime.txt).
+  The workspace is chosen from a menu; its path is typed key by key in cratchit's own buffer with shell-like Tab
+  completion. Paths are shown and saved in full. `q` quits from `workspace>`. The workspace opens on start.
+
 ## Open questions
 
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
 - Should warnings be errors (`-Werror` / `/WX`)? Currently not.
+- How should the user change to another workspace once one is set? Today only by editing runtime.txt, which is also
+  the only way out when a saved workspace has a `.cratchit` without workspace.txt.
 - Is a CI setup (e.g. GitHub Actions on macOS/Linux/Windows) wanted to verify cross-platform builds?

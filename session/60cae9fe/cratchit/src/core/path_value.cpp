@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <format>
+#include <fstream>
+#include <sstream>
 
 namespace cratchit {
 
@@ -51,6 +53,46 @@ std::optional<std::string> find_value(PathValues const& entries, std::string_vie
     return std::nullopt;
   }
   return it->value;
+}
+
+void set_value(PathValues& entries, std::string_view path, std::string_view value) {
+  auto const it = std::ranges::find(entries, path, &PathValue::path);
+  if (it == entries.end()) {
+    entries.push_back({std::string(path), std::string(value)});
+  } else {
+    it->value = value;
+  }
+}
+
+std::string format_path_values(PathValues const& entries) {
+  std::string text;
+  for (auto const& entry : entries) {
+    text += std::format("{} = {}\n", entry.path, entry.value);
+  }
+  return text;
+}
+
+std::expected<PathValues, std::string> read_path_values(std::filesystem::path const& file) {
+  std::ifstream in(file);
+  std::ostringstream text;
+  text << in.rdbuf();
+  if (!in) {
+    return std::unexpected(std::format("Cannot read {}", file.string()));
+  }
+  auto entries = parse_path_values(text.str());
+  if (!entries) {
+    return std::unexpected(std::format("{}: {}", file.string(), entries.error()));
+  }
+  return entries;
+}
+
+std::expected<void, std::string> write_path_values(std::filesystem::path const& file, PathValues const& entries) {
+  std::ofstream out(file);
+  out << format_path_values(entries);
+  if (!out) {
+    return std::unexpected(std::format("Cannot write {}", file.string()));
+  }
+  return {};
 }
 
 } // namespace cratchit
