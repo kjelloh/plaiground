@@ -5,6 +5,10 @@
 #include <sstream>
 #include <string>
 
+using cratchit::Repl;
+using cratchit::Section;
+using cratchit::Step;
+
 namespace {
 
 // Feeds the keys of a string one at a time, then reports end of input
@@ -17,49 +21,103 @@ cratchit::KeySource keys_from(std::string keys) {
   };
 }
 
+Section const manual{"Manual", "", {{"A", "Text A\n", {}}}};
+
 } // namespace
 
-TEST(OnKey, HPrintsHelp) {
+TEST(Repl, HOpensHelp) {
+  Repl repl(manual, 0);
   std::ostringstream out;
-  EXPECT_EQ(cratchit::on_key('h', out), cratchit::Step::Continue);
-  EXPECT_NE(out.str().find("h  show this help"), std::string::npos);
-  EXPECT_NE(out.str().find("q  quit"), std::string::npos);
+  EXPECT_EQ(repl.on_key('h', out), Step::Continue);
+  EXPECT_NE(out.str().find("  1  A"), std::string::npos);
+  EXPECT_EQ(repl.prompt(), "help> ");
 }
 
-TEST(OnKey, QQuits) {
+TEST(Repl, QQuits) {
+  Repl repl(manual, 0);
   std::ostringstream out;
-  EXPECT_EQ(cratchit::on_key('q', out), cratchit::Step::Quit);
+  EXPECT_EQ(repl.on_key('q', out), Step::Quit);
 }
 
-TEST(OnKey, CtrlDQuits) {
+TEST(Repl, CtrlDQuits) {
+  Repl repl(manual, 0);
   std::ostringstream out;
-  EXPECT_EQ(cratchit::on_key('\x04', out), cratchit::Step::Quit);
+  EXPECT_EQ(repl.on_key('\x04', out), Step::Quit);
 }
 
-TEST(OnKey, UnknownKeyPointsToHelp) {
+TEST(Repl, CtrlDQuitsFromHelp) {
+  Repl repl(manual, 0);
   std::ostringstream out;
-  EXPECT_EQ(cratchit::on_key('x', out), cratchit::Step::Continue);
+  repl.on_key('h', out);
+  EXPECT_EQ(repl.on_key('\x04', out), Step::Quit);
+}
+
+TEST(Repl, QInHelpLeavesHelpOnly) {
+  Repl repl(manual, 0);
+  std::ostringstream out;
+  repl.on_key('h', out);
+  EXPECT_EQ(repl.on_key('q', out), Step::Continue);
+  EXPECT_EQ(repl.prompt(), "cratchit> ");
+}
+
+TEST(Repl, UnknownKeyPointsToHelp) {
+  Repl repl(manual, 0);
+  std::ostringstream out;
+  EXPECT_EQ(repl.on_key('x', out), Step::Continue);
   EXPECT_NE(out.str().find("Press h for help"), std::string::npos);
 }
 
-TEST(RunRepl, StopsAtQAndIgnoresLaterKeys) {
+TEST(Repl, EscapeDoesNothing) {
+  Repl repl(manual, 0);
+  EXPECT_TRUE(repl.ignores('\x1b'));
   std::ostringstream out;
-  cratchit::run_repl(keys_from("hqh"), out);
+  repl.on_key('h', out);
+  EXPECT_TRUE(repl.ignores('\x1b'));
+}
+
+TEST(Repl, SpaceTurnsThePageOnlyWhilePaging) {
+  Section long_manual{"Manual", "1\n2\n3\n4\n", {}};
+  Repl repl(long_manual, 2);
+  EXPECT_TRUE(repl.ignores(' '));
+  std::ostringstream out;
+  repl.on_key('h', out);
+  EXPECT_FALSE(repl.ignores(' '));
+  EXPECT_FALSE(repl.ignores('\n'));
+}
+
+TEST(RunRepl, BrowsesHelpAndQuits) {
+  std::ostringstream out;
+  cratchit::run_repl(keys_from("h1--q"), out, manual, 0);
   EXPECT_EQ(out.str(), "cratchit> h\n"
-                       "Keys:\n"
-                       "  h  show this help\n"
-                       "  q  quit\n"
+                       "Manual\n"
+                       "\n"
+                       "  1  A\n"
+                       "\n"
+                       "Press a number to open a section, - to go back, q to leave help.\n"
+                       "help> 1\n"
+                       "A\n"
+                       "\n"
+                       "Text A\n"
+                       "\n"
+                       "Press - to go back, q to leave help.\n"
+                       "help 1> -\n"
+                       "Manual\n"
+                       "\n"
+                       "  1  A\n"
+                       "\n"
+                       "Press a number to open a section, - to go back, q to leave help.\n"
+                       "help> -\n"
                        "cratchit> q\n");
 }
 
 TEST(RunRepl, StopsAtEndOfInput) {
   std::ostringstream out;
-  cratchit::run_repl(keys_from(""), out);
+  cratchit::run_repl(keys_from(""), out, manual, 0);
   EXPECT_EQ(out.str(), "cratchit> \n");
 }
 
 TEST(RunRepl, IgnoresNewlines) {
   std::ostringstream out;
-  cratchit::run_repl(keys_from("\nq\n"), out);
+  cratchit::run_repl(keys_from("\nq\n"), out, manual, 0);
   EXPECT_EQ(out.str(), "cratchit> q\n");
 }

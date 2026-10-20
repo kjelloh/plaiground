@@ -3,9 +3,17 @@
 #include <cstdio>
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <conio.h>
 #include <io.h>
+#include <windows.h>
 #else
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 #endif
@@ -35,6 +43,15 @@ std::optional<char> RawTerminal::read_key() {
     return std::nullopt;
   }
   return static_cast<char>(c);
+}
+
+std::size_t page_lines() {
+  CONSOLE_SCREEN_BUFFER_INFO info{};
+  if (_isatty(_fileno(stdout)) == 0 || GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info) == 0) {
+    return 0;
+  }
+  auto rows = info.srWindow.Bottom - info.srWindow.Top + 1;
+  return rows > 1 ? static_cast<std::size_t>(rows - 1) : 0;
 }
 
 #else
@@ -67,6 +84,14 @@ std::optional<char> RawTerminal::read_key() {
     return std::nullopt;
   }
   return c;
+}
+
+std::size_t page_lines() {
+  winsize size{};
+  if (isatty(STDOUT_FILENO) == 0 || ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) != 0) {
+    return 0;
+  }
+  return size.ws_row > 1 ? static_cast<std::size_t>(size.ws_row - 1) : 0;
 }
 
 #endif

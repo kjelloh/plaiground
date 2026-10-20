@@ -17,4 +17,5 @@ For a release build, replace `Debug`/`debug` with `Release`/`release`.
 
 ## Use
 
-See [MANUAL.md](MANUAL.md).
+See [MANUAL.md](MANUAL.md). It is built into the program and shown by the `h` key,
+so its headings are the help menu. CMake rebuilds it whenever the file changes.

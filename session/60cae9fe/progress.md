@@ -8,6 +8,10 @@ Task 2: Single-key REPL (`h` help, `q` / Ctrl-D quit). Builds without warnings, 
 
 Task 3: Seeded user manual `cratchit/MANUAL.md`; CLAUDE.md now requires keeping it current. In review.
 
+Task 4: `h` browses the built-in manual (`core/manual`, `core/help`). Number keys drill down, `-` goes back,
+`q` leaves help, Esc does nothing, 0/9 scroll lists of more than 9, long output pages like `more`.
+39 tests pass, no warnings, checked with piped input and in a 10-row pty. Not built on Windows yet. In review.
+
 ## Next
 
 To be given in chat.
@@ -20,6 +24,9 @@ To be given in chat.
 - 2026-10-19: Classic headers (`#pragma once`), no C++20 modules.
 - 2026-10-20: Single-key input is plain code (termios / conio), not a Conan package. `q` quits.
 - 2026-10-20: User manual lives in `cratchit/MANUAL.md`; every new or changed user operation updates it.
+- 2026-10-20: Help is MANUAL.md built into the binary. Headings are the menu. `-` backs out (not Esc, which
+  arrow keys also send). `q` in help leaves help only. Over 9 entries: 1-8 plus `0 ...up` / `9 ...down`.
+  Long output pages with space/Enter at `--More--`.
 
 ## Open questions
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <optional>
 
 namespace cratchit {
@@ -19,5 +20,9 @@ public:
 private:
   bool is_raw_ = false;
 };
+
+// Lines that fit on one page of output, leaving one for the prompt.
+// 0 when output is not a terminal, so nothing is paged.
+std::size_t page_lines();
 
 } // namespace cratchit

@@ -8,26 +8,42 @@ namespace cratchit {
 namespace {
 
 constexpr char ctrl_d = '\x04';
+// Esc does nothing: arrow keys also start with it, so the two can't be told apart
+constexpr char escape = '\x1b';
 
-void print_help(std::ostream& out) {
-  std::println(out, "Keys:");
-  std::println(out, "  h  show this help");
-  std::println(out, "  q  quit");
+bool is_whitespace(char key) {
+  return key == '\n' || key == '\r' || key == ' ' || key == '\t';
 }
 
-bool is_ignored(char key) {
-  return key == '\n' || key == '\r' || key == ' ' || key == '\t';
+// How a key press is shown after the prompt, as echo is off in raw mode
+std::string_view echo_of(char const& key) {
+  if (key == ctrl_d) {
+    return "^D";
+  }
+  if (is_whitespace(key)) {
+    return "";
+  }
+  return {&key, 1};
 }
 
 } // namespace
 
-Step on_key(char key, std::ostream& out) {
+Repl::Repl(Section const& manual, std::size_t page_lines) : help_(manual, page_lines) {}
+
+Step Repl::on_key(char key, std::ostream& out) {
+  if (key == ctrl_d) {
+    return Step::Quit;
+  }
+  if (in_help_) {
+    in_help_ = help_.on_key(key, out) == HelpBrowser::Result::Stay;
+    return Step::Continue;
+  }
   switch (key) {
   case 'h':
-    print_help(out);
+    in_help_ = true;
+    help_.open(out);
     return Step::Continue;
   case 'q':
-  case ctrl_d:
     return Step::Quit;
   default:
     std::println(out, "Unknown key. Press h for help.");
@@ -35,21 +51,36 @@ Step on_key(char key, std::ostream& out) {
   }
 }
 
-void run_repl(KeySource const& next_key, std::ostream& out) {
+bool Repl::ignores(char key) const {
+  if (key == escape) {
+    return true;
+  }
+  // Space and Enter show the next page of help
+  if (in_help_ && help_.is_paging()) {
+    return key == '\t';
+  }
+  return is_whitespace(key);
+}
+
+std::string Repl::prompt() const {
+  return in_help_ ? help_.prompt() : "cratchit> ";
+}
+
+void run_repl(KeySource const& next_key, std::ostream& out, Section const& manual, std::size_t page_lines) {
+  Repl repl(manual, page_lines);
   while (true) {
-    std::print(out, "cratchit> ");
+    std::print(out, "{}", repl.prompt());
     out.flush();
     std::optional<char> key;
     do {
       key = next_key();
-    } while (key && is_ignored(*key));
+    } while (key && repl.ignores(*key));
     if (!key) {
       std::println(out, "");
       return;
     }
-    // Echo is off in raw mode, so show the key that was pressed
-    std::println(out, "{}", *key == ctrl_d ? std::string_view("^D") : std::string_view(&*key, 1));
-    if (on_key(*key, out) == Step::Quit) {
+    std::println(out, "{}", echo_of(*key));
+    if (repl.on_key(*key, out) == Step::Quit) {
       return;
     }
   }

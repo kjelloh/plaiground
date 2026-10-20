@@ -14,8 +14,17 @@ else()
   target_compile_options(cratchit_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()
 
+# Build MANUAL.md into the program as bytes; CMake re-runs when the manual changes
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS MANUAL.md)
+file(READ MANUAL.md manual_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
+configure_file(src/core/manual_text.cpp.in generated/manual_text.cpp @ONLY)
+
 # All application logic lives in the core library
 add_library(cratchit_core
+  src/core/help.cpp
+  src/core/manual.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
   src/core/repl.cpp
   src/core/terminal.cpp
   src/core/version.cpp
