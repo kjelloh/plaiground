@@ -12,6 +12,11 @@ Task 4: `h` browses the built-in manual (`core/manual`, `core/help`). Number key
 `q` leaves help, Esc does nothing, 0/9 scroll lists of more than 9, long output pages like `more`.
 39 tests pass, no warnings, checked with piped input and in a 10-row pty. Not built on Windows yet. In review.
 
+Task 5: On start cratchit opens `./.cratchit` (`core/data_folder`). Missing: creates it with `framework.txt`
+(`created = <local date>`) and reports `Initiated <file> in <folder>` per new file. Existing: never changed;
+an error (exit 1) when it is a file or lacks `framework.txt`.
+45 tests pass, no warnings, checked in a scratch folder (fresh, existing, missing file). In review.
+
 ## Next
 
 To be given in chat.
@@ -27,6 +32,9 @@ To be given in chat.
 - 2026-10-20: Help is MANUAL.md built into the binary. Headings are the menu. `-` backs out (not Esc, which
   arrow keys also send). `q` in help leaves help only. Over 9 entries: 1-8 plus `0 ...up` / `9 ...down`.
   Long output pages with space/Enter at `--More--`.
+- 2026-10-20: Data lives in `.cratchit/` in the current folder. Planned chain of dot-files:
+  framework -> runtime -> workspace -> project. For now `framework.txt` holds only `created = YYYY-MM-DD`.
+  Every new file in `.cratchit` is reported as `Initiated ...`. An existing `.cratchit` missing required content is an error.
 
 ## Open questions
 

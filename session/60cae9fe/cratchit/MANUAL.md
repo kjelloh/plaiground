@@ -18,6 +18,31 @@ cratchit 0.1.0. Press h for help, q to quit.
 cratchit> 
 ```
 
+## The .cratchit folder
+
+cratchit keeps its data in a folder named `.cratchit` in the folder you start
+it from. Each set of books is a folder of its own: go to that folder and run
+cratchit there.
+
+If `.cratchit` does not exist (a fresh start), cratchit creates it with the
+file `framework.txt`. For each new file it reports
+
+```
+Initiated .cratchit/framework.txt in <folder>
+```
+
+cratchit never changes an existing `.cratchit`. It must hold `framework.txt`.
+
+A new `framework.txt` holds the date it was created:
+
+```
+created = 2026-10-20
+```
+
+cratchit prints an error and stops when `.cratchit` is a file rather than a
+folder, when it lacks `framework.txt`, or when cratchit cannot create it. To
+start over, remove or rename the `.cratchit` folder.
+
 ## Using the prompt
 
 At the prompt, each key acts as soon as you press it. You don't need to press Enter.
@@ -76,5 +101,8 @@ This is useful for scripts:
 ```sh
 printf 'hq' | ./build/Debug/cratchit
 ```
+
+This also creates `.cratchit` in the current folder if it is missing (see
+The .cratchit folder).
 
 cratchit stops at `q` or when the input ends.

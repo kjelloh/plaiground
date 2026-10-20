@@ -22,6 +22,7 @@ configure_file(src/core/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
 # All application logic lives in the core library
 add_library(cratchit_core
+  src/core/data_folder.cpp
   src/core/help.cpp
   src/core/manual.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
