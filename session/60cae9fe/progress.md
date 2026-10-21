@@ -41,6 +41,14 @@ point)` returns `utf8::Bytes` (`std::array<CodePoint, 4>` + `size`, iterable). S
 U+FFFD. `utf8::from_unicode(code points)` returns a `std::string`. Test chains CP437 -> Unicode -> UTF-8.
 119 tests pass, no warnings. In review.
 
+Task 10: Terminal encoding (`core/terminal_encoding`). On start cratchit asks the platform for the terminal's input and
+output encoding and keeps the choice for the run (in memory, not saved). macOS and Android: UTF-8 at compile time.
+Linux/POSIX: `nl_langinfo(CODESET)` of the user's locale (process locale restored after). Windows: `GetConsoleCP` /
+`GetConsoleOutputCP`, else `GetACP`. `Charset` names many encodings (incl. GBK, GB18030, Big5, Shift_JIS, EUC-JP/KR);
+each direction adapts when a transcoder exists (read: UTF-8, CP437; write: UTF-8), else UTF-8 plus a warning on stderr.
+Not yet wired into actual terminal I/O. Manual has a new section "Terminal encoding". 126 tests pass, no warnings.
+Linux and Windows branches not built yet (Linux query logic checked on macOS). In review.
+
 ## Next
 
 To be given in chat.
@@ -71,10 +79,15 @@ To be given in chat.
   `charset::<name>` with its own `CodePoint` type; Unicode lives in `charset::unicode`. CP437 bytes 0x00-0x1F and 0x7F
   are ASCII control characters, not the IBM screen glyphs.
 
+- 2026-10-21: Cratchit has its own internal encoding (Unicode code points), separate from the platform's. It determines
+  and remembers the terminal in/out encodings, adapts to them when it can transcode, and otherwise falls back to UTF-8
+  with a warning. Transcoders are added as the need arises.
+
 ## Open questions
 
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
 - Should warnings be errors (`-Werror` / `/WX`)? Currently not.
 - How should the user change to another workspace once one is set? Today only by editing runtime.txt, which is also
   the only way out when a saved workspace has a `.cratchit` without workspace.txt.
+- Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?
 - Is a CI setup (e.g. GitHub Actions on macOS/Linux/Windows) wanted to verify cross-platform builds?

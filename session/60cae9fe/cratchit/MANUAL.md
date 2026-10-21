@@ -21,6 +21,35 @@ Opened workspace /Users/me/Documents/cratchit
 workspace> 
 ```
 
+## Terminal encoding
+
+When cratchit starts, it finds out which character encoding your terminal
+uses for what you type (input) and for what cratchit prints (output). It keeps
+these for the rest of the run. Inside, cratchit works in Unicode no matter what
+the terminal uses.
+
+How cratchit finds the encoding:
+
+| Platform | Where it comes from                                                      |
+|----------|--------------------------------------------------------------------------|
+| macOS    | Always UTF-8.                                                            |
+| Android  | Always UTF-8.                                                            |
+| Linux    | Your locale: `LC_ALL`, `LC_CTYPE` or `LANG`, e.g. `sv_SE.UTF-8`.         |
+| Windows  | The console's input and output code pages (see `chcp`), e.g. 850 or 65001. |
+
+When cratchit cannot yet handle the encoding, or does not recognise it, it uses
+UTF-8 and warns you before it does anything else, for example:
+
+```
+Warning: Terminal output encoding code page 850 (CP850) is not supported yet. Using UTF-8.
+Warning: Terminal input encoding KOI8-R is unknown. Using UTF-8.
+```
+
+Input and output are checked separately, so you may get a warning for only
+one of them. Today cratchit can read UTF-8 and CP437 (code page 437) and write UTF-8. To
+avoid the warnings on Windows, run `chcp 65001` before starting cratchit. On
+Linux, use a UTF-8 locale.
+
 ## The .cratchit folder
 
 cratchit keeps its data in a folder named `.cratchit` in the folder you start

@@ -2,6 +2,7 @@
 #include "core/manual.hpp"
 #include "core/repl.hpp"
 #include "core/terminal.hpp"
+#include "core/terminal_encoding.hpp"
 #include "core/version.hpp"
 #include "core/workspace.hpp"
 
@@ -11,6 +12,11 @@
 
 int main() {
   std::println("cratchit {}. Press h for help, q to quit.", cratchit::version());
+  // Kept for the run: the encodings of the bytes cratchit reads from and writes to the terminal
+  auto const terminal_encoding = cratchit::choose_terminal_encoding(cratchit::report_terminal_encoding());
+  for (auto const& warning : terminal_encoding.warnings) {
+    std::println(stderr, "{}", warning);
+  }
   auto const cwd = std::filesystem::current_path();
   auto const today = cratchit::today_iso();
   auto const folder = cratchit::open_data_folder(cwd, today);
