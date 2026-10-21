@@ -58,6 +58,7 @@ void Repl::open_workspace(std::ostream& out) {
     enter_workspace(**entry, false, out);
     return;
   }
+  before_choose_ = Mode::Main;
   mode_ = Mode::Choose;
   show_choices(out);
 }
@@ -70,7 +71,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::Help:
     if (help_.on_key(key, out) == HelpBrowser::Result::Leave) {
       mode_ = before_help_;
-      if (mode_ == Mode::Choose) {
+      if (mode_ == Mode::Menu) {
+        show_menu(out);
+      } else if (mode_ == Mode::Choose) {
         show_choices(out);
       }
     }
@@ -99,12 +102,15 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   switch (mode_) {
   case Mode::Main:
     if (key == U'w') {
-      open_workspace(out);
+      open_menu(out);
     } else if (key == U'l') {
       open_log(out);
     } else {
       std::println(out, "Unknown key. Press h for help.");
     }
+    break;
+  case Mode::Menu:
+    on_menu_key(key, out);
     break;
   case Mode::Choose:
     on_choose_key(key, out);
@@ -149,6 +155,7 @@ std::string Repl::prompt() const {
     return help_.prompt();
   case Mode::Log:
     return log_view_.prompt();
+  case Mode::Menu:
   case Mode::Choose:
     return "workspace?> ";
   case Mode::Typing:
@@ -175,12 +182,51 @@ void Repl::open_log(std::ostream& out) {
   }
 }
 
+void Repl::open_menu(std::ostream& out) {
+  auto const entry = workspace_entry(places_.runtime_file);
+  if (!entry) {
+    std::println(out, "Error: {}", entry.error());
+    return;
+  }
+  std::error_code ec;
+  current_.reset();
+  if (*entry && fs::is_directory(**entry, ec)) {
+    current_ = **entry;
+  }
+  mode_ = Mode::Menu;
+  show_menu(out);
+}
+
+void Repl::show_menu(std::ostream& out) {
+  std::println(out, "Workspace:");
+  if (current_) {
+    std::println(out, "  w  Open {}", current_->string());
+  }
+  std::println(out, "  b  Browse for a new workspace");
+  std::println(out, "");
+  std::println(out, "Press {}, - to go back, h for help, q to quit.", current_ ? "w or b" : "b");
+}
+
+void Repl::on_menu_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'w' && current_) {
+    enter_workspace(*current_, false, out);
+  } else if (key == U'b') {
+    before_choose_ = Mode::Menu;
+    mode_ = Mode::Choose;
+    show_choices(out);
+  } else if (key == U'-') {
+    mode_ = Mode::Main;
+  } else {
+    std::println(out, "Press {}, - to go back, h for help, q to quit.", current_ ? "w or b" : "b");
+  }
+}
+
 void Repl::show_choices(std::ostream& out) {
   std::println(out, "Choose a workspace folder:");
+  std::println(out, "  1  {}", places_.start_folder.string());
   if (places_.default_folder) {
-    std::println(out, "  1  {}", places_.default_folder->string());
+    std::println(out, "  2  {}", places_.default_folder->string());
   }
-  std::println(out, "  2  {}", places_.start_folder.string());
   std::println(out, "  3  Type a folder path");
   std::println(out, "");
   std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
@@ -194,15 +240,18 @@ void Repl::start_typing(std::ostream& out) {
 }
 
 void Repl::on_choose_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U'1' && places_.default_folder) {
-    create_and_choose(*places_.default_folder, out);
-  } else if (key == U'2') {
+  if (key == U'1') {
     enter_workspace(places_.start_folder, true, out);
+  } else if (key == U'2' && places_.default_folder) {
+    create_and_choose(*places_.default_folder, out);
   } else if (key == U'3') {
     editor_.start(places_.start_folder.root_path().string());
     start_typing(out);
   } else if (key == U'-') {
-    mode_ = Mode::Main;
+    mode_ = before_choose_;
+    if (mode_ == Mode::Menu) {
+      show_menu(out);
+    }
   } else {
     std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
   }
@@ -274,7 +323,10 @@ void Repl::enter_workspace(fs::path const& folder, bool chosen, std::ostream& ou
   for (auto const& entry : workspace->initiated) {
     std::println(out, "Initiated {} in {}", entry.file.generic_string(), entry.folder.string());
   }
-  if (chosen) {
+  // Choosing the saved workspace again leaves runtime.txt as it is
+  auto const previous = workspace_entry(places_.runtime_file);
+  auto const unchanged = previous && *previous && **previous == folder;
+  if (chosen && !unchanged) {
     if (auto const saved = save_workspace_entry(places_.runtime_file, folder); !saved) {
       std::println(out, "Error: {}", saved.error());
       mode_ = Mode::Main;
@@ -282,7 +334,12 @@ void Repl::enter_workspace(fs::path const& folder, bool chosen, std::ostream& ou
     }
     auto const runtime_root = places_.runtime_file.parent_path().parent_path();
     std::println(out, "Updated .cratchit/runtime.txt in {}", runtime_root.string());
-    LOG_BUSINESS("Chose workspace {}, saved in {}", folder.string(), places_.runtime_file.string());
+    if (previous && *previous) {
+      LOG_BUSINESS("Switched workspace from {} to {}, saved in {}", (*previous)->string(), folder.string(),
+                   places_.runtime_file.string());
+    } else {
+      LOG_BUSINESS("Chose workspace {}, saved in {}", folder.string(), places_.runtime_file.string());
+    }
   }
   for (auto const& entry : workspace->initiated) {
     LOG_BUSINESS("Initiated {} in {}", entry.file.generic_string(), entry.folder.string());

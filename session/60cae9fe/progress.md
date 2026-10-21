@@ -81,6 +81,14 @@ written as UTF-8 (the only output encoding so far). The path editor keeps its te
 C0/C1 controls and U+FFFD. Windows `_getch` kept as is: 0xE0 (alpha in CP437, O-acute in CP850) cannot be typed.
 Manual section "Terminal encoding" updated. 163 tests pass, no warnings; checked with piped input. In review.
 
+Task 16: Switch workspace. Start is unchanged. `w` at `cratchit>` now shows a workspace menu (`workspace?>`): `w` opens
+the saved workspace (left out when none is saved or its folder is missing), `b` browses, `-` back. Browse is the folder
+menu, reordered: 1) start folder 2) Documents/cratchit (hidden if not found) 3) type a path; its `-` returns to the
+workspace menu after `b`, else to `cratchit>`. Choosing the saved folder again leaves runtime.txt as is. A real change
+logs `Switched workspace from <old> to <new>` (business). A broken saved workspace can now be replaced via `w` `b`.
+Manual: new "The workspace menu", choices reordered, piped example now `1q`. 169 tests pass, no warnings; checked
+with piped input. In review.
+
 ## Next
 
 To be given in chat.
@@ -138,10 +146,11 @@ To be given in chat.
   A key that fails to decode is logged as a design insufficiency. Path editor text is UTF-8 for now. Windows keeps
   `_getch` (0xE0 clash with CP437/CP850 accepted).
 
+- 2026-10-21: `w` at `cratchit>` shows a menu: `w` opens the saved workspace, `b` browses for a new one (folder menu
+  1) start folder 2) Documents/cratchit 3) type a path). The browse choice switches the saved workspace.
+
 ## Open questions
 
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
-- How should the user change to another workspace once one is set? Today only by editing runtime.txt, which is also
-  the only way out when a saved workspace has a `.cratchit` without workspace.txt.
 - Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?
 - Is a CI setup (e.g. GitHub Actions on macOS/Linux/Windows) wanted to verify cross-platform builds?

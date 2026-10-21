@@ -118,7 +118,7 @@ it the first time it logs something and only ever adds lines to it.
 
 ### When something is missing
 
-cratchit changes an existing file only when you ask it to: choosing a
+cratchit changes an existing file only when you ask it to: choosing a new
 workspace sets the `workspace` line in `runtime.txt`, keeps the other lines,
 and reports `Updated .cratchit/runtime.txt in <folder>`.
 
@@ -145,8 +145,7 @@ The workspace is the folder cratchit works in. Its `.cratchit` folder holds
 
 ### Opening the workspace
 
-cratchit opens the workspace when it starts, and when you press `w` at the
-`cratchit>` prompt:
+cratchit opens the workspace when it starts:
 
 - If `runtime.txt` names a workspace folder, cratchit opens it and shows
   `Opened workspace <folder>`. A folder without `.cratchit` is a fresh
@@ -156,24 +155,53 @@ cratchit opens the workspace when it starts, and when you press `w` at the
   choose one (see Choosing a workspace).
 - If the folder has a `.cratchit` without `workspace.txt`, or a malformed
   `workspace.txt`, cratchit shows an error and stays at the `cratchit>` prompt.
+  Press `w` and browse to choose another workspace (see The workspace menu).
+
+### The workspace menu
+
+Press `w` at the `cratchit>` prompt to open the workspace again or switch to
+another one:
+
+```
+Workspace:
+  w  Open /Users/me/Documents/cratchit
+  b  Browse for a new workspace
+```
+
+| Key    | What it does                                              |
+|--------|-----------------------------------------------------------|
+| w      | Opens the workspace saved in `runtime.txt`.               |
+| b      | Lets you choose another folder (see Choosing a workspace). |
+| -      | Goes back to the `cratchit>` prompt.                      |
+| h      | Opens this manual.                                        |
+| q      | Quits cratchit.                                           |
+| Ctrl-D | Quits cratchit.                                           |
+
+So `w` `w` at `cratchit>` takes you back into the workspace. When no workspace
+is saved, or its folder does not exist, only `b` is offered.
+
+Choosing a folder with `b` switches the workspace: cratchit saves it in
+`runtime.txt` and opens it from then on. The old workspace folder is left as it
+is.
 
 ### Choosing a workspace
 
-cratchit offers these folders:
+cratchit offers these folders, both on start when no workspace is set and
+after `b` in the workspace menu:
 
 ```
 Choose a workspace folder:
-  1  /Users/me/Documents/cratchit
-  2  /Users/me/books
+  1  /Users/me/books
+  2  /Users/me/Documents/cratchit
   3  Type a folder path
 ```
 
 | Key    | What it does                                                     |
 |--------|------------------------------------------------------------------|
-| 1      | Uses `cratchit` in your Documents folder, creating it if needed. |
-| 2      | Uses the folder you started cratchit in.                         |
+| 1      | Uses the folder you started cratchit in.                         |
+| 2      | Uses `cratchit` in your Documents folder, creating it if needed. |
 | 3      | Lets you type a folder path (see Typing a folder path).          |
-| -      | Goes back to the `cratchit>` prompt without a workspace.         |
+| -      | Goes back: to the workspace menu after `b`, else to the `cratchit>` prompt without a workspace. |
 | h      | Opens this manual.                                               |
 | q      | Quits cratchit.                                                  |
 | Ctrl-D | Quits cratchit.                                                  |
@@ -181,10 +209,12 @@ Choose a workspace folder:
 The Documents folder is `~/Documents` on macOS. On Linux it is the one set in
 `~/.config/user-dirs.dirs` (for example `~/Dokument`), else `~/Documents`. On
 Windows it is your Documents folder, also when it has been moved, for example
-to OneDrive. If cratchit cannot find it, option 1 is not shown.
+to OneDrive. If cratchit cannot find it, option 2 is not shown.
 
 When you choose a folder, cratchit adds `.cratchit/workspace.txt` to it if it
-is missing, saves the folder in `runtime.txt` and opens the workspace.
+is missing, saves the folder in `runtime.txt` and opens the workspace. Choosing
+the workspace that is already saved just opens it and leaves `runtime.txt` as
+it is.
 
 ### Typing a folder path
 
@@ -234,7 +264,7 @@ Typing a folder path).
 |--------|-------------------------------------|
 | h      | Opens this manual (see Using help). |
 | l      | Shows the log (see The log).        |
-| w      | Opens the workspace.                |
+| w      | Shows the workspace menu.           |
 | q      | Quits cratchit.                     |
 | Ctrl-D | Quits cratchit (same as q).         |
 
@@ -334,11 +364,11 @@ When input does not come from a terminal, cratchit reads keys from it one by one
 This is useful for scripts:
 
 ```sh
-printf '2q' | ./build/Debug/cratchit
+printf '1q' | ./build/Debug/cratchit
 ```
 
 In a fresh folder this creates `.cratchit` (see The .cratchit folder), chooses
-the current folder as the workspace (key `2`) and quits. Once a workspace is
+the current folder as the workspace (key `1`) and quits. Once a workspace is
 set, `printf 'q'` just opens it and quits.
 
 cratchit stops at `q` or when the input ends.

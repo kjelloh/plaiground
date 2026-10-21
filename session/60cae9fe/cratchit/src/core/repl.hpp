@@ -27,7 +27,7 @@ struct WorkspacePlaces {
 };
 
 // The state of the app between key presses: the main prompt, browsing help,
-// viewing the log, choosing a workspace, or in the workspace
+// viewing the log, the workspace menu, choosing a workspace, or in the workspace
 class Repl {
 public:
   // page_lines is the number of help and log lines per page; 0 shows everything at once.
@@ -35,7 +35,7 @@ public:
   Repl(Section const& manual, std::size_t page_lines, WorkspacePlaces places, std::filesystem::path log_file = {});
 
   // Open the workspace named in runtime.txt, or offer folders to choose from
-  // when there is none or its folder is missing (key w, and on start)
+  // when there is none or its folder is missing (on start)
   void open_workspace(std::ostream& out);
 
   // Handle one key press, writing any response to out
@@ -50,7 +50,7 @@ public:
   std::string prompt() const;
 
 private:
-  enum class Mode { Main, Help, Log, Choose, Typing, ConfirmCreate, Workspace };
+  enum class Mode { Main, Help, Log, Menu, Choose, Typing, ConfirmCreate, Workspace };
 
   WorkspacePlaces places_;
   std::filesystem::path log_file_;
@@ -60,10 +60,15 @@ private:
   Mode mode_ = Mode::Main;
   Mode before_help_ = Mode::Main;
   Mode before_log_ = Mode::Main;
+  Mode before_choose_ = Mode::Main;
+  std::optional<std::filesystem::path> current_; // the saved workspace offered by the menu, if its folder exists
   std::filesystem::path to_create_;
 
   void open_help(std::ostream& out);
   void open_log(std::ostream& out);
+  void open_menu(std::ostream& out);
+  void show_menu(std::ostream& out);
+  void on_menu_key(charset::unicode::CodePoint key, std::ostream& out);
   void show_choices(std::ostream& out);
   void start_typing(std::ostream& out);
   void on_choose_key(charset::unicode::CodePoint key, std::ostream& out);

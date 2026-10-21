@@ -171,8 +171,8 @@ protected:
 
   std::string choices() const {
     return "Choose a workspace folder:\n"
-           "  1  " + (root / "Documents" / "cratchit").string() + "\n"
-           "  2  " + (root / "start").string() + "\n"
+           "  1  " + (root / "start").string() + "\n"
+           "  2  " + (root / "Documents" / "cratchit").string() + "\n"
            "  3  Type a folder path\n"
            "\n"
            "Press a number to choose, - to go back, h for help, q to quit.\n";
@@ -190,8 +190,8 @@ TEST_F(WorkspaceRepl, NoEntryOffersChoices) {
 
 TEST_F(WorkspaceRepl, DefaultIsCreatedSavedAndOpened) {
   auto const folder = root / "Documents" / "cratchit";
-  auto const output = run("1q");
-  EXPECT_NE(output.find("workspace?> 1\nCreated folder " + folder.string() + "\n"
+  auto const output = run("2q");
+  EXPECT_NE(output.find("workspace?> 2\nCreated folder " + folder.string() + "\n"
                         "Initiated .cratchit/workspace.txt in " + folder.string() + "\n"
                         "Updated .cratchit/runtime.txt in " + (root / "start").string() + "\n"
                         "Opened workspace " + folder.string() + "\n"
@@ -203,13 +203,13 @@ TEST_F(WorkspaceRepl, DefaultIsCreatedSavedAndOpened) {
 }
 
 TEST_F(WorkspaceRepl, StartFolderGetsWorkspaceFileInItsOwnCratchit) {
-  run("2");
+  run("1");
   EXPECT_EQ(read_file(root / "start" / ".cratchit" / "workspace.txt"), "created = 2026-10-20\n");
   EXPECT_EQ(read_file(runtime_file), "created = 2026-10-20\nworkspace = " + (root / "start").string() + "\n");
 }
 
 TEST_F(WorkspaceRepl, SavedWorkspaceOpensOnStart) {
-  run("2");
+  run("1");
   auto const output = run("-q");
   EXPECT_EQ(output, "Opened workspace " + (root / "start").string() + "\nworkspace> -\ncratchit> q\n");
 }
@@ -300,17 +300,90 @@ TEST_F(WorkspaceRepl, QIsTypedInAPathButQuitsElsewhere) {
 }
 
 TEST_F(WorkspaceRepl, HelpReturnsToTheWorkspace) {
-  run("2");
+  run("1");
   auto const output = run("hqq");
   EXPECT_NE(output.find("help> q\nworkspace> q\n"), std::string::npos) << output;
 }
 
-TEST_F(WorkspaceRepl, WKeyOpensTheWorkspace) {
-  run("2");
+TEST_F(WorkspaceRepl, WKeyOffersTheSavedWorkspaceAndBrowsing) {
+  run("1");
   auto repl = make_repl();
   std::ostringstream out;
-  repl.on_key(U'w', out);
-  EXPECT_EQ(repl.prompt(), "workspace> ");
+  cratchit::run_repl(repl, keys_from("wx-q"), out);
+  EXPECT_EQ(out.str(), "cratchit> w\n"
+                       "Workspace:\n"
+                       "  w  Open " + (root / "start").string() + "\n"
+                       "  b  Browse for a new workspace\n"
+                       "\n"
+                       "Press w or b, - to go back, h for help, q to quit.\n"
+                       "workspace?> x\n"
+                       "Press w or b, - to go back, h for help, q to quit.\n"
+                       "workspace?> -\n"
+                       "cratchit> q\n");
+}
+
+TEST_F(WorkspaceRepl, WKeyTwiceOpensTheSavedWorkspace) {
+  run("1");
+  auto const before = read_file(runtime_file);
+  auto repl = make_repl();
+  std::ostringstream out;
+  cratchit::run_repl(repl, keys_from("ww"), out);
+  EXPECT_TRUE(out.str().ends_with("workspace?> w\nOpened workspace " + (root / "start").string() + "\nworkspace> \n"))
+      << out.str();
+  EXPECT_EQ(read_file(runtime_file), before);
+}
+
+TEST_F(WorkspaceRepl, MenuWithoutSavedWorkspaceOffersOnlyBrowsing) {
+  auto repl = make_repl();
+  std::ostringstream out;
+  cratchit::run_repl(repl, keys_from("ww"), out);
+  EXPECT_EQ(out.str(), "cratchit> w\n"
+                       "Workspace:\n"
+                       "  b  Browse for a new workspace\n"
+                       "\n"
+                       "Press b, - to go back, h for help, q to quit.\n"
+                       "workspace?> w\n"
+                       "Press b, - to go back, h for help, q to quit.\n"
+                       "workspace?> \n");
+}
+
+TEST_F(WorkspaceRepl, BrowsingSwitchesTheSavedWorkspace) {
+  run("1");
+  auto const folder = root / "Documents" / "cratchit";
+  auto const output = run("-wb2");
+  EXPECT_NE(output.find("workspace?> b\n" + choices() + "workspace?> 2\nCreated folder " + folder.string()),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Opened workspace " + folder.string() + "\nworkspace> \n"), std::string::npos) << output;
+  EXPECT_EQ(read_file(runtime_file), "created = 2026-10-20\nworkspace = " + folder.string() + "\n");
+}
+
+TEST_F(WorkspaceRepl, BackFromBrowsingShowsTheMenu) {
+  run("1");
+  auto const output = run("-wb-");
+  EXPECT_TRUE(output.ends_with("workspace?> -\nWorkspace:\n"
+                               "  w  Open " + (root / "start").string() + "\n"
+                               "  b  Browse for a new workspace\n"
+                               "\n"
+                               "Press w or b, - to go back, h for help, q to quit.\n"
+                               "workspace?> \n"))
+      << output;
+}
+
+TEST_F(WorkspaceRepl, ChoosingTheSavedWorkspaceAgainKeepsRuntimeFile) {
+  run("1");
+  auto const output = run("-wb1");
+  EXPECT_EQ(output.find("Updated"), std::string::npos) << output;
+  EXPECT_NE(output.find("workspace?> 1\nOpened workspace " + (root / "start").string()), std::string::npos) << output;
+}
+
+TEST_F(WorkspaceRepl, BrokenSavedWorkspaceCanBeReplacedFromTheMenu) {
+  fs::create_directories(root / "books" / ".cratchit");
+  std::ofstream(runtime_file) << "workspace = " << (root / "books").string() << "\n";
+  auto const output = run("wwwb1");
+  EXPECT_NE(output.find("workspace?> w\nError: "), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("Opened workspace " + (root / "start").string() + "\nworkspace> \n")) << output;
+  EXPECT_EQ(read_file(runtime_file), "workspace = " + (root / "start").string() + "\n");
 }
 
 TEST_F(WorkspaceRepl, LKeyPagesTheLogAndReturnsToThePrompt) {
@@ -345,7 +418,7 @@ TEST_F(WorkspaceRepl, LKeyWorksInTheWorkspace) {
   auto repl = Repl(manual, 0, {runtime_file, root / "start", root / "Documents" / "cratchit", "2026-10-20"}, log_file);
   std::ostringstream out;
   repl.open_workspace(out);
-  cratchit::run_repl(repl, keys_from("2l"), out);
+  cratchit::run_repl(repl, keys_from("1l"), out);
   EXPECT_TRUE(out.str().ends_with("workspace> l\nLog " + log_file.string() + ", newest first:\none\n(start of log)\n"
                                   "workspace> \n"))
       << out.str();
