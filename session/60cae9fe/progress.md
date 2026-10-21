@@ -30,6 +30,12 @@ in runtime.txt (`Updated ...`). A fresh location gets `.cratchit/workspace.txt` 
 workspace whose `.cratchit` lacks it is an error (stays at `cratchit>`). 107 tests pass, no warnings, checked in a pty
 and with piped input. Windows Documents lookup (SHGetKnownFolderPath) not built yet. In review.
 
+Task 8: Charset transcoding scaffold, CP437 to Unicode (`core/charset/unicode`, `core/charset/cp437`).
+`charset::unicode::CodePoint` (char32_t), `charset::cp437::CodePoint` (uint8_t). `cp437::ToUnicodeBuffer::push(byte)`
+returns `std::optional<unicode::CodePoint>` (always a value for CP437); `cp437::to_unicode(bytes)` decodes a text.
+0x00-0x7F is ASCII including control characters, 0x80-0xFF the standard CP437 table. No user operation, so no manual
+change. 112 tests pass, no warnings. In review.
+
 ## Next
 
 To be given in chat.
@@ -54,6 +60,11 @@ To be given in chat.
 - 2026-10-20: cratchit may change an existing file when the user asks for it (choosing a workspace updates runtime.txt).
   The workspace is chosen from a menu; its path is typed key by key in cratchit's own buffer with shell-like Tab
   completion. Paths are shown and saved in full. `q` quits from `workspace>`. The workspace opens on start.
+
+- 2026-10-21: Transcoding goes through two push buffers: charset -> Unicode (`push(byte)` returns an optional code
+  point) and Unicode -> charset (`push(code point)` returns the byte or bytes). Each charset has its own namespace
+  `charset::<name>` with its own `CodePoint` type; Unicode lives in `charset::unicode`. CP437 bytes 0x00-0x1F and 0x7F
+  are ASCII control characters, not the IBM screen glyphs.
 
 ## Open questions
 

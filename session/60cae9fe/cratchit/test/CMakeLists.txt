@@ -1,6 +1,7 @@
 find_package(GTest REQUIRED)
 
 add_executable(cratchit_tests
+  test_cp437.cpp
   test_data_folder.cpp
   test_help.cpp
   test_manual.cpp

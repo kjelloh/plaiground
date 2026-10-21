@@ -2,6 +2,24 @@
 
 ```#60cae9fe```
 
+## 20261021
+
+Now it is time to introduce the scaffolding for character set encoding and decoding.
+
+* I want character set transcoding to be based on a stack-like buffer with a 'push' operation.
+* Two buffers are required to transcode from one character set encoding to another.
+* One character set to Unicode buffer that accepts push of bytes from the input character set encoding and produces Unicode code code points as they are available.
+* One Unicode to character set buffer that accepts push of Unicode code points and produces an std::array of multi byte encoding in the encoded character set.
+* The character set to Unicode buffer 'push' returns an optional Unicode code pointer to signal when there is one available in the buffer.
+* The Unicode to character set buffer 'push' returns a single byte or an std::array as required to return single or multi byte encoding for the target character set encoding.
+
+I want to try this architecture out for the CP437 character set.
+
+* I want the code places in namespace 'charset::cp437'
+* I want to first implement CP437 to Unicode based on this design.
+
+What can Claude propose as an implementation for this design?
+
 ## 20261019
 
 So this is take three to try and 'vibe code' a Swedish book keeping app in modern C++23.
