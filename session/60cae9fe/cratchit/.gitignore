@@ -1,2 +1,5 @@
 build/
 CMakeUserPresets.json
+
+# Ignore all cratchit dot-folder files
+.cratchit
