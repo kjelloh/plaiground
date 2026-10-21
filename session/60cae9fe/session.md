@@ -24,6 +24,34 @@ Claude implemented CP437 to Unicode buffer for me.
 
 * Now I want Claude to take this design an implement Unicode to UTF8 for me.
 
+I have now iterated some task steps and think I have a character set transcoding architecture in place.
+
+* I cleared Claude and asked fresh about some clean boundary between internal character set string encoding and terminal io.
+* And Claude came back and said - Not so!
+* It then proposed several aspects to attend to.
+
+So I decided to continue the 'vibe coding' approach and let it do its thing as it found 'best' based on my asking for the attention and design goals.
+
+Now I have reviewed the change Claude proposed and I do no longer agree.
+
+* It identified a problem with UTF8 to Unicode where a broken sequence may result in one unknown character (the broken escape) and one potentially valid one (the sequence breaking byte).
+
+```sh
+The problem is narrower. It's the case where the byte that reveals an error is itself a valid character:
+
+bytes:   E2      82      61 ('a')
+push:    nothing nothing ?
+
+After E2 82, the decoder is waiting for a third byte. Then a arrives. It isn't a continuation byte, so two things are now true:
+
+1. E2 82 was a broken sequence, so the output owes a U+FFFD.
+2. a is a perfectly good character, so the output owes an a.
+```
+
+* But on second thought I do not believe returning both the unknown character and the breaking one as a valid one is the way to go?
+* I think I will revert Claudes fixes and ask for a clarification in code that in this case the breaking sequence shall consume all three into an unknown character?
+* I mean, We AER assuming it is UTF-8. So if we find an invalid sequence, then the whole sequence can be mapped to an unknown char (assuming the breaking char is itself a valid char is NOT automatically a good resolution)?
+
 ## 20261019
 
 So this is take three to try and 'vibe code' a Swedish book keeping app in modern C++23.
