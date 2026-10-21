@@ -6,7 +6,6 @@
 
 using charset::cp437::CodePoint;
 using charset::cp437::ToUnicodeBuffer;
-using charset::cp437::to_unicode;
 
 TEST(Cp437, AsciiIncludingControlCharactersIsUnchanged) {
   ToUnicodeBuffer buffer;
@@ -45,9 +44,4 @@ TEST(Cp437, EveryByteGivesADistinctCodePoint) {
     EXPECT_TRUE(seen.insert(*code_point).second) << "byte " << byte;
   }
   EXPECT_EQ(seen.size(), 256u);
-}
-
-TEST(Cp437, ToUnicodeDecodesAText) {
-  EXPECT_EQ(to_unicode("R\x84kning\r\n\x8Fr"), U"Räkning\r\nÅr");
-  EXPECT_EQ(to_unicode(""), U"");
 }

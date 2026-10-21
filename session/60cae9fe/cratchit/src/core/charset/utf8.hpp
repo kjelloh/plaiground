@@ -5,7 +5,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <string>
 
 namespace charset::utf8 {
 
@@ -28,8 +27,5 @@ class FromUnicodeBuffer {
 public:
   Bytes push(unicode::CodePoint code_point);
 };
-
-// A text of Unicode code points as UTF-8 bytes
-std::string from_unicode(unicode::CodePoints const& code_points);
 
 } // namespace charset::utf8

@@ -4,9 +4,9 @@
 #include <gtest/gtest.h>
 
 #include <string>
+#include <string_view>
 
 using charset::utf8::FromUnicodeBuffer;
-using charset::utf8::from_unicode;
 
 namespace {
 
@@ -54,12 +54,17 @@ TEST(Utf8, NonCharactersGiveReplacementCharacter) {
   EXPECT_EQ(encoded(0x110000), "\xEF\xBF\xBD");
 }
 
-TEST(Utf8, FromUnicodeEncodesAText) {
-  EXPECT_EQ(from_unicode(U"Räkning €"), "R\xC3\xA4kning \xE2\x82\xAC");
-  EXPECT_EQ(from_unicode(U""), "");
-}
-
+// Each code point goes straight from one buffer into the other
 TEST(Utf8, TranscodesCp437ToUtf8) {
-  auto const text = charset::cp437::to_unicode("\x8Fr \x84r \x94l\r\n");
-  EXPECT_EQ(from_unicode(text), "\xC3\x85r \xC3\xA4r \xC3\xB6l\r\n"); // År är öl
+  charset::cp437::ToUnicodeBuffer to_unicode;
+  FromUnicodeBuffer from_unicode;
+  std::string result;
+  for (char const c : std::string_view{"\x8Fr \x84r \x94l\r\n"}) {
+    if (auto const code_point = to_unicode.push(static_cast<charset::cp437::CodePoint>(c))) {
+      for (auto const byte : from_unicode.push(*code_point)) {
+        result.push_back(static_cast<char>(byte));
+      }
+    }
+  }
+  EXPECT_EQ(result, "\xC3\x85r \xC3\xA4r \xC3\xB6l\r\n"); // År är öl
 }

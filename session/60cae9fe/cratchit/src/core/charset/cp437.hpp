@@ -4,7 +4,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <string_view>
 
 namespace charset::cp437 {
 
@@ -19,8 +18,5 @@ public:
   // CP437 is one byte per character, so a byte always makes one.
   std::optional<unicode::CodePoint> push(CodePoint byte);
 };
-
-// All bytes of a CP437 text as Unicode code points
-unicode::CodePoints to_unicode(std::string_view bytes);
 
 } // namespace charset::cp437

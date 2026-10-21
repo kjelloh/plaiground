@@ -43,15 +43,4 @@ std::optional<unicode::CodePoint> ToUnicodeBuffer::push(CodePoint byte) {
   return upper_half[byte - 0x80];
 }
 
-unicode::CodePoints to_unicode(std::string_view bytes) {
-  unicode::CodePoints result;
-  ToUnicodeBuffer buffer;
-  for (char const c : bytes) {
-    if (auto const code_point = buffer.push(static_cast<CodePoint>(c))) {
-      result.push_back(*code_point);
-    }
-  }
-  return result;
-}
-
 } // namespace charset::cp437

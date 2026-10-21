@@ -32,14 +32,13 @@ and with piped input. Windows Documents lookup (SHGetKnownFolderPath) not built 
 
 Task 8: Charset transcoding scaffold, CP437 to Unicode (`core/charset/unicode`, `core/charset/cp437`).
 `charset::unicode::CodePoint` (char32_t), `charset::cp437::CodePoint` (uint8_t). `cp437::ToUnicodeBuffer::push(byte)`
-returns `std::optional<unicode::CodePoint>` (always a value for CP437); `cp437::to_unicode(bytes)` decodes a text.
+returns `std::optional<unicode::CodePoint>` (always a value for CP437).
 0x00-0x7F is ASCII including control characters, 0x80-0xFF the standard CP437 table. No user operation, so no manual
 change. 112 tests pass, no warnings. In review.
 
 Task 9: Unicode to UTF-8 (`core/charset/utf8`). `charset::utf8::CodePoint` (uint8_t). `utf8::FromUnicodeBuffer::push(code
 point)` returns `utf8::Bytes` (`std::array<CodePoint, 4>` + `size`, iterable). Surrogates and values above U+10FFFF give
-U+FFFD. `utf8::from_unicode(code points)` returns a `std::string`. Test chains CP437 -> Unicode -> UTF-8.
-119 tests pass, no warnings. In review.
+U+FFFD. Test chains CP437 -> Unicode -> UTF-8. 119 tests pass, no warnings. In review.
 
 Task 10: Terminal encoding (`core/terminal_encoding`). On start cratchit asks the platform for the terminal's input and
 output encoding and keeps the choice for the run (in memory, not saved). macOS and Android: UTF-8 at compile time.
@@ -48,6 +47,10 @@ Linux/POSIX: `nl_langinfo(CODESET)` of the user's locale (process locale restore
 each direction adapts when a transcoder exists (read: UTF-8, CP437; write: UTF-8), else UTF-8 plus a warning on stderr.
 Not yet wired into actual terminal I/O. Manual has a new section "Terminal encoding". 126 tests pass, no warnings.
 Linux and Windows branches not built yet (Linux query logic checked on macOS). In review.
+
+Task 11: Removed all Unicode code point buffers: `cp437::to_unicode(text)`, `utf8::from_unicode(text)` and the
+`unicode::CodePoints` (u32string) alias. Only the two push buffers remain; the CP437 -> UTF-8 test pairs them in its
+own loop. No user operation, so no manual change. 124 tests pass, no warnings. In review.
 
 ## Next
 
@@ -82,6 +85,10 @@ To be given in chat.
 - 2026-10-21: Cratchit has its own internal encoding (Unicode code points), separate from the platform's. It determines
   and remembers the terminal in/out encodings, adapts to them when it can transcode, and otherwise falls back to UTF-8
   with a warning. Transcoders are added as the need arises.
+
+- 2026-10-21: Results come from return values, never out-parameters. Unicode code points exist only one at a time
+  between two push buffers, never in a buffer of their own. There are no whole-text transcode helpers: each client
+  pairs the buffers it needs in its own algorithm.
 
 ## Open questions
 

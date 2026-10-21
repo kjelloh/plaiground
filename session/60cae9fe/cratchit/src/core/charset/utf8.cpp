@@ -36,15 +36,4 @@ Bytes FromUnicodeBuffer::push(unicode::CodePoint code_point) {
   return encode(code_point, 4, 0xF0);
 }
 
-std::string from_unicode(unicode::CodePoints const& code_points) {
-  std::string result;
-  FromUnicodeBuffer buffer;
-  for (auto const code_point : code_points) {
-    for (auto const byte : buffer.push(code_point)) {
-      result.push_back(static_cast<char>(byte));
-    }
-  }
-  return result;
-}
-
 } // namespace charset::utf8

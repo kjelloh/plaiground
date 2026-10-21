@@ -52,6 +52,30 @@ After E2 82, the decoder is waiting for a third byte. Then a arrives. It isn't a
 * I think I will revert Claudes fixes and ask for a clarification in code that in this case the breaking sequence shall consume all three into an unknown character?
 * I mean, We AER assuming it is UTF-8. So if we find an invalid sequence, then the whole sequence can be mapped to an unknown char (assuming the breaking char is itself a valid char is NOT automatically a good resolution)?
 
+I started fresh again and asked Claude for this UTF8 to Unicode solution.
+
+* It now again commented on throwing away a valid character that breaks an escape sequence.
+* It states the Unicode standard recommends to produce two Unicode code points invalid-char + valid-char.
+* I still disagree based on my argument above.
+
+I think I will try to make Claude keep the breaking char if it is a new sync char?
+
+* Then we consume the invalid sequence into the invalid char
+* And we start a new escape sequence in the buffer.
+
+What do Claude say?
+
+DARN! Claude has gone off the rails without me noting it.
+
+* It has implemented full to_unicode(std::string_view,&UnicodeBytes)
+* This iw WRONG for two reasons.
+    1. I do NOT want out-parameters (Result should always come from function return value)
+    2. I never intended Unicode to be used in buffering (only as intermediate code points) used by transcoding buffers.
+
+I wonder if I can trust Claude to reactor this away? Or if the to_unicode architecture is already manifested in to much code?
+
+I think I made Claude correct this error for now. At any case, I did what I can for now and want to proceed.
+
 ## 20261019
 
 So this is take three to try and 'vibe code' a Swedish book keeping app in modern C++23.
