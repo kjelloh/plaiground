@@ -15,6 +15,10 @@ Run: `./build/Debug/cratchit` (Windows/multi-config generators: `build/Debug/cra
 
 For a release build, replace `Debug`/`debug` with `Release`/`release`.
 
+`LOG_DEVELOPMENT_TRACE` events are compiled into Debug builds only. Set the CMake cache
+variable `CRATCHIT_DEVELOPMENT_TRACE` to `ON` (every build), `OFF` (none) or `DEBUG`
+(the default), e.g. `cmake --preset conan-debug -DCRATCHIT_DEVELOPMENT_TRACE=OFF`.
+
 ## Use
 
 See [MANUAL.md](MANUAL.md). It is built into the program and shown by the `h` key,

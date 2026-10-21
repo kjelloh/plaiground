@@ -26,6 +26,8 @@ add_library(cratchit_core
   src/core/charset/utf8.cpp
   src/core/data_folder.cpp
   src/core/help.cpp
+  src/core/log.cpp
+  src/core/log_view.cpp
   src/core/manual.cpp
   src/core/path_editor.cpp
   src/core/path_value.cpp
@@ -43,6 +45,19 @@ if(WIN32)
   target_link_libraries(cratchit_core PRIVATE shell32 ole32)
 endif()
 target_compile_definitions(cratchit_core PRIVATE CRATCHIT_VERSION="${PROJECT_VERSION}")
+
+# LOG_DEVELOPMENT_TRACE is compiled in when CRATCHIT_DEVELOPMENT_TRACE is ON,
+# left out when OFF, and DEBUG (the default) compiles it into Debug builds only
+set(CRATCHIT_DEVELOPMENT_TRACE DEBUG CACHE STRING "Compile in LOG_DEVELOPMENT_TRACE: ON, OFF or DEBUG")
+set_property(CACHE CRATCHIT_DEVELOPMENT_TRACE PROPERTY STRINGS ON OFF DEBUG)
+if(CRATCHIT_DEVELOPMENT_TRACE STREQUAL "DEBUG")
+  set(development_trace "$<CONFIG:Debug>")
+elseif(CRATCHIT_DEVELOPMENT_TRACE)
+  set(development_trace 1)
+else()
+  set(development_trace 0)
+endif()
+target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${development_trace})
 
 # Thin executable on top of the core library
 add_executable(cratchit

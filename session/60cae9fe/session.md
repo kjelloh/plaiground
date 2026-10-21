@@ -76,6 +76,12 @@ I wonder if I can trust Claude to reactor this away? Or if the to_unicode archit
 
 I think I made Claude correct this error for now. At any case, I did what I can for now and want to proceed.
 
+I now think I need a better harness in the generated code.
+
+* I think I will ask Claude to add spdlog with my preferred facade LOG_BUSINESS, LOG_DEVELOPMENT_TRACE and LOG_DESIGN_INSUFFICIENCY.
+* I think I will ask Claude to remember to NEVER use out parameters?
+* I think I will ask Claude to NEVER implement code that is not explicitly required by implemented functionality or asked for by me?
+
 ## 20261019
 
 So this is take three to try and 'vibe code' a Swedish book keeping app in modern C++23.

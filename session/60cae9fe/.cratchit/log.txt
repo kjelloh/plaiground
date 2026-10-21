@@ -1,0 +1,8 @@
+2026-10-21T15:25:27 BUSINESS main.cpp:17 cratchit 0.1.0 started in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe
+2026-10-21T15:25:27 DEVELOPMENT_TRACE main.cpp:41 Page lines 64
+2026-10-21T15:25:27 BUSINESS repl.cpp:285 Opened workspace /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe
+2026-10-21T15:26:08 BUSINESS main.cpp:46 cratchit quit
+2026-10-21T15:26:11 BUSINESS main.cpp:17 cratchit 0.1.0 started in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe
+2026-10-21T15:26:11 DEVELOPMENT_TRACE main.cpp:41 Page lines 64
+2026-10-21T15:26:11 BUSINESS repl.cpp:285 Opened workspace /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe
+2026-10-21T15:26:31 BUSINESS main.cpp:46 cratchit quit

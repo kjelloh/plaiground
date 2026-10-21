@@ -52,6 +52,17 @@ Task 11: Removed all Unicode code point buffers: `cp437::to_unicode(text)`, `utf
 `unicode::CodePoints` (u32string) alias. Only the two push buffers remain; the CP437 -> UTF-8 test pairs them in its
 own loop. No user operation, so no manual change. 124 tests pass, no warnings. In review.
 
+Task 12: Logging facade (`core/log`), own code, no Conan package. `LOG_BUSINESS`, `LOG_DEVELOPMENT_TRACE`,
+`LOG_DESIGN_INSUFFICIENCY` take `std::format` arguments and append one line `<local time> <KIND> <file>:<line> <message>`
+to `log.txt` next to runtime.txt (one log for all runs, never on screen). Events before the log is opened are kept in
+memory and written on open. CMake cache variable `CRATCHIT_DEVELOPMENT_TRACE` = ON/OFF/DEBUG (default DEBUG: Debug
+builds only); when off, the trace is still type-checked but never runs. Log viewer (`core/log_view`): `l` at
+`cratchit>` and `workspace>` shows the log newest first, paged with `--More--` (space/Enter older, `-`/`q` back),
+ends with `(start of log)`. Logged so far: start, initiated files, chosen/opened workspace, quit (business);
+terminal encoding fallback (design insufficiency, still also warned on stderr); page lines (trace). Manual has
+section "The log"; README documents the CMake flag. 139 tests pass, no warnings with trace on or off; checked with
+piped input and in a 10-row pty. In review.
+
 ## Next
 
 To be given in chat.
@@ -85,6 +96,11 @@ To be given in chat.
 - 2026-10-21: Cratchit has its own internal encoding (Unicode code points), separate from the platform's. It determines
   and remembers the terminal in/out encodings, adapts to them when it can transcode, and otherwise falls back to UTF-8
   with a warning. Transcoders are added as the need arises.
+
+- 2026-10-21: Logging is cratchit's own code behind a facade (swap to spdlog later only if needed). Three kinds:
+  business (information for the user, NOT bookkeeping data), development trace (CMake flag, on in Debug for now),
+  design insufficiency. One log for all runs in the runtime's `.cratchit/log.txt`. Nothing is logged to the screen.
+  A rudimentary viewer shows the log newest first.
 
 - 2026-10-21: Results come from return values, never out-parameters. Unicode code points exist only one at a time
   between two push buffers, never in a buffer of their own. There are no whole-text transcode helpers: each client

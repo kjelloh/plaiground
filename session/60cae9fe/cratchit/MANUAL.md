@@ -103,6 +103,9 @@ is taken from the folder holding the runtime's `.cratchit`.
 created = 2026-10-20
 ```
 
+`log.txt`, next to `runtime.txt`, is the log (see The log). cratchit creates
+it the first time it logs something and only ever adds lines to it.
+
 ### When something is missing
 
 cratchit changes an existing file only when you ask it to: choosing a
@@ -206,6 +209,7 @@ The prompt is `workspace>`.
 | Key    | What it does                         |
 |--------|--------------------------------------|
 | h      | Opens this manual.                   |
+| l      | Shows the log (see The log).         |
 | -      | Goes back to the `cratchit>` prompt. |
 | q      | Quits cratchit.                      |
 | Ctrl-D | Quits cratchit.                      |
@@ -219,6 +223,7 @@ Typing a folder path).
 | Key    | What it does                        |
 |--------|-------------------------------------|
 | h      | Opens this manual (see Using help). |
+| l      | Shows the log (see The log).        |
 | w      | Opens the workspace.                |
 | q      | Quits cratchit.                     |
 | Ctrl-D | Quits cratchit (same as q).         |
@@ -226,6 +231,57 @@ Typing a folder path).
 Any other key prints `Unknown key. Press h for help.`
 
 Ctrl-C stops cratchit at once.
+
+## The log
+
+cratchit logs what happens while it runs, as extra information for you. The
+log is not part of your books. Nothing from the log is shown on screen unless
+you ask for it.
+
+### Where the log is
+
+All runs log to the same file, `log.txt` in the runtime's `.cratchit` folder
+(next to `runtime.txt`, see The .cratchit folder). Each run adds to the end.
+What happens at start, before cratchit has found the runtime, is written as
+soon as it has. When cratchit stops with an error at start, nothing is logged.
+
+If the log can't be written, cratchit warns once at start and goes on without
+it:
+
+```
+Warning: Cannot open log <folder>/.cratchit/log.txt. Nothing is logged.
+```
+
+### What a log line holds
+
+Each event is one line: the local time, the kind of event, where in
+cratchit's code it was logged, and what happened:
+
+```
+2026-10-21T14:03:12 BUSINESS repl.cpp:285 Opened workspace /Users/me/Documents/cratchit
+```
+
+| Kind                 | What it means                                          |
+|----------------------|--------------------------------------------------------|
+| BUSINESS             | Something cratchit did, such as opening a workspace.   |
+| DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle. |
+| DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
+
+### Viewing the log
+
+Press `l` at the `cratchit>` or `workspace>` prompt. cratchit shows the log
+newest event first, so you read backwards in time. When it does not fit in the
+terminal window, it shows one page and then `--More--`:
+
+| Key         | What it does                         |
+|-------------|--------------------------------------|
+| space/Enter | Shows the next page of older events. |
+| -           | Stops and goes back to the prompt.   |
+| q           | Stops and goes back to the prompt.   |
+| Ctrl-D      | Quits cratchit.                      |
+
+After the oldest event cratchit shows `(start of log)` and returns to the
+prompt. When the output is not a terminal, the whole log is shown at once.
 
 ## Using help
 

@@ -1,5 +1,6 @@
 #include "core/repl.hpp"
 
+#include "core/log.hpp"
 #include "core/workspace.hpp"
 
 #include <print>
@@ -32,8 +33,8 @@ std::string_view echo_of(char const& key) {
 
 } // namespace
 
-Repl::Repl(Section const& manual, std::size_t page_lines, WorkspacePlaces places)
-    : places_(std::move(places)), help_(manual, page_lines) {}
+Repl::Repl(Section const& manual, std::size_t page_lines, WorkspacePlaces places, fs::path log_file)
+    : places_(std::move(places)), log_file_(std::move(log_file)), help_(manual, page_lines), log_view_(page_lines) {}
 
 void Repl::open_workspace(std::ostream& out) {
   auto const entry = workspace_entry(places_.runtime_file);
@@ -68,6 +69,11 @@ Step Repl::on_key(char key, std::ostream& out) {
       }
     }
     return Step::Continue;
+  case Mode::Log:
+    if (log_view_.on_key(key, out) == LogView::Result::Leave) {
+      mode_ = before_log_;
+    }
+    return Step::Continue;
   case Mode::Typing:
     on_typing_key(key, out);
     return Step::Continue;
@@ -88,6 +94,8 @@ Step Repl::on_key(char key, std::ostream& out) {
   case Mode::Main:
     if (key == 'w') {
       open_workspace(out);
+    } else if (key == 'l') {
+      open_log(out);
     } else {
       std::println(out, "Unknown key. Press h for help.");
     }
@@ -98,6 +106,8 @@ Step Repl::on_key(char key, std::ostream& out) {
   case Mode::Workspace:
     if (key == '-') {
       mode_ = Mode::Main;
+    } else if (key == 'l') {
+      open_log(out);
     } else {
       std::println(out, "Unknown key. Press h for help.");
     }
@@ -116,8 +126,8 @@ bool Repl::ignores(char key) const {
   if (key == escape) {
     return true;
   }
-  // Space and Enter show the next page of help
-  if (mode_ == Mode::Help && help_.is_paging()) {
+  // Space and Enter show the next page of help or the log
+  if ((mode_ == Mode::Help && help_.is_paging()) || mode_ == Mode::Log) {
     return key == '\t';
   }
   return is_whitespace(key);
@@ -131,6 +141,8 @@ std::string Repl::prompt() const {
   switch (mode_) {
   case Mode::Help:
     return help_.prompt();
+  case Mode::Log:
+    return log_view_.prompt();
   case Mode::Choose:
     return "workspace?> ";
   case Mode::Typing:
@@ -148,6 +160,13 @@ void Repl::open_help(std::ostream& out) {
   before_help_ = mode_;
   mode_ = Mode::Help;
   help_.open(out);
+}
+
+void Repl::open_log(std::ostream& out) {
+  if (log_view_.open(log_file_, out) == LogView::Result::Stay) {
+    before_log_ = mode_;
+    mode_ = Mode::Log;
+  }
 }
 
 void Repl::show_choices(std::ostream& out) {
@@ -257,8 +276,13 @@ void Repl::enter_workspace(fs::path const& folder, bool chosen, std::ostream& ou
     }
     auto const runtime_root = places_.runtime_file.parent_path().parent_path();
     std::println(out, "Updated .cratchit/runtime.txt in {}", runtime_root.string());
+    LOG_BUSINESS("Chose workspace {}, saved in {}", folder.string(), places_.runtime_file.string());
+  }
+  for (auto const& entry : workspace->initiated) {
+    LOG_BUSINESS("Initiated {} in {}", entry.file.generic_string(), entry.folder.string());
   }
   std::println(out, "Opened workspace {}", folder.string());
+  LOG_BUSINESS("Opened workspace {}", folder.string());
   mode_ = Mode::Workspace;
 }
 

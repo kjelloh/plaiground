@@ -4,6 +4,8 @@ add_executable(cratchit_tests
   test_cp437.cpp
   test_data_folder.cpp
   test_help.cpp
+  test_log.cpp
+  test_log_view.cpp
   test_manual.cpp
   test_path_editor.cpp
   test_path_value.cpp

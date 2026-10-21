@@ -289,3 +289,41 @@ TEST_F(WorkspaceRepl, WKeyOpensTheWorkspace) {
   repl.on_key('w', out);
   EXPECT_EQ(repl.prompt(), "workspace> ");
 }
+
+TEST_F(WorkspaceRepl, LKeyPagesTheLogAndReturnsToThePrompt) {
+  auto const log_file = root / "log.txt";
+  std::ofstream(log_file) << "one\ntwo\nthree\n";
+  Repl repl(manual, 2, {runtime_file, root / "start", root / "Documents" / "cratchit", "2026-10-20"}, log_file);
+  std::ostringstream out;
+  cratchit::run_repl(repl, keys_from("l l-lqq"), out);
+  EXPECT_EQ(out.str(), "cratchit> l\n"
+                       "Log " + log_file.string() + ", newest first:\n"
+                       "three\n"
+                       "two\n"
+                       "--More-- \n"
+                       "one\n"
+                       "(start of log)\n"
+                       "cratchit> l\n"
+                       "Log " + log_file.string() + ", newest first:\n"
+                       "three\n"
+                       "two\n"
+                       "--More-- -\n"
+                       "cratchit> l\n"
+                       "Log " + log_file.string() + ", newest first:\n"
+                       "three\n"
+                       "two\n"
+                       "--More-- q\n"
+                       "cratchit> q\n");
+}
+
+TEST_F(WorkspaceRepl, LKeyWorksInTheWorkspace) {
+  auto const log_file = root / "log.txt";
+  std::ofstream(log_file) << "one\n";
+  auto repl = Repl(manual, 0, {runtime_file, root / "start", root / "Documents" / "cratchit", "2026-10-20"}, log_file);
+  std::ostringstream out;
+  repl.open_workspace(out);
+  cratchit::run_repl(repl, keys_from("2l"), out);
+  EXPECT_TRUE(out.str().ends_with("workspace> l\nLog " + log_file.string() + ", newest first:\none\n(start of log)\n"
+                                  "workspace> \n"))
+      << out.str();
+}
