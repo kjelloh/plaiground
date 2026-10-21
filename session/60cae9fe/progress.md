@@ -102,6 +102,10 @@ To be given in chat.
   design insufficiency. One log for all runs in the runtime's `.cratchit/log.txt`. Nothing is logged to the screen.
   A rudimentary viewer shows the log newest first.
 
+- 2026-10-21: Every task considers what to log. Log sparsely but deliberately: important events only (what the user
+  did or cratchit changed as `LOG_BUSINESS`, every not-designed-for path as `LOG_DESIGN_INSUFFICIENCY`, traces only
+  where they help development). No logging in loops or per key press.
+
 - 2026-10-21: Results come from return values, never out-parameters. Unicode code points exist only one at a time
   between two push buffers, never in a buffer of their own. There are no whole-text transcode helpers: each client
   pairs the buffers it needs in its own algorithm.
