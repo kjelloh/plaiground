@@ -82,6 +82,8 @@ I now think I need a better harness in the generated code.
 * I think I will ask Claude to remember to NEVER use out parameters?
 * I think I will ask Claude to NEVER implement code that is not explicitly required by implemented functionality or asked for by me?
 
+I now vibe coded UTF8 to Unicode and made Claude configure for all-warnings-as-errors.
+
 ## 20261019
 
 So this is take three to try and 'vibe code' a Swedish book keeping app in modern C++23.

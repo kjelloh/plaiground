@@ -63,6 +63,16 @@ terminal encoding fallback (design insufficiency, still also warned on stderr); 
 section "The log"; README documents the CMake flag. 139 tests pass, no warnings with trace on or off; checked with
 piped input and in a 10-row pty. In review.
 
+Task 13: UTF-8 to Unicode (`utf8::ToUnicodeBuffer` in `core/charset/utf8`). `push(byte)` returns an optional code point;
+`finish()` ends the input. Only well-formed UTF-8 decodes (no overlong forms, surrogates or values above U+10FFFF,
+checked from the second byte). A failed sequence consumes its bytes including the breaking byte (even if that byte is
+good on its own) and gives one U+FFFD. `failure_count()` counts failed sequences, `failed_bytes()` keeps all their bytes
+flat and in order, without a cap. `unicode::replacement_character` moved to `core/charset/unicode.hpp`. The buffer does
+not log (clients decide). No user operation, so no manual change. 151 tests pass, no warnings. In review.
+
+Task 14: Warnings are errors (`-Werror` / `/WX` on the shared `cratchit_warnings` target). Clean Debug rebuild with
+trace DEBUG, OFF and ON builds and passes 151 tests on macOS. Release, Linux and Windows not built. In review.
+
 ## Next
 
 To be given in chat.
@@ -110,10 +120,15 @@ To be given in chat.
   between two push buffers, never in a buffer of their own. There are no whole-text transcode helpers: each client
   pairs the buffers it needs in its own algorithm.
 
+- 2026-10-21: A failed UTF-8 sequence consumes all its bytes including the byte that breaks it, gives one U+FFFD, and
+  its bytes are kept in a flat, uncapped buffer (to e.g. detect a match with another charset). The decoder counts
+  failures. `finish()` ends the input; an unfinished sequence there is a failure.
+
+- 2026-10-21: Warnings are errors in all builds of cratchit's own targets (`-Werror` / `/WX`).
+
 ## Open questions
 
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
-- Should warnings be errors (`-Werror` / `/WX`)? Currently not.
 - How should the user change to another workspace once one is set? Today only by editing runtime.txt, which is also
   the only way out when a saved workspace has a `.cratchit` without workspace.txt.
 - Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?

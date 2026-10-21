@@ -6,12 +6,12 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Warning flags shared by all targets
+# Warning flags shared by all targets; warnings are errors
 add_library(cratchit_warnings INTERFACE)
 if(MSVC)
-  target_compile_options(cratchit_warnings INTERFACE /W4 /permissive-)
+  target_compile_options(cratchit_warnings INTERFACE /W4 /WX /permissive-)
 else()
-  target_compile_options(cratchit_warnings INTERFACE -Wall -Wextra -Wpedantic)
+  target_compile_options(cratchit_warnings INTERFACE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
 # Build MANUAL.md into the program as bytes; CMake re-runs when the manual changes
