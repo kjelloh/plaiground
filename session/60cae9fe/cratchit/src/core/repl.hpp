@@ -5,6 +5,8 @@
 #include "core/log_view.hpp"
 #include "core/manual.hpp"
 #include "core/path_editor.hpp"
+#include "core/project.hpp"
+#include "core/workspace.hpp"
 
 #include <cstddef>
 #include <filesystem>
@@ -12,6 +14,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <vector>
 
 namespace cratchit {
 
@@ -27,7 +30,8 @@ struct WorkspacePlaces {
 };
 
 // The state of the app between key presses: the main prompt, browsing help,
-// viewing the log, the workspace menu, choosing a workspace, or in the workspace
+// viewing the log, the workspace menu, choosing a workspace, in the workspace,
+// the project menu, creating or adding a project, or in a project
 class Repl {
 public:
   // page_lines is the number of help and log lines per page; 0 shows everything at once.
@@ -35,7 +39,8 @@ public:
   Repl(Section const& manual, std::size_t page_lines, WorkspacePlaces places, std::filesystem::path log_file = {});
 
   // Open the workspace named in runtime.txt, or offer folders to choose from
-  // when there is none or its folder is missing (on start)
+  // when there is none or its folder is missing (on start). The workspace's
+  // last opened project is opened too.
   void open_workspace(std::ostream& out);
 
   // Handle one key press, writing any response to out
@@ -44,13 +49,15 @@ public:
   // True for keys that do nothing in the current mode, so are not even echoed
   bool ignores(charset::unicode::CodePoint key) const;
 
-  // True while a folder path is typed; on_key then writes the prompt and echo itself
+  // True while a folder path or name is typed; on_key then writes the prompt and echo itself
   bool is_typing() const;
 
   std::string prompt() const;
 
 private:
-  enum class Mode { Main, Help, Log, Menu, Choose, Typing, ConfirmCreate, Workspace };
+  enum class Mode { Main, Help, Log, Menu, Choose, Typing, ConfirmCreate, Workspace, Projects, ProjectFolder, Project };
+  // What the text typed in the editor is for
+  enum class Purpose { Workspace, ProjectName, ProjectFolder, ExistingProject };
 
   WorkspacePlaces places_;
   std::filesystem::path log_file_;
@@ -63,6 +70,11 @@ private:
   Mode before_choose_ = Mode::Main;
   std::optional<std::filesystem::path> current_; // the saved workspace offered by the menu, if its folder exists
   std::filesystem::path to_create_;
+  Purpose purpose_ = Purpose::Workspace;
+  std::optional<Workspace> workspace_;  // the open workspace
+  std::vector<ListedProject> listed_;   // the projects in the project menu
+  std::size_t first_listed_ = 0;        // the first project shown when they are more than keys 1-9
+  std::string new_name_;                // the name of the project being created
 
   void open_help(std::ostream& out);
   void open_log(std::ostream& out);
@@ -76,6 +88,20 @@ private:
   void on_confirm_key(charset::unicode::CodePoint key, std::ostream& out);
   void create_and_choose(std::filesystem::path const& folder, std::ostream& out);
   void enter_workspace(std::filesystem::path const& folder, bool chosen, std::ostream& out);
+  std::filesystem::path typed_folder(std::filesystem::path const& base) const;
+  bool make_folder(std::filesystem::path const& folder, std::ostream& out);
+  void open_last_project(std::ostream& out);
+  void open_projects(std::ostream& out);
+  void show_projects(std::ostream& out);
+  void projects_hint(std::ostream& out);
+  void on_projects_key(charset::unicode::CodePoint key, std::ostream& out);
+  void start_project_typing(Purpose purpose, std::ostream& out);
+  void show_project_folders(std::ostream& out);
+  void on_project_folder_key(charset::unicode::CodePoint key, std::ostream& out);
+  void on_project_path(std::filesystem::path const& folder, std::ostream& out);
+  void create_new_project(std::filesystem::path const& folder, std::ostream& out);
+  void add_existing_project(std::filesystem::path const& folder, std::ostream& out);
+  void enter_project(Project const& project, std::ostream& out);
 };
 
 // Supplies the next key press as a Unicode code point, or nothing at end of input

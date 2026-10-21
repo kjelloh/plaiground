@@ -84,6 +84,11 @@ I now think I need a better harness in the generated code.
 
 I now vibe coded UTF8 to Unicode and made Claude configure for all-warnings-as-errors.
 
+So now I have iterated to having 'open/ create project' based on uuid. 
+
+* Seems to work just fine?
+* Although allows for path with spaces (should use lowercase and '_' for CLI convenience?)
+
 ## 20261019
 
 So this is take three to try and 'vibe code' a Swedish book keeping app in modern C++23.

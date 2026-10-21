@@ -89,6 +89,17 @@ logs `Switched workspace from <old> to <new>` (business). A broken saved workspa
 Manual: new "The workspace menu", choices reordered, piped example now `1q`. 169 tests pass, no warnings; checked
 with piped input. In review.
 
+Task 17: Projects (`core/project`). A project is the books of one juridical person; its folder (anywhere) has
+`.cratchit/project.txt` (`created`, `uuid` (random v4, own code), `name` = official name). workspace.txt lists
+`project.<uuid> = <folder>` (full path written; relative read from the workspace folder) and `project = <uuid>` (last
+opened). `p` at `workspace>` shows the project menu (`project?>`): numbers open (0/9 scroll over 9), `n` new (name typed
+at `name>`, then folder: 1) `<workspace>/<name>` (hidden if not a valid folder name) 2) type a path from the workspace
+folder, missing asks `Create it?`), `a` adds an existing project folder, `-` back. `project>` prompt: `h`, `l`, `-`, `q`.
+Opening a workspace (start, `w w`, switch) reopens its last project. Listed uuid must match project.txt. A uuid already
+listed with another folder (copy) is an error + design insufficiency log. Business log: created, added, opened. Manual:
+new section "Projects", files, typing paths, log. 201 tests pass, no warnings; checked with piped input.
+Not done: remove/rename a project, update a listed folder that moved (re-adding it is now the copy error). In review.
+
 ## Next
 
 To be given in chat.
@@ -148,6 +159,11 @@ To be given in chat.
 
 - 2026-10-21: `w` at `cratchit>` shows a menu: `w` opens the saved workspace, `b` browses for a new one (folder menu
   1) start folder 2) Documents/cratchit 3) type a path). The browse choice switches the saved workspace.
+
+- 2026-10-21: A project is the bookkeeping of one juridical person (private person, company or organisation, one
+  personal or organisation number). Each project has a uuid, kept in its `.cratchit/project.txt` with the official
+  `name`. workspace.txt lists `project.<uuid> = <folder>`; the folder may be anywhere. The last opened project is
+  remembered and reopened. The same uuid in two folders is an error for now (merge or override may come later).
 
 ## Open questions
 

@@ -10,6 +10,7 @@ add_executable(cratchit_tests
   test_manual.cpp
   test_path_editor.cpp
   test_path_value.cpp
+  test_project.cpp
   test_repl.cpp
   test_terminal_encoding.cpp
   test_utf8.cpp

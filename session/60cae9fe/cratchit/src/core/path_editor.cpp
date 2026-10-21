@@ -24,8 +24,9 @@ bool is_utf8_continuation(char c) {
 
 } // namespace
 
-void PathEditor::start(std::string text) {
+void PathEditor::start(std::string text, Kind kind) {
   text_ = std::move(text);
+  kind_ = kind;
   escape_ = Escape::None;
 }
 
@@ -51,7 +52,11 @@ PathEditor::Result PathEditor::on_key(charset::unicode::CodePoint key, std::ostr
     return text_.empty() ? Result::Cancelled : Result::Accepted;
   }
   if (key == U'\t') {
-    complete(out);
+    if (kind_ == Kind::Path) {
+      complete(out);
+    } else {
+      out << '\a';
+    }
   } else if (key == backspace || key == ctrl_h) {
     erase(out);
   } else if (is_printable(key)) {
@@ -69,7 +74,7 @@ std::string const& PathEditor::text() const {
 }
 
 std::string PathEditor::prompt() const {
-  return "path> " + text_;
+  return (kind_ == Kind::Path ? "path> " : "name> ") + text_;
 }
 
 void PathEditor::erase(std::ostream& out) {

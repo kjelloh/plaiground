@@ -11,7 +11,8 @@ Run `cratchit` from a terminal (see README.md for how to build it):
 ./build/Debug/cratchit
 ```
 
-cratchit prints its version, then opens the workspace (see The workspace).
+cratchit prints its version, then opens the workspace (see The workspace) and
+the project you last opened in it (see Projects).
 The first time, it asks you to choose a workspace folder. After that it opens
 the same workspace each time and shows its prompt:
 
@@ -107,11 +108,32 @@ workspace = /Users/me/Documents/cratchit
 cratchit writes it as a full path. If you write a relative folder yourself, it
 is taken from the folder holding the runtime's `.cratchit`.
 
-`workspace.txt` holds the date it was created:
+`workspace.txt` holds the date it was created and, once you have created or
+added projects, the projects it lists and the one you last opened:
 
 ```
 created = 2026-10-20
+project.3f2b8c1e-9a4d-4e7f-b6a2-1c5d8e0f7a93 = /Users/me/Documents/cratchit/ITfied AB
+project.0a1b2c3d-4e5f-4a6b-8c7d-8e9f0a1b2c3d = /Volumes/share/Föreningen
+project = 3f2b8c1e-9a4d-4e7f-b6a2-1c5d8e0f7a93
 ```
+
+Each `project.<uuid>` line lists a project: the path holds the project's uuid
+and the value its folder. cratchit writes the folder as a full path. If you
+write a relative folder yourself, it is taken from the workspace folder.
+`project` names the uuid of the project you last opened.
+
+`project.txt`, in a project folder's `.cratchit`, holds the date the project
+was created, its uuid and the official name of the person, company or
+organisation whose books it is:
+
+```
+created = 2026-10-21
+uuid = 3f2b8c1e-9a4d-4e7f-b6a2-1c5d8e0f7a93
+name = ITfied AB
+```
+
+The uuid is made by cratchit when it creates the project and never changes.
 
 `log.txt`, next to `runtime.txt`, is the log (see The log). cratchit creates
 it the first time it logs something and only ever adds lines to it.
@@ -120,7 +142,10 @@ it the first time it logs something and only ever adds lines to it.
 
 cratchit changes an existing file only when you ask it to: choosing a new
 workspace sets the `workspace` line in `runtime.txt`, keeps the other lines,
-and reports `Updated .cratchit/runtime.txt in <folder>`.
+and reports `Updated .cratchit/runtime.txt in <folder>`. Creating, adding or
+opening a project lists it in `workspace.txt` and saves it as the last opened,
+keeping the other lines, and reports `Updated .cratchit/workspace.txt in
+<folder>` when the file changes.
 
 cratchit adds a missing `runtime.txt` to its own `.cratchit` (when `runtime` is
 `.`) and reports it as `Initiated`. It never creates a runtime in another
@@ -218,14 +243,15 @@ it is.
 
 ### Typing a folder path
 
-The path starts at the root folder (`/`, or for example `C:\` on Windows) and
-you type the rest, one key at a time:
+For a workspace, the path starts at the root folder (`/`, or for example `C:\`
+on Windows). For a project folder it starts at the workspace folder. You type
+the rest, one key at a time:
 
 | Key       | What it does                                                  |
 |-----------|---------------------------------------------------------------|
 | Tab       | Completes the folder name you have started (see below).       |
 | Backspace | Erases the last character.                                    |
-| Enter     | Accepts the path. On an empty path, goes back to the choices. |
+| Enter     | Accepts the path. On an empty path, goes back to the choices or the project menu. |
 | Ctrl-D    | Quits cratchit.                                               |
 
 Every other key, including `q`, `h` and `-`, is part of the path. Arrow keys
@@ -238,27 +264,144 @@ lists them. When none
 match, the terminal beeps. Hidden folders (starting with `.`) match only when
 you type the dot.
 
+A relative path is taken from the folder cratchit started in (for a workspace)
+or from the workspace folder (for a project), and `..` goes up one folder.
+
 When the folder exists, cratchit uses it. When it does not, cratchit asks
 `Create it? (y/n)`. Press `y` to create it, or `n` to go back and change the
-path.
+path. When adding an existing project, a missing folder is not created: cratchit
+says so and lets you change the path.
 
 ### In the workspace
 
 The prompt is `workspace>`.
 
-| Key    | What it does                         |
-|--------|--------------------------------------|
-| h      | Opens this manual.                   |
-| l      | Shows the log (see The log).         |
-| -      | Goes back to the `cratchit>` prompt. |
-| q      | Quits cratchit.                      |
-| Ctrl-D | Quits cratchit.                      |
+| Key    | What it does                                 |
+|--------|----------------------------------------------|
+| p      | Shows the project menu (see Projects).       |
+| h      | Opens this manual.                           |
+| l      | Shows the log (see The log).                 |
+| -      | Goes back to the `cratchit>` prompt.         |
+| q      | Quits cratchit.                              |
+| Ctrl-D | Quits cratchit.                              |
+
+When the workspace opens, cratchit also opens the project you last opened in
+it, and the prompt is `project>`. Press `-` to get to `workspace>`.
+
+## Projects
+
+A project is the bookkeeping of one juridical person: a private person, a
+company or an organisation, with one personal or organisation number. Each
+project has a folder of its own, which can be anywhere. Its `.cratchit` holds
+`project.txt` with the project's uuid and the official name (see The files).
+
+The workspace lists its projects in `workspace.txt`. The same project can be
+listed in more than one workspace.
+
+### The project menu
+
+Press `p` at the `workspace>` prompt:
+
+```
+Projects in /Users/me/Documents/cratchit:
+  1  ITfied AB  /Users/me/Documents/cratchit/ITfied AB
+  2  (not found)  /Volumes/share/Föreningen
+  n  New project
+  a  Add an existing project folder
+```
+
+The prompt is `project?>`. Each project shows its name and folder. A folder
+that does not exist shows `(not found)`, and a folder that cratchit cannot read
+as the listed project shows `(error)`. Choosing either shows the error and
+leaves the list as it is.
+
+| Key    | What it does                                                 |
+|--------|--------------------------------------------------------------|
+| 1-9    | Opens the project with that number.                          |
+| n      | Creates a new project (see Creating a project).              |
+| a      | Adds a project folder that already exists (see Adding an existing project). |
+| -      | Goes back to the `workspace>` prompt.                        |
+| h      | Opens this manual.                                           |
+| q      | Quits cratchit.                                              |
+| Ctrl-D | Quits cratchit.                                              |
+
+With more than 9 projects the list shows 8 at a time. Key `9` shows `...down`
+and moves to the next 8. Key `0` shows `...up` and moves back.
+
+### Creating a project
+
+Press `n` in the project menu and type the official name of the person,
+company or organisation, then Enter. The prompt is `name>`. Backspace erases,
+and Enter on an empty name goes back to the project menu. Every other key,
+including `q`, `h` and `-`, is part of the name.
+
+Then choose the project folder:
+
+```
+Choose a folder for ITfied AB:
+  1  /Users/me/Documents/cratchit/ITfied AB
+  2  Type a folder path
+```
+
+| Key    | What it does                                                      |
+|--------|-------------------------------------------------------------------|
+| 1      | Uses a folder with the name in the workspace, creating it if needed. |
+| 2      | Lets you type a folder path (see Typing a folder path).           |
+| -      | Goes back to the project menu.                                    |
+| h      | Opens this manual.                                                |
+| q      | Quits cratchit.                                                   |
+
+Option 1 is not shown when the name cannot be a folder name, for example when
+it holds `/` or `:`.
+
+cratchit creates `.cratchit/project.txt` in the folder with a new uuid, lists
+the project in `workspace.txt` and opens it:
+
+```
+Created folder /Users/me/Documents/cratchit/ITfied AB
+Initiated .cratchit/project.txt in /Users/me/Documents/cratchit/ITfied AB
+Updated .cratchit/workspace.txt in /Users/me/Documents/cratchit
+Opened project ITfied AB in /Users/me/Documents/cratchit/ITfied AB
+project> 
+```
+
+A folder that already holds a `project.txt` is an error; add it with `a`
+instead. The folder may hold other cratchit files, for example the workspace's
+own `.cratchit`.
+
+### Adding an existing project
+
+Press `a` in the project menu and type the folder of a project, for example one
+listed in another workspace (see Typing a folder path). The folder must hold
+`.cratchit/project.txt`. cratchit lists the project in `workspace.txt` and
+opens it.
+
+A project whose uuid is already listed with another folder is an error, for
+example a copy of a project folder. cratchit shows the error, logs it, and
+lets you change the path. A copied project folder is not supported yet.
+
+### In a project
+
+The prompt is `project>`.
+
+| Key    | What it does                          |
+|--------|---------------------------------------|
+| h      | Opens this manual.                    |
+| l      | Shows the log (see The log).          |
+| -      | Goes back to the `workspace>` prompt. |
+| q      | Quits cratchit.                       |
+| Ctrl-D | Quits cratchit.                       |
+
+The project you open is saved as the last opened in `workspace.txt`, so it
+opens again the next time the workspace opens. If the last opened project is
+not listed, or cannot be opened, cratchit shows the error and stays at
+`workspace>`.
 
 ## Using the prompt
 
 At the prompt, each key acts as soon as you press it. You don't need to press Enter.
-Enter, space and tab are ignored, except while you type a folder path (see
-Typing a folder path).
+Enter, space and tab are ignored, except while you type a folder path or a
+name (see Typing a folder path and Creating a project).
 
 | Key    | What it does                        |
 |--------|-------------------------------------|
@@ -309,7 +452,7 @@ cratchit's code it was logged, and what happened:
 
 ### Viewing the log
 
-Press `l` at the `cratchit>` or `workspace>` prompt. cratchit shows the log
+Press `l` at the `cratchit>`, `workspace>` or `project>` prompt. cratchit shows the log
 newest event first, so you read backwards in time. When it does not fit in the
 terminal window, it shows one page and then `--More--`:
 

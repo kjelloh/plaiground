@@ -2,8 +2,9 @@
 
 #include "core/charset/utf8.hpp"
 #include "core/log.hpp"
-#include "core/workspace.hpp"
 
+#include <algorithm>
+#include <format>
 #include <print>
 #include <string>
 
@@ -19,6 +20,18 @@ constexpr charset::unicode::CodePoint escape = U'\x1b';
 
 bool is_whitespace(charset::unicode::CodePoint key) {
   return key == U'\n' || key == U'\r' || key == U' ' || key == U'\t';
+}
+
+// With more projects than keys 1-9, keys 1-8 show a range, 0 scrolls up and 9 down, as in help
+constexpr std::size_t max_keys = 9;
+constexpr std::size_t range_size = 8;
+
+std::string trimmed(std::string const& text) {
+  auto const first = text.find_first_not_of(' ');
+  if (first == std::string::npos) {
+    return {};
+  }
+  return text.substr(first, text.find_last_not_of(' ') - first + 1);
 }
 
 // How a key press is shown after the prompt, as echo is off in raw mode.
@@ -75,6 +88,10 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_menu(out);
       } else if (mode_ == Mode::Choose) {
         show_choices(out);
+      } else if (mode_ == Mode::Projects) {
+        show_projects(out);
+      } else if (mode_ == Mode::ProjectFolder) {
+        show_project_folders(out);
       }
     }
     return Step::Continue;
@@ -118,6 +135,23 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::Workspace:
     if (key == U'-') {
       mode_ = Mode::Main;
+    } else if (key == U'p') {
+      open_projects(out);
+    } else if (key == U'l') {
+      open_log(out);
+    } else {
+      std::println(out, "Unknown key. Press h for help.");
+    }
+    break;
+  case Mode::Projects:
+    on_projects_key(key, out);
+    break;
+  case Mode::ProjectFolder:
+    on_project_folder_key(key, out);
+    break;
+  case Mode::Project:
+    if (key == U'-') {
+      mode_ = Mode::Workspace;
     } else if (key == U'l') {
       open_log(out);
     } else {
@@ -164,6 +198,11 @@ std::string Repl::prompt() const {
     return "Create it? (y/n) ";
   case Mode::Workspace:
     return "workspace> ";
+  case Mode::Projects:
+  case Mode::ProjectFolder:
+    return "project?> ";
+  case Mode::Project:
+    return "project> ";
   default:
     return "cratchit> ";
   }
@@ -246,6 +285,7 @@ void Repl::on_choose_key(charset::unicode::CodePoint key, std::ostream& out) {
     create_and_choose(*places_.default_folder, out);
   } else if (key == U'3') {
     editor_.start(places_.start_folder.root_path().string());
+    purpose_ = Purpose::Workspace;
     start_typing(out);
   } else if (key == U'-') {
     mode_ = before_choose_;
@@ -259,22 +299,38 @@ void Repl::on_choose_key(charset::unicode::CodePoint key, std::ostream& out) {
 
 void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
   auto const result = editor_.on_key(key, out);
+  if (result == PathEditor::Result::Typing) {
+    return;
+  }
+  if (purpose_ == Purpose::ProjectName) {
+    new_name_ = trimmed(editor_.text());
+    if (result == PathEditor::Result::Cancelled || new_name_.empty()) {
+      mode_ = Mode::Projects;
+      show_projects(out);
+    } else {
+      mode_ = Mode::ProjectFolder;
+      show_project_folders(out);
+    }
+    return;
+  }
   if (result == PathEditor::Result::Cancelled) {
-    mode_ = Mode::Choose;
-    show_choices(out);
+    if (purpose_ == Purpose::Workspace) {
+      mode_ = Mode::Choose;
+      show_choices(out);
+    } else if (purpose_ == Purpose::ProjectFolder) {
+      mode_ = Mode::ProjectFolder;
+      show_project_folders(out);
+    } else {
+      mode_ = Mode::Projects;
+      show_projects(out);
+    }
     return;
   }
-  if (result != PathEditor::Result::Accepted) {
+  if (purpose_ != Purpose::Workspace) {
+    on_project_path(typed_folder(workspace_->folder), out);
     return;
   }
-  auto folder = fs::path(editor_.text());
-  if (folder.is_relative()) {
-    folder = places_.start_folder / folder;
-  }
-  folder = folder.lexically_normal();
-  if (!folder.has_filename() && folder.has_relative_path()) {
-    folder = folder.parent_path(); // drop a final separator
-  }
+  auto const folder = typed_folder(places_.start_folder);
   std::error_code ec;
   if (fs::is_directory(folder, ec)) {
     enter_workspace(folder, true, out);
@@ -289,7 +345,14 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
 }
 
 void Repl::on_confirm_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U'y') {
+  if (key == U'y' && purpose_ == Purpose::ProjectFolder) {
+    if (make_folder(to_create_, out)) {
+      create_new_project(to_create_, out);
+    } else {
+      mode_ = Mode::Typing;
+      out << editor_.prompt();
+    }
+  } else if (key == U'y') {
     create_and_choose(to_create_, out);
   } else if (key == U'n' || key == U'-') {
     mode_ = Mode::Typing;
@@ -300,17 +363,39 @@ void Repl::on_confirm_key(charset::unicode::CodePoint key, std::ostream& out) {
 }
 
 void Repl::create_and_choose(fs::path const& folder, std::ostream& out) {
-  std::error_code ec;
-  if (!fs::is_directory(folder, ec)) {
-    if (!fs::create_directories(folder, ec)) {
-      std::println(out, "Error: Cannot create {}: {}", folder.string(), ec.message());
-      mode_ = Mode::Choose;
-      show_choices(out);
-      return;
-    }
-    std::println(out, "Created folder {}", folder.string());
+  if (!make_folder(folder, out)) {
+    mode_ = Mode::Choose;
+    show_choices(out);
+    return;
   }
   enter_workspace(folder, true, out);
+}
+
+// The folder typed in the editor; a relative path is taken from base
+fs::path Repl::typed_folder(fs::path const& base) const {
+  auto folder = fs::path(editor_.text());
+  if (folder.is_relative()) {
+    folder = base / folder;
+  }
+  folder = folder.lexically_normal();
+  if (!folder.has_filename() && folder.has_relative_path()) {
+    folder = folder.parent_path(); // drop a final separator
+  }
+  return folder;
+}
+
+// Creates folder when missing, reporting it; false (with the error shown) if it cannot be created
+bool Repl::make_folder(fs::path const& folder, std::ostream& out) {
+  std::error_code ec;
+  if (fs::is_directory(folder, ec)) {
+    return true;
+  }
+  if (!fs::create_directories(folder, ec)) {
+    std::println(out, "Error: Cannot create {}: {}", folder.string(), ec.message());
+    return false;
+  }
+  std::println(out, "Created folder {}", folder.string());
+  return true;
 }
 
 void Repl::enter_workspace(fs::path const& folder, bool chosen, std::ostream& out) {
@@ -346,7 +431,239 @@ void Repl::enter_workspace(fs::path const& folder, bool chosen, std::ostream& ou
   }
   std::println(out, "Opened workspace {}", folder.string());
   LOG_BUSINESS("Opened workspace {}", folder.string());
+  workspace_ = *workspace;
   mode_ = Mode::Workspace;
+  open_last_project(out);
+}
+
+// Opens the project named by `project = <uuid>` in workspace.txt, if any
+void Repl::open_last_project(std::ostream& out) {
+  auto const last = last_project(workspace_->workspace_file);
+  if (!last) {
+    std::println(out, "Error: {}", last.error());
+    return;
+  }
+  if (!*last) {
+    return;
+  }
+  auto const listed = listed_projects(workspace_->workspace_file);
+  if (!listed) {
+    std::println(out, "Error: {}", listed.error());
+    return;
+  }
+  auto const it = std::ranges::find(*listed, **last, &ListedProject::uuid);
+  if (it == listed->end()) {
+    std::println(out, "Error: The last project {} is not listed in {}", **last, workspace_->workspace_file.string());
+    return;
+  }
+  auto const project = open_listed_project(*it);
+  if (!project) {
+    std::println(out, "Error: {}", project.error());
+    return;
+  }
+  enter_project(*project, out);
+}
+
+void Repl::open_projects(std::ostream& out) {
+  auto listed = listed_projects(workspace_->workspace_file);
+  if (!listed) {
+    std::println(out, "Error: {}", listed.error());
+    return;
+  }
+  listed_ = std::move(*listed);
+  first_listed_ = 0;
+  mode_ = Mode::Projects;
+  show_projects(out);
+}
+
+void Repl::show_projects(std::ostream& out) {
+  std::println(out, "Projects in {}:", workspace_->folder.string());
+  auto const n = listed_.size();
+  auto const first = n <= max_keys ? 0 : first_listed_;
+  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
+  if (first > 0) {
+    std::println(out, "  0  ...up");
+  }
+  for (auto i = first; i < last; ++i) {
+    auto const& listed = listed_[i];
+    std::string name = "(error)";
+    std::error_code ec;
+    if (auto const project = open_listed_project(listed)) {
+      name = project->name;
+    } else if (!fs::is_directory(listed.folder, ec)) {
+      name = "(not found)";
+    }
+    std::println(out, "  {}  {}  {}", i - first + 1, name, listed.folder.string());
+  }
+  if (last < n) {
+    std::println(out, "  9  ...down");
+  }
+  std::println(out, "  n  New project");
+  std::println(out, "  a  Add an existing project folder");
+  std::println(out, "");
+  projects_hint(out);
+}
+
+void Repl::projects_hint(std::ostream& out) {
+  std::println(out, "Press {}n or a, - to go back, h for help, q to quit.", listed_.empty() ? "" : "a number, ");
+}
+
+void Repl::on_projects_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const n = listed_.size();
+  if (key == U'n') {
+    start_project_typing(Purpose::ProjectName, out);
+  } else if (key == U'a') {
+    start_project_typing(Purpose::ExistingProject, out);
+  } else if (key == U'-') {
+    mode_ = Mode::Workspace;
+  } else if (n > max_keys && key == U'0' && first_listed_ > 0) {
+    first_listed_ -= range_size;
+    show_projects(out);
+  } else if (n > max_keys && key == U'9' && first_listed_ + range_size < n) {
+    first_listed_ += range_size;
+    show_projects(out);
+  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9')) {
+    auto const index = (n > max_keys ? first_listed_ : 0) + static_cast<std::size_t>(key - U'1');
+    if (index >= n) {
+      projects_hint(out);
+      return;
+    }
+    auto const project = open_listed_project(listed_[index]);
+    if (!project) {
+      std::println(out, "Error: {}", project.error());
+      return;
+    }
+    enter_project(*project, out);
+  } else {
+    projects_hint(out);
+  }
+}
+
+void Repl::start_project_typing(Purpose purpose, std::ostream& out) {
+  purpose_ = purpose;
+  if (purpose == Purpose::ProjectName) {
+    editor_.start("", PathEditor::Kind::Name);
+    mode_ = Mode::Typing;
+    std::println(out, "Type the official name of the person, company or organisation. Backspace erases, Enter accepts.");
+    std::println(out, "Enter on an empty name goes back.");
+    out << editor_.prompt();
+    return;
+  }
+  if (purpose == Purpose::ExistingProject) {
+    std::println(out, "The folder must hold .cratchit/project.txt.");
+  }
+  editor_.start((workspace_->folder / "").string());
+  start_typing(out);
+}
+
+void Repl::show_project_folders(std::ostream& out) {
+  std::println(out, "Choose a folder for {}:", new_name_);
+  if (auto const folder = default_project_folder(workspace_->folder, new_name_)) {
+    std::println(out, "  1  {}", folder->string());
+  }
+  std::println(out, "  2  Type a folder path");
+  std::println(out, "");
+  std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_project_folder_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const folder = default_project_folder(workspace_->folder, new_name_);
+  if (key == U'1' && folder) {
+    if (make_folder(*folder, out)) {
+      create_new_project(*folder, out);
+    }
+  } else if (key == U'2') {
+    start_project_typing(Purpose::ProjectFolder, out);
+  } else if (key == U'-') {
+    mode_ = Mode::Projects;
+    show_projects(out);
+  } else {
+    std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+  }
+}
+
+// A folder path accepted in the editor, for a new or an existing project
+void Repl::on_project_path(fs::path const& folder, std::ostream& out) {
+  std::error_code ec;
+  if (fs::is_directory(folder, ec)) {
+    if (purpose_ == Purpose::ProjectFolder) {
+      create_new_project(folder, out);
+    } else {
+      add_existing_project(folder, out);
+    }
+  } else if (fs::exists(folder, ec)) {
+    std::println(out, "{} is not a folder.", folder.string());
+    out << editor_.prompt();
+  } else if (purpose_ == Purpose::ProjectFolder) {
+    std::println(out, "Folder {} does not exist.", folder.string());
+    to_create_ = folder;
+    mode_ = Mode::ConfirmCreate;
+  } else {
+    std::println(out, "Folder {} does not exist.", folder.string());
+    out << editor_.prompt();
+  }
+}
+
+void Repl::create_new_project(fs::path const& folder, std::ostream& out) {
+  auto const project = create_project(folder, new_name_, new_uuid(), places_.today);
+  if (!project) {
+    std::println(out, "Error: {}", project.error());
+    mode_ = Mode::ProjectFolder;
+    show_project_folders(out);
+    return;
+  }
+  for (auto const& entry : project->initiated) {
+    std::println(out, "Initiated {} in {}", entry.file.generic_string(), entry.folder.string());
+    LOG_BUSINESS("Initiated {} in {}", entry.file.generic_string(), entry.folder.string());
+  }
+  LOG_BUSINESS("Created project {} ({}) in {}", project->name, project->uuid, folder.string());
+  enter_project(*project, out);
+}
+
+void Repl::add_existing_project(fs::path const& folder, std::ostream& out) {
+  auto const project = read_project(folder);
+  if (!project) {
+    std::println(out, "Error: {}", project.error());
+    out << editor_.prompt();
+    return;
+  }
+  auto const listed = listed_projects(workspace_->workspace_file);
+  if (!listed) {
+    std::println(out, "Error: {}", listed.error());
+    out << editor_.prompt();
+    return;
+  }
+  auto const it = std::ranges::find(*listed, project->uuid, &ListedProject::uuid);
+  std::error_code ec;
+  if (it != listed->end() && !fs::equivalent(it->folder, folder, ec)) {
+    // The same project in two folders, e.g. a copied project folder
+    std::println(out, "Error: Project {} ({}) is already listed with folder {}", project->name, project->uuid,
+                 it->folder.string());
+    LOG_DESIGN_INSUFFICIENCY("Project {} ({}) in {} is already listed with folder {}", project->name, project->uuid,
+                             folder.string(), it->folder.string());
+    out << editor_.prompt();
+    return;
+  }
+  if (it == listed->end()) {
+    LOG_BUSINESS("Added project {} ({}) in {}", project->name, project->uuid, folder.string());
+  }
+  enter_project(*project, out);
+}
+
+// Lists the project in workspace.txt if needed, saves it as the last opened, and opens it
+void Repl::enter_project(Project const& project, std::ostream& out) {
+  auto const changed = remember_project(workspace_->workspace_file, {project.uuid, project.folder});
+  if (!changed) {
+    std::println(out, "Error: {}", changed.error());
+    mode_ = Mode::Workspace;
+    return;
+  }
+  if (*changed) {
+    std::println(out, "Updated .cratchit/workspace.txt in {}", workspace_->folder.string());
+  }
+  std::println(out, "Opened project {} in {}", project.name, project.folder.string());
+  LOG_BUSINESS("Opened project {} ({}) in {}", project.name, project.uuid, project.folder.string());
+  mode_ = Mode::Project;
 }
 
 void run_repl(Repl& repl, KeySource const& next_key, std::ostream& out) {

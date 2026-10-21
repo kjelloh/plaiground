@@ -2,6 +2,7 @@
 
 #include "core/data_folder.hpp"
 #include "core/key_input.hpp"
+#include "core/project.hpp"
 
 #include <gtest/gtest.h>
 
@@ -422,4 +423,193 @@ TEST_F(WorkspaceRepl, LKeyWorksInTheWorkspace) {
   EXPECT_TRUE(out.str().ends_with("workspace> l\nLog " + log_file.string() + ", newest first:\none\n(start of log)\n"
                                   "workspace> \n"))
       << out.str();
+}
+
+namespace {
+
+constexpr char const* listed_uuid = "3f2b8c1e-9a4d-4e7f-b6a2-1c5d8e0f7a93";
+
+std::string projects_menu(fs::path const& workspace, std::string const& lines, bool any) {
+  return "Projects in " + workspace.string() + ":\n" + lines +
+         "  n  New project\n"
+         "  a  Add an existing project folder\n"
+         "\n"
+         "Press " + (any ? "a number, " : "") + "n or a, - to go back, h for help, q to quit.\n";
+}
+
+} // namespace
+
+TEST_F(WorkspaceRepl, PKeyShowsAnEmptyProjectMenu) {
+  run("1");
+  auto const output = run("p-q");
+  EXPECT_EQ(output, "Opened workspace " + (root / "start").string() + "\nworkspace> p\n" +
+                        projects_menu(root / "start", "", false) + "project?> -\nworkspace> q\n");
+}
+
+TEST_F(WorkspaceRepl, NewProjectIsCreatedListedAndOpened) {
+  auto const folder = root / "start" / "ITfied AB";
+  auto const output = run("1pnITfied AB\n1");
+  EXPECT_NE(output.find("project?> n\n"
+                        "Type the official name of the person, company or organisation. Backspace erases, Enter "
+                        "accepts.\nEnter on an empty name goes back.\n"
+                        "name> ITfied AB\n"
+                        "Choose a folder for ITfied AB:\n"
+                        "  1  " + folder.string() + "\n"
+                        "  2  Type a folder path\n"
+                        "\n"
+                        "Press a number to choose, - to go back, h for help, q to quit.\n"
+                        "project?> 1\n"
+                        "Created folder " + folder.string() + "\n"
+                        "Initiated .cratchit/project.txt in " + folder.string() + "\n"
+                        "Updated .cratchit/workspace.txt in " + (root / "start").string() + "\n"
+                        "Opened project ITfied AB in " + folder.string() + "\n"
+                        "project> \n"),
+            std::string::npos)
+      << output;
+  auto const project = cratchit::read_project(folder);
+  ASSERT_TRUE(project.has_value()) << project.error();
+  EXPECT_EQ(project->name, "ITfied AB");
+  EXPECT_EQ(read_file(root / "start" / ".cratchit" / "workspace.txt"),
+            "created = 2026-10-20\nproject." + project->uuid + " = " + folder.string() + "\nproject = " +
+                project->uuid + "\n");
+}
+
+TEST_F(WorkspaceRepl, LastProjectOpensOnStart) {
+  run("1pnX\n1");
+  auto const output = run("--q");
+  EXPECT_EQ(output, "Opened workspace " + (root / "start").string() + "\n"
+                    "Opened project X in " + (root / "start" / "X").string() + "\n"
+                    "project> -\nworkspace> -\ncratchit> q\n");
+}
+
+TEST_F(WorkspaceRepl, WKeyTwiceReopensTheLastProject) {
+  run("1pnX\n1");
+  auto const output = run("--ww");
+  EXPECT_TRUE(output.ends_with("Opened project X in " + (root / "start" / "X").string() + "\nproject> \n")) << output;
+}
+
+TEST_F(WorkspaceRepl, ProjectMenuListsProjectsAndOpensTheChosen) {
+  run("1pnA\n1");
+  run("-pnB\n1");
+  auto const before = read_file(root / "start" / ".cratchit" / "workspace.txt");
+  auto const output = run("-p1");
+  EXPECT_NE(output.find(projects_menu(root / "start",
+                                      "  1  A  " + (root / "start" / "A").string() + "\n"
+                                      "  2  B  " + (root / "start" / "B").string() + "\n",
+                                      true) +
+                        "project?> 1\nUpdated .cratchit/workspace.txt in " + (root / "start").string() + "\n"
+                        "Opened project A in " + (root / "start" / "A").string() + "\nproject> \n"),
+            std::string::npos)
+      << output;
+  EXPECT_EQ(read_file(root / "start" / ".cratchit" / "workspace.txt").size(), before.size());
+}
+
+TEST_F(WorkspaceRepl, EmptyNameGoesBackToTheProjectMenu) {
+  run("1");
+  auto const output = run("pn  \n-q");
+  EXPECT_TRUE(output.ends_with(projects_menu(root / "start", "", false) + "project?> -\nworkspace> q\n")) << output;
+}
+
+TEST_F(WorkspaceRepl, NameThatCannotBeAFolderOffersOnlyTyping) {
+  run("1");
+  auto const output = run("pnA/B\n");
+  EXPECT_NE(output.find("Choose a folder for A/B:\n  2  Type a folder path\n"), std::string::npos) << output;
+}
+
+TEST_F(WorkspaceRepl, NewProjectInATypedFolderIsCreatedOnYes) {
+  run("1");
+  auto const folder = root / "elsewhere" / "books";
+  auto const output = run("pnX\n2../elsewhere/books\ny");
+  EXPECT_NE(output.find("path> " + (root / "start" / "").string() + "../elsewhere/books\n"
+                        "Folder " + folder.string() + " does not exist.\n"
+                        "Create it? (y/n) y\n"
+                        "Created folder " + folder.string() + "\n"
+                        "Initiated .cratchit/project.txt in " + folder.string() + "\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Opened project X in " + folder.string() + "\nproject> \n")) << output;
+}
+
+TEST_F(WorkspaceRepl, NewProjectOverAProjectIsAnError) {
+  run("1pnX\n1");
+  auto const output = run("-pnY\n2X\n");
+  EXPECT_NE(output.find("Error: "), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("Choose a folder for Y:\n  1  " + (root / "start" / "Y").string() +
+                               "\n  2  Type a folder path\n\n"
+                               "Press a number to choose, - to go back, h for help, q to quit.\nproject?> \n"))
+      << output;
+}
+
+TEST_F(WorkspaceRepl, ExistingProjectIsAddedAndOpened) {
+  fs::create_directories(root / "shared");
+  ASSERT_TRUE(cratchit::create_project(root / "shared", "Föreningen", listed_uuid, "2026-10-01").has_value());
+  run("1");
+  auto const output = run("pa../shared\n");
+  EXPECT_NE(output.find("project?> a\nThe folder must hold .cratchit/project.txt.\n"), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("Updated .cratchit/workspace.txt in " + (root / "start").string() + "\n"
+                               "Opened project Föreningen in " + (root / "shared").string() + "\nproject> \n"))
+      << output;
+  EXPECT_EQ(read_file(root / "start" / ".cratchit" / "workspace.txt"),
+            "created = 2026-10-20\nproject." + std::string(listed_uuid) + " = " + (root / "shared").string() +
+                "\nproject = " + listed_uuid + "\n");
+}
+
+TEST_F(WorkspaceRepl, AddingAFolderWithoutProjectIsAnError) {
+  fs::create_directories(root / "plain");
+  run("1");
+  auto const output = run("pa../plain\n");
+  EXPECT_NE(output.find("Error: "), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("path> " + (root / "start" / "").string() + "../plain\n")) << output;
+}
+
+TEST_F(WorkspaceRepl, AddingACopiedProjectIsAnError) {
+  fs::create_directories(root / "shared");
+  ASSERT_TRUE(cratchit::create_project(root / "shared", "X", listed_uuid, "2026-10-01").has_value());
+  fs::copy(root / "shared", root / "copy", fs::copy_options::recursive);
+  run("1pa../shared\n");
+  auto const before = read_file(root / "start" / ".cratchit" / "workspace.txt");
+  auto const output = run("-pa../copy\n");
+  EXPECT_NE(output.find("Error: Project X (" + std::string(listed_uuid) + ") is already listed with folder " +
+                        (root / "shared").string()),
+            std::string::npos)
+      << output;
+  EXPECT_EQ(read_file(root / "start" / ".cratchit" / "workspace.txt"), before);
+}
+
+TEST_F(WorkspaceRepl, MissingProjectFolderIsShownAndCannotBeOpened) {
+  run("1");
+  std::ofstream(root / "start" / ".cratchit" / "workspace.txt")
+      << "created = 2026-10-20\nproject." << listed_uuid << " = gone\n";
+  auto const output = run("p1");
+  EXPECT_NE(output.find("  1  (not found)  " + (root / "start" / "gone").string() + "\n"), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("project?> 1\nError: Project folder " + (root / "start" / "gone").string() +
+                               " does not exist\nproject?> \n"))
+      << output;
+}
+
+TEST_F(WorkspaceRepl, UnlistedLastProjectIsAnErrorAtTheWorkspace) {
+  run("1");
+  std::ofstream(root / "start" / ".cratchit" / "workspace.txt") << "project = " << listed_uuid << "\n";
+  auto const output = run("");
+  EXPECT_TRUE(output.ends_with("Error: The last project " + std::string(listed_uuid) + " is not listed in " +
+                               (root / "start" / ".cratchit" / "workspace.txt").string() + "\nworkspace> \n"))
+      << output;
+}
+
+TEST_F(WorkspaceRepl, ManyProjectsScrollWithZeroAndNine) {
+  run("1");
+  std::ofstream file(root / "start" / ".cratchit" / "workspace.txt");
+  for (int i = 0; i < 10; ++i) {
+    file << std::format("project.{:08x}-0000-4000-8000-000000000000 = p{}\n", i, i);
+  }
+  file.close();
+  auto const output = run("p9");
+  EXPECT_NE(output.find("  8  (not found)  " + (root / "start" / "p7").string() + "\n  9  ...down\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("project?> 9\nProjects in " + (root / "start").string() + ":\n  0  ...up\n"
+                        "  1  (not found)  " + (root / "start" / "p8").string() + "\n"
+                        "  2  (not found)  " + (root / "start" / "p9").string() + "\n  n  New project\n"),
+            std::string::npos)
+      << output;
 }
