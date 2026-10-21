@@ -73,6 +73,14 @@ not log (clients decide). No user operation, so no manual change. 151 tests pass
 Task 14: Warnings are errors (`-Werror` / `/WX` on the shared `cratchit_warnings` target). Clean Debug rebuild with
 trace DEBUG, OFF and ON builds and passes 151 tests on macOS. Release, Linux and Windows not built. In review.
 
+Task 15: REPL keys are decoded to Unicode before they are acted on (`core/key_input`). `KeyReader(charset, byte source)`
+holds the push buffer for the input charset detected on start (UTF-8 or CP437, else UTF-8) and `next()` gives one code
+point per key, calling `finish()` at end of input. A sequence that fails gives U+FFFD (unknown key) and one
+`LOG_DESIGN_INSUFFICIENCY` with its bytes. `KeySource` and all `on_key`/`ignores` take `unicode::CodePoint`. Echo is
+written as UTF-8 (the only output encoding so far). The path editor keeps its text as UTF-8 (agreed for now) and drops
+C0/C1 controls and U+FFFD. Windows `_getch` kept as is: 0xE0 (alpha in CP437, O-acute in CP850) cannot be typed.
+Manual section "Terminal encoding" updated. 163 tests pass, no warnings; checked with piped input. In review.
+
 ## Next
 
 To be given in chat.
@@ -125,6 +133,10 @@ To be given in chat.
   failures. `finish()` ends the input; an unfinished sequence there is a failure.
 
 - 2026-10-21: Warnings are errors in all builds of cratchit's own targets (`-Werror` / `/WX`).
+
+- 2026-10-21: REPL keys are transcoded from the detected terminal input encoding to Unicode before acting on them.
+  A key that fails to decode is logged as a design insufficiency. Path editor text is UTF-8 for now. Windows keeps
+  `_getch` (0xE0 clash with CP437/CP850 accepted).
 
 ## Open questions
 

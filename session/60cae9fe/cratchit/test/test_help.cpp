@@ -54,10 +54,10 @@ TEST(HelpBrowser, NumbersDrillDownToText) {
   HelpBrowser help(manual, 0);
   std::ostringstream out;
   help.open(out);
-  help.on_key('1', out);
+  help.on_key(U'1', out);
   EXPECT_EQ(help.prompt(), "help 1> ");
   out.str("");
-  help.on_key('1', out);
+  help.on_key(U'1', out);
   EXPECT_EQ(help.prompt(), "help 1.1> ");
   EXPECT_EQ(out.str(), "A1\n"
                        "\n"
@@ -71,14 +71,14 @@ TEST(HelpBrowser, MinusGoesBackThenLeaves) {
   HelpBrowser help(manual, 0);
   std::ostringstream out;
   help.open(out);
-  help.on_key('2', out);
+  help.on_key(U'2', out);
   out.str("");
-  EXPECT_EQ(help.on_key('-', out), HelpBrowser::Result::Stay);
+  EXPECT_EQ(help.on_key(U'-', out), HelpBrowser::Result::Stay);
   EXPECT_EQ(help.prompt(), "help> ");
   // Going back shows the list again, not the text
   EXPECT_FALSE(contains(out.str(), "Intro"));
   EXPECT_TRUE(contains(out.str(), "  2  B"));
-  EXPECT_EQ(help.on_key('-', out), HelpBrowser::Result::Leave);
+  EXPECT_EQ(help.on_key(U'-', out), HelpBrowser::Result::Leave);
 }
 
 TEST(HelpBrowser, QLeavesFromAnyDepth) {
@@ -86,9 +86,9 @@ TEST(HelpBrowser, QLeavesFromAnyDepth) {
   HelpBrowser help(manual, 0);
   std::ostringstream out;
   help.open(out);
-  help.on_key('1', out);
-  help.on_key('1', out);
-  EXPECT_EQ(help.on_key('q', out), HelpBrowser::Result::Leave);
+  help.on_key(U'1', out);
+  help.on_key(U'1', out);
+  EXPECT_EQ(help.on_key(U'q', out), HelpBrowser::Result::Leave);
 }
 
 TEST(HelpBrowser, MissingNumberSaysSo) {
@@ -97,7 +97,7 @@ TEST(HelpBrowser, MissingNumberSaysSo) {
   std::ostringstream out;
   help.open(out);
   out.str("");
-  EXPECT_EQ(help.on_key('3', out), HelpBrowser::Result::Stay);
+  EXPECT_EQ(help.on_key(U'3', out), HelpBrowser::Result::Stay);
   EXPECT_TRUE(contains(out.str(), "No section 3 here."));
   EXPECT_EQ(help.prompt(), "help> ");
 }
@@ -109,7 +109,7 @@ TEST(HelpBrowser, NineSectionsNeedNoScrolling) {
   help.open(out);
   EXPECT_TRUE(contains(out.str(), "  9  S9\n"));
   EXPECT_FALSE(contains(out.str(), "...down"));
-  help.on_key('9', out);
+  help.on_key(U'9', out);
   EXPECT_EQ(help.prompt(), "help 9> ");
 }
 
@@ -122,24 +122,24 @@ TEST(HelpBrowser, TenSectionsScrollWithNineAndZero) {
   EXPECT_FALSE(contains(out.str(), "...up"));
 
   out.str("");
-  help.on_key('9', out);
+  help.on_key(U'9', out);
   EXPECT_TRUE(contains(out.str(), "  0  ...up\n  1  S9\n"));
   EXPECT_TRUE(contains(out.str(), "  8  S16\n  9  ...down\n"));
 
   out.str("");
-  help.on_key('9', out);
+  help.on_key(U'9', out);
   EXPECT_TRUE(contains(out.str(), "  0  ...up\n  1  S17\n"));
   EXPECT_TRUE(contains(out.str(), "  4  S20\n\n"));
   EXPECT_FALSE(contains(out.str(), "...down"));
   out.str("");
-  EXPECT_EQ(help.on_key('9', out), HelpBrowser::Result::Stay);
+  EXPECT_EQ(help.on_key(U'9', out), HelpBrowser::Result::Stay);
   EXPECT_TRUE(contains(out.str(), "No section 9 here."));
 
   out.str("");
-  help.on_key('0', out);
+  help.on_key(U'0', out);
   EXPECT_TRUE(contains(out.str(), "  1  S9\n"));
 
-  help.on_key('2', out);
+  help.on_key(U'2', out);
   EXPECT_EQ(help.prompt(), "help 10> ");
 }
 
@@ -148,10 +148,10 @@ TEST(HelpBrowser, BackKeepsTheScrolledRange) {
   HelpBrowser help(manual, 0);
   std::ostringstream out;
   help.open(out);
-  help.on_key('9', out);
-  help.on_key('1', out);
+  help.on_key(U'9', out);
+  help.on_key(U'1', out);
   out.str("");
-  help.on_key('-', out);
+  help.on_key(U'-', out);
   EXPECT_TRUE(contains(out.str(), "  1  S9\n"));
 }
 
@@ -165,11 +165,11 @@ TEST(HelpBrowser, LongTextIsPaged) {
   EXPECT_EQ(help.prompt(), "--More-- ");
 
   out.str("");
-  help.on_key(' ', out);
+  help.on_key(U' ', out);
   EXPECT_EQ(out.str(), "2\n3\n4\n");
 
   out.str("");
-  help.on_key('\n', out);
+  help.on_key(U'\n', out);
   EXPECT_EQ(out.str(), "5\n\nPress - to go back, q to leave help.\n");
   EXPECT_FALSE(help.is_paging());
   EXPECT_EQ(help.prompt(), "help> ");
@@ -181,7 +181,7 @@ TEST(HelpBrowser, OtherKeysWhilePagingExplainThePage) {
   std::ostringstream out;
   help.open(out);
   out.str("");
-  help.on_key('1', out);
+  help.on_key(U'1', out);
   EXPECT_EQ(out.str(), "Press space for more, - to go back, q to leave help.\n");
   EXPECT_TRUE(help.is_paging());
 }
@@ -192,9 +192,9 @@ TEST(HelpBrowser, MinusWhilePagingGoesBack) {
   HelpBrowser help(manual, 5);
   std::ostringstream out;
   help.open(out);
-  help.on_key('1', out);
+  help.on_key(U'1', out);
   EXPECT_TRUE(help.is_paging());
-  EXPECT_EQ(help.on_key('-', out), HelpBrowser::Result::Stay);
+  EXPECT_EQ(help.on_key(U'-', out), HelpBrowser::Result::Stay);
   EXPECT_FALSE(help.is_paging());
   EXPECT_EQ(help.prompt(), "help> ");
 }

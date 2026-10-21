@@ -1,4 +1,5 @@
 #include "core/data_folder.hpp"
+#include "core/key_input.hpp"
 #include "core/log.hpp"
 #include "core/manual.hpp"
 #include "core/repl.hpp"
@@ -42,7 +43,9 @@ int main() {
   cratchit::Repl repl(manual, cratchit::page_lines(),
                       {folder->runtime_file, cwd, cratchit::default_workspace_folder(), today}, log_file);
   repl.open_workspace(std::cout);
-  cratchit::run_repl(repl, [&terminal] { return terminal.read_key(); }, std::cout);
+  // Keys are decoded from the terminal's input encoding to Unicode before the REPL acts on them
+  cratchit::KeyReader keys(terminal_encoding.in, [&terminal] { return terminal.read_key(); });
+  cratchit::run_repl(repl, [&keys] { return keys.next(); }, std::cout);
   LOG_BUSINESS("cratchit quit");
   return 0;
 }

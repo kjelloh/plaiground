@@ -26,6 +26,7 @@ add_library(cratchit_core
   src/core/charset/utf8.cpp
   src/core/data_folder.cpp
   src/core/help.cpp
+  src/core/key_input.cpp
   src/core/log.cpp
   src/core/log_view.cpp
   src/core/manual.cpp

@@ -44,28 +44,28 @@ void HelpBrowser::open(std::ostream& out) {
   show_section(out);
 }
 
-HelpBrowser::Result HelpBrowser::on_key(char key, std::ostream& out) {
-  if (key == 'q') {
+HelpBrowser::Result HelpBrowser::on_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'q') {
     path_.clear();
     waiting_lines_.clear();
     return Result::Leave;
   }
-  if (key == '-') {
+  if (key == U'-') {
     back(out);
     return path_.empty() ? Result::Leave : Result::Stay;
   }
   if (is_paging()) {
-    if (key == ' ' || key == '\n' || key == '\r') {
+    if (key == U' ' || key == U'\n' || key == U'\r') {
       show_next_page(out);
     } else {
       std::println(out, "Press space for more, - to go back, q to leave help.");
     }
     return Result::Stay;
   }
-  if (key == 'h') {
+  if (key == U'h') {
     show_section(out);
-  } else if (key >= '0' && key <= '9') {
-    select(key, out);
+  } else if (key >= U'0' && key <= U'9') {
+    select(static_cast<char>(key), out);
   } else {
     std::println(out, "Unknown key. {}", hint(*path_.back().section));
   }
@@ -127,11 +127,11 @@ void HelpBrowser::back(std::ostream& out) {
   }
 }
 
-void HelpBrowser::select(char key, std::ostream& out) {
+void HelpBrowser::select(char digit, std::ostream& out) {
   auto& level = path_.back();
   auto const& children = level.section->children;
   auto const n = children.size();
-  auto const k = static_cast<std::size_t>(key - '0');
+  auto const k = static_cast<std::size_t>(digit - '0');
   std::size_t index = n; // not found
   if (n <= max_keys) {
     if (k >= 1) {
@@ -149,7 +149,7 @@ void HelpBrowser::select(char key, std::ostream& out) {
     index = level.first_shown + k - 1;
   }
   if (index >= n) {
-    std::println(out, "No section {} here. {}", key, hint(*level.section));
+    std::println(out, "No section {} here. {}", digit, hint(*level.section));
     return;
   }
   path_.push_back({&children[index], index + 1, 0});

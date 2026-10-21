@@ -50,6 +50,16 @@ one of them. Today cratchit can read UTF-8 and CP437 (code page 437) and write U
 avoid the warnings on Windows, run `chcp 65001` before starting cratchit. On
 Linux, use a UTF-8 locale.
 
+Every key you press is read in the terminal's input encoding and turned into
+Unicode before cratchit acts on it. So you can type letters such as `å`, `ä`
+and `ö` in a folder path, whichever of the supported encodings the terminal
+uses. A key that does not make sense in that encoding is shown as `�`, treated
+as an unknown key, and noted in the log.
+
+On Windows with code page 437 or 850, the character `α` (437) or `Ó` (850)
+cannot be typed: the console sends the same code for it as for the start of an
+arrow key.
+
 ## The .cratchit folder
 
 cratchit keeps its data in a folder named `.cratchit` in the folder you start

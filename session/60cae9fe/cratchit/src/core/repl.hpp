@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/charset/unicode.hpp"
 #include "core/help.hpp"
 #include "core/log_view.hpp"
 #include "core/manual.hpp"
@@ -38,10 +39,10 @@ public:
   void open_workspace(std::ostream& out);
 
   // Handle one key press, writing any response to out
-  Step on_key(char key, std::ostream& out);
+  Step on_key(charset::unicode::CodePoint key, std::ostream& out);
 
   // True for keys that do nothing in the current mode, so are not even echoed
-  bool ignores(char key) const;
+  bool ignores(charset::unicode::CodePoint key) const;
 
   // True while a folder path is typed; on_key then writes the prompt and echo itself
   bool is_typing() const;
@@ -65,15 +66,15 @@ private:
   void open_log(std::ostream& out);
   void show_choices(std::ostream& out);
   void start_typing(std::ostream& out);
-  void on_choose_key(char key, std::ostream& out);
-  void on_typing_key(char key, std::ostream& out);
-  void on_confirm_key(char key, std::ostream& out);
+  void on_choose_key(charset::unicode::CodePoint key, std::ostream& out);
+  void on_typing_key(charset::unicode::CodePoint key, std::ostream& out);
+  void on_confirm_key(charset::unicode::CodePoint key, std::ostream& out);
   void create_and_choose(std::filesystem::path const& folder, std::ostream& out);
   void enter_workspace(std::filesystem::path const& folder, bool chosen, std::ostream& out);
 };
 
-// Supplies the next key press, or nothing at end of input
-using KeySource = std::function<std::optional<char>()>;
+// Supplies the next key press as a Unicode code point, or nothing at end of input
+using KeySource = std::function<std::optional<charset::unicode::CodePoint>()>;
 
 // Prompt, read a key, handle it, until quit or end of input
 void run_repl(Repl& repl, KeySource const& next_key, std::ostream& out);

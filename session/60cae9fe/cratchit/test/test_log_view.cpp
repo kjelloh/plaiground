@@ -52,10 +52,10 @@ TEST_F(LogViewTest, PagesBackwardsInTime) {
   EXPECT_EQ(view.open(file, out), LogView::Result::Stay);
   EXPECT_TRUE(out.str().ends_with("five\nfour\n"));
   out.str("");
-  EXPECT_EQ(view.on_key(' ', out), LogView::Result::Stay);
+  EXPECT_EQ(view.on_key(U' ', out), LogView::Result::Stay);
   EXPECT_EQ(out.str(), "three\ntwo\n");
   out.str("");
-  EXPECT_EQ(view.on_key('\n', out), LogView::Result::Leave);
+  EXPECT_EQ(view.on_key(U'\n', out), LogView::Result::Leave);
   EXPECT_EQ(out.str(), "one\n(start of log)\n");
 }
 
@@ -63,10 +63,10 @@ TEST_F(LogViewTest, DashOrQLeaves) {
   LogView view(2);
   std::ostringstream out;
   view.open(file, out);
-  EXPECT_EQ(view.on_key('x', out), LogView::Result::Stay);
-  EXPECT_EQ(view.on_key('-', out), LogView::Result::Leave);
+  EXPECT_EQ(view.on_key(U'x', out), LogView::Result::Stay);
+  EXPECT_EQ(view.on_key(U'-', out), LogView::Result::Leave);
   view.open(file, out);
-  EXPECT_EQ(view.on_key('q', out), LogView::Result::Leave);
+  EXPECT_EQ(view.on_key(U'q', out), LogView::Result::Leave);
 }
 
 TEST_F(LogViewTest, EmptyLogSaysSo) {

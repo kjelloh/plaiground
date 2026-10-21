@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/charset/unicode.hpp"
+
 #include <ostream>
 #include <string>
 
@@ -15,7 +17,7 @@ public:
   void start(std::string text);
 
   // Enter accepts the text, or cancels when it is empty
-  Result on_key(char key, std::ostream& out);
+  Result on_key(charset::unicode::CodePoint key, std::ostream& out);
 
   std::string const& text() const;
 

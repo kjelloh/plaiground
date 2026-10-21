@@ -18,12 +18,12 @@ LogView::Result LogView::open(std::filesystem::path const& file, std::ostream& o
   return show_next_page(out);
 }
 
-LogView::Result LogView::on_key(char key, std::ostream& out) {
-  if (key == '-' || key == 'q') {
+LogView::Result LogView::on_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-' || key == U'q') {
     waiting_lines_.clear();
     return Result::Leave;
   }
-  if (key == ' ' || key == '\n' || key == '\r') {
+  if (key == U' ' || key == U'\n' || key == U'\r') {
     return show_next_page(out);
   }
   std::println(out, "Press space for older events, - or q to leave the log.");

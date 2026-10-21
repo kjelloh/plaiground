@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/charset/unicode.hpp"
+
 #include "core/manual.hpp"
 
 #include <cstddef>
@@ -21,7 +23,7 @@ public:
   // Show the top of the manual
   void open(std::ostream& out);
 
-  Result on_key(char key, std::ostream& out);
+  Result on_key(charset::unicode::CodePoint key, std::ostream& out);
 
   // "help> ", "help 2.1> ", or the more prompt while a page is waiting
   std::string prompt() const;
@@ -44,7 +46,7 @@ private:
   void show_section(std::ostream& out);
   void show_menu(std::ostream& out);
   void back(std::ostream& out);
-  void select(char key, std::ostream& out);
+  void select(char digit, std::ostream& out);
   std::vector<std::string> menu_lines() const;
   void show(std::vector<std::string> lines, std::ostream& out);
   void show_next_page(std::ostream& out);

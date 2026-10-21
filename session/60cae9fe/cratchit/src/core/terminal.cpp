@@ -34,7 +34,8 @@ std::optional<char> RawTerminal::read_key() {
   }
   int c = _getch();
   if (c == 0 || c == 0xE0) {
-    // Function and arrow keys come as two codes; skip both
+    // Function and arrow keys come as two codes; skip both. In CP437 and CP850, 0xE0 is
+    // also a character (α, Ó), which therefore cannot be typed.
     _getch();
     return '\0';
   }

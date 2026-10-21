@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/charset/unicode.hpp"
+
 #include <cstddef>
 #include <filesystem>
 #include <ostream>
@@ -20,7 +22,7 @@ public:
   Result open(std::filesystem::path const& file, std::ostream& out);
 
   // Space or Enter shows the next (older) page; - or q leaves
-  Result on_key(char key, std::ostream& out);
+  Result on_key(charset::unicode::CodePoint key, std::ostream& out);
 
   std::string prompt() const;
 

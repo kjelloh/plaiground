@@ -1,11 +1,13 @@
 #include "core/repl.hpp"
 
 #include "core/data_folder.hpp"
+#include "core/key_input.hpp"
 
 #include <gtest/gtest.h>
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -15,14 +17,16 @@ using cratchit::Step;
 
 namespace {
 
-// Feeds the keys of a string one at a time, then reports end of input
-cratchit::KeySource keys_from(std::string keys) {
-  return [keys = std::move(keys), pos = std::size_t{0}]() mutable -> std::optional<char> {
-    if (pos == keys.size()) {
-      return std::nullopt;
-    }
-    return keys[pos++];
-  };
+// Feeds the keys of a string in charset one at a time, then reports end of input
+cratchit::KeySource keys_from(std::string keys, cratchit::Charset charset = cratchit::Charset::Utf8) {
+  auto reader = std::make_shared<cratchit::KeyReader>(
+      charset, [keys = std::move(keys), pos = std::size_t{0}]() mutable -> std::optional<char> {
+        if (pos == keys.size()) {
+          return std::nullopt;
+        }
+        return keys[pos++];
+      });
+  return [reader] { return reader->next(); };
 }
 
 Section const manual{"Manual", "", {{"A", "Text A\n", {}}}};
@@ -32,7 +36,7 @@ Section const manual{"Manual", "", {{"A", "Text A\n", {}}}};
 TEST(Repl, HOpensHelp) {
   Repl repl(manual, 0, {});
   std::ostringstream out;
-  EXPECT_EQ(repl.on_key('h', out), Step::Continue);
+  EXPECT_EQ(repl.on_key(U'h', out), Step::Continue);
   EXPECT_NE(out.str().find("  1  A"), std::string::npos);
   EXPECT_EQ(repl.prompt(), "help> ");
 }
@@ -40,53 +44,53 @@ TEST(Repl, HOpensHelp) {
 TEST(Repl, QQuits) {
   Repl repl(manual, 0, {});
   std::ostringstream out;
-  EXPECT_EQ(repl.on_key('q', out), Step::Quit);
+  EXPECT_EQ(repl.on_key(U'q', out), Step::Quit);
 }
 
 TEST(Repl, CtrlDQuits) {
   Repl repl(manual, 0, {});
   std::ostringstream out;
-  EXPECT_EQ(repl.on_key('\x04', out), Step::Quit);
+  EXPECT_EQ(repl.on_key(U'\x04', out), Step::Quit);
 }
 
 TEST(Repl, CtrlDQuitsFromHelp) {
   Repl repl(manual, 0, {});
   std::ostringstream out;
-  repl.on_key('h', out);
-  EXPECT_EQ(repl.on_key('\x04', out), Step::Quit);
+  repl.on_key(U'h', out);
+  EXPECT_EQ(repl.on_key(U'\x04', out), Step::Quit);
 }
 
 TEST(Repl, QInHelpLeavesHelpOnly) {
   Repl repl(manual, 0, {});
   std::ostringstream out;
-  repl.on_key('h', out);
-  EXPECT_EQ(repl.on_key('q', out), Step::Continue);
+  repl.on_key(U'h', out);
+  EXPECT_EQ(repl.on_key(U'q', out), Step::Continue);
   EXPECT_EQ(repl.prompt(), "cratchit> ");
 }
 
 TEST(Repl, UnknownKeyPointsToHelp) {
   Repl repl(manual, 0, {});
   std::ostringstream out;
-  EXPECT_EQ(repl.on_key('x', out), Step::Continue);
+  EXPECT_EQ(repl.on_key(U'x', out), Step::Continue);
   EXPECT_NE(out.str().find("Press h for help"), std::string::npos);
 }
 
 TEST(Repl, EscapeDoesNothing) {
   Repl repl(manual, 0, {});
-  EXPECT_TRUE(repl.ignores('\x1b'));
+  EXPECT_TRUE(repl.ignores(U'\x1b'));
   std::ostringstream out;
-  repl.on_key('h', out);
-  EXPECT_TRUE(repl.ignores('\x1b'));
+  repl.on_key(U'h', out);
+  EXPECT_TRUE(repl.ignores(U'\x1b'));
 }
 
 TEST(Repl, SpaceTurnsThePageOnlyWhilePaging) {
   Section long_manual{"Manual", "1\n2\n3\n4\n", {}};
   Repl repl(long_manual, 2, {});
-  EXPECT_TRUE(repl.ignores(' '));
+  EXPECT_TRUE(repl.ignores(U' '));
   std::ostringstream out;
-  repl.on_key('h', out);
-  EXPECT_FALSE(repl.ignores(' '));
-  EXPECT_FALSE(repl.ignores('\n'));
+  repl.on_key(U'h', out);
+  EXPECT_FALSE(repl.ignores(U' '));
+  EXPECT_FALSE(repl.ignores(U'\n'));
 }
 
 TEST(RunRepl, BrowsesHelpAndQuits) {
@@ -157,11 +161,11 @@ protected:
   Repl make_repl() { return Repl(manual, 0, {runtime_file, root / "start", root / "Documents" / "cratchit", "2026-10-20"}); }
 
   // Open the workspace as on start, then feed keys
-  std::string run(std::string keys) {
+  std::string run(std::string keys, cratchit::Charset charset = cratchit::Charset::Utf8) {
     auto repl = make_repl();
     std::ostringstream out;
     repl.open_workspace(out);
-    cratchit::run_repl(repl, keys_from(std::move(keys)), out);
+    cratchit::run_repl(repl, keys_from(std::move(keys), charset), out);
     return out.str();
   }
 
@@ -249,6 +253,25 @@ TEST_F(WorkspaceRepl, MissingTypedFolderIsCreatedOnYes) {
   EXPECT_TRUE(fs::is_regular_file(folder / ".cratchit" / "workspace.txt"));
 }
 
+TEST_F(WorkspaceRepl, NonAsciiPathTypedInCp437IsCreated) {
+  auto const typed = root.string().substr(root.root_path().string().size());
+  run("3" + typed + "/R\x84kenskaper\ny", cratchit::Charset::Cp437);
+  EXPECT_TRUE(fs::is_regular_file(root / fs::path(u8"R\u00e4kenskaper") / ".cratchit" / "workspace.txt"));
+}
+
+TEST_F(WorkspaceRepl, NonAsciiPathTypedInUtf8IsCreated) {
+  auto const typed = root.string().substr(root.root_path().string().size());
+  run("3" + typed + "/R\xc3\xa4kenskaper\ny", cratchit::Charset::Utf8);
+  EXPECT_TRUE(fs::is_regular_file(root / fs::path(u8"R\u00e4kenskaper") / ".cratchit" / "workspace.txt"));
+}
+
+TEST_F(WorkspaceRepl, NonAsciiKeyIsEchoed) {
+  auto repl = make_repl();
+  std::ostringstream out;
+  cratchit::run_repl(repl, keys_from("\x84", cratchit::Charset::Cp437), out);
+  EXPECT_EQ(out.str(), "cratchit> \xc3\xa4\nUnknown key. Press h for help.\ncratchit> \n");
+}
+
 TEST_F(WorkspaceRepl, NoKeepsTheTypedPath) {
   auto const typed = (root / "new").string().substr(root.root_path().string().size());
   auto const output = run("3" + typed + "\nn\x7f\x7f\x7fstart\n");
@@ -269,11 +292,11 @@ TEST_F(WorkspaceRepl, QIsTypedInAPathButQuitsElsewhere) {
   auto repl = make_repl();
   std::ostringstream out;
   repl.open_workspace(out);
-  EXPECT_EQ(repl.on_key('3', out), Step::Continue);
+  EXPECT_EQ(repl.on_key(U'3', out), Step::Continue);
   EXPECT_TRUE(repl.is_typing());
-  EXPECT_EQ(repl.on_key('q', out), Step::Continue);
-  EXPECT_FALSE(repl.ignores(' '));
-  EXPECT_EQ(repl.on_key('\x04', out), Step::Quit);
+  EXPECT_EQ(repl.on_key(U'q', out), Step::Continue);
+  EXPECT_FALSE(repl.ignores(U' '));
+  EXPECT_EQ(repl.on_key(U'\x04', out), Step::Quit);
 }
 
 TEST_F(WorkspaceRepl, HelpReturnsToTheWorkspace) {
@@ -286,7 +309,7 @@ TEST_F(WorkspaceRepl, WKeyOpensTheWorkspace) {
   run("2");
   auto repl = make_repl();
   std::ostringstream out;
-  repl.on_key('w', out);
+  repl.on_key(U'w', out);
   EXPECT_EQ(repl.prompt(), "workspace> ");
 }
 

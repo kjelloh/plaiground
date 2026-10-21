@@ -14,7 +14,8 @@ public:
   RawTerminal(RawTerminal const&) = delete;
   RawTerminal& operator=(RawTerminal const&) = delete;
 
-  // Block until a key is pressed; nothing at end of input
+  // Block until a byte is read; nothing at end of input. A key that is not
+  // ASCII may come as several bytes, in the terminal's input encoding.
   std::optional<char> read_key();
 
 private:

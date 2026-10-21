@@ -1,10 +1,11 @@
 #include "core/repl.hpp"
 
+#include "core/charset/utf8.hpp"
 #include "core/log.hpp"
 #include "core/workspace.hpp"
 
 #include <print>
-#include <string_view>
+#include <string>
 
 namespace cratchit {
 
@@ -12,23 +13,28 @@ namespace fs = std::filesystem;
 
 namespace {
 
-constexpr char ctrl_d = '\x04';
+constexpr charset::unicode::CodePoint ctrl_d = U'\x04';
 // Esc does nothing: arrow keys also start with it, so the two can't be told apart
-constexpr char escape = '\x1b';
+constexpr charset::unicode::CodePoint escape = U'\x1b';
 
-bool is_whitespace(char key) {
-  return key == '\n' || key == '\r' || key == ' ' || key == '\t';
+bool is_whitespace(charset::unicode::CodePoint key) {
+  return key == U'\n' || key == U'\r' || key == U' ' || key == U'\t';
 }
 
-// How a key press is shown after the prompt, as echo is off in raw mode
-std::string_view echo_of(char const& key) {
+// How a key press is shown after the prompt, as echo is off in raw mode.
+// UTF-8, as that is the only terminal output encoding cratchit writes so far.
+std::string echo_of(charset::unicode::CodePoint key) {
   if (key == ctrl_d) {
     return "^D";
   }
   if (is_whitespace(key)) {
     return "";
   }
-  return {&key, 1};
+  std::string result;
+  for (auto const byte : charset::utf8::FromUnicodeBuffer{}.push(key)) {
+    result += static_cast<char>(byte);
+  }
+  return result;
 }
 
 } // namespace
@@ -56,7 +62,7 @@ void Repl::open_workspace(std::ostream& out) {
   show_choices(out);
 }
 
-Step Repl::on_key(char key, std::ostream& out) {
+Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   if (key == ctrl_d) {
     return Step::Quit;
   }
@@ -83,18 +89,18 @@ Step Repl::on_key(char key, std::ostream& out) {
   default:
     break;
   }
-  if (key == 'q') {
+  if (key == U'q') {
     return Step::Quit;
   }
-  if (key == 'h') {
+  if (key == U'h') {
     open_help(out);
     return Step::Continue;
   }
   switch (mode_) {
   case Mode::Main:
-    if (key == 'w') {
+    if (key == U'w') {
       open_workspace(out);
-    } else if (key == 'l') {
+    } else if (key == U'l') {
       open_log(out);
     } else {
       std::println(out, "Unknown key. Press h for help.");
@@ -104,9 +110,9 @@ Step Repl::on_key(char key, std::ostream& out) {
     on_choose_key(key, out);
     break;
   case Mode::Workspace:
-    if (key == '-') {
+    if (key == U'-') {
       mode_ = Mode::Main;
-    } else if (key == 'l') {
+    } else if (key == U'l') {
       open_log(out);
     } else {
       std::println(out, "Unknown key. Press h for help.");
@@ -118,7 +124,7 @@ Step Repl::on_key(char key, std::ostream& out) {
   return Step::Continue;
 }
 
-bool Repl::ignores(char key) const {
+bool Repl::ignores(charset::unicode::CodePoint key) const {
   // The path editor uses every key, and drops arrow keys itself
   if (mode_ == Mode::Typing) {
     return false;
@@ -128,7 +134,7 @@ bool Repl::ignores(char key) const {
   }
   // Space and Enter show the next page of help or the log
   if ((mode_ == Mode::Help && help_.is_paging()) || mode_ == Mode::Log) {
-    return key == '\t';
+    return key == U'\t';
   }
   return is_whitespace(key);
 }
@@ -187,22 +193,22 @@ void Repl::start_typing(std::ostream& out) {
   out << editor_.prompt();
 }
 
-void Repl::on_choose_key(char key, std::ostream& out) {
-  if (key == '1' && places_.default_folder) {
+void Repl::on_choose_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'1' && places_.default_folder) {
     create_and_choose(*places_.default_folder, out);
-  } else if (key == '2') {
+  } else if (key == U'2') {
     enter_workspace(places_.start_folder, true, out);
-  } else if (key == '3') {
+  } else if (key == U'3') {
     editor_.start(places_.start_folder.root_path().string());
     start_typing(out);
-  } else if (key == '-') {
+  } else if (key == U'-') {
     mode_ = Mode::Main;
   } else {
     std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
   }
 }
 
-void Repl::on_typing_key(char key, std::ostream& out) {
+void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
   auto const result = editor_.on_key(key, out);
   if (result == PathEditor::Result::Cancelled) {
     mode_ = Mode::Choose;
@@ -233,10 +239,10 @@ void Repl::on_typing_key(char key, std::ostream& out) {
   }
 }
 
-void Repl::on_confirm_key(char key, std::ostream& out) {
-  if (key == 'y') {
+void Repl::on_confirm_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
     create_and_choose(to_create_, out);
-  } else if (key == 'n' || key == '-') {
+  } else if (key == U'n' || key == U'-') {
     mode_ = Mode::Typing;
     out << editor_.prompt();
   } else {
@@ -293,7 +299,7 @@ void run_repl(Repl& repl, KeySource const& next_key, std::ostream& out) {
       std::print(out, "{}", repl.prompt());
     }
     out.flush();
-    std::optional<char> key;
+    std::optional<charset::unicode::CodePoint> key;
     do {
       key = next_key();
     } while (key && repl.ignores(*key));
