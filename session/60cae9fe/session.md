@@ -20,6 +20,10 @@ I want to try this architecture out for the CP437 character set.
 
 What can Claude propose as an implementation for this design?
 
+Claude implemented CP437 to Unicode buffer for me.
+
+* Now I want Claude to take this design an implement Unicode to UTF8 for me.
+
 ## 20261019
 
 So this is take three to try and 'vibe code' a Swedish book keeping app in modern C++23.

@@ -36,6 +36,11 @@ returns `std::optional<unicode::CodePoint>` (always a value for CP437); `cp437::
 0x00-0x7F is ASCII including control characters, 0x80-0xFF the standard CP437 table. No user operation, so no manual
 change. 112 tests pass, no warnings. In review.
 
+Task 9: Unicode to UTF-8 (`core/charset/utf8`). `charset::utf8::CodePoint` (uint8_t). `utf8::FromUnicodeBuffer::push(code
+point)` returns `utf8::Bytes` (`std::array<CodePoint, 4>` + `size`, iterable). Surrogates and values above U+10FFFF give
+U+FFFD. `utf8::from_unicode(code points)` returns a `std::string`. Test chains CP437 -> Unicode -> UTF-8.
+119 tests pass, no warnings. In review.
+
 ## Next
 
 To be given in chat.
