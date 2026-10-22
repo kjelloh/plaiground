@@ -131,6 +131,83 @@ project>
 
 What are ALL THOSE new project files!!
 
+At first I thought I should ask Claude to clean this mess up.
+
+* On second thought I imagine I can leave the result as is and just carry on?
+* This is Vibe Coding so we can take this as an exercise to see how agentic coding behaves?
+
+So next we can now implement actual accounting and accounting support?
+
+* Do we need to somehow base this functionality on BAS specification(s)?
+* Maybe to provide BAS accounting help in the manual?
+* Do we need to store our own machine readable 'account plan'?
+* If so, how do we use account information from SIE files with BAS accounting specification?
+* Can they clash?
+    * If so, what do we doo?
+
+Finally, I actually already know we will later need to know how class 8 BAS accounts map to their types (asset, liability, cost, income).
+
+* Is there a BAS specification from which we can extract account types for each BAS account?
+
+So I asked Claude to investigate and the answer is annoying.
+
+* It seems BAS charges 4000 SEK ex VAT for a json-file.
+    * And this json-file is then only licensed for won use (not copy, share or sub-license)
+* And the free pdf-s are fragile to read (sais Claude)
+
+OK, So where are we?
+
+* It seems BAS free specifications are in fact worthless?
+* At best, they can be used to get the names of BAS accounts?
+* But no meta data about counter accounts, account types etc.
+* So it seems for now totally pointless to try and download and parse them?
+    * Also, previous cratchit::zeroth also did NOT extract any meta data from these BAS specs.
+* Does the SIE file in fact specify BAS account names?
+    * YES!
+
+But it irritates me that I fail to get any specs on BAS account class 8 account types!
+
+* I can buy the book "Svensk Redovisning. Bokföringsboken 2026" and read about it?
+* I could then manually create a meta-data map for BAS accounts?
+    * I may then be able to manually define the account types for BAS account class 8 accounts?
+
+OK, I bought it as e-book.
+
+* It does NOT state the account types in account class 8!
+    * Do I have to deduce the type from the account name?
+
+I have now studied BAS vs SRU vs INK2.
+
+* It seems the information in the SIE-file is self contained and sufficient?
+    * Each BAS account is mapped to SRU code
+* And maybe the INK2 fields are always defined by their SRU codes?
+    * So as long as BAS vs SRU is correct, then INK2 from SRU will also be correct?
+
+Also, for account class 8.
+
+* The BAS Account to SRU code is sign dependant!
+    * So if the BAS account sums to a positive value it links to one SRU code
+    * But if it is negative it links to another SRU code!
+    * E.g., BAS account 8810
+
+    ```
+    7420    3.21    Aterföring av periodiseringsfond    8810 (Om netto +), 8819
+    7525    3.22    Avsättning till periodiseringsfond  8810 (Om netto -), 8811
+    ```
+
+    * 8810, if saldo positive, accumulates to SRU 7420 (INK 3.21)
+    * 8810, if saldo negative, accumulates to SRU 7525 (INK 3.22)
+
+So how does the SIE file (My Fortnox export) handle this?
+
+* In Fortnox BAS 88100 seems linked to SRU 7420 ?!
+* And YES, in _sie_in/TheITfiedAB20261019_105324.se the mapping is '#SRU 8810 7420'!
+
+HOW ON EARTH IS THIS SUPPOSED TO WORK??!!
+
+* AHA! You are supposed to use explicit BAS 8819 or 8811 as an accountant ?!!
+* YES. In SIE file '#SRU 8811 7525'!
+
 ## 20261021
 
 Now it is time to introduce the scaffolding for character set encoding and decoding.

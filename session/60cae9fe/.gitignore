@@ -1,2 +1,8 @@
+# Ignore resource folder
+_resources
+
 # Ignore all cratchit dot-folder files
 .cratchit
+
+# Ignore cratchit project folder(s)
+ITfied AB/
