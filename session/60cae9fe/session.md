@@ -52,6 +52,8 @@ Decision for you: CP437 maps every byte to a character, so decoding never fails 
 
 Claude have now defined a list of tasks to implement SIE file import.
 
+```
+
 Seven tasks remain in the SIE import plan, numbered 20–26 in progress.md:
 
 20. SIE document, part 1: company details (#FNAMN, #ORGNR, #RAR, #KPTYP and similar) and the chart of accounts (#KONTO, #SRU, #KTYP), read from the lexed lines into the SIE document.
@@ -67,7 +69,67 @@ Seven tasks remain in the SIE import plan, numbered 20–26 in progress.md:
 26. Reports: saldobalans (trial balance), a voucher list and an account ledger, so you can compare cratchit's books with Fortnox.
 
 Later, outside this plan: checking the chart of accounts against BAS, exporting SIE (and testing that an import followed by an export gives the same file), and SIE 5.
+```
 
+At this stage I went for it and told Claude to implement all remaining tasks in one go. ANd ask only if critical decisions needs to be made by me.
+
+* It came cak with questions about miss-matched in and out balances in SIE files.
+* It detected that input balance for 2026/2027 did now match output balance for 20205/2026.
+    * I suggested cratchit should warn and use its own in and out balances if it has them
+    * And alert in log and to the user about the discrepancy but ignore and use contained vouchers.
+
+Now when I think about it.
+
+* If the in-balance in an SIE-file differs from the out-balance in a previous year imported SIE file, then this means the SIE file snapshots differs.
+    * But we don't know where the difference is?
+    * Cratchit should always treat its own books as the 'truth'
+    * And update this truth from SIE files only if there is NO conflict!
+    * We can later add a 'force' flag to re-synk cratchit with an external truth.
+    * But for now SIE file import only allows for new financial events - NOT mutations!
+
+ 
+ Claude have now implemented SIE import with user interface and persistent storage.
+
+ * The user interface works (but is over complicated!)
+
+ ```text
+ project> 
+Keys at project>:
+  i  Import an SIE file
+  r  Reports
+  l  Show the log
+  -  Back to workspace>
+  h  Help (the manual)
+  q  Quit
+project> i
+Type the path of the SIE file to import. Tab completes a folder or file name, Backspace erases,
+Enter accepts. Enter on an empty path goes back.
+path> /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/62c6984e/_sie_in/TheITfiedAB20261019_105220.se
+SIE file /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/62c6984e/_sie_in/TheITfiedAB20261019_105220.se
+  Read as      CP437
+  Program      Fortnox 3.62.17, generated 2026-10-19
+  Company      The ITfied AB, 556782-8172
+  Fiscal year  2025-05-01 - 2026-04-30
+  Accounts     501: 501 new, 0 changed
+  Vouchers     116: 116 new, 0 already in the books
+Notes:
+  - The project gets organisation number 556782-8172 (#ORGNR)
+  - The project's name changes from "ITfied AB" to "The ITfied AB" (#FNAMN)
+Import it? (y/n) y
+Initiated .cratchit/books/books.txt in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Initiated .cratchit/books/accounts.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Initiated .cratchit/books/dimensions.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Initiated .cratchit/books/objects.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Initiated .cratchit/books/2025-05-01/opening.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Initiated .cratchit/books/2025-05-01/vouchers.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Initiated .cratchit/books/2025-05-01/transactions.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Updated .cratchit/project.txt in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Stashed the file as .cratchit/imports/2026-10-22_1_TheITfiedAB20261019_105220.se in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/ITfied AB
+Imported 116 vouchers into fiscal year 2025-05-01 - 2026-04-30 (0 already in the books).
+project> 
+ ```
+
+What are ALL THOSE new project files!!
 
 ## 20261021
 

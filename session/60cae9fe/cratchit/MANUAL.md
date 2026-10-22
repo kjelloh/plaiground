@@ -124,16 +124,46 @@ write a relative folder yourself, it is taken from the workspace folder.
 `project` names the uuid of the project you last opened.
 
 `project.txt`, in a project folder's `.cratchit`, holds the date the project
-was created, its uuid and the official name of the person, company or
-organisation whose books it is:
+was created, its uuid, the official name of the person, company or
+organisation whose books it is and, after the first import, its
+organisation number:
 
 ```
 created = 2026-10-21
 uuid = 3f2b8c1e-9a4d-4e7f-b6a2-1c5d8e0f7a93
-name = ITfied AB
+name = The ITfied AB
+orgnr = 556782-8172
 ```
 
 The uuid is made by cratchit when it creates the project and never changes.
+The first SIE import sets `orgnr` and `name` (see Importing an SIE file).
+
+The project's books are in `.cratchit/books` in the project folder:
+
+| File | What it holds |
+|------|---------------|
+| `books.txt` | `chart_type` (e.g. `EUBAS97`), `company_id`, `address.contact`, `address.street`, `address.postal`, `address.phone`, and one `year.<start> = <end>` line per fiscal year, dates as YYYY-MM-DD. |
+| `accounts.csv` | The chart of accounts: `account,name,type,sru,unit`. |
+| `dimensions.csv` | `dimension,name,super` (`super` only for a sub dimension). |
+| `objects.csv` | `dimension,object,name`. |
+| `<start>/opening.csv` | Per fiscal year, in a folder named by its start date: the opening balances the source reported, `account,amount`. |
+| `<start>/vouchers.csv` | The year's vouchers: `series,number,date,text,registered,signature`. |
+| `<start>/transactions.csv` | Their rows: `series,number,kind,account,objects,amount,date,text,quantity,signature`. |
+
+The `.csv` files are comma separated with a header line. A field holding a
+comma, a quote or a line break is quoted, with quotes doubled. Amounts have a
+point and two decimals, debit positive and credit negative, for example
+`-6498.77`. `kind` is `normal`, `added` (a row added after the voucher was
+registered) or `removed` (a row struck after it was registered; kept for the
+history but not counted). `objects` holds dimension and object pairs as a comma
+separated list, for example `1,100,6,P1`. `type` is `T`, `S`, `K` or `I`
+(asset, liability, cost, income) when the source gave one.
+
+`.cratchit/imports` in the project folder keeps an unchanged copy of every
+imported file, named `<date>_<n>_<file name>`, and next to it a record
+`<date>_<n>_<file name>.txt` of the import: `imported`, `source`, `encoding`,
+`program`, `generated`, `company`, `orgnr`, `year`, `vouchers_added`,
+`vouchers_known` and `notes` (the number of notes shown).
 
 `log.txt`, next to `runtime.txt`, is the log (see The log). cratchit creates
 it the first time it logs something and only ever adds lines to it.
@@ -145,7 +175,8 @@ workspace sets the `workspace` line in `runtime.txt`, keeps the other lines,
 and reports `Updated .cratchit/runtime.txt in <folder>`. Creating, adding or
 opening a project lists it in `workspace.txt` and saves it as the last opened,
 keeping the other lines, and reports `Updated .cratchit/workspace.txt in
-<folder>` when the file changes.
+<folder>` when the file changes. Importing an SIE file adds to the books and
+reports each books file as `Initiated` or `Updated`.
 
 cratchit adds a missing `runtime.txt` to its own `.cratchit` (when `runtime` is
 `.`) and reports it as `Initiated`. It never creates a runtime in another
@@ -244,12 +275,13 @@ it is.
 ### Typing a folder path
 
 For a workspace, the path starts at the root folder (`/`, or for example `C:\`
-on Windows). For a project folder it starts at the workspace folder. You type
-the rest, one key at a time:
+on Windows). For a project folder it starts at the workspace folder, and for
+an SIE file to import at the folder cratchit started in. You type the rest,
+one key at a time:
 
 | Key       | What it does                                                  |
 |-----------|---------------------------------------------------------------|
-| Tab       | Completes the folder name you have started (see below).       |
+| Tab       | Completes the folder name you have started (see below). For an SIE file, file names too. |
 | Backspace | Erases the last character.                                    |
 | Enter     | Accepts the path. On an empty path, goes back to the choices or the project menu. |
 | Ctrl-D    | Quits cratchit.                                               |
@@ -262,7 +294,8 @@ name is completed and a separator added. When several match, the name is
 completed as far as they agree, and when they agree on nothing more, Tab
 lists them. When none
 match, the terminal beeps. Hidden folders (starting with `.`) match only when
-you type the dot.
+you type the dot. When typing the path of a file, a unique file name is
+completed without a separator after it.
 
 A relative path is taken from the folder cratchit started in (for a workspace)
 or from the workspace folder (for a project), and `..` goes up one folder.
@@ -279,6 +312,7 @@ The prompt is `workspace>`.
 | Key    | What it does                                 |
 |--------|----------------------------------------------|
 | p      | Shows the project menu (see Projects).       |
+| Enter  | Lists these keys.                            |
 | h      | Opens this manual.                           |
 | l      | Shows the log (see The log).                 |
 | -      | Goes back to the `cratchit>` prompt.         |
@@ -384,34 +418,187 @@ lets you change the path. A copied project folder is not supported yet.
 
 The prompt is `project>`.
 
-| Key    | What it does                          |
-|--------|---------------------------------------|
-| h      | Opens this manual.                    |
-| l      | Shows the log (see The log).          |
-| -      | Goes back to the `workspace>` prompt. |
-| q      | Quits cratchit.                       |
-| Ctrl-D | Quits cratchit.                       |
+| Key    | What it does                                        |
+|--------|-----------------------------------------------------|
+| i      | Imports an SIE file (see Importing an SIE file).    |
+| r      | Shows reports of the books (see Reports).           |
+| Enter  | Lists these keys.                                   |
+| h      | Opens this manual.                                  |
+| l      | Shows the log (see The log).                        |
+| -      | Goes back to the `workspace>` prompt.               |
+| q      | Quits cratchit.                                     |
+| Ctrl-D | Quits cratchit.                                     |
 
 The project you open is saved as the last opened in `workspace.txt`, so it
 opens again the next time the workspace opens. If the last opened project is
 not listed, or cannot be opened, cratchit shows the error and stays at
 `workspace>`.
 
+### Importing an SIE file
+
+An SIE file is the books exported from another bookkeeping program, such as
+Fortnox. cratchit imports SIE type 4 files (4E, with vouchers), one fiscal year
+per file: the year the file calls year 0. Export one file per fiscal year and
+import them in any order.
+
+Press `i` at the `project>` prompt and type the path of the file (see Typing a
+folder path). cratchit reads and checks the file and shows what importing it
+would do, without changing anything:
+
+```
+SIE file /Users/me/Downloads/ITfied20261019.se
+  Read as      CP437
+  Program      Fortnox 3.62.17, generated 2026-10-19
+  Company      The ITfied AB, 556782-8172
+  Fiscal year  2025-05-01 - 2026-04-30
+  Accounts     501: 501 new, 0 changed
+  Vouchers     116: 116 new, 0 already in the books
+Notes:
+  - The project gets organisation number 556782-8172 (#ORGNR)
+Import it? (y/n)
+```
+
+Press `y` to import, `n` or `-` not to. When the file has errors, cratchit lists
+them, says `Nothing is imported.` and asks nothing. When everything in the file
+is already in the books, it says so.
+
+On import cratchit adds to the books (see The files), stashes an unchanged copy
+of the file with a record of the import in `.cratchit/imports`, and shows:
+
+```
+Stashed the file as .cratchit/imports/2026-10-22_1_ITfied20261019.se in /Users/me/Documents/cratchit/ITfied AB
+Imported 116 vouchers into fiscal year 2025-05-01 - 2026-04-30 (0 already in the books).
+```
+
+#### The encoding
+
+SIE files must be in PC8 (code page 437). cratchit reads them so, unless that
+gives characters that do not belong in an SIE file, such as box drawing
+characters. Then, if the file is UTF-8, cratchit reads it as UTF-8 and notes
+it, for example `Not in PC8 (CP437) as SIE requires: read as CP437 it has '├'
+(U+251C) on line 8. Read as UTF-8 instead.` Otherwise the encoding is unknown
+and nothing is imported.
+
+#### What the import does
+
+- The first import sets the project's organisation number and name from the
+  file (`#ORGNR`, `#FNAMN`) and updates `project.txt`. After that, a file for
+  another organisation number or company name is an error.
+- The file's fiscal year is added to the books. A year that overlaps a year in
+  the books, or starts the same day but ends another, is an error.
+- Vouchers (financial events) are never changed once in the books. A voucher
+  already in the books (same series and number) is skipped when it is
+  identical, and is an error when it differs. New vouchers are added. Vouchers
+  in the books that the file lacks are noted and kept.
+- Rows added or struck in a voucher after it was registered (`#RTRANS`,
+  `#BTRANS`) are kept with the voucher and marked. Struck rows do not count.
+- New accounts, dimensions and objects are added. Changed names, types, SRU
+  codes and company details are taken, and noted, only from a file whose year is
+  the latest in the books, so an older file does not undo newer names.
+
+#### Errors
+
+Nothing is imported when the file:
+
+- is not SIE type 4, lacks `#FNAMN`, `#ORGNR` or a year 0 (`#RAR 0`), or is in
+  another currency than SEK (`#VALUTA`)
+- has a line cratchit cannot read, or a record with a missing or invalid field
+  (for example a date that is not YYYYMMDD, or an amount with a comma)
+- has a voucher without series or number, given twice, dated outside the
+  fiscal year, using an account the file does not define, or not balancing
+- has a checksum (`#KSUMMA`) that does not match its content
+- does not match the project or the books, as above
+
+#### Balances and notes
+
+cratchit keeps its own balances: a fiscal year directly after another in the
+books opens with that year's closing balances, for the balance sheet accounts
+(BAS classes 1-2, or type T and S). The result accounts (3-8, or K and I) open
+at zero. The first year in the books, or one after a gap, opens with the
+opening balances its file reported.
+
+The balances in the file (`#IB`, `#UB`, `#RES`) are only checked. Each
+difference is shown as a note and logged, but does not stop the import:
+
+- the file's own year does not add up (opening balance + transactions against
+  the closing balance, or transactions against the result)
+- the file's opening balance differs from its closing balance of the year before
+- the file's opening balance differs from what cratchit carries from its own
+  closing balance of the year before; cratchit uses its own
+- the file's balances of an earlier year (year -1 and so on) differ from that
+  year in the books
+- the import changes the opening balances of a later year in the books, now
+  carried from the imported year
+
+Where one or more vouchers in the books have exactly the difference on the
+account, the note names them as the possible cause, for example
+`Possibly from voucher M 5 2026-04-30 "Momsrapport"`.
+
+Unknown records in the file are ignored and noted, as SIE requires.
+
+### Reports
+
+Press `r` at the `project>` prompt. cratchit lists the fiscal years in the
+books, newest first; press a number to choose one (with more than 9, keys 0
+and 9 scroll as in the project menu). Then choose a report:
+
+```
+Reports for 2025-05-01 - 2026-04-30:
+  1  Trial balance (saldobalans)
+  2  Vouchers
+  3  Account ledger
+```
+
+The prompt is `report?>`.
+
+| Key    | What it does                                                    |
+|--------|-----------------------------------------------------------------|
+| 1      | Trial balance: each balance sheet account with opening balance, change and closing balance, each result account with its result, and totals. It says where the opening balances come from, and lists those that differ from what the source reported. |
+| 2      | Every voucher of the year with its rows. Rows added or struck after registration are marked `added` or `removed`. |
+| 3      | Account ledger: type an account number at `account>`, then Enter. Shows the opening balance, every row on the account by date with the balance after it, and the closing balance. Enter on an empty number goes back. |
+| -      | Goes back: from the reports to the years, from the years to `project>`. |
+| h      | Opens this manual.                                              |
+| q      | Quits cratchit.                                                 |
+
+Amounts have two decimals, debit positive and credit negative. A report longer
+than the terminal window is shown a page at a time with `--More--`: space or
+Enter shows the next page, `-` or `q` stops. After a report the report menu is
+shown again.
+
 ## Using the prompt
 
 At the prompt, each key acts as soon as you press it. You don't need to press Enter.
-Enter, space and tab are ignored, except while you type a folder path or a
-name (see Typing a folder path and Creating a project).
+Space and tab are ignored, except while you type a folder path, a name or an
+account number (see Typing a folder path and Creating a project).
+
+At the `cratchit>`, `workspace>` and `project>` prompts, Enter lists the keys
+you can press there, for example:
+
+```
+project> 
+Keys at project>:
+  i  Import an SIE file
+  r  Reports
+  l  Show the log
+  -  Back to workspace>
+  h  Help (the manual)
+  q  Quit
+```
+
+Any other key prints `Unknown key.` and the same list. In the menus (such as
+the workspace menu, the project menu and the reports), the menu itself shows
+the keys.
+
+At the `cratchit>` prompt:
 
 | Key    | What it does                        |
 |--------|-------------------------------------|
 | h      | Opens this manual (see Using help). |
 | l      | Shows the log (see The log).        |
 | w      | Shows the workspace menu.           |
+| Enter  | Lists these keys.                   |
 | q      | Quits cratchit.                     |
 | Ctrl-D | Quits cratchit (same as q).         |
-
-Any other key prints `Unknown key. Press h for help.`
 
 Ctrl-C stops cratchit at once.
 
@@ -446,8 +633,8 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace.   |
-| DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, or a note of an import. |
+| DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, or an SIE file in an unknown encoding. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 
 ### Viewing the log

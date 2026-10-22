@@ -45,3 +45,19 @@ TEST(Cp437, EveryByteGivesADistinctCodePoint) {
   }
   EXPECT_EQ(seen.size(), 256u);
 }
+
+TEST(Cp437, EveryByteRoundTrips) {
+  charset::cp437::ToUnicodeBuffer to_unicode;
+  charset::cp437::FromUnicodeBuffer from_unicode;
+  for (unsigned byte = 0; byte < 256; ++byte) {
+    auto const code_point = to_unicode.push(static_cast<charset::cp437::CodePoint>(byte));
+    ASSERT_TRUE(code_point.has_value());
+    EXPECT_EQ(from_unicode.push(*code_point), static_cast<charset::cp437::CodePoint>(byte)) << byte;
+  }
+}
+
+TEST(Cp437, CodePointsOutsideCp437GiveNothing) {
+  charset::cp437::FromUnicodeBuffer from_unicode;
+  EXPECT_FALSE(from_unicode.push(0x20AC).has_value()); // euro sign
+  EXPECT_FALSE(from_unicode.push(0x00C3).has_value()); // A tilde
+}

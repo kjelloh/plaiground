@@ -119,13 +119,54 @@ error name the file. The alert is not on screen yet (no import UI); the dry-run 
 231 tests pass, no warnings. All 11 samples read as CP437, no alert; a UTF-8 copy reads as UTF-8 with alert
 (U+251C on line 8); a Windows-1252 copy is an unknown encoding (U+03A3). In review.
 
+Task 20-21: SIE document (`core/sie/document`). `parse_document(lexed lines)` gives `Parsed{Document, errors}`.
+Document holds every SIE 4 record true to the file: identification (#FLAGGA ... #PROSA), chart (#KONTO with #KTYP,
+#SRU, #ENHET), #DIM/#UNDERDIM/#OBJEKT, #IB/#UB/#RES, #OIB/#OUB, #PSALDO/#PBUDGET, #VER with transactions
+(`Transaction::Kind` normal / added (#RTRANS, its duplicate #TRANS skipped) / removed (#BTRANS, kept, not counted)),
+unknown labels counted and ignored, #KSUMMA (CRC-32 per SIE 4B 10.x over `#LABEL` + field texts in CP437, no
+separators/quotes/braces/block lines; an escaped quote counts as `"` without its backslash, as the underlined
+example in SIE 4B 10.15 shows; a mismatch stops the import, as 10.3 requires checking). Amounts in öre
+(`core/amount`, max 2 decimals), dates `std::chrono::year_month_day` (`core/date`). In review.
+
+Task 22: File checks (`core/sie/check`, `core/bas`). Errors: not type 4, no #FNAMN/#ORGNR/#RAR 0, non-SEK, voucher
+without series/number, duplicate, outside year 0, unknown account, unbalanced, checksum mismatch. Notes: #FORMAT not
+PC8, unknown labels, IB0+trans vs UB0, trans vs RES0, IB0 vs UB-1. Account kind by #KTYP else BAS class (1-2
+balance, 3-8 result). In review.
+
+Task 23+25: Import UI and import (`core/books/import`, repl). `i` at `project>`: path typed from the start folder (Tab
+completes files too), summary (encoding, program, company, year, accounts, vouchers, notes, errors), `Import it?
+(y/n)`; errors -> "Nothing is imported."; all known -> "Nothing to import". `plan_import(books, identity, document)`:
+first import sets orgnr + name (project.txt via `save_project_identity`), later mismatch = error; year overlap / other
+end = error; identical voucher skipped, differing voucher = error (no mutation), missing vouchers noted; master data
+changes only from the latest year (noted); balances checked only, with possible-cause vouchers. `save_import`: writes
+books, stashes `.cratchit/imports/<today>_<n>_<file>` + `.txt` record. Logged: read, checked, imported, each note.
+In review.
+
+Task 24: Books (`core/books/books`): accounts, dimensions, objects, fiscal years (reported opening + vouchers) in
+`<project>/.cratchit/books/` (books.txt, accounts/dimensions/objects.csv, `<start>/opening|vouchers|transactions.csv`,
+own CSV module `core/csv`). Only changed files are written. `balances()`: a year directly after another opens with its
+closing balances (balance accounts); else the reported opening. In review.
+
+Task 26: Reports (`core/books/report`, `core/pager`). `r` at `project>`: years newest first (0/9 scroll), then
+`report?>` 1 trial balance (saldobalans, notes carried-vs-reported opening differences), 2 vouchers (added/removed
+marked), 3 account ledger (`account>`), paged with `--More--`. In review.
+
+Tasks 20-26: manual updated (files, typing paths, in a project, "Importing an SIE file", "Reports", log kinds).
+309 tests pass, no warnings (Debug, trace DEBUG). Checked with the 11 Fortnox samples: all import through the app via
+piped input in mixed year order, re-import gives "Nothing to import", both orders give identical books, and an
+independent script confirms every year's closing balances and results equal Fortnox's #UB/#RES except 2026/27
+1650/2641, the noted opening difference (cratchit carries its 2025/26 closing: 1650 89.00, 2641 0.10; Fortnox opens
+with 0.00 and 90.08, possibly voucher M 5 2026-04-30 Momsrapport). Not built on Linux/Windows or Release; trace OFF/ON
+not rebuilt (no trace added).
+
+Tasks 20-26 fix (after review: no way to find the import key): at `cratchit>`, `workspace>` and `project>`, Enter
+lists the keys of that prompt (`Keys at project>:` with i, r, l, -, h, q); an unknown key prints `Unknown key.` and
+the same list (was `Unknown key. Press h for help.`). Space and tab are still ignored. Manual "Using the prompt" and
+the key tables updated. 313 tests pass, no warnings; checked in the app with piped input. In review.
+
 ## Next
 
-SIE import plan (proposed 2026-10-22, see chat): 20) SIE document: identification + chart of accounts records and
-parser from lines; 21) balances, vouchers (`#RTRANS` is followed by a duplicate `#TRANS` to skip), dimensions;
-22) file checks (KSUMMA, balanced vouchers, known accounts, IB + transactions = UB); 23) `i` at `project>` dry run
-(summary only, shows the encoding alert); 24) books model + files; 25) import (confirm, write books, stash file +
-import record, log, manual); 26) reports (saldobalans, voucher list, account ledger). Next task to be given in chat.
+To be given in chat. Possible: SIE export (and import->export round trip), BAS chart check, rename/remove projects.
 
 ## Agreed in chat
 
@@ -198,8 +239,17 @@ import record, log, manual); 26) reports (saldobalans, voucher list, account led
   read as UTF-8 if it is UTF-8, with an alert to the user and a log of the applied encoding; else it is an error.
   Charset detection is seeded in `charset::detect`, one test per charset, added as needed.
 
+- 2026-10-22: SIE import answers: imported vouchers are never changed; a differing voucher with the same series and
+  number stops the whole import. Balances are calculated by cratchit: a year's opening balances are the previous year's
+  closing balances in the books; the file's #IB/#UB/#RES are only checked, differences are noted to the user and logged
+  with the vouchers that may explain them, and ignored as long as the vouchers do not conflict. Year -1 data in a file
+  is check only. Account names etc. come from the newest fiscal year imported.
+
+- 2026-10-22: Enter or an unknown key at a prompt lists the keys available there.
+
 ## Open questions
 
+- Should differing account data (name, SRU) from an older year's file be noted even when not taken?
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
 - Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?
 - Is a CI setup (e.g. GitHub Actions on macOS/Linux/Windows) wanted to verify cross-platform builds?

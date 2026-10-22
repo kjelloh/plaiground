@@ -1,7 +1,9 @@
 #include "core/repl.hpp"
 
+#include "core/books/report.hpp"
 #include "core/charset/utf8.hpp"
 #include "core/log.hpp"
+#include "core/sie/file.hpp"
 
 #include <algorithm>
 #include <format>
@@ -53,7 +55,8 @@ std::string echo_of(charset::unicode::CodePoint key) {
 } // namespace
 
 Repl::Repl(Section const& manual, std::size_t page_lines, WorkspacePlaces places, fs::path log_file)
-    : places_(std::move(places)), log_file_(std::move(log_file)), help_(manual, page_lines), log_view_(page_lines) {}
+    : places_(std::move(places)), log_file_(std::move(log_file)), help_(manual, page_lines), log_view_(page_lines),
+      pager_(page_lines) {}
 
 void Repl::open_workspace(std::ostream& out) {
   auto const entry = workspace_entry(places_.runtime_file);
@@ -92,6 +95,10 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_projects(out);
       } else if (mode_ == Mode::ProjectFolder) {
         show_project_folders(out);
+      } else if (mode_ == Mode::Years) {
+        show_years(out);
+      } else if (mode_ == Mode::Reports) {
+        show_reports(out);
       }
     }
     return Step::Continue;
@@ -106,6 +113,15 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::ConfirmCreate:
     on_confirm_key(key, out);
     return Step::Continue;
+  case Mode::ConfirmImport:
+    on_confirm_import_key(key, out);
+    return Step::Continue;
+  case Mode::Paging:
+    if (pager_.on_key(key, out) == Pager::Result::Leave) {
+      mode_ = Mode::Reports;
+      show_reports(out);
+    }
+    return Step::Continue;
   default:
     break;
   }
@@ -116,6 +132,10 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     open_help(out);
     return Step::Continue;
   }
+  if (is_prompt() && (key == U'\n' || key == U'\r')) {
+    show_keys(out);
+    return Step::Continue;
+  }
   switch (mode_) {
   case Mode::Main:
     if (key == U'w') {
@@ -123,7 +143,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     } else if (key == U'l') {
       open_log(out);
     } else {
-      std::println(out, "Unknown key. Press h for help.");
+      std::println(out, "Unknown key.");
+      show_keys(out);
     }
     break;
   case Mode::Menu:
@@ -140,7 +161,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     } else if (key == U'l') {
       open_log(out);
     } else {
-      std::println(out, "Unknown key. Press h for help.");
+      std::println(out, "Unknown key.");
+      show_keys(out);
     }
     break;
   case Mode::Projects:
@@ -154,9 +176,20 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
       mode_ = Mode::Workspace;
     } else if (key == U'l') {
       open_log(out);
+    } else if (key == U'i') {
+      start_import(out);
+    } else if (key == U'r') {
+      open_years(out);
     } else {
-      std::println(out, "Unknown key. Press h for help.");
+      std::println(out, "Unknown key.");
+      show_keys(out);
     }
+    break;
+  case Mode::Years:
+    on_years_key(key, out);
+    break;
+  case Mode::Reports:
+    on_reports_key(key, out);
     break;
   default:
     break;
@@ -172,11 +205,39 @@ bool Repl::ignores(charset::unicode::CodePoint key) const {
   if (key == escape) {
     return true;
   }
+  // Enter lists the keys at a prompt
+  if (is_prompt() && (key == U'\n' || key == U'\r')) {
+    return false;
+  }
   // Space and Enter show the next page of help or the log
-  if ((mode_ == Mode::Help && help_.is_paging()) || mode_ == Mode::Log) {
+  if ((mode_ == Mode::Help && help_.is_paging()) || mode_ == Mode::Log || mode_ == Mode::Paging) {
     return key == U'\t';
   }
   return is_whitespace(key);
+}
+
+bool Repl::is_prompt() const {
+  return mode_ == Mode::Main || mode_ == Mode::Workspace || mode_ == Mode::Project;
+}
+
+void Repl::show_keys(std::ostream& out) const {
+  std::println(out, "Keys at {}:", prompt().substr(0, prompt().size() - 1));
+  if (mode_ == Mode::Main) {
+    std::println(out, "  w  Workspace menu");
+  } else if (mode_ == Mode::Workspace) {
+    std::println(out, "  p  Projects");
+  } else {
+    std::println(out, "  i  Import an SIE file");
+    std::println(out, "  r  Reports");
+  }
+  std::println(out, "  l  Show the log");
+  if (mode_ == Mode::Workspace) {
+    std::println(out, "  -  Back to cratchit>");
+  } else if (mode_ == Mode::Project) {
+    std::println(out, "  -  Back to workspace>");
+  }
+  std::println(out, "  h  Help (the manual)");
+  std::println(out, "  q  Quit");
 }
 
 bool Repl::is_typing() const {
@@ -203,6 +264,13 @@ std::string Repl::prompt() const {
     return "project?> ";
   case Mode::Project:
     return "project> ";
+  case Mode::ConfirmImport:
+    return "Import it? (y/n) ";
+  case Mode::Years:
+  case Mode::Reports:
+    return "report?> ";
+  case Mode::Paging:
+    return pager_.prompt();
   default:
     return "cratchit> ";
   }
@@ -300,6 +368,37 @@ void Repl::on_choose_key(charset::unicode::CodePoint key, std::ostream& out) {
 void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
   auto const result = editor_.on_key(key, out);
   if (result == PathEditor::Result::Typing) {
+    return;
+  }
+  if (purpose_ == Purpose::SieFile) {
+    if (result == PathEditor::Result::Cancelled) {
+      mode_ = Mode::Project;
+      return;
+    }
+    auto const file = typed_folder(places_.start_folder);
+    std::error_code ec;
+    if (!fs::is_regular_file(file, ec)) {
+      std::println(out, "No file {}.", file.string());
+      out << editor_.prompt();
+      return;
+    }
+    check_import(file, out);
+    return;
+  }
+  if (purpose_ == Purpose::Account) {
+    mode_ = Mode::Reports;
+    auto const account = trimmed(editor_.text());
+    if (result == PathEditor::Result::Cancelled || account.empty()) {
+      show_reports(out);
+      return;
+    }
+    auto lines = books::account_ledger(books_, year_, company(), account);
+    if (!lines) {
+      std::println(out, "No account {} in the books.", account);
+      show_reports(out);
+      return;
+    }
+    show_report(std::move(*lines), out);
     return;
   }
   if (purpose_ == Purpose::ProjectName) {
@@ -663,7 +762,232 @@ void Repl::enter_project(Project const& project, std::ostream& out) {
   }
   std::println(out, "Opened project {} in {}", project.name, project.folder.string());
   LOG_BUSINESS("Opened project {} ({}) in {}", project.name, project.uuid, project.folder.string());
+  project_ = project;
   mode_ = Mode::Project;
+}
+
+std::string Repl::company() const {
+  return project_->orgnr.empty() ? project_->name : std::format("{}, {}", project_->name, project_->orgnr);
+}
+
+void Repl::start_import(std::ostream& out) {
+  purpose_ = Purpose::SieFile;
+  editor_.start((places_.start_folder / "").string(), PathEditor::Kind::File);
+  mode_ = Mode::Typing;
+  std::println(out, "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace erases,");
+  std::println(out, "Enter accepts. Enter on an empty path goes back.");
+  out << editor_.prompt();
+}
+
+// Reads, checks and plans the import of an SIE file, shows what it would do, and asks
+void Repl::check_import(fs::path const& file, std::ostream& out) {
+  mode_ = Mode::Project;
+  auto const lexed = sie::lex_file(file);
+  if (!lexed) {
+    std::println(out, "Error: {}", lexed.error());
+    return;
+  }
+  auto const parsed = sie::parse_document(lexed->lines);
+  auto const books = books::read_books(project_->folder);
+  if (!books) {
+    std::println(out, "Error: {}", books.error());
+    return;
+  }
+  auto plan = books::plan_import(*books, {project_->name, project_->orgnr}, parsed.document);
+  plan.errors.insert(plan.errors.begin(), parsed.errors.begin(), parsed.errors.end());
+  if (!lexed->alert.empty()) {
+    plan.notes.insert(plan.notes.begin(), lexed->alert);
+  }
+  auto const& document = parsed.document;
+  std::println(out, "SIE file {}", file.string());
+  std::println(out, "  Read as      {}", charset_name(lexed->charset));
+  std::println(out, "  Program      {} {}{}", document.program, document.program_version,
+               document.generated ? ", generated " + format_iso_date(*document.generated) : std::string{});
+  std::println(out, "  Company      {}, {}", document.company_name, document.orgnr);
+  if (document.year(0)) {
+    std::println(out, "  Fiscal year  {} - {}", format_iso_date(plan.year_start), format_iso_date(plan.year_end));
+  }
+  std::println(out, "  Accounts     {}: {} new, {} changed", document.accounts.size(), plan.accounts_added,
+               plan.accounts_changed);
+  std::println(out, "  Vouchers     {}: {} new, {} already in the books", document.vouchers.size(), plan.vouchers_added,
+               plan.vouchers_known);
+  if (!plan.notes.empty()) {
+    std::println(out, "Notes:");
+    for (auto const& note : plan.notes) {
+      std::println(out, "  - {}", note);
+    }
+  }
+  LOG_BUSINESS("Checked SIE file {} for project {} ({}): {} errors, {} notes", file.string(), project_->name,
+               project_->uuid, plan.errors.size(), plan.notes.size());
+  if (!plan.errors.empty()) {
+    constexpr std::size_t max_errors = 20;
+    std::println(out, "Errors:");
+    for (std::size_t i = 0; i < std::min(plan.errors.size(), max_errors); ++i) {
+      std::println(out, "  - {}", plan.errors[i]);
+    }
+    if (plan.errors.size() > max_errors) {
+      std::println(out, "  - and {} more", plan.errors.size() - max_errors);
+    }
+    std::println(out, "Nothing is imported.");
+    return;
+  }
+  if (plan.vouchers_added == 0 && plan.accounts_added == 0 && plan.accounts_changed == 0 && !plan.identity_changed &&
+      books->year_starting(plan.year_start)) {
+    std::println(out, "Everything in the file is already in the books. Nothing to import.");
+    return;
+  }
+  import_source_ = {file, std::string(charset_name(lexed->charset)),
+                    std::format("{} {}", document.program, document.program_version), document.generated,
+                    places_.today};
+  plan_ = std::move(plan);
+  mode_ = Mode::ConfirmImport;
+}
+
+void Repl::on_confirm_import_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
+    import(out);
+  } else if (key == U'n' || key == U'-') {
+    std::println(out, "Nothing is imported.");
+    plan_.reset();
+    mode_ = Mode::Project;
+  } else {
+    std::println(out, "Press y to import the file, n not to.");
+  }
+}
+
+void Repl::import(std::ostream& out) {
+  mode_ = Mode::Project;
+  auto const plan = std::move(*plan_);
+  plan_.reset();
+  auto const saved = books::save_import(project_->folder, plan, import_source_);
+  if (!saved) {
+    std::println(out, "Error: {}", saved.error());
+    return;
+  }
+  for (auto const& written : saved->written) {
+    std::println(out, "{} {} in {}", written.created ? "Initiated" : "Updated", written.file.generic_string(),
+                 project_->folder.string());
+    if (written.created) {
+      LOG_BUSINESS("Initiated {} in {}", written.file.generic_string(), project_->folder.string());
+    }
+  }
+  if (plan.identity_changed) {
+    auto const changed = save_project_identity(project_->folder, plan.identity.name, plan.identity.orgnr);
+    if (!changed) {
+      std::println(out, "Error: {}", changed.error());
+    } else if (*changed) {
+      std::println(out, "Updated .cratchit/project.txt in {}", project_->folder.string());
+      LOG_BUSINESS("Project {} ({}) is now {}, organisation number {}", project_->name, project_->uuid,
+                   plan.identity.name, plan.identity.orgnr);
+      project_->name = plan.identity.name;
+      project_->orgnr = plan.identity.orgnr;
+    }
+  }
+  std::println(out, "Stashed the file as {} in {}", saved->stashed.generic_string(), project_->folder.string());
+  std::println(out, "Imported {} voucher{} into fiscal year {} - {} ({} already in the books).", plan.vouchers_added,
+               plan.vouchers_added == 1 ? "" : "s", format_iso_date(plan.year_start), format_iso_date(plan.year_end),
+               plan.vouchers_known);
+  LOG_BUSINESS("Imported SIE file {} into project {} ({}): fiscal year {} - {}, {} vouchers added, {} already in the "
+               "books, stashed as {}",
+               import_source_.file.string(), project_->name, project_->uuid, format_iso_date(plan.year_start),
+               format_iso_date(plan.year_end), plan.vouchers_added, plan.vouchers_known,
+               saved->stashed.generic_string());
+  for (auto const& note : plan.notes) {
+    LOG_BUSINESS("Import note: {}", note);
+  }
+}
+
+void Repl::open_years(std::ostream& out) {
+  auto books = books::read_books(project_->folder);
+  if (!books) {
+    std::println(out, "Error: {}", books.error());
+    return;
+  }
+  if (books->years.empty()) {
+    std::println(out, "No books yet. Press i to import an SIE file.");
+    return;
+  }
+  books_ = std::move(*books);
+  first_year_ = 0;
+  mode_ = Mode::Years;
+  show_years(out);
+}
+
+// Newest year first
+void Repl::show_years(std::ostream& out) {
+  std::println(out, "Fiscal years of {}:", company());
+  auto const n = books_.years.size();
+  auto const first = n <= max_keys ? 0 : first_year_;
+  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
+  if (first > 0) {
+    std::println(out, "  0  ...up");
+  }
+  for (auto i = first; i < last; ++i) {
+    auto const& year = books_.years[n - 1 - i];
+    std::println(out, "  {}  {} - {}", i - first + 1, format_iso_date(year.start), format_iso_date(year.end));
+  }
+  if (last < n) {
+    std::println(out, "  9  ...down");
+  }
+  std::println(out, "");
+  std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_years_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const n = books_.years.size();
+  if (key == U'-') {
+    mode_ = Mode::Project;
+  } else if (n > max_keys && key == U'0' && first_year_ > 0) {
+    first_year_ -= range_size;
+    show_years(out);
+  } else if (n > max_keys && key == U'9' && first_year_ + range_size < n) {
+    first_year_ += range_size;
+    show_years(out);
+  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
+             (n > max_keys ? first_year_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
+    year_ = n - 1 - ((n > max_keys ? first_year_ : 0) + static_cast<std::size_t>(key - U'1'));
+    mode_ = Mode::Reports;
+    show_reports(out);
+  } else {
+    std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+  }
+}
+
+void Repl::show_reports(std::ostream& out) {
+  auto const& year = books_.years[year_];
+  std::println(out, "Reports for {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
+  std::println(out, "  1  Trial balance (saldobalans)");
+  std::println(out, "  2  Vouchers");
+  std::println(out, "  3  Account ledger");
+  std::println(out, "");
+  std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_reports_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'1') {
+    show_report(books::trial_balance(books_, year_, company()), out);
+  } else if (key == U'2') {
+    show_report(books::voucher_list(books_, year_, company()), out);
+  } else if (key == U'3') {
+    purpose_ = Purpose::Account;
+    editor_.start("", PathEditor::Kind::Account);
+    mode_ = Mode::Typing;
+    std::println(out, "Type the account number. Backspace erases, Enter accepts. Enter on an empty number goes back.");
+    out << editor_.prompt();
+  } else if (key == U'-') {
+    mode_ = Mode::Years;
+    show_years(out);
+  } else {
+    std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+  }
+}
+
+void Repl::show_report(std::vector<std::string> lines, std::ostream& out) {
+  mode_ = Mode::Paging;
+  if (pager_.open(std::move(lines), out) == Pager::Result::Leave) {
+    mode_ = Mode::Reports;
+    show_reports(out);
+  }
 }
 
 void run_repl(Repl& repl, KeySource const& next_key, std::ostream& out) {

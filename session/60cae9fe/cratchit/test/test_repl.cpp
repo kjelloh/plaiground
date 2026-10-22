@@ -3,6 +3,7 @@
 #include "core/data_folder.hpp"
 #include "core/key_input.hpp"
 #include "core/project.hpp"
+#include "sie_test_file.hpp"
 
 #include <gtest/gtest.h>
 
@@ -31,6 +32,12 @@ cratchit::KeySource keys_from(std::string keys, cratchit::Charset charset = crat
 }
 
 Section const manual{"Manual", "", {{"A", "Text A\n", {}}}};
+
+std::string const main_keys = "Keys at cratchit>:\n"
+                              "  w  Workspace menu\n"
+                              "  l  Show the log\n"
+                              "  h  Help (the manual)\n"
+                              "  q  Quit\n";
 
 } // namespace
 
@@ -69,11 +76,22 @@ TEST(Repl, QInHelpLeavesHelpOnly) {
   EXPECT_EQ(repl.prompt(), "cratchit> ");
 }
 
-TEST(Repl, UnknownKeyPointsToHelp) {
+TEST(Repl, UnknownKeyListsTheKeys) {
   Repl repl(manual, 0, {});
   std::ostringstream out;
   EXPECT_EQ(repl.on_key(U'x', out), Step::Continue);
-  EXPECT_NE(out.str().find("Press h for help"), std::string::npos);
+  EXPECT_EQ(out.str(), "Unknown key.\n" + main_keys);
+}
+
+TEST(Repl, EnterListsTheKeys) {
+  Repl repl(manual, 0, {});
+  EXPECT_FALSE(repl.ignores(U'\n'));
+  EXPECT_FALSE(repl.ignores(U'\r'));
+  EXPECT_TRUE(repl.ignores(U' '));
+  EXPECT_TRUE(repl.ignores(U'\t'));
+  std::ostringstream out;
+  EXPECT_EQ(repl.on_key(U'\r', out), Step::Continue);
+  EXPECT_EQ(out.str(), main_keys);
 }
 
 TEST(Repl, EscapeDoesNothing) {
@@ -127,11 +145,11 @@ TEST(RunRepl, StopsAtEndOfInput) {
   EXPECT_EQ(out.str(), "cratchit> \n");
 }
 
-TEST(RunRepl, IgnoresNewlines) {
+TEST(RunRepl, EnterListsTheKeysAndSpaceIsIgnored) {
   std::ostringstream out;
   Repl repl(manual, 0, {});
-  cratchit::run_repl(repl, keys_from("\nq\n"), out);
-  EXPECT_EQ(out.str(), "cratchit> q\n");
+  cratchit::run_repl(repl, keys_from("\n q\n"), out);
+  EXPECT_EQ(out.str(), "cratchit> \n" + main_keys + "cratchit> q\n");
 }
 
 namespace {
@@ -270,7 +288,7 @@ TEST_F(WorkspaceRepl, NonAsciiKeyIsEchoed) {
   auto repl = make_repl();
   std::ostringstream out;
   cratchit::run_repl(repl, keys_from("\x84", cratchit::Charset::Cp437), out);
-  EXPECT_EQ(out.str(), "cratchit> \xc3\xa4\nUnknown key. Press h for help.\ncratchit> \n");
+  EXPECT_EQ(out.str(), "cratchit> \xc3\xa4\nUnknown key.\n" + main_keys + "cratchit> \n");
 }
 
 TEST_F(WorkspaceRepl, NoKeepsTheTypedPath) {
@@ -612,4 +630,177 @@ TEST_F(WorkspaceRepl, ManyProjectsScrollWithZeroAndNine) {
                         "  2  (not found)  " + (root / "start" / "p9").string() + "\n  n  New project\n"),
             std::string::npos)
       << output;
+}
+
+namespace {
+
+// An SIE file in the start folder, where the import path starts
+void write_sie(fs::path const& file, std::string const& text) {
+  std::ofstream(file, std::ios::binary) << text;
+}
+
+std::string good_sie() {
+  return sie_test::sie_file(2025, sie_test::balanced_balances(), sie_test::sale_and_cost(2025));
+}
+
+} // namespace
+
+TEST_F(WorkspaceRepl, IKeyChecksTheFileAndImportsOnYes) {
+  run("1pnTest\n1");
+  auto const folder = root / "start" / "Test";
+  auto const file = root / "start" / "test.se";
+  write_sie(file, good_sie());
+  auto const output = run("itest.se\ny");
+  EXPECT_NE(output.find("project> i\n"
+                        "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace "
+                        "erases,\nEnter accepts. Enter on an empty path goes back.\n"
+                        "path> " + (root / "start").string() + "/test.se\n"
+                        "SIE file " + file.string() + "\n"
+                        "  Read as      CP437\n"
+                        "  Program      Test 1.0, generated 2026-10-19\n"
+                        "  Company      Test AB, 556000-0001\n"
+                        "  Fiscal year  2025-01-01 - 2025-12-31\n"
+                        "  Accounts     4: 4 new, 0 changed\n"
+                        "  Vouchers     2: 2 new, 0 already in the books\n"
+                        "Notes:\n"
+                        "  - The project gets organisation number 556000-0001 (#ORGNR)\n"
+                        "  - The project's name changes from \"Test\" to \"Test AB\" (#FNAMN)\n"
+                        "Import it? (y/n) y\n"
+                        "Initiated .cratchit/books/books.txt in " + folder.string() + "\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Updated .cratchit/project.txt in " + folder.string() + "\n"
+                        "Stashed the file as .cratchit/imports/2026-10-20_1_test.se in " + folder.string() + "\n"
+                        "Imported 2 vouchers into fiscal year 2025-01-01 - 2025-12-31 (0 already in the books).\n"
+                        "project> \n"),
+            std::string::npos)
+      << output;
+  auto const project = cratchit::read_project(folder);
+  ASSERT_TRUE(project.has_value()) << project.error();
+  EXPECT_EQ(project->name, "Test AB");
+  EXPECT_EQ(project->orgnr, "556000-0001");
+  EXPECT_TRUE(fs::exists(folder / ".cratchit" / "imports" / "2026-10-20_1_test.se.txt"));
+  EXPECT_TRUE(fs::exists(folder / ".cratchit" / "books" / "2025-01-01" / "vouchers.csv"));
+  // The same file again has nothing new
+  auto const again = run("itest.se\n");
+  EXPECT_NE(again.find("  Vouchers     2: 0 new, 2 already in the books\n"
+                       "Everything in the file is already in the books. Nothing to import.\nproject> \n"),
+            std::string::npos)
+      << again;
+}
+
+TEST_F(WorkspaceRepl, NoImportsNothing) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  auto const output = run("itest.se\nn");
+  EXPECT_TRUE(output.ends_with("Import it? (y/n) n\nNothing is imported.\nproject> \n")) << output;
+  EXPECT_FALSE(fs::exists(root / "start" / "Test" / ".cratchit" / "books"));
+}
+
+TEST_F(WorkspaceRepl, FileWithErrorsIsNotImported) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "bad.se",
+            sie_test::sie_file(2025, "", "#VER A 1 20250101 \"\"\n{\n#TRANS 1930 {} 1\n}\n"));
+  auto const output = run("ibad.se\n");
+  EXPECT_TRUE(output.ends_with("Errors:\n  - line 16: voucher A 1 does not balance: its amounts add up to 1.00\n"
+                               "Nothing is imported.\nproject> \n"))
+      << output;
+  EXPECT_FALSE(fs::exists(root / "start" / "Test" / ".cratchit" / "books"));
+}
+
+TEST_F(WorkspaceRepl, MissingSieFileKeepsThePath) {
+  run("1pnTest\n1");
+  auto const output = run("inope.se\n");
+  EXPECT_TRUE(output.ends_with("No file " + (root / "start" / "nope.se").string() + ".\npath> " +
+                               (root / "start").string() + "/nope.se\n"))
+      << output;
+}
+
+TEST_F(WorkspaceRepl, RKeyWithoutBooks) {
+  run("1pnTest\n1");
+  auto const output = run("r");
+  EXPECT_TRUE(output.ends_with("project> r\nNo books yet. Press i to import an SIE file.\nproject> \n")) << output;
+}
+
+TEST_F(WorkspaceRepl, RKeyShowsYearsAndReports) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\ny");
+  auto const output = run("r11x3 1930\n3 9999\n2--");
+  EXPECT_NE(output.find("project> r\n"
+                        "Fiscal years of Test AB, 556000-0001:\n"
+                        "  1  2025-01-01 - 2025-12-31\n"
+                        "\n"
+                        "Press a number to choose, - to go back, h for help, q to quit.\n"
+                        "report?> 1\n"
+                        "Reports for 2025-01-01 - 2025-12-31:\n"
+                        "  1  Trial balance (saldobalans)\n"
+                        "  2  Vouchers\n"
+                        "  3  Account ledger\n"
+                        "\n"
+                        "Press a number to choose, - to go back, h for help, q to quit.\n"
+                        "report?> 1\n"
+                        "Trial balance (saldobalans) 2025-01-01 - 2025-12-31\n"
+                        "Test AB, 556000-0001\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("report?> x\nPress a number to choose, - to go back, h for help, q to quit.\n"
+                        "report?> 3\n"
+                        "Type the account number. Backspace erases, Enter accepts. Enter on an empty number goes "
+                        "back.\n"
+                        "account>  1930\n"
+                        "Account 1930 Bank ledger 2025-01-01 - 2025-12-31\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("account>  9999\nNo account 9999 in the books.\nReports for"), std::string::npos) << output;
+  EXPECT_NE(output.find("report?> 2\nVouchers 2025-01-01 - 2025-12-31\n"), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("report?> -\nFiscal years of Test AB, 556000-0001:\n  1  2025-01-01 - 2025-12-31\n\n"
+                               "Press a number to choose, - to go back, h for help, q to quit.\n"
+                               "report?> -\nproject> \n"))
+      << output;
+}
+
+TEST_F(WorkspaceRepl, LongReportsArePaged) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\ny");
+  auto repl = Repl(manual, 3, {runtime_file, root / "start", root / "Documents" / "cratchit", "2026-10-20"});
+  std::ostringstream out;
+  repl.open_workspace(out);
+  cratchit::run_repl(repl, keys_from("r11 -"), out);
+  EXPECT_NE(out.str().find("report?> 1\nTrial balance (saldobalans) 2025-01-01 - 2025-12-31\nTest AB, 556000-0001\n"
+                           "\n--More-- \nAccount "),
+            std::string::npos)
+      << out.str();
+  EXPECT_TRUE(out.str().ends_with("--More-- -\nReports for 2025-01-01 - 2025-12-31:\n  1  Trial balance (saldobalans)\n"
+                                  "  2  Vouchers\n  3  Account ledger\n\n"
+                                  "Press a number to choose, - to go back, h for help, q to quit.\nreport?> \n"))
+      << out.str();
+}
+
+TEST_F(WorkspaceRepl, EnterListsTheKeysOfTheWorkspace) {
+  run("1");
+  auto const at_workspace = run("\n");
+  EXPECT_TRUE(at_workspace.ends_with("workspace> \n"
+                                     "Keys at workspace>:\n"
+                                     "  p  Projects\n"
+                                     "  l  Show the log\n"
+                                     "  -  Back to cratchit>\n"
+                                     "  h  Help (the manual)\n"
+                                     "  q  Quit\n"
+                                     "workspace> \n"))
+      << at_workspace;
+}
+
+TEST_F(WorkspaceRepl, EnterAndUnknownKeysListTheKeysOfAProject) {
+  run("1pnTest\n1");
+  std::string const keys = "Keys at project>:\n"
+                           "  i  Import an SIE file\n"
+                           "  r  Reports\n"
+                           "  l  Show the log\n"
+                           "  -  Back to workspace>\n"
+                           "  h  Help (the manual)\n"
+                           "  q  Quit\n";
+  auto const output = run("\nx");
+  EXPECT_TRUE(output.ends_with("project> \n" + keys + "project> x\nUnknown key.\n" + keys + "project> \n")) << output;
 }

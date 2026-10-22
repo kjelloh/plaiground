@@ -19,4 +19,11 @@ public:
   std::optional<unicode::CodePoint> push(CodePoint byte);
 };
 
+// Takes Unicode code points one at a time and gives back their CP437 byte,
+// or nothing for a code point CP437 does not have
+class FromUnicodeBuffer {
+public:
+  std::optional<CodePoint> push(unicode::CodePoint code_point);
+};
+
 } // namespace charset::cp437

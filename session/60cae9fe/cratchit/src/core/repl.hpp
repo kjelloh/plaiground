@@ -1,9 +1,12 @@
 #pragma once
 
+#include "core/books/books.hpp"
+#include "core/books/import.hpp"
 #include "core/charset/unicode.hpp"
 #include "core/help.hpp"
 #include "core/log_view.hpp"
 #include "core/manual.hpp"
+#include "core/pager.hpp"
 #include "core/path_editor.hpp"
 #include "core/project.hpp"
 #include "core/workspace.hpp"
@@ -31,7 +34,8 @@ struct WorkspacePlaces {
 
 // The state of the app between key presses: the main prompt, browsing help,
 // viewing the log, the workspace menu, choosing a workspace, in the workspace,
-// the project menu, creating or adding a project, or in a project
+// the project menu, creating or adding a project, in a project, importing an
+// SIE file, or choosing and reading reports
 class Repl {
 public:
   // page_lines is the number of help and log lines per page; 0 shows everything at once.
@@ -49,15 +53,31 @@ public:
   // True for keys that do nothing in the current mode, so are not even echoed
   bool ignores(charset::unicode::CodePoint key) const;
 
-  // True while a folder path or name is typed; on_key then writes the prompt and echo itself
+  // True while a path, name or account is typed; on_key then writes the prompt and echo itself
   bool is_typing() const;
 
   std::string prompt() const;
 
 private:
-  enum class Mode { Main, Help, Log, Menu, Choose, Typing, ConfirmCreate, Workspace, Projects, ProjectFolder, Project };
+  enum class Mode {
+    Main,
+    Help,
+    Log,
+    Menu,
+    Choose,
+    Typing,
+    ConfirmCreate,
+    Workspace,
+    Projects,
+    ProjectFolder,
+    Project,
+    ConfirmImport,
+    Years,
+    Reports,
+    Paging,
+  };
   // What the text typed in the editor is for
-  enum class Purpose { Workspace, ProjectName, ProjectFolder, ExistingProject };
+  enum class Purpose { Workspace, ProjectName, ProjectFolder, ExistingProject, SieFile, Account };
 
   WorkspacePlaces places_;
   std::filesystem::path log_file_;
@@ -75,7 +95,16 @@ private:
   std::vector<ListedProject> listed_;   // the projects in the project menu
   std::size_t first_listed_ = 0;        // the first project shown when they are more than keys 1-9
   std::string new_name_;                // the name of the project being created
+  std::optional<Project> project_;      // the open project
+  std::optional<books::ImportPlan> plan_; // the import waiting for y/n
+  books::ImportSource import_source_;
+  books::Books books_;                  // the books the reports are about
+  std::size_t first_year_ = 0;          // the first year shown when they are more than keys 1-9
+  std::size_t year_ = 0;                // the year of the reports, an index into books_.years
+  Pager pager_;
 
+  bool is_prompt() const; // at cratchit>, workspace> or project>
+  void show_keys(std::ostream& out) const;
   void open_help(std::ostream& out);
   void open_log(std::ostream& out);
   void open_menu(std::ostream& out);
@@ -102,6 +131,17 @@ private:
   void create_new_project(std::filesystem::path const& folder, std::ostream& out);
   void add_existing_project(std::filesystem::path const& folder, std::ostream& out);
   void enter_project(Project const& project, std::ostream& out);
+  void start_import(std::ostream& out);
+  void check_import(std::filesystem::path const& file, std::ostream& out);
+  void on_confirm_import_key(charset::unicode::CodePoint key, std::ostream& out);
+  void import(std::ostream& out);
+  void open_years(std::ostream& out);
+  void show_years(std::ostream& out);
+  void on_years_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_reports(std::ostream& out);
+  void on_reports_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_report(std::vector<std::string> lines, std::ostream& out);
+  std::string company() const;
 };
 
 // Supplies the next key press as a Unicode code point, or nothing at end of input

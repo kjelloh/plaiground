@@ -1,6 +1,7 @@
 #include "core/charset/cp437.hpp"
 
 #include <array>
+#include <cstddef>
 
 namespace charset::cp437 {
 
@@ -41,6 +42,18 @@ std::optional<unicode::CodePoint> ToUnicodeBuffer::push(CodePoint byte) {
     return unicode::CodePoint{byte};
   }
   return upper_half[byte - 0x80];
+}
+
+std::optional<CodePoint> FromUnicodeBuffer::push(unicode::CodePoint code_point) {
+  if (code_point < 0x80) {
+    return static_cast<CodePoint>(code_point);
+  }
+  for (std::size_t i = 0; i < upper_half.size(); ++i) {
+    if (upper_half[i] == code_point) {
+      return static_cast<CodePoint>(0x80 + i);
+    }
+  }
+  return std::nullopt;
 }
 
 } // namespace charset::cp437

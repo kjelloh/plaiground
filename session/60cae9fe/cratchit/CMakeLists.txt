@@ -22,20 +22,30 @@ configure_file(src/core/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
 # All application logic lives in the core library
 add_library(cratchit_core
+  src/core/amount.cpp
+  src/core/bas.cpp
+  src/core/books/books.cpp
+  src/core/books/import.cpp
+  src/core/books/report.cpp
   src/core/charset/cp437.cpp
   src/core/charset/detect.cpp
   src/core/charset/utf8.cpp
+  src/core/csv.cpp
   src/core/data_folder.cpp
+  src/core/date.cpp
   src/core/help.cpp
   src/core/key_input.cpp
   src/core/log.cpp
   src/core/log_view.cpp
   src/core/manual.cpp
+  src/core/pager.cpp
   src/core/path_editor.cpp
   src/core/path_value.cpp
   src/core/project.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
   src/core/repl.cpp
+  src/core/sie/check.cpp
+  src/core/sie/document.cpp
   src/core/sie/file.cpp
   src/core/sie/lexer.cpp
   src/core/terminal.cpp

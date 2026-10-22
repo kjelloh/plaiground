@@ -161,7 +161,7 @@ std::optional<fs::path> default_workspace_folder() {
 #endif
 }
 
-Completion complete_folder(std::string_view typed) {
+Completion complete_folder(std::string_view typed, bool files) {
   auto const cut = typed.find_last_of(separators);
   if (cut == std::string_view::npos) {
     return {};
@@ -170,11 +170,13 @@ Completion complete_folder(std::string_view typed) {
   auto const prefix = typed.substr(cut + 1);
 
   std::vector<std::string> names;
+  std::vector<std::string> folders; // the names that are folders
   std::error_code ec;
   for (fs::directory_iterator it(folder, fs::directory_options::skip_permission_denied, ec), end; !ec && it != end;
        it.increment(ec)) {
     std::error_code type_ec;
-    if (!it->is_directory(type_ec)) {
+    bool const is_folder = it->is_directory(type_ec);
+    if (!is_folder && !(files && it->is_regular_file(type_ec))) {
       continue;
     }
     auto name = it->path().filename().string();
@@ -182,6 +184,9 @@ Completion complete_folder(std::string_view typed) {
       continue;
     }
     if (starts_with(name, prefix)) {
+      if (is_folder) {
+        folders.push_back(name);
+      }
       names.push_back(std::move(name));
     }
   }
@@ -190,7 +195,8 @@ Completion complete_folder(std::string_view typed) {
   }
   std::ranges::sort(names);
   if (names.size() == 1) {
-    return {names.front().substr(prefix.size()) + separators.front(), {}};
+    auto const is_folder = std::ranges::find(folders, names.front()) != folders.end();
+    return {names.front().substr(prefix.size()) + (is_folder ? std::string(1, separators.front()) : ""), {}};
   }
   auto agreed = names.front().size();
   for (auto const& name : names) {

@@ -55,7 +55,8 @@ struct Completion {
 // it, like Tab in a shell. A unique folder is completed with a separator after
 // it; several are completed as far as they agree, and listed when they agree on
 // nothing more. Hidden folders (.name) count only when the typed name starts
-// with a dot. Nothing for a path without a separator.
-Completion complete_folder(std::string_view typed);
+// with a dot. Nothing for a path without a separator. With files, files count
+// too; a unique file is completed without a separator.
+Completion complete_folder(std::string_view typed, bool files = false);
 
 } // namespace cratchit

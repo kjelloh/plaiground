@@ -172,6 +172,20 @@ TEST_F(WorkspaceTest, HiddenFoldersNeedADot) {
   EXPECT_EQ(cratchit::complete_folder((root / ".").string()).added, "cratchit" + separator());
 }
 
+TEST_F(WorkspaceTest, FilesAreCompletedOnlyWhenAsked) {
+  write_file(root / "export.se", "#FLAGGA 0\n");
+  EXPECT_EQ(cratchit::complete_folder((root / "ex").string()).added, "");
+  EXPECT_EQ(cratchit::complete_folder((root / "ex").string(), true).added, "port.se");
+}
+
+TEST_F(WorkspaceTest, FilesAndFoldersAreListedTogether) {
+  write_file(root / "export.se", "#FLAGGA 0\n");
+  fs::create_directories(root / "exports");
+  auto const completion = cratchit::complete_folder((root / "export").string(), true);
+  EXPECT_EQ(completion.added, "");
+  EXPECT_EQ(completion.candidates, (std::vector<std::string>{"export.se", "exports"}));
+}
+
 TEST(XdgDocuments, HomeIsReplaced) {
   auto const text = "# comment\nXDG_DESKTOP_DIR=\"$HOME/Desktop\"\nXDG_DOCUMENTS_DIR=\"$HOME/Dokument\"\n";
   EXPECT_EQ(cratchit::xdg_documents_folder(text, "/home/me"), fs::path("/home/me/Dokument"));

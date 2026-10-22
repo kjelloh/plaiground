@@ -19,6 +19,7 @@ struct Project {
   std::string name; // the official name of the person, company or organisation
   std::filesystem::path folder;
   std::vector<Initiated> initiated;
+  std::string orgnr; // the personal or organisation number; empty until set (by the first import)
 };
 
 // A project listed in workspace.txt as `project.<uuid> = <folder>`
@@ -54,6 +55,11 @@ std::expected<bool, std::string> remember_project(std::filesystem::path const& w
 
 // Reads <folder>/.cratchit/project.txt, which must hold a uuid and a name
 std::expected<Project, std::string> read_project(std::filesystem::path const& folder);
+
+// Sets the name and organisation number in <folder>/.cratchit/project.txt,
+// keeping the other entries. The file is written only when it changes; true if it did.
+std::expected<bool, std::string> save_project_identity(std::filesystem::path const& folder, std::string_view name,
+                                                       std::string_view orgnr);
 
 // Opens a listed project: its folder must exist and its project.txt hold the listed uuid
 std::expected<Project, std::string> open_listed_project(ListedProject const& listed);

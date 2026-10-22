@@ -52,7 +52,7 @@ PathEditor::Result PathEditor::on_key(charset::unicode::CodePoint key, std::ostr
     return text_.empty() ? Result::Cancelled : Result::Accepted;
   }
   if (key == U'\t') {
-    if (kind_ == Kind::Path) {
+    if (kind_ == Kind::Path || kind_ == Kind::File) {
       complete(out);
     } else {
       out << '\a';
@@ -74,7 +74,14 @@ std::string const& PathEditor::text() const {
 }
 
 std::string PathEditor::prompt() const {
-  return (kind_ == Kind::Path ? "path> " : "name> ") + text_;
+  switch (kind_) {
+  case Kind::Name:
+    return "name> " + text_;
+  case Kind::Account:
+    return "account> " + text_;
+  default:
+    return "path> " + text_;
+  }
 }
 
 void PathEditor::erase(std::ostream& out) {
@@ -89,7 +96,7 @@ void PathEditor::erase(std::ostream& out) {
 }
 
 void PathEditor::complete(std::ostream& out) {
-  auto const completion = complete_folder(text_);
+  auto const completion = complete_folder(text_, kind_ == Kind::File);
   if (!completion.added.empty()) {
     text_ += completion.added;
     out << completion.added;
