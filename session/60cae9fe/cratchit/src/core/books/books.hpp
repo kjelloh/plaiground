@@ -85,6 +85,10 @@ struct FiscalYear {
   // is not in the books; else the year before's closing balances are carried.
   std::map<std::string, Amount> reported_opening;
   std::vector<Voucher> vouchers;
+  bool closed = false; // closed for new vouchers (open by default)
+
+  // True when date is within the year
+  bool holds(Date date) const;
 };
 
 struct Address {

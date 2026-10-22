@@ -174,3 +174,12 @@ TEST(DefaultProjectFolder, NoneForNamesThatCannotBeAFolder) {
     EXPECT_FALSE(cratchit::default_project_folder("/ws", name).has_value()) << name;
   }
 }
+
+TEST_F(ProjectTest, SaveYearSetsTheLastOpenedYear) {
+  ASSERT_TRUE(cratchit::create_project(root, "ITfied AB", uuid_a, "2026-10-21").has_value());
+  EXPECT_EQ(cratchit::save_project_year(root, "2026-05-01"), true);
+  EXPECT_EQ(cratchit::save_project_year(root, "2026-05-01"), false);
+  EXPECT_EQ(read_file(root / ".cratchit" / "project.txt"),
+            std::format("created = 2026-10-21\nuuid = {}\nname = ITfied AB\nyear = 2026-05-01\n", uuid_a));
+  EXPECT_EQ(cratchit::read_project(root)->year, "2026-05-01");
+}

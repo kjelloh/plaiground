@@ -795,6 +795,7 @@ TEST_F(WorkspaceRepl, EnterListsTheKeysOfTheWorkspace) {
 TEST_F(WorkspaceRepl, EnterAndUnknownKeysListTheKeysOfAProject) {
   run("1pnTest\n1");
   std::string const keys = "Keys at project>:\n"
+                           "  y  Fiscal years\n"
                            "  i  Import an SIE file\n"
                            "  r  Reports\n"
                            "  l  Show the log\n"
@@ -803,4 +804,214 @@ TEST_F(WorkspaceRepl, EnterAndUnknownKeysListTheKeysOfAProject) {
                            "  q  Quit\n";
   auto const output = run("\nx");
   EXPECT_TRUE(output.ends_with("project> \n" + keys + "project> x\nUnknown key.\n" + keys + "project> \n")) << output;
+}
+
+TEST_F(WorkspaceRepl, YKeyWithoutBooks) {
+  run("1pnTest\n1");
+  auto const output = run("y");
+  EXPECT_TRUE(output.ends_with("project> y\nNo books yet. Press i to import an SIE file.\nproject> \n")) << output;
+}
+
+TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const folder = root / "start" / "Test";
+  auto const output = run("eBank cost march 35 2025-03-31\ny\n6570\n1930\n\ny");
+  EXPECT_NE(output.find("2025> e\n"
+                        "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 "
+                        "2026-10-22.\n"
+                        "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
+                        "voucher> Bank cost march 35 2025-03-31\n"
+                        "  Heading  Bank cost march\n"
+                        "  Amount   35.00\n"
+                        "  Date     2025-03-31   (fiscal year 2025-01-01 - 2025-12-31)\n"
+                        "OK? (y/n) y\n"
+                        "Series (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"
+                        "  A  Redovisning\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("  N  Lager\n"
+                        "\n"
+                        "Press a letter or Enter to choose, - to go back, q to quit.\n"
+                        "series> \n"
+                        "Voucher A 3 (Redovisning) 2025-03-31 \"Bank cost march\" 35.00\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("post> 6570\n"
+                        "  6570          35.00  Bank costs\n"
+                        "  Remaining -35.00 (debit 35.00, credit 0.00, amount 35.00).\n"
+                        "post> 1930\n"
+                        "  1930         -35.00  Bank\n"
+                        "  Balanced. Enter saves.\n"
+                        "post> \n"
+                        "Voucher A 3 2025-03-31 \"Bank cost march\"\n"
+                        "  6570          35.00  Bank costs\n"
+                        "  1930         -35.00  Bank\n"
+                        "Save as A 3? (y/n) y\n"
+                        "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
+                        "Updated .cratchit/books/2025-01-01/transactions.csv in " + folder.string() + "\n"
+                        "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"
+                        "2025> \n"),
+            std::string::npos)
+      << output;
+  auto const books = cratchit::books::read_books(folder);
+  ASSERT_TRUE(books.has_value()) << books.error();
+  auto const& saved = books->years.front().vouchers.back();
+  EXPECT_EQ(saved.series, "A");
+  EXPECT_EQ(saved.number, "3");
+  EXPECT_EQ(saved.text, "Bank cost march");
+  EXPECT_EQ(cratchit::format_iso_date(*saved.registered), "2026-10-20");
+  ASSERT_EQ(saved.transactions.size(), 2u);
+  EXPECT_EQ(saved.transactions[1].amount, -3500);
+}
+
+TEST_F(WorkspaceRepl, VoucherLineIsRefusedAndKeptForEditing) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  // Backspace (DEL) edits the kept line
+  auto const output = run("eBank 35 2027-01-01\n" + std::string(10, '\x7f') + "2025-01-01\nn");
+  EXPECT_NE(output.find("voucher> Bank 35 2027-01-01\n"
+                        "Refused: 2027-01-01 is outside fiscal year 2025-01-01 - 2025-12-31.\n"
+                        "voucher> Bank 35 2027-01-01"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("  Date     2025-01-01   (fiscal year 2025-01-01 - 2025-12-31)\nOK? (y/n) n\n"
+                        "voucher> Bank 35 2025-01-01"),
+            std::string::npos)
+      << output;
+}
+
+TEST_F(WorkspaceRepl, RowsListAccountsRemoveAndDrop) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const output = run("eLunch 100 2025-05-05\nyb" "bank\n1930 -100\n\n-\n-\n");
+  EXPECT_NE(output.find("Voucher B 1 (Kundfakturor) 2025-05-05 \"Lunch\" 100.00\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("post> bank\nAccounts matching bank:\n  1930  Bank\n  6570  Bank costs\n"), std::string::npos)
+      << output;
+  EXPECT_NE(output.find("post> \n  Remaining 100.00 (debit 0.00, credit 100.00, amount 100.00).\n"), std::string::npos)
+      << output;
+  EXPECT_NE(output.find("post> -\nRemoved  1930        -100.00  Bank\n  No rows.\n"), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\n2025> \n")) << output;
+}
+
+TEST_F(WorkspaceRepl, SpacedAmountMustBeChosen) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const output = run("eFaktura 87 500 2025-05-05\nx3-\n2n");
+  EXPECT_NE(output.find("voucher> Faktura 87 500 2025-05-05\n"
+                        "The amount is unclear: spaces may separate thousands. Which is it?\n"
+                        "  1           500.00  Faktura 87\n"
+                        "  2         87500.00  Faktura\n"
+                        "\n"
+                        "Press a number to choose, - to change the line, h for help, q to quit.\n"
+                        "amount?> x\n"
+                        "Press a number to choose, - to change the line, h for help, q to quit.\n"
+                        "amount?> 3\n"
+                        "Press a number to choose, - to change the line, h for help, q to quit.\n"
+                        "amount?> -\n"
+                        "voucher> Faktura 87 500 2025-05-05\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("amount?> 2\n"
+                        "  Heading  Faktura\n"
+                        "  Amount   87500.00\n"
+                        "  Date     2025-05-05   (fiscal year 2025-01-01 - 2025-12-31)\n"
+                        "OK? (y/n) n\n"
+                        "voucher> Faktura 87 500 2025-05-05"),
+            std::string::npos)
+      << output;
+}
+
+TEST_F(WorkspaceRepl, RowsMustAddUpToTheAmountToSave) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const output = run("eBank cost 35 2025-03-31\ny\n6570 10\n1930\n\n6570\n6570 25\n1930 -25\n\n");
+  EXPECT_NE(output.find("post> 1930\n"
+                        "  1930         -10.00  Bank\n"
+                        "  Debit 10.00, credit 10.00, amount 35.00: debit and credit must each reach the amount.\n"
+                        "post> \n"
+                        "  Debit 10.00, credit 10.00, amount 35.00: debit and credit must each reach the amount.\n"
+                        "post> 6570\n"
+                        "Type an amount: the rows add up to zero, but not to the amount.\n"
+                        "post> 6570 25\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("  Balanced. Enter saves.\npost> \nVoucher A 3 2025-03-31 \"Bank cost\"\n"
+                               "  6570          10.00  Bank costs\n  1930         -10.00  Bank\n"
+                               "  6570          25.00  Bank costs\n  1930         -25.00  Bank\nSave as A 3? (y/n) \n"))
+      << output;
+}
+
+TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\ny");
+  auto const folder = root / "start" / "Test";
+  auto const output = run("yx0\n");
+  EXPECT_NE(output.find("project> y\n"
+                        "Fiscal years of Test AB, 556000-0001 (0 is the newest):\n"
+                        "  0  2025-01-01 - 2025-12-31  open\n"
+                        "\n"
+                        "Press a number to open a year, - to go back, h for help, q to quit.\n"
+                        "year?> x\n"
+                        "Press a number to open a year, - to go back, h for help, q to quit.\n"
+                        "year?> 0\n"
+                        "Updated .cratchit/project.txt in " + folder.string() + "\n"
+                        "Opened fiscal year 2025-01-01 - 2025-12-31, open for new vouchers.\n"
+                        "2025> \n"
+                        "Keys at 2025>:\n"
+                        "  e  Enter a voucher\n"
+                        "  r  Reports of this year\n"
+                        "  c  Close the year for new vouchers\n"
+                        "  l  Show the log\n"
+                        "  -  Back to project>\n"
+                        "  h  Help (the manual)\n"
+                        "  q  Quit\n"
+                        "2025> \n"),
+            std::string::npos)
+      << output;
+  // Reopened with the project; closing stops new vouchers until opened again
+  auto const closing = run("ceoy-");
+  EXPECT_NE(closing.find("Opened fiscal year 2025-01-01 - 2025-12-31, open for new vouchers.\n"
+                         "2025> c\n"
+                         "Updated .cratchit/books/books.txt in " + folder.string() + "\n"
+                         "Fiscal year 2025-01-01 - 2025-12-31 is now closed for new vouchers.\n"
+                         "2025> e\n"
+                         "Fiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press o to open it.\n"
+                         "2025> o\n"
+                         "Updated .cratchit/books/books.txt in " + folder.string() + "\n"
+                         "Fiscal year 2025-01-01 - 2025-12-31 is now open for new vouchers.\n"
+                         "2025> y\nUnknown key.\n"),
+            std::string::npos)
+      << closing;
+  EXPECT_TRUE(closing.ends_with("2025> -\nproject> \n")) << closing;
+  auto const project = cratchit::read_project(folder);
+  ASSERT_TRUE(project.has_value()) << project.error();
+  EXPECT_EQ(project->year, "2025-01-01");
+}
+
+TEST_F(WorkspaceRepl, RKeyInAYearShowsItsReports) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const output = run("r-");
+  EXPECT_TRUE(output.ends_with("2025> r\nReports for 2025-01-01 - 2025-12-31:\n  1  Trial balance (saldobalans)\n"
+                               "  2  Vouchers\n  3  Account ledger\n\n"
+                               "Press a number to choose, - to go back, h for help, q to quit.\nreport?> -\n2025> \n"))
+      << output;
+}
+
+TEST_F(WorkspaceRepl, NoDateOutsideTheYearAsksForIt) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const output = run("eBank 35\n");
+  EXPECT_NE(output.find("voucher> Bank 35\nNo date, and today is outside the fiscal year. Type the date.\n"),
+            std::string::npos)
+      << output;
 }

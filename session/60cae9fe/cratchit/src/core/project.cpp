@@ -134,7 +134,8 @@ std::expected<Project, std::string> read_project(fs::path const& folder) {
   if (!name || name->empty()) {
     return std::unexpected(std::format("{}: no 'name = <name>'", file.string()));
   }
-  return Project{*uuid, *name, folder, {}, find_value(*entries, "orgnr").value_or("")};
+  return Project{*uuid, *name, folder, {}, find_value(*entries, "orgnr").value_or(""),
+                 find_value(*entries, "year").value_or("")};
 }
 
 std::expected<bool, std::string> save_project_identity(fs::path const& folder, std::string_view name,
@@ -152,6 +153,22 @@ std::expected<bool, std::string> save_project_identity(fs::path const& folder, s
       })) {
     return false;
   }
+  if (auto written = write_path_values(file, *entries); !written) {
+    return std::unexpected(written.error());
+  }
+  return true;
+}
+
+std::expected<bool, std::string> save_project_year(fs::path const& folder, std::string_view start) {
+  auto const file = folder / project_file_name();
+  auto entries = read_path_values(file);
+  if (!entries) {
+    return std::unexpected(entries.error());
+  }
+  if (find_value(*entries, "year") == start) {
+    return false;
+  }
+  set_value(*entries, "year", start);
   if (auto written = write_path_values(file, *entries); !written) {
     return std::unexpected(written.error());
   }
@@ -189,7 +206,7 @@ std::expected<Project, std::string> create_project(fs::path const& folder, std::
   if (auto written = write_path_values(file, entries); !written) {
     return std::unexpected(written.error());
   }
-  return Project{std::string(uuid), std::string(name), folder, {{folder, project_file_name()}}, {}};
+  return Project{std::string(uuid), std::string(name), folder, {{folder, project_file_name()}}, {}, {}};
 }
 
 std::optional<fs::path> default_project_folder(fs::path const& workspace_folder, std::string_view name) {

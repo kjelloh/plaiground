@@ -168,3 +168,14 @@ TEST_F(BooksFiles, MissingYearFileIsAnError) {
   ASSERT_FALSE(books.has_value());
   EXPECT_NE(books.error().find("Cannot read"), std::string::npos) << books.error();
 }
+
+TEST_F(BooksFiles, ClosedYearsAreWrittenAndReadBack) {
+  auto books = sample();
+  books.years[0].closed = true;
+  ASSERT_TRUE(cratchit::books::write_books(root, books).has_value());
+  EXPECT_NE(read_file(root / ".cratchit" / "books" / "books.txt").find("closed.2025-01-01 = yes\n"), std::string::npos);
+  auto const back = cratchit::books::read_books(root);
+  ASSERT_TRUE(back.has_value()) << back.error();
+  EXPECT_TRUE(back->years[0].closed);
+  EXPECT_FALSE(back->years[1].closed);
+}

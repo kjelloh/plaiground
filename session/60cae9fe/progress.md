@@ -164,9 +164,44 @@ lists the keys of that prompt (`Keys at project>:` with i, r, l, -, h, q); an un
 the same list (was `Unknown key. Press h for help.`). Space and tab are still ignored. Manual "Using the prompt" and
 the key tables updated. 313 tests pass, no warnings; checked in the app with piped input. In review.
 
+Task 27: Enter a voucher (`core/books/entry`, repl). `e` at `project>` (no books: "No books yet ..."). `voucher>`: heading,
+amount and date on one line in any order (`parse_event`: last date word, else today; last other number is the amount,
+decimal comma or point, groups of three before a number with decimals, no-break spaces dropped; rest is the heading).
+Errors and a date outside the books' years ("Refused: ...") keep the line for editing; `OK? (y/n)`. `series>`: A-N
+(Fortnox names), Enter takes the default = series of the voucher sharing most heading words (latest on tie), else A;
+`h` is series H here (no help), `q` quits. Number = highest in series and year + 1. `post>`: `account amount`, account
+alone = what remains (first row: the amount), not an account = list matches by number prefix or name (max 20), `-`
+removes last row / drops the voucher, Enter when balanced shows it (+ note if debit total != amount) and `Save as D 4?
+(y/n)`; `n` back to rows. Saved into the year's vouchers.csv/transactions.csv via write_books, registered = today,
+logged (business). Re-import of a Fortnox file keeps it and notes it as missing in the file. Manual: new section
+"Entering a voucher", key tables, files, log kinds. 331 tests pass, no warnings; checked with piped input on a Fortnox
+sample. In review.
+
+Task 27 fix (after review): a voucher saves only when debit and credit each add up to the amount on the voucher line
+(`Draft::is_balanced`, `Draft::status`: "Remaining X (debit, credit, amount)", "...: debit and credit must each reach
+the amount", "...: more than the amount"); the save note is gone. An account alone on rows that add up to zero (but not
+to the amount) asks for an amount. `parse_event` now returns every reading of a spaced amount (last word alone, then
+with each three-digit group before it: `87 500` -> 500.00 or 87500.00); several readings must be chosen at `amount?>`
+(number, `-` back to the line, `h`, `q`). A no-break space inside a number stays clear. Manual updated. 335 tests pass,
+no warnings; checked with piped input on a Fortnox sample.
+
+Task 28: Fiscal years. `y` at `project>` lists the years numbered as SIE (0 = newest), with open/closed; ten per page,
+`>` older, `<` newer (keys restart at 0, heading names year of key 0); `year?>` prompt. Opening saves `year = <start>`
+in project.txt (`save_project_year`) and is logged; the project reopens it on open (missing year = error, stays at
+`project>`). Year prompt is the year itself (`2026/27>`, `2025>`): `e` enter a voucher (only when open), `r` that year's
+reports (`-` back to the year), `c` close / `o` open for new vouchers (`closed.<start> = yes` in books.txt,
+`FiscalYear::closed`, logged), `l`, `-` back to `project>`, Enter lists keys. `e` moved from `project>` to the year.
+Voucher date must be in the open year ("Refused: <date> is outside fiscal year ..."); no date + today outside the year
+asks for the date (`parse_event` takes an optional today; `year_for` removed, `FiscalYear::holds` added). An SIE
+import into a closed year is not stopped. Manual: new "Fiscal years", files, key tables, entry, reports, log.
+341 tests pass, no warnings; checked with all 11 Fortnox samples via piped input (two pages, close/open, restart).
+In review.
+
 ## Next
 
-To be given in chat. Possible: SIE export (and import->export round trip), BAS chart check, rename/remove projects.
+Task 29 (agreed plan): template vouchers. Picking an earlier voucher copies its accounts and scales its amounts to the
+new amount. Later: VAT helpers, source document reference, correction help, creating a new fiscal year, sync with
+Fortnox. Other possible: SIE export (and import->export round trip), BAS chart check, rename/remove projects.
 
 ## Agreed in chat
 
@@ -247,8 +282,24 @@ To be given in chat. Possible: SIE export (and import->export round trip), BAS c
 
 - 2026-10-22: Enter or an unknown key at a prompt lists the keys available there.
 
+- 2026-10-22: Voucher entry (planned, not started). A new voucher goes into a series by its type. The series are
+  Fortnox's defaults (no BAS or legal standard found; the law only requires numbered vouchers in order):
+  A Redovisning, B Kundfakturor, C Inbetalningar från kunder, D Leverantörsfakturor, E Utbetalningar till
+  leverantörer, F Kassa, G Avskrivning, H Periodisering, I Bokslut, J Kontantfaktura, K Kvitto, L Lön,
+  M Momsrapport, N Lager. The imported books use A, B, C, D, E, I and M.
+  Entry starts with heading, amount and date; then the series is chosen, with one guessed from the input as
+  default. A date outside the open fiscal year is refused with a reason. No source-document reference
+  and no correction help yet. Entered vouchers go into the same books as imported ones. Local vouchers are the
+  truth (better sync rules with Fortnox later).
+
+- 2026-10-22: Vouchers are entered in an opened fiscal year (`y` at `project>`). Years are numbered as SIE: 0 is the
+  newest. The last opened year is remembered and reopened; `-` leaves it. Each year has an open/closed setting; new
+  vouchers only in an open year. No "new year" operation yet: years come from SIE import. The year prompt is the
+  fiscal year itself, e.g. `2026/27>`.
+
 ## Open questions
 
+- Should an SIE import into a closed fiscal year be refused (it is allowed now)?
 - Should differing account data (name, SRU) from an older year's file be noted even when not taken?
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
 - Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?

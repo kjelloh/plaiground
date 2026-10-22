@@ -79,6 +79,10 @@ std::string PathEditor::prompt() const {
     return "name> " + text_;
   case Kind::Account:
     return "account> " + text_;
+  case Kind::Voucher:
+    return "voucher> " + text_;
+  case Kind::Row:
+    return "post> " + text_;
   default:
     return "path> " + text_;
   }

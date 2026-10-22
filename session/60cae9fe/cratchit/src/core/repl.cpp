@@ -99,6 +99,10 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_years(out);
       } else if (mode_ == Mode::Reports) {
         show_reports(out);
+      } else if (mode_ == Mode::ChooseAmount) {
+        show_readings(out);
+      } else if (mode_ == Mode::YearMenu) {
+        show_year_menu(out);
       }
     }
     return Step::Continue;
@@ -121,6 +125,19 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
       mode_ = Mode::Reports;
       show_reports(out);
     }
+    return Step::Continue;
+  case Mode::ConfirmEvent:
+    on_confirm_event_key(key, out);
+    return Step::Continue;
+  case Mode::Series:
+    // h is series H here, so help is not offered
+    if (key == U'q') {
+      return Step::Quit;
+    }
+    on_series_key(key, out);
+    return Step::Continue;
+  case Mode::ConfirmSave:
+    on_confirm_save_key(key, out);
     return Step::Continue;
   default:
     break;
@@ -176,9 +193,12 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
       mode_ = Mode::Workspace;
     } else if (key == U'l') {
       open_log(out);
+    } else if (key == U'y') {
+      open_year_menu(out);
     } else if (key == U'i') {
       start_import(out);
     } else if (key == U'r') {
+      before_reports_ = Mode::Years;
       open_years(out);
     } else {
       std::println(out, "Unknown key.");
@@ -190,6 +210,15 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     break;
   case Mode::Reports:
     on_reports_key(key, out);
+    break;
+  case Mode::ChooseAmount:
+    on_choose_amount_key(key, out);
+    break;
+  case Mode::YearMenu:
+    on_year_menu_key(key, out);
+    break;
+  case Mode::Year:
+    on_year_key(key, out);
     break;
   default:
     break;
@@ -205,8 +234,8 @@ bool Repl::ignores(charset::unicode::CodePoint key) const {
   if (key == escape) {
     return true;
   }
-  // Enter lists the keys at a prompt
-  if (is_prompt() && (key == U'\n' || key == U'\r')) {
+  // Enter lists the keys at a prompt, and takes the default series
+  if ((is_prompt() || mode_ == Mode::Series) && (key == U'\n' || key == U'\r')) {
     return false;
   }
   // Space and Enter show the next page of help or the log
@@ -217,7 +246,7 @@ bool Repl::ignores(charset::unicode::CodePoint key) const {
 }
 
 bool Repl::is_prompt() const {
-  return mode_ == Mode::Main || mode_ == Mode::Workspace || mode_ == Mode::Project;
+  return mode_ == Mode::Main || mode_ == Mode::Workspace || mode_ == Mode::Project || mode_ == Mode::Year;
 }
 
 void Repl::show_keys(std::ostream& out) const {
@@ -226,15 +255,27 @@ void Repl::show_keys(std::ostream& out) const {
     std::println(out, "  w  Workspace menu");
   } else if (mode_ == Mode::Workspace) {
     std::println(out, "  p  Projects");
-  } else {
+  } else if (mode_ == Mode::Project) {
+    std::println(out, "  y  Fiscal years");
     std::println(out, "  i  Import an SIE file");
     std::println(out, "  r  Reports");
+  } else {
+    auto const* year = books_.year_starting(open_year_);
+    std::println(out, "  e  Enter a voucher");
+    std::println(out, "  r  Reports of this year");
+    if (year && year->closed) {
+      std::println(out, "  o  Open the year for new vouchers");
+    } else {
+      std::println(out, "  c  Close the year for new vouchers");
+    }
   }
   std::println(out, "  l  Show the log");
   if (mode_ == Mode::Workspace) {
     std::println(out, "  -  Back to cratchit>");
   } else if (mode_ == Mode::Project) {
     std::println(out, "  -  Back to workspace>");
+  } else if (mode_ == Mode::Year) {
+    std::println(out, "  -  Back to project>");
   }
   std::println(out, "  h  Help (the manual)");
   std::println(out, "  q  Quit");
@@ -271,6 +312,26 @@ std::string Repl::prompt() const {
     return "report?> ";
   case Mode::Paging:
     return pager_.prompt();
+  case Mode::YearMenu:
+    return "year?> ";
+  case Mode::Year: {
+    // The fiscal year, e.g. 2026/27, or 2025 for a calendar year
+    auto const* year = books_.year_starting(open_year_);
+    if (!year) {
+      return "year> ";
+    }
+    auto const start = static_cast<int>(year->start.year());
+    auto const end = static_cast<int>(year->end.year());
+    return start == end ? std::format("{}> ", start) : std::format("{}/{:02}> ", start, end % 100);
+  }
+  case Mode::ChooseAmount:
+    return "amount?> ";
+  case Mode::ConfirmEvent:
+    return "OK? (y/n) ";
+  case Mode::Series:
+    return "series> ";
+  case Mode::ConfirmSave:
+    return std::format("Save as {} {}? (y/n) ", draft_->series, number_);
   default:
     return "cratchit> ";
   }
@@ -368,6 +429,18 @@ void Repl::on_choose_key(charset::unicode::CodePoint key, std::ostream& out) {
 void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
   auto const result = editor_.on_key(key, out);
   if (result == PathEditor::Result::Typing) {
+    return;
+  }
+  if (purpose_ == Purpose::Voucher) {
+    if (result == PathEditor::Result::Cancelled) {
+      mode_ = Mode::Project;
+      return;
+    }
+    on_voucher_line(out);
+    return;
+  }
+  if (purpose_ == Purpose::Row) {
+    on_row(result, out);
     return;
   }
   if (purpose_ == Purpose::SieFile) {
@@ -764,6 +837,7 @@ void Repl::enter_project(Project const& project, std::ostream& out) {
   LOG_BUSINESS("Opened project {} ({}) in {}", project.name, project.uuid, project.folder.string());
   project_ = project;
   mode_ = Mode::Project;
+  open_last_year(out);
 }
 
 std::string Repl::company() const {
@@ -974,6 +1048,8 @@ void Repl::on_reports_key(charset::unicode::CodePoint key, std::ostream& out) {
     mode_ = Mode::Typing;
     std::println(out, "Type the account number. Backspace erases, Enter accepts. Enter on an empty number goes back.");
     out << editor_.prompt();
+  } else if (key == U'-' && before_reports_ == Mode::Year) {
+    mode_ = Mode::Year;
   } else if (key == U'-') {
     mode_ = Mode::Years;
     show_years(out);
@@ -988,6 +1064,436 @@ void Repl::show_report(std::vector<std::string> lines, std::ostream& out) {
     mode_ = Mode::Reports;
     show_reports(out);
   }
+}
+
+void Repl::open_year_menu(std::ostream& out) {
+  auto books = books::read_books(project_->folder);
+  if (!books) {
+    std::println(out, "Error: {}", books.error());
+    return;
+  }
+  if (books->years.empty()) {
+    std::println(out, "No books yet. Press i to import an SIE file.");
+    return;
+  }
+  books_ = std::move(*books);
+  first_open_ = 0;
+  mode_ = Mode::YearMenu;
+  show_year_menu(out);
+}
+
+// Numbered from 0, the newest, as SIE numbers years; ten at a time
+void Repl::show_year_menu(std::ostream& out) {
+  auto const n = books_.years.size();
+  auto const last = std::min(first_open_ + 10, n);
+  if (first_open_ == 0) {
+    std::println(out, "Fiscal years of {} (0 is the newest):", company());
+  } else {
+    std::println(out, "Fiscal years {} to {} of {} (key 0 is year {}):", first_open_, last - 1, company(), first_open_);
+  }
+  if (first_open_ > 0) {
+    std::println(out, "  <  ...newer");
+  }
+  for (auto i = first_open_; i < last; ++i) {
+    auto const& year = books_.years[n - 1 - i];
+    std::println(out, "  {}  {} - {}  {}", i - first_open_, format_iso_date(year.start), format_iso_date(year.end),
+                 year.closed ? "closed" : "open");
+  }
+  if (last < n) {
+    std::println(out, "  >  ...older");
+  }
+  std::println(out, "");
+  std::println(out, "Press a number to open a year, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_year_menu_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const n = books_.years.size();
+  if (key == U'-') {
+    mode_ = Mode::Project;
+  } else if (key == U'<' && first_open_ > 0) {
+    first_open_ -= 10;
+    show_year_menu(out);
+  } else if (key == U'>' && first_open_ + 10 < n) {
+    first_open_ += 10;
+    show_year_menu(out);
+  } else if (key >= U'0' && key <= U'9' && first_open_ + static_cast<std::size_t>(key - U'0') < n) {
+    auto const index = n - 1 - (first_open_ + static_cast<std::size_t>(key - U'0'));
+    auto const saved = save_project_year(project_->folder, format_iso_date(books_.years[index].start));
+    if (!saved) {
+      std::println(out, "Error: {}", saved.error());
+      return;
+    }
+    if (*saved) {
+      std::println(out, "Updated .cratchit/project.txt in {}", project_->folder.string());
+    }
+    project_->year = format_iso_date(books_.years[index].start);
+    enter_year(index, out);
+  } else {
+    std::println(out, "Press a number to open a year, - to go back, h for help, q to quit.");
+  }
+}
+
+void Repl::enter_year(std::size_t index, std::ostream& out) {
+  auto const& year = books_.years[index];
+  open_year_ = year.start;
+  mode_ = Mode::Year;
+  std::println(out, "Opened fiscal year {} - {}, {}.", format_iso_date(year.start), format_iso_date(year.end),
+               year.closed ? "closed for new vouchers" : "open for new vouchers");
+  LOG_BUSINESS("Opened fiscal year {} - {} of project {} ({})", format_iso_date(year.start), format_iso_date(year.end),
+               project_->name, project_->uuid);
+}
+
+// Opens the fiscal year named by `year` in project.txt, if any
+void Repl::open_last_year(std::ostream& out) {
+  if (project_->year.empty()) {
+    return;
+  }
+  auto books = books::read_books(project_->folder);
+  if (!books) {
+    std::println(out, "Error: {}", books.error());
+    return;
+  }
+  auto const start = parse_iso_date(project_->year);
+  auto const* year = start ? books->year_starting(*start) : nullptr;
+  if (!year) {
+    std::println(out, "Error: The last fiscal year {} in .cratchit/project.txt is not in the books", project_->year);
+    return;
+  }
+  auto const index = static_cast<std::size_t>(year - books->years.data());
+  books_ = std::move(*books);
+  enter_year(index, out);
+}
+
+// Reads the books again and finds the open year in them; nothing (with the error shown) if it is gone
+std::optional<std::size_t> Repl::read_open_year(std::ostream& out) {
+  auto books = books::read_books(project_->folder);
+  if (!books) {
+    std::println(out, "Error: {}", books.error());
+    return std::nullopt;
+  }
+  books_ = std::move(*books);
+  auto const* year = books_.year_starting(open_year_);
+  if (!year) {
+    std::println(out, "Error: Fiscal year {} is not in the books", format_iso_date(open_year_));
+    return std::nullopt;
+  }
+  return static_cast<std::size_t>(year - books_.years.data());
+}
+
+void Repl::on_year_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const* year = books_.year_starting(open_year_);
+  if (key == U'-') {
+    mode_ = Mode::Project;
+  } else if (key == U'l') {
+    open_log(out);
+  } else if (key == U'e') {
+    start_entry(out);
+  } else if (key == U'r') {
+    if (auto const index = read_open_year(out)) {
+      year_ = *index;
+      before_reports_ = Mode::Year;
+      mode_ = Mode::Reports;
+      show_reports(out);
+    }
+  } else if (key == U'c' && year && !year->closed) {
+    set_closed(true, out);
+  } else if (key == U'o' && year && year->closed) {
+    set_closed(false, out);
+  } else {
+    std::println(out, "Unknown key.");
+    show_keys(out);
+  }
+}
+
+void Repl::set_closed(bool closed, std::ostream& out) {
+  auto const index = read_open_year(out);
+  if (!index) {
+    return;
+  }
+  auto& year = books_.years[*index];
+  year.closed = closed;
+  auto const written = books::write_books(project_->folder, books_);
+  if (!written) {
+    std::println(out, "Error: {}", written.error());
+    year.closed = !closed;
+    return;
+  }
+  for (auto const& file : *written) {
+    std::println(out, "{} {} in {}", file.created ? "Initiated" : "Updated", file.file.generic_string(),
+                 project_->folder.string());
+  }
+  std::println(out, "Fiscal year {} - {} is now {} for new vouchers.", format_iso_date(year.start),
+               format_iso_date(year.end), closed ? "closed" : "open");
+  LOG_BUSINESS("{} fiscal year {} - {} of project {} ({}) for new vouchers", closed ? "Closed" : "Opened",
+               format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid);
+}
+
+void Repl::start_entry(std::ostream& out) {
+  auto const index = read_open_year(out);
+  if (!index) {
+    return;
+  }
+  auto const& year = books_.years[*index];
+  if (year.closed) {
+    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press o to open it.", format_iso_date(year.start),
+                 format_iso_date(year.end));
+    return;
+  }
+  draft_.reset();
+  purpose_ = Purpose::Voucher;
+  editor_.start("", PathEditor::Kind::Voucher);
+  mode_ = Mode::Typing;
+  std::println(out, "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 2026-10-22.");
+  std::println(out, "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.");
+  out << editor_.prompt();
+}
+
+// The heading, amount and date typed: shown for y/n, offered as readings when the
+// amount is unclear, or refused with the line kept for editing
+void Repl::on_voucher_line(std::ostream& out) {
+  auto const year = static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data());
+  auto const& fiscal = books_.years[year];
+  auto today = parse_iso_date(places_.today);
+  if (today && !fiscal.holds(*today)) {
+    today.reset();
+  }
+  auto readings = books::parse_event(editor_.text(), today);
+  if (!readings) {
+    std::println(out, "{}", readings.error());
+    out << editor_.prompt();
+    return;
+  }
+  if (!fiscal.holds(readings->front().date)) {
+    std::println(out, "Refused: {} is outside fiscal year {} - {}.", format_iso_date(readings->front().date),
+                 format_iso_date(fiscal.start), format_iso_date(fiscal.end));
+    out << editor_.prompt();
+    return;
+  }
+  if (readings->size() == 1) {
+    show_event(readings->front(), year, out);
+    return;
+  }
+  readings_ = std::move(*readings);
+  mode_ = Mode::ChooseAmount;
+  show_readings(out);
+}
+
+void Repl::show_readings(std::ostream& out) {
+  std::println(out, "The amount is unclear: spaces may separate thousands. Which is it?");
+  for (std::size_t i = 0; i < readings_.size(); ++i) {
+    std::println(out, "  {}  {:>15}  {}", i + 1, format_amount(readings_[i].amount), readings_[i].heading);
+  }
+  std::println(out, "");
+  std::println(out, "Press a number to choose, - to change the line, h for help, q to quit.");
+}
+
+void Repl::on_choose_amount_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key >= U'1' && key <= U'9' && static_cast<std::size_t>(key - U'1') < readings_.size()) {
+    auto const event = readings_[static_cast<std::size_t>(key - U'1')];
+    show_event(event, static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data()), out);
+  } else if (key == U'-') {
+    mode_ = Mode::Typing;
+    out << editor_.prompt();
+  } else {
+    std::println(out, "Press a number to choose, - to change the line, h for help, q to quit.");
+  }
+}
+
+void Repl::show_event(books::Event const& event, std::size_t year, std::ostream& out) {
+  auto const& fiscal = books_.years[year];
+  std::println(out, "  Heading  {}", event.heading);
+  std::println(out, "  Amount   {}", format_amount(event.amount));
+  std::println(out, "  Date     {}   (fiscal year {} - {})", format_iso_date(event.date), format_iso_date(fiscal.start),
+               format_iso_date(fiscal.end));
+  draft_ = books::Draft{event, year, {}, {}};
+  mode_ = Mode::ConfirmEvent;
+}
+
+void Repl::on_confirm_event_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
+    guess_ = books::guess_series(books_, draft_->event.heading);
+    mode_ = Mode::Series;
+    show_series(out);
+  } else if (key == U'n' || key == U'-') {
+    mode_ = Mode::Typing;
+    out << editor_.prompt();
+  } else {
+    std::println(out, "Press y to go on, n to change the line.");
+  }
+}
+
+void Repl::show_series(std::ostream& out) {
+  if (guess_.like) {
+    std::println(out, "Series (Enter = {}, as {} {} {} \"{}\"):", guess_.series, guess_.like->series, guess_.like->number,
+                 format_iso_date(guess_.like->date), guess_.like->text);
+  } else {
+    std::println(out, "Series (Enter = {}):", guess_.series);
+  }
+  for (auto const& series : books::series_names()) {
+    std::println(out, "  {}  {}", series.letter, series.name);
+  }
+  std::println(out, "");
+  std::println(out, "Press a letter or Enter to choose, - to go back, q to quit.");
+}
+
+void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    purpose_ = Purpose::Voucher;
+    mode_ = Mode::Typing;
+    out << editor_.prompt();
+    return;
+  }
+  std::string letter;
+  if (key == U'\n' || key == U'\r') {
+    letter = guess_.series;
+  } else if (key >= U'a' && key <= U'z') {
+    letter = static_cast<char>(key - U'a' + U'A');
+  } else if (key >= U'A' && key <= U'Z') {
+    letter = static_cast<char>(key);
+  }
+  if (letter.empty() || !books::series_name(letter)) {
+    std::println(out, "Press a letter or Enter to choose, - to go back, q to quit.");
+    return;
+  }
+  draft_->series = letter;
+  number_ = books::next_number(books_.years[draft_->year], letter);
+  std::println(out, "Voucher {} {} ({}) {} \"{}\" {}", letter, number_, books::series_name(letter)->name,
+               format_iso_date(draft_->event.date), draft_->event.heading, format_amount(draft_->event.amount));
+  std::println(out, "Type one row per line: an account and an amount, debit positive, credit negative, e.g. 1930 -1118.");
+  std::println(out, "An account alone gets what remains (on the first row, the amount). A number prefix or a word of");
+  std::println(out, "the name lists accounts. - removes the last row. Enter saves when debit and credit each add up");
+  std::println(out, "to the amount.");
+  start_rows(out);
+}
+
+void Repl::start_rows(std::ostream& out) {
+  purpose_ = Purpose::Row;
+  editor_.start("", PathEditor::Kind::Row);
+  mode_ = Mode::Typing;
+  out << editor_.prompt();
+}
+
+void Repl::on_row(PathEditor::Result result, std::ostream& out) {
+  auto& rows = draft_->rows;
+  auto const text = trimmed(editor_.text());
+  if (result == PathEditor::Result::Cancelled || text.empty()) {
+    if (draft_->is_balanced()) {
+      std::println(out, "Voucher {} {} {} \"{}\"", draft_->series, number_, format_iso_date(draft_->event.date),
+                   draft_->event.heading);
+      for (auto const& row : rows) {
+        show_row(row, out);
+      }
+      mode_ = Mode::ConfirmSave;
+      return;
+    }
+    if (rows.empty()) {
+      std::println(out, "No rows yet. Type an account and an amount, or - to drop the voucher.");
+    } else {
+      show_remaining(out);
+    }
+    start_rows(out);
+    return;
+  }
+  if (text == "-") {
+    if (rows.empty()) {
+      std::println(out, "Dropped the voucher. Nothing is saved.");
+      draft_.reset();
+      mode_ = Mode::Year;
+      return;
+    }
+    std::print(out, "Removed");
+    show_row(rows.back(), out);
+    rows.pop_back();
+    show_remaining(out);
+    start_rows(out);
+    return;
+  }
+  auto const row = books::parse_row(text);
+  if (!row) {
+    std::println(out, "{}", row.error());
+    start_rows(out);
+    return;
+  }
+  if (!books_.account(row->account)) {
+    show_accounts(row->amount ? row->account : text, out);
+    start_rows(out);
+    return;
+  }
+  auto const amount = row->amount ? *row->amount : rows.empty() ? draft_->event.amount : draft_->remaining();
+  if (amount == 0) {
+    std::println(out, "{}", row->amount         ? "The amount is zero."
+                            : draft_->is_balanced() ? "Nothing remains. Enter saves, - removes the last row."
+                                                    : "Type an amount: the rows add up to zero, but not to the amount.");
+    start_rows(out);
+    return;
+  }
+  books::Transaction transaction;
+  transaction.account = row->account;
+  transaction.amount = amount;
+  rows.push_back(std::move(transaction));
+  show_row(rows.back(), out);
+  show_remaining(out);
+  start_rows(out);
+}
+
+void Repl::show_row(books::Transaction const& row, std::ostream& out) const {
+  auto const* account = books_.account(row.account);
+  std::println(out, "  {:<6} {:>12}  {}", row.account, format_amount(row.amount), account ? account->name : "");
+}
+
+void Repl::show_remaining(std::ostream& out) const {
+  std::println(out, "  {}", draft_->status());
+}
+
+// The accounts matching a query that is not an account in the books
+void Repl::show_accounts(std::string const& query, std::ostream& out) const {
+  constexpr std::size_t max_shown = 20;
+  auto const found = books::find_accounts(books_, query);
+  if (found.empty()) {
+    std::println(out, "No account matches {}.", query);
+    return;
+  }
+  std::println(out, "Accounts matching {}:", query);
+  for (std::size_t i = 0; i < std::min(found.size(), max_shown); ++i) {
+    std::println(out, "  {}  {}", found[i]->number, found[i]->name);
+  }
+  if (found.size() > max_shown) {
+    std::println(out, "  and {} more. Type more of the number or name.", found.size() - max_shown);
+  }
+}
+
+void Repl::on_confirm_save_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
+    save_voucher(out);
+  } else if (key == U'n' || key == U'-') {
+    start_rows(out);
+  } else {
+    std::println(out, "Press y to save the voucher, n to change the rows.");
+  }
+}
+
+void Repl::save_voucher(std::ostream& out) {
+  mode_ = Mode::Year;
+  auto const draft = std::move(*draft_);
+  draft_.reset();
+  auto& year = books_.years[draft.year];
+  year.vouchers.push_back(draft.voucher(number_, parse_iso_date(places_.today).value_or(draft.event.date)));
+  auto const written = books::write_books(project_->folder, books_);
+  if (!written) {
+    std::println(out, "Error: {}", written.error());
+    year.vouchers.pop_back();
+    return;
+  }
+  for (auto const& file : *written) {
+    std::println(out, "{} {} in {}", file.created ? "Initiated" : "Updated", file.file.generic_string(),
+                 project_->folder.string());
+  }
+  std::println(out, "Saved voucher {} {} into fiscal year {} - {}.", draft.series, number_, format_iso_date(year.start),
+               format_iso_date(year.end));
+  LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}) into project {} ({}), fiscal year {} - {}",
+               draft.series, number_, format_iso_date(draft.event.date), draft.event.heading, draft.rows.size(),
+               format_amount(draft.debit()), project_->name, project_->uuid, format_iso_date(year.start),
+               format_iso_date(year.end));
 }
 
 void run_repl(Repl& repl, KeySource const& next_key, std::ostream& out) {

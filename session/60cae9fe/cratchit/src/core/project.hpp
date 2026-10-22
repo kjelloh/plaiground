@@ -20,6 +20,7 @@ struct Project {
   std::filesystem::path folder;
   std::vector<Initiated> initiated;
   std::string orgnr; // the personal or organisation number; empty until set (by the first import)
+  std::string year;  // the start (YYYY-MM-DD) of the fiscal year last opened, from `year`; empty if none
 };
 
 // A project listed in workspace.txt as `project.<uuid> = <folder>`
@@ -60,6 +61,10 @@ std::expected<Project, std::string> read_project(std::filesystem::path const& fo
 // keeping the other entries. The file is written only when it changes; true if it did.
 std::expected<bool, std::string> save_project_identity(std::filesystem::path const& folder, std::string_view name,
                                                        std::string_view orgnr);
+
+// Sets `year = <start>` (the fiscal year last opened) in <folder>/.cratchit/project.txt,
+// keeping the other entries. The file is written only when it changes; true if it did.
+std::expected<bool, std::string> save_project_year(std::filesystem::path const& folder, std::string_view start);
 
 // Opens a listed project: its folder must exist and its project.txt hold the listed uuid
 std::expected<Project, std::string> open_listed_project(ListedProject const& listed);

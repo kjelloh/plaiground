@@ -125,29 +125,32 @@ write a relative folder yourself, it is taken from the workspace folder.
 
 `project.txt`, in a project folder's `.cratchit`, holds the date the project
 was created, its uuid, the official name of the person, company or
-organisation whose books it is and, after the first import, its
-organisation number:
+organisation whose books it is, after the first import its organisation
+number, and once you have opened one, the start of the fiscal year you last
+opened:
 
 ```
 created = 2026-10-21
 uuid = 3f2b8c1e-9a4d-4e7f-b6a2-1c5d8e0f7a93
 name = The ITfied AB
 orgnr = 556782-8172
+year = 2026-05-01
 ```
 
 The uuid is made by cratchit when it creates the project and never changes.
 The first SIE import sets `orgnr` and `name` (see Importing an SIE file).
+Opening a fiscal year sets `year` (see Fiscal years).
 
 The project's books are in `.cratchit/books` in the project folder:
 
 | File | What it holds |
 |------|---------------|
-| `books.txt` | `chart_type` (e.g. `EUBAS97`), `company_id`, `address.contact`, `address.street`, `address.postal`, `address.phone`, and one `year.<start> = <end>` line per fiscal year, dates as YYYY-MM-DD. |
+| `books.txt` | `chart_type` (e.g. `EUBAS97`), `company_id`, `address.contact`, `address.street`, `address.postal`, `address.phone`, one `year.<start> = <end>` line per fiscal year, and a `closed.<start> = yes` line per year closed for new vouchers, dates as YYYY-MM-DD. |
 | `accounts.csv` | The chart of accounts: `account,name,type,sru,unit`. |
 | `dimensions.csv` | `dimension,name,super` (`super` only for a sub dimension). |
 | `objects.csv` | `dimension,object,name`. |
 | `<start>/opening.csv` | Per fiscal year, in a folder named by its start date: the opening balances the source reported, `account,amount`. |
-| `<start>/vouchers.csv` | The year's vouchers: `series,number,date,text,registered,signature`. |
+| `<start>/vouchers.csv` | The year's vouchers, imported and entered: `series,number,date,text,registered,signature`. A voucher entered in cratchit is registered on the day it is saved. |
 | `<start>/transactions.csv` | Their rows: `series,number,kind,account,objects,amount,date,text,quantity,signature`. |
 
 The `.csv` files are comma separated with a header line. A field holding a
@@ -420,6 +423,7 @@ The prompt is `project>`.
 
 | Key    | What it does                                        |
 |--------|-----------------------------------------------------|
+| y      | Lists the fiscal years to open one (see Fiscal years). |
 | i      | Imports an SIE file (see Importing an SIE file).    |
 | r      | Shows reports of the books (see Reports).           |
 | Enter  | Lists these keys.                                   |
@@ -432,7 +436,215 @@ The prompt is `project>`.
 The project you open is saved as the last opened in `workspace.txt`, so it
 opens again the next time the workspace opens. If the last opened project is
 not listed, or cannot be opened, cratchit shows the error and stays at
-`workspace>`.
+`workspace>`. When the project opens, the fiscal year you last opened in it
+opens too (see Fiscal years).
+
+### Fiscal years
+
+Vouchers are entered in an open fiscal year. Press `y` at the `project>`
+prompt. cratchit lists the fiscal years in the books, numbered as SIE numbers
+them: 0 is the newest, 1 the year before, and so on. Each says whether it is
+open or closed for new vouchers:
+
+```
+Fiscal years of The ITfied AB, 556782-8172 (0 is the newest):
+  0  2026-05-01 - 2027-04-30  open
+  1  2025-05-01 - 2026-04-30  open
+  ...
+  9  2017-05-01 - 2018-04-30  open
+  >  ...older
+
+Press a number to open a year, - to go back, h for help, q to quit.
+year?> 
+```
+
+The prompt is `year?>`. Press the number of a year to open it. Ten years are
+shown at a time: `>` shows older years and `<` newer ones. On the older pages
+the keys start at 0 again, and the heading says which year key 0 is, for
+example `Fiscal years 10 to 10 ... (key 0 is year 10)`.
+
+Fiscal years come from SIE files (see Importing an SIE file). Without books,
+cratchit says `No books yet. Press i to import an SIE file.`
+
+The year you open is saved as `year` in `project.txt`, so it opens again when
+the project opens. If that year is not in the books, cratchit shows an error
+and stays at `project>`.
+
+#### In a fiscal year
+
+The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
+`2025>` for a calendar year.
+
+| Key    | What it does                                        |
+|--------|-----------------------------------------------------|
+| e      | Enters a voucher (see Entering a voucher). Only in an open year. |
+| r      | Shows the reports of this year (see Reports). `-` there comes back here. |
+| c      | Closes the year for new vouchers (shown when the year is open). |
+| o      | Opens the year for new vouchers (shown when it is closed). |
+| Enter  | Lists these keys.                                   |
+| h      | Opens this manual.                                  |
+| l      | Shows the log (see The log).                        |
+| -      | Goes back to the `project>` prompt.                 |
+| q      | Quits cratchit.                                     |
+| Ctrl-D | Quits cratchit.                                     |
+
+A new year from an SIE import is open. Closing it stops new vouchers from being
+entered in it until you open it again; `e` then says
+`Fiscal year 2025-05-01 - 2026-04-30 is closed for new vouchers. Press o to open it.`
+cratchit saves the setting in `books.txt` (see The files) and logs it. Closing
+a year changes nothing else: its vouchers, balances and reports stay as they are,
+and an SIE import into it still works.
+
+### Entering a voucher
+
+Press `e` at the prompt of an open fiscal year (see Fiscal years). A voucher
+(verifikation) records one financial event. You type it in three steps: what
+happened, the series, and the rows on the accounts. Nothing is saved until the
+rows balance and you press `y`.
+
+#### Heading, amount and date
+
+Type them on one line at `voucher>`, in any order, and press Enter:
+
+```
+voucher> Telia faktura oktober 1 118,00 2026-10-22
+  Heading  Telia faktura oktober
+  Amount   1118.00
+  Date     2026-10-22   (fiscal year 2026-05-01 - 2027-04-30)
+OK? (y/n)
+```
+
+- The date is the last word that is a date, written `2026-10-22` or
+  `20261022`. Without a date, today is used when it is in the fiscal year;
+  else cratchit asks for it:
+  `No date, and today is outside the fiscal year. Type the date.`
+- The amount is the last other number: digits with an optional `-`, and a
+  decimal comma or point, at most two decimals (`1118`, `1118,5`, `-1118.00`).
+  A no-break space inside a number, as a bank may write it, is dropped.
+- The rest is the heading, in the order typed. Numbers in it stay, as long as
+  they are not last: in `Faktura 87 Payex 500` the heading is `Faktura 87 Payex`.
+
+When number words come just before the amount, a space may separate thousands
+(`1 118,00`) or a number in the heading from the amount (`Faktura 87 500`).
+cratchit does not guess: it lists each reading and you choose one with its
+number. The prompt is `amount?>`; `-` goes back to change the line.
+
+```
+voucher> Faktura 87 500
+The amount is unclear: spaces may separate thousands. Which is it?
+  1           500.00  Faktura 87
+  2         87500.00  Faktura
+
+Press a number to choose, - to change the line, h for help, q to quit.
+amount?> 
+```
+
+A word only counts as a group of thousands when it has exactly three digits
+and no sign, and the word before it has at most three digits and no decimals.
+So `Faktura 8700 500`, `Faktura 87 -500` and `Faktura 87 50,00` are clear.
+To avoid the question, type the amount without spaces.
+
+Press `y` if the line is read right, or `n` (or `-`) to change it. When
+something is missing or wrong, cratchit says so and keeps the line for you
+to change, for example `No amount. Type it with digits, e.g. 1118,00`. A date
+outside the open fiscal year is refused:
+
+```
+Refused: 2027-05-03 is outside fiscal year 2026-05-01 - 2027-04-30.
+```
+
+Enter on an empty line goes back to the year prompt.
+
+#### The series
+
+Each voucher goes in a series by its kind, as in Fortnox:
+
+| Series | Name |
+|--------|------|
+| A | Redovisning |
+| B | Kundfakturor |
+| C | Inbetalningar från kunder |
+| D | Leverantörsfakturor |
+| E | Utbetalningar till leverantörer |
+| F | Kassa |
+| G | Avskrivning |
+| H | Periodisering |
+| I | Bokslut |
+| J | Kontantfaktura |
+| K | Kvitto |
+| L | Lön |
+| M | Momsrapport |
+| N | Lager |
+
+cratchit offers a series by default: that of the voucher in the books whose
+text shares the most words with your heading (case, numbers and one-letter
+words do not count; the latest voucher wins a tie). Without such a voucher
+it offers A. It shows which voucher the guess comes from:
+
+```
+Series (Enter = D, as D 3 2026-05-18 "Faktura: Telia"):
+```
+
+The prompt is `series>`. Press Enter to take the default, or the letter of
+another series (upper or lower case). `-` goes back to the line. Here `h` is
+series H, so help is not offered; `q` quits.
+
+The voucher gets the next number in its series in the fiscal year: the
+highest number used plus one, or 1.
+
+#### The rows
+
+Type one row per line at `post>`: an account and an amount, debit positive,
+credit negative, then Enter. The voucher balances when the debit rows add up
+to the amount on the voucher line, and so do the credit rows. After each row
+cratchit shows it and where the rows stand:
+
+```
+post> 1930 -1118
+  1930       -1118.00  Företagskonto
+  Remaining 1118.00 (debit 0.00, credit 1118.00, amount 1118.00).
+post> 6212 894,40
+  6212         894.40  Mobiltelefon
+  Remaining 223.60 (debit 894.40, credit 1118.00, amount 1118.00).
+post> 2641
+  2641         223.60  Debiterad ingående moms
+  Balanced. Enter saves.
+```
+
+Rows that add up to zero but not to the amount show
+`Debit 223.60, credit 223.60, amount 1118.00: debit and credit must each reach the amount.`
+More than the amount on either side shows `...: more than the amount.`
+
+| You type          | What it does |
+|-------------------|--------------|
+| account amount    | Adds a row. The amount is written as on the voucher line; spaces in it are dropped. |
+| account           | Adds a row with what remains. On the first row, the voucher's amount. When the rows add up to zero but not to the amount, cratchit asks you to type the amount. |
+| a number prefix or a word | When it is not an account in the books, lists the accounts whose number starts with it or whose name contains it (case does not matter), at most 20. |
+| -                 | Removes the last row. With no rows, drops the voucher: `Dropped the voucher. Nothing is saved.` |
+| Enter (empty)     | When the voucher balances (at least two rows, debit and credit each adding up to the amount), shows it and asks to save it. Else shows where the rows stand; the voucher cannot be saved. |
+
+Only accounts in the books can be used. Backspace erases while you type.
+
+#### Saving
+
+```
+Voucher D 4 2026-10-22 "Telia faktura oktober"
+  1930       -1118.00  Företagskonto
+  6212         894.40  Mobiltelefon
+  2641         223.60  Debiterad ingående moms
+Save as D 4? (y/n)
+```
+
+Press `y` to save, `n` or `-` to go back to the rows. cratchit adds the
+voucher to the fiscal year's files in the books (see The files), shows which
+files it updated, says `Saved voucher D 4 into fiscal year 2026-05-01 -
+2027-04-30.` and logs it. A saved voucher is never changed.
+
+The vouchers you enter are the truth of the books. A later SIE import keeps
+them: a voucher in the books that the file lacks is noted, and a voucher in
+the file with the same series and number but other content is an error, so
+nothing is imported. Keep booking a fiscal year in one program only, cratchit
+or the other, until cratchit can sync them.
 
 ### Importing an SIE file
 
@@ -540,7 +752,8 @@ Unknown records in the file are ignored and noted, as SIE requires.
 
 Press `r` at the `project>` prompt. cratchit lists the fiscal years in the
 books, newest first; press a number to choose one (with more than 9, keys 0
-and 9 scroll as in the project menu). Then choose a report:
+and 9 scroll as in the project menu). Then choose a report. In a fiscal year,
+`r` shows the reports of that year at once, and `-` goes back to its prompt:
 
 ```
 Reports for 2025-05-01 - 2026-04-30:
@@ -556,7 +769,7 @@ The prompt is `report?>`.
 | 1      | Trial balance: each balance sheet account with opening balance, change and closing balance, each result account with its result, and totals. It says where the opening balances come from, and lists those that differ from what the source reported. |
 | 2      | Every voucher of the year with its rows. Rows added or struck after registration are marked `added` or `removed`. |
 | 3      | Account ledger: type an account number at `account>`, then Enter. Shows the opening balance, every row on the account by date with the balance after it, and the closing balance. Enter on an empty number goes back. |
-| -      | Goes back: from the reports to the years, from the years to `project>`. |
+| -      | Goes back: from the reports to the years (or to the fiscal year prompt they were opened from), from the years to `project>`. |
 | h      | Opens this manual.                                              |
 | q      | Quits cratchit.                                                 |
 
@@ -568,15 +781,17 @@ shown again.
 ## Using the prompt
 
 At the prompt, each key acts as soon as you press it. You don't need to press Enter.
-Space and tab are ignored, except while you type a folder path, a name or an
-account number (see Typing a folder path and Creating a project).
+Space and tab are ignored, except while you type a folder path, a name, an
+account number or a voucher line or row (see Typing a folder path, Creating a
+project and Entering a voucher).
 
-At the `cratchit>`, `workspace>` and `project>` prompts, Enter lists the keys
-you can press there, for example:
+At the `cratchit>`, `workspace>`, `project>` and fiscal year (such as
+`2026/27>`) prompts, Enter lists the keys you can press there, for example:
 
 ```
 project> 
 Keys at project>:
+  y  Fiscal years
   i  Import an SIE file
   r  Reports
   l  Show the log
@@ -633,7 +848,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, or a note of an import. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, or saving an entered voucher. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, or an SIE file in an unknown encoding. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

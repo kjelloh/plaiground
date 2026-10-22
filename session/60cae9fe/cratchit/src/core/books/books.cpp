@@ -237,6 +237,10 @@ bool number_less(std::string const& a, std::string const& b) {
 
 } // namespace
 
+bool FiscalYear::holds(Date date) const {
+  return start <= date && date <= end;
+}
+
 FiscalYear const* Books::year_starting(Date start) const {
   auto const it = std::ranges::find(years, start, &FiscalYear::start);
   return it == years.end() ? nullptr : &*it;
@@ -299,6 +303,7 @@ std::expected<Books, std::string> read_books(fs::path const& project_folder) {
   }
   Books books;
   std::vector<std::pair<Date, Date>> years;
+  std::vector<Date> closed;
   for (auto const& [path, value] : *entries) {
     if (path == "chart_type") {
       books.chart_type = value;
@@ -320,6 +325,13 @@ std::expected<Books, std::string> read_books(fs::path const& project_folder) {
                                            (folder / books_file).string(), path, value));
       }
       years.emplace_back(*start, *end);
+    } else if (path.starts_with("closed.")) {
+      auto const start = parse_iso_date(std::string_view{path}.substr(7));
+      if (!start || value != "yes") {
+        return std::unexpected(std::format("{}: '{} = {}' is not 'closed.<YYYY-MM-DD> = yes'",
+                                           (folder / books_file).string(), path, value));
+      }
+      closed.push_back(*start);
     }
   }
   auto const accounts = read_table(folder / accounts_file, accounts_header);
@@ -349,6 +361,7 @@ std::expected<Books, std::string> read_books(fs::path const& project_folder) {
     if (!year) {
       return std::unexpected(year.error());
     }
+    year->closed = std::ranges::contains(closed, start);
     books.years.push_back(std::move(*year));
   }
   return books;
@@ -368,6 +381,11 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
   std::ranges::sort(years, {}, &FiscalYear::start);
   for (auto const& year : years) {
     entries.push_back({"year." + format_iso_date(year.start), format_iso_date(year.end)});
+  }
+  for (auto const& year : years) {
+    if (year.closed) {
+      entries.push_back({"closed." + format_iso_date(year.start), "yes"});
+    }
   }
   files.emplace_back(books_file, format_path_values(entries));
 

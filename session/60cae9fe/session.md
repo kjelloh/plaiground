@@ -208,6 +208,59 @@ HOW ON EARTH IS THIS SUPPOSED TO WORK??!!
 * AHA! You are supposed to use explicit BAS 8819 or 8811 as an accountant ?!!
 * YES. In SIE file '#SRU 8811 7525'!
 
+OK, maybe time to see if we can implement some basic accounting?
+
+* It seems Fortnox applies (suggests?) a list of pre-defined series to enter vouchers?
+
+```
+A - Redovisning	
+B - Kundfakturor	
+C - Inbetalningar från kunder	
+D - Leverantörsfakturor	
+E - Utbetalningar till leverantörer	
+F - Kassa	
+G - Avskrivning	
+H - Periodisering	
+I - Bokslut	
+J - Kontantfaktura	
+K - Kvitto	
+L - Lön	
+M - Momsrapport	
+N - Lager
+```
+
+After some forth and back I made Claude implement accounting vouchers.
+
+* I now discover we lack 'open fiscal year' (should list option 0,1,2,... for one key select current, previous, before previous...)
+
+I made Claude fix that.
+
+* I now discovered I would like import SIE file to list available SIE files if the path is a folder and I press enter
+    * I would like each SIE file to be read for financial year and show at least that in the options list
+    * A fancy 'latest of same year' filter would be nice to.
+* I think new voucher y/n after Heading Amount Date is redundant and can be removed.
+    * I imagine if the input could not be parsed we can guide the user to edit?
+* The Series selection can be clearer by listing the default with a '*' prefix?
+* When choosing posting with a word or number and get account listing we can enhance the user interface.
+    * We can 'drill down' with more user input (match only current list moving on)?
+    * We can provide bullet list with single letter from first word of listen account names?
+    * We can drill down from user entering part or whole account number (reduce list to matching input number)?
+    * Also, entering a number should math from beginning of account number (not 'contains' as now )
+* We need VAT support
+    * Can we detect if we select a VAT account?
+    * Can we then also detect VAT percentage?
+    * Then we can propose a VAT
+    * Then maybe this is overkill as invoices always states VAT?
+* Cratchit did not understand to switch to Credit for VAT
+    * If Debit matches input amount, Cratchit can switch to assuming remaining Credit to be posted?
+    * The opposite should also be true?
+* I want some hints to what accounts have been used in historic vouchers of same type?
+    * Provide the user with an initial list of 'templates' to mirror account postings from?
+    * On empty enter, provide a list of accounts posted to in vouchers of 'same form'?
+* I can't, don't know how to (and get no help on how to) exit from 'post' state?
+* Ctrl-C exists without safety net!
+    * Is it possible to catch Ctrl-C and auto-save?
+
 ## 20261021
 
 Now it is time to introduce the scaffolding for character set encoding and decoding.
