@@ -23,6 +23,7 @@ configure_file(src/core/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 # All application logic lives in the core library
 add_library(cratchit_core
   src/core/charset/cp437.cpp
+  src/core/charset/detect.cpp
   src/core/charset/utf8.cpp
   src/core/data_folder.cpp
   src/core/help.cpp
@@ -35,6 +36,7 @@ add_library(cratchit_core
   src/core/project.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
   src/core/repl.cpp
+  src/core/sie/file.cpp
   src/core/sie/lexer.cpp
   src/core/terminal.cpp
   src/core/terminal_encoding.cpp

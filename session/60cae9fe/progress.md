@@ -108,13 +108,24 @@ name the line; lexing continues on the next line. No logging (clients decide). N
 217 tests pass, no warnings. Also lexed all 11 Fortnox sample files in `../62c6984e/_sie_in` (CP437 -> lexer, scratch
 program, not in the repo): 0 errors. In review.
 
+Task 19: SIE file encoding check (`core/sie/file`) and seed of charset detection (`core/charset/detect`).
+`charset::detect::is_utf8(bytes)`: well-formed UTF-8 with at least one multi-byte character (pure ASCII gives false).
+`sie::is_expected_text(code point)`: tab, CR, LF, printable ASCII, U+00A0-U+00FF; CP437 box drawing, blocks, Greek,
+math and other controls are unexpected. `sie::lex_bytes(bytes)` reads CP437; on the first unexpected character it
+applies UTF-8 if `is_utf8` (leading BOM skipped) and sets `alert` (names the character and line), else returns error
+text "Unknown encoding ...". `LexedFile` = applied `Charset`, `alert`, lexed lines. `sie::lex_file(path)` logs
+`Read SIE file <file> as <charset>` and the alert (business), an unknown encoding as design insufficiency; alert and
+error name the file. The alert is not on screen yet (no import UI); the dry-run task shows it. No manual change.
+231 tests pass, no warnings. All 11 samples read as CP437, no alert; a UTF-8 copy reads as UTF-8 with alert
+(U+251C on line 8); a Windows-1252 copy is an unknown encoding (U+03A3). In review.
+
 ## Next
 
-SIE import plan (proposed 2026-10-22, see chat): 19) SIE document: identification + chart of accounts records and
-parser from lines; 20) balances, vouchers (`#RTRANS` is followed by a duplicate `#TRANS` to skip), dimensions;
-21) file checks (KSUMMA, balanced vouchers, known accounts, IB + transactions = UB); 22) `i` at `project>` dry run
-(summary only); 23) books model + files; 24) import (confirm, write books, stash file + import record, log, manual);
-25) reports (saldobalans, voucher list, account ledger). Next task to be given in chat.
+SIE import plan (proposed 2026-10-22, see chat): 20) SIE document: identification + chart of accounts records and
+parser from lines; 21) balances, vouchers (`#RTRANS` is followed by a duplicate `#TRANS` to skip), dimensions;
+22) file checks (KSUMMA, balanced vouchers, known accounts, IB + transactions = UB); 23) `i` at `project>` dry run
+(summary only, shows the encoding alert); 24) books model + files; 25) import (confirm, write books, stash file +
+import record, log, manual); 26) reports (saldobalans, voucher list, account ledger). Next task to be given in chat.
 
 ## Agreed in chat
 
@@ -183,10 +194,11 @@ parser from lines; 20) balances, vouchers (`#RTRANS` is followed by a duplicate 
   accounts is taken as is, designed for a later check against BAS. Import adds new financial events but never changes
   existing ones. The imported file is stashed in the project together with metadata about the import.
 
-## Open questions
+- 2026-10-22: An SIE file is read as CP437 unless that gives an unexpected character (box drawing etc.); then it is
+  read as UTF-8 if it is UTF-8, with an alert to the user and a log of the applied encoding; else it is an error.
+  Charset detection is seeded in `charset::detect`, one test per charset, added as needed.
 
-- SIE: CP437 decodes every byte, so it never counts a failure. How should "another encoding" be detected? E.g. abort
-  when the file is valid UTF-8 with multi-byte sequences, or when CP437 gives box-drawing/graphics characters.
+## Open questions
 
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
 - Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?

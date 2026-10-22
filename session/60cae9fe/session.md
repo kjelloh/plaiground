@@ -50,6 +50,23 @@ Decision for you: CP437 maps every byte to a character, so decoding never fails 
 - abort when CP437 decoding gives box-drawing or graphics characters, which don't belong in bookkeeping text.
 ```
 
+Claude have now defined a list of tasks to implement SIE file import.
+
+Seven tasks remain in the SIE import plan, numbered 20–26 in progress.md:
+
+20. SIE document, part 1: company details (#FNAMN, #ORGNR, #RAR, #KPTYP and similar) and the chart of accounts (#KONTO, #SRU, #KTYP), read from the lexed lines into the SIE document.
+21. SIE document, part 2: opening and closing balances (#IB, #UB, #RES, #PSALDO), vouchers (#VER with #TRANS, #RTRANS, #BTRANS) and dimensions (#DIM, #OBJEKT). In the Fortnox files each #RTRANS is followed by a duplicate #TRANS, which has to be skipped.
+22. File checks: the checksum (#KSUMMA) when the file has one, vouchers that sum to zero, accounts that exist in the chart, and opening balance plus transactions equal to the closing balance.
+23. Import dry run: i at project> lets you type a file path. Cratchit then shows a summary, the check results and any encoding alert, and changes nothing. This is the first step you can try in the app.
+24. Books model: cratchit's own representation of the books, and the files it is saved in under the project's .cratchit.
+25. Import:
+    - You confirm with y/n, and the books are updated.
+    - The first import sets the org number and other company details. A later file that doesn't match them is an error.
+    - New financial events are added; existing ones are never changed.
+    - The file is stashed in the project with a record of the import, the import is logged, and the manual is updated.
+26. Reports: saldobalans (trial balance), a voucher list and an account ledger, so you can compare cratchit's books with Fortnox.
+
+Later, outside this plan: checking the chart of accounts against BAS, exporting SIE (and testing that an import followed by an export gives the same file), and SIE 5.
 
 
 ## 20261021
