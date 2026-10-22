@@ -35,6 +35,7 @@ add_library(cratchit_core
   src/core/project.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
   src/core/repl.cpp
+  src/core/sie/lexer.cpp
   src/core/terminal.cpp
   src/core/terminal_encoding.cpp
   src/core/version.cpp

@@ -100,9 +100,21 @@ listed with another folder (copy) is an error + design insufficiency log. Busine
 new section "Projects", files, typing paths, log. 201 tests pass, no warnings; checked with piped input.
 Not done: remove/rename a project, update a listed folder that moved (re-adding it is now the copy error). In review.
 
+Task 18: SIE import, step 1: push-based SIE lexer (`core/sie/lexer`, namespace `cratchit::sie`). `Lexer::push(code
+point)` gives an optional `Lexed` (`std::expected<Line, std::string>`) once a line ends; `finish()` gives a last line
+without LF. `Line`: kind (record / lone `{` / lone `}`), label without `#`, fields (UTF-8 text or `ObjectList` of item
+texts), line number. CR ignored, blank lines skipped, space/tab separate, `\"` in quotes is `"`, other `\` kept. Errors
+name the line; lexing continues on the next line. No logging (clients decide). No user operation, so no manual change.
+217 tests pass, no warnings. Also lexed all 11 Fortnox sample files in `../62c6984e/_sie_in` (CP437 -> lexer, scratch
+program, not in the repo): 0 errors. In review.
+
 ## Next
 
-To be given in chat.
+SIE import plan (proposed 2026-10-22, see chat): 19) SIE document: identification + chart of accounts records and
+parser from lines; 20) balances, vouchers (`#RTRANS` is followed by a duplicate `#TRANS` to skip), dimensions;
+21) file checks (KSUMMA, balanced vouchers, known accounts, IB + transactions = UB); 22) `i` at `project>` dry run
+(summary only); 23) books model + files; 24) import (confirm, write books, stash file + import record, log, manual);
+25) reports (saldobalans, voucher list, account ledger). Next task to be given in chat.
 
 ## Agreed in chat
 
@@ -165,7 +177,16 @@ To be given in chat.
   `name`. workspace.txt lists `project.<uuid> = <folder>`; the folder may be anywhere. The last opened project is
   remembered and reopened. The same uuid in two folders is an error for now (merge or override may come later).
 
+- 2026-10-22: SIE import: SIE 4E (full, with transactions) only, no SIE 5 yet. Sample files in `../62c6984e/_sie_in`
+  (Fortnox, PC8, CRLF). Strict CP437, abort when decoding shows another encoding. The first import sets the project's
+  org number and metadata (name, fiscal years, ...); a later file that does not match is an error. The chart of
+  accounts is taken as is, designed for a later check against BAS. Import adds new financial events but never changes
+  existing ones. The imported file is stashed in the project together with metadata about the import.
+
 ## Open questions
+
+- SIE: CP437 decodes every byte, so it never counts a failure. How should "another encoding" be detected? E.g. abort
+  when the file is valid UTF-8 with multi-byte sequences, or when CP437 gives box-drawing/graphics characters.
 
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
 - Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?

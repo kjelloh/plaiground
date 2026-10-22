@@ -2,6 +2,56 @@
 
 ```#60cae9fe```
 
+## 20261022
+
+I wonder if I still lack trust in the vibe coding process? What happens if I just go for it? Still task-by-tak though?
+
+* So I decide if a task is done or needs tweaks.
+* I decide what the nxt task should be.
+* But I do NOT care about what the code looks like?
+
+Do I dare to do this?
+
+* I still need to trust cratchit to perform book keeping and reporting correct!
+* I can accomplish this by asking for cratchit being able to show reports about what it has done.
+* I can integrate required book keeping information into the use manual (help file)?
+* In this way I can read the requirements and compare with what cratchit does?
+
+Ok, enough thinking and second guessing. What is next?
+
+* Read in an SIE file!
+* Cratchit now needs an internal representations of the books.
+* How much do I need to tell Claude?
+* Should cratchit stash a clone of the imported SIE file?
+* Should cratchit remember what was imported to keep track of changes compared to the imported books?
+
+I asked Claude to implement SIE import with user interface, parser and some open hints about if to stash the import and use sie.se and bas.se for specs.
+
+* It came back with the proposal to begin with the SIE file lexer.
+* But it also laid out task steps towards SIE import, internal book update and checks before accept.
+* I asked me about overlaps, support for SIE 5 etc.
+* I actually felt reassured to go ahead from the questions and what it seemed Claude (and the model) understood about the goal.
+
+Claude came back with some interesting insights.
+
+* Fortnox SIE file provides no checksum (fragile SIE file content?)
+```sh
+- The samples confirm a few things the parser will need to handle:
+  - #RTRANS is followed by a duplicate #TRANS, as I suspected.
+  - Fortnox also writes #BTRANS, #PSALDO, #DIM and #FNR.
+  - There is no #KSUMMA, so the checksum check is only possible when a file has one.
+```
+
+* Claude asked.
+
+```sh
+Decision for you: CP437 maps every byte to a character, so decoding never fails and there is no failure count to abort on. How should cratchit decide that a file is really in another encoding? Two options:
+- abort when the file is valid UTF-8 with multi-byte characters;
+- abort when CP437 decoding gives box-drawing or graphics characters, which don't belong in bookkeeping text.
+```
+
+
+
 ## 20261021
 
 Now it is time to introduce the scaffolding for character set encoding and decoding.

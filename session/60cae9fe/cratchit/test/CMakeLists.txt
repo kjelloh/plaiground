@@ -12,6 +12,7 @@ add_executable(cratchit_tests
   test_path_value.cpp
   test_project.cpp
   test_repl.cpp
+  test_sie_lexer.cpp
   test_terminal_encoding.cpp
   test_utf8.cpp
   test_version.cpp
