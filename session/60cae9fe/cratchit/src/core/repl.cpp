@@ -9,6 +9,7 @@
 #include <format>
 #include <print>
 #include <string>
+#include <utility>
 
 namespace cratchit {
 
@@ -50,6 +51,11 @@ std::string echo_of(charset::unicode::CodePoint key) {
     result += static_cast<char>(byte);
   }
   return result;
+}
+
+// How a file written for the books is reported
+std::string_view change_word(books::Written const& written) {
+  return written.removed ? "Removed" : written.created ? "Initiated" : "Updated";
 }
 
 } // namespace
@@ -103,6 +109,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_readings(out);
       } else if (mode_ == Mode::YearMenu) {
         show_year_menu(out);
+      } else if (mode_ == Mode::Waiting) {
+        show_waiting(out);
       }
     }
     return Step::Continue;
@@ -138,6 +146,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     return Step::Continue;
   case Mode::ConfirmSave:
     on_confirm_save_key(key, out);
+    return Step::Continue;
+  case Mode::ConfirmDelete:
+    on_confirm_delete_key(key, out);
     return Step::Continue;
   default:
     break;
@@ -220,6 +231,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::Year:
     on_year_key(key, out);
     break;
+  case Mode::Waiting:
+    on_waiting_key(key, out);
+    break;
   default:
     break;
   }
@@ -262,6 +276,8 @@ void Repl::show_keys(std::ostream& out) const {
   } else {
     auto const* year = books_.year_starting(open_year_);
     std::println(out, "  e  Enter a voucher");
+    std::println(out, "  n  Note an event to post later");
+    std::println(out, "  w  Waiting events ({})", year ? year->waiting.size() : 0);
     std::println(out, "  r  Reports of this year");
     if (year && year->closed) {
       std::println(out, "  o  Open the year for new vouchers");
@@ -332,6 +348,10 @@ std::string Repl::prompt() const {
     return "series> ";
   case Mode::ConfirmSave:
     return std::format("Save as {} {}? (y/n) ", draft_->series, number_);
+  case Mode::Waiting:
+    return deleting_ ? "delete?> " : "waiting?> ";
+  case Mode::ConfirmDelete:
+    return "Delete it? (y/n) ";
   default:
     return "cratchit> ";
   }
@@ -433,7 +453,7 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
   }
   if (purpose_ == Purpose::Voucher) {
     if (result == PathEditor::Result::Cancelled) {
-      mode_ = Mode::Project;
+      mode_ = Mode::Year;
       return;
     }
     on_voucher_line(out);
@@ -939,8 +959,7 @@ void Repl::import(std::ostream& out) {
     return;
   }
   for (auto const& written : saved->written) {
-    std::println(out, "{} {} in {}", written.created ? "Initiated" : "Updated", written.file.generic_string(),
-                 project_->folder.string());
+    std::println(out, "{} {} in {}", change_word(written), written.file.generic_string(), project_->folder.string());
     if (written.created) {
       LOG_BUSINESS("Initiated {} in {}", written.file.generic_string(), project_->folder.string());
     }
@@ -1187,7 +1206,11 @@ void Repl::on_year_key(charset::unicode::CodePoint key, std::ostream& out) {
   } else if (key == U'l') {
     open_log(out);
   } else if (key == U'e') {
-    start_entry(out);
+    start_entry(false, out);
+  } else if (key == U'n') {
+    start_entry(true, out);
+  } else if (key == U'w') {
+    open_waiting(out);
   } else if (key == U'r') {
     if (auto const index = read_open_year(out)) {
       year_ = *index;
@@ -1212,15 +1235,9 @@ void Repl::set_closed(bool closed, std::ostream& out) {
   }
   auto& year = books_.years[*index];
   year.closed = closed;
-  auto const written = books::write_books(project_->folder, books_);
-  if (!written) {
-    std::println(out, "Error: {}", written.error());
+  if (!write_books(out)) {
     year.closed = !closed;
     return;
-  }
-  for (auto const& file : *written) {
-    std::println(out, "{} {} in {}", file.created ? "Initiated" : "Updated", file.file.generic_string(),
-                 project_->folder.string());
   }
   std::println(out, "Fiscal year {} - {} is now {} for new vouchers.", format_iso_date(year.start),
                format_iso_date(year.end), closed ? "closed" : "open");
@@ -1228,7 +1245,8 @@ void Repl::set_closed(bool closed, std::ostream& out) {
                format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid);
 }
 
-void Repl::start_entry(std::ostream& out) {
+// The voucher line of a new voucher, or of an event to note when noting
+void Repl::start_entry(bool noting, std::ostream& out) {
   auto const index = read_open_year(out);
   if (!index) {
     return;
@@ -1240,10 +1258,13 @@ void Repl::start_entry(std::ostream& out) {
     return;
   }
   draft_.reset();
+  noting_ = noting;
+  from_waiting_.reset();
   purpose_ = Purpose::Voucher;
-  editor_.start("", PathEditor::Kind::Voucher);
+  editor_.start("", noting ? PathEditor::Kind::Event : PathEditor::Kind::Voucher);
   mode_ = Mode::Typing;
-  std::println(out, "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 2026-10-22.");
+  std::println(out, "Type the heading, amount and date of the {}, e.g. Telia faktura oktober 1118,00 2026-10-22.",
+               noting ? "event to post later" : "voucher");
   std::println(out, "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.");
   out << editor_.prompt();
 }
@@ -1310,7 +1331,9 @@ void Repl::show_event(books::Event const& event, std::size_t year, std::ostream&
 }
 
 void Repl::on_confirm_event_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U'y') {
+  if (key == U'y' && noting_) {
+    note_event(out);
+  } else if (key == U'y') {
     guess_ = books::guess_series(books_, draft_->event.heading);
     mode_ = Mode::Series;
     show_series(out);
@@ -1325,7 +1348,7 @@ void Repl::on_confirm_event_key(charset::unicode::CodePoint key, std::ostream& o
 void Repl::show_series(std::ostream& out) {
   if (guess_.like) {
     std::println(out, "Series (Enter = {}, as {} {} {} \"{}\"):", guess_.series, guess_.like->series, guess_.like->number,
-                 format_iso_date(guess_.like->date), guess_.like->text);
+                 format_iso_date(guess_.like->event.date), guess_.like->event.heading);
   } else {
     std::println(out, "Series (Enter = {}):", guess_.series);
   }
@@ -1337,6 +1360,13 @@ void Repl::show_series(std::ostream& out) {
 }
 
 void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-' && from_waiting_) {
+    draft_.reset();
+    from_waiting_.reset();
+    mode_ = Mode::Waiting;
+    show_waiting(out);
+    return;
+  }
   if (key == U'-') {
     purpose_ = Purpose::Voucher;
     mode_ = Mode::Typing;
@@ -1374,7 +1404,7 @@ void Repl::start_rows(std::ostream& out) {
 }
 
 void Repl::on_row(PathEditor::Result result, std::ostream& out) {
-  auto& rows = draft_->rows;
+  auto& rows = draft_->postings;
   auto const text = trimmed(editor_.text());
   if (result == PathEditor::Result::Cancelled || text.empty()) {
     if (draft_->is_balanced()) {
@@ -1396,8 +1426,9 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
   }
   if (text == "-") {
     if (rows.empty()) {
-      std::println(out, "Dropped the voucher. Nothing is saved.");
+      std::println(out, "Dropped the voucher. Nothing is saved.{}", from_waiting_ ? " The event is still waiting." : "");
       draft_.reset();
+      from_waiting_.reset();
       mode_ = Mode::Year;
       return;
     }
@@ -1427,16 +1458,16 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
     start_rows(out);
     return;
   }
-  books::Transaction transaction;
-  transaction.account = row->account;
-  transaction.amount = amount;
-  rows.push_back(std::move(transaction));
+  books::Posting posting;
+  posting.account = row->account;
+  posting.amount = amount;
+  rows.push_back(std::move(posting));
   show_row(rows.back(), out);
   show_remaining(out);
   start_rows(out);
 }
 
-void Repl::show_row(books::Transaction const& row, std::ostream& out) const {
+void Repl::show_row(books::Posting const& row, std::ostream& out) const {
   auto const* account = books_.account(row.account);
   std::println(out, "  {:<6} {:>12}  {}", row.account, format_amount(row.amount), account ? account->name : "");
 }
@@ -1476,24 +1507,191 @@ void Repl::save_voucher(std::ostream& out) {
   mode_ = Mode::Year;
   auto const draft = std::move(*draft_);
   draft_.reset();
+  auto const from_waiting = std::exchange(from_waiting_, std::nullopt);
   auto& year = books_.years[draft.year];
-  year.vouchers.push_back(draft.voucher(number_, parse_iso_date(places_.today).value_or(draft.event.date)));
-  auto const written = books::write_books(project_->folder, books_);
-  if (!written) {
-    std::println(out, "Error: {}", written.error());
-    year.vouchers.pop_back();
-    return;
+  std::optional<books::WaitingEvent> waited;
+  if (from_waiting) {
+    waited = year.waiting[*from_waiting];
+    year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(*from_waiting));
   }
-  for (auto const& file : *written) {
-    std::println(out, "{} {} in {}", file.created ? "Initiated" : "Updated", file.file.generic_string(),
-                 project_->folder.string());
+  year.vouchers.push_back(draft.voucher(number_, parse_iso_date(places_.today).value_or(draft.event.date)));
+  if (!write_books(out)) {
+    year.vouchers.pop_back();
+    if (waited) {
+      year.waiting.insert(year.waiting.begin() + static_cast<std::ptrdiff_t>(*from_waiting), *waited);
+    }
+    return;
   }
   std::println(out, "Saved voucher {} {} into fiscal year {} - {}.", draft.series, number_, format_iso_date(year.start),
                format_iso_date(year.end));
-  LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}) into project {} ({}), fiscal year {} - {}",
-               draft.series, number_, format_iso_date(draft.event.date), draft.event.heading, draft.rows.size(),
-               format_amount(draft.debit()), project_->name, project_->uuid, format_iso_date(year.start),
-               format_iso_date(year.end));
+  if (waited) {
+    std::println(out, "The event is no longer waiting ({} still waiting).", year.waiting.size());
+  }
+  LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}){} into project {} ({}), fiscal year {} - {}",
+               draft.series, number_, format_iso_date(draft.event.date), draft.event.heading, draft.postings.size(),
+               format_amount(books::debit(draft.postings)), waited ? " from a waiting event" : "", project_->name,
+               project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
+}
+
+bool Repl::write_books(std::ostream& out) {
+  auto const written = books::write_books(project_->folder, books_);
+  if (!written) {
+    std::println(out, "Error: {}", written.error());
+    return false;
+  }
+  for (auto const& file : *written) {
+    std::println(out, "{} {} in {}", change_word(file), file.file.generic_string(), project_->folder.string());
+  }
+  return true;
+}
+
+// The event typed, noted in its year's waiting events
+void Repl::note_event(std::ostream& out) {
+  mode_ = Mode::Year;
+  auto const draft = std::move(*draft_);
+  draft_.reset();
+  auto& year = books_.years[draft.year];
+  books::Event const event{draft.event.heading, draft.target(), draft.event.date};
+  year.waiting.push_back({event, parse_iso_date(places_.today).value_or(event.date)});
+  if (!write_books(out)) {
+    year.waiting.pop_back();
+    return;
+  }
+  std::println(out, "Noted: {} {} {} ({} waiting). Press w to post it.", format_iso_date(event.date), event.heading,
+               format_amount(event.amount), year.waiting.size());
+  LOG_BUSINESS("Noted waiting event {} \"{}\" {} in project {} ({}), fiscal year {} - {}", format_iso_date(event.date),
+               event.heading, format_amount(event.amount), project_->name, project_->uuid,
+               format_iso_date(year.start), format_iso_date(year.end));
+}
+
+void Repl::open_waiting(std::ostream& out) {
+  auto const index = read_open_year(out);
+  if (!index) {
+    return;
+  }
+  auto const& year = books_.years[*index];
+  if (year.waiting.empty()) {
+    std::println(out, "No events are waiting in fiscal year {} - {}. Press n to note one.", format_iso_date(year.start),
+                 format_iso_date(year.end));
+    return;
+  }
+  first_waiting_ = 0;
+  deleting_ = false;
+  mode_ = Mode::Waiting;
+  show_waiting(out);
+}
+
+// Numbered from 1 in the order noted; over 9, keys 1-8 with 0 up and 9 down
+void Repl::show_waiting(std::ostream& out) {
+  auto const& year = *books_.year_starting(open_year_);
+  auto const n = year.waiting.size();
+  auto const first = n <= max_keys ? 0 : first_waiting_;
+  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
+  std::println(out, "Waiting events in fiscal year {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
+  if (first > 0) {
+    std::println(out, "  0  ...up");
+  }
+  for (auto i = first; i < last; ++i) {
+    auto const& event = year.waiting[i].event;
+    std::println(out, "  {}  {}  {:>12}  {}", i - first + 1, format_iso_date(event.date), format_amount(event.amount),
+                 event.heading);
+  }
+  if (last < n) {
+    std::println(out, "  9  ...down");
+  }
+  std::println(out, "");
+  waiting_hint(out);
+}
+
+void Repl::waiting_hint(std::ostream& out) const {
+  if (deleting_) {
+    std::println(out, "Press the number of the event to delete, - not to delete.");
+  } else {
+    std::println(out, "Press a number to post it, d to delete one, - to go back, h for help, q to quit.");
+  }
+}
+
+void Repl::on_waiting_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const& year = *books_.year_starting(open_year_);
+  auto const n = year.waiting.size();
+  if (key == U'-' && deleting_) {
+    deleting_ = false;
+    waiting_hint(out);
+  } else if (key == U'-') {
+    mode_ = Mode::Year;
+  } else if (key == U'd' && !deleting_) {
+    deleting_ = true;
+    waiting_hint(out);
+  } else if (n > max_keys && key == U'0' && first_waiting_ > 0) {
+    first_waiting_ -= range_size;
+    show_waiting(out);
+  } else if (n > max_keys && key == U'9' && first_waiting_ + range_size < n) {
+    first_waiting_ += range_size;
+    show_waiting(out);
+  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
+             (n > max_keys ? first_waiting_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
+    auto const index = (n > max_keys ? first_waiting_ : 0) + static_cast<std::size_t>(key - U'1');
+    if (deleting_) {
+      auto const& event = year.waiting[index].event;
+      std::println(out, "  {}  {:>12}  {}", format_iso_date(event.date), format_amount(event.amount), event.heading);
+      to_delete_ = index;
+      mode_ = Mode::ConfirmDelete;
+    } else {
+      post_waiting(index, out);
+    }
+  } else {
+    waiting_hint(out);
+  }
+}
+
+// Enters a voucher for a waiting event: its series, then its rows
+void Repl::post_waiting(std::size_t index, std::ostream& out) {
+  auto const year_index = static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data());
+  auto const& year = books_.years[year_index];
+  if (year.closed) {
+    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press - and then o to open it.",
+                 format_iso_date(year.start), format_iso_date(year.end));
+    return;
+  }
+  noting_ = false;
+  from_waiting_ = index;
+  draft_ = books::Draft{year.waiting[index].event, year_index, {}, {}};
+  guess_ = books::guess_series(books_, draft_->event.heading);
+  mode_ = Mode::Series;
+  show_series(out);
+}
+
+void Repl::on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
+    auto& year = books_.years[static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data())];
+    auto const deleted = year.waiting[to_delete_];
+    year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(to_delete_));
+    if (!write_books(out)) {
+      year.waiting.insert(year.waiting.begin() + static_cast<std::ptrdiff_t>(to_delete_), deleted);
+      mode_ = Mode::Waiting;
+      return;
+    }
+    std::println(out, "Deleted the waiting event {} \"{}\" {}.", format_iso_date(deleted.event.date),
+                 deleted.event.heading, format_amount(deleted.event.amount));
+    LOG_BUSINESS("Deleted waiting event {} \"{}\" {} from project {} ({}), fiscal year {} - {}",
+                 format_iso_date(deleted.event.date), deleted.event.heading, format_amount(deleted.event.amount),
+                 project_->name, project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
+    deleting_ = false;
+    if (year.waiting.empty()) {
+      std::println(out, "No events are waiting now.");
+      mode_ = Mode::Year;
+      return;
+    }
+    first_waiting_ = std::min(first_waiting_, (year.waiting.size() - 1) / range_size * range_size);
+    mode_ = Mode::Waiting;
+    show_waiting(out);
+  } else if (key == U'n' || key == U'-') {
+    deleting_ = false;
+    mode_ = Mode::Waiting;
+    show_waiting(out);
+  } else {
+    std::println(out, "Press y to delete the event, n not to.");
+  }
 }
 
 void run_repl(Repl& repl, KeySource const& next_key, std::ostream& out) {

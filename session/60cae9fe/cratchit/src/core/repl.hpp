@@ -37,7 +37,7 @@ struct WorkspacePlaces {
 // viewing the log, the workspace menu, choosing a workspace, in the workspace,
 // the project menu, creating or adding a project, in a project, importing an
 // SIE file, choosing and reading reports, choosing a fiscal year, in a fiscal
-// year, or entering a voucher
+// year, entering a voucher, noting an event, or the waiting events
 class Repl {
 public:
   // page_lines is the number of help and log lines per page; 0 shows everything at once.
@@ -83,6 +83,8 @@ private:
     ConfirmEvent,
     Series,
     ConfirmSave,
+    Waiting,
+    ConfirmDelete,
   };
   // What the text typed in the editor is for
   enum class Purpose { Workspace, ProjectName, ProjectFolder, ExistingProject, SieFile, Account, Voucher, Row };
@@ -117,6 +119,11 @@ private:
   std::optional<books::Draft> draft_;   // the voucher being entered, in a year of books_
   books::Guess guess_;                  // the series offered by default
   std::string number_;                  // the number the voucher is saved as
+  bool noting_ = false;                 // the event line is noted to be posted later, not posted now
+  std::optional<std::size_t> from_waiting_; // the waiting event being posted, an index into its year's waiting
+  std::size_t first_waiting_ = 0;       // the first waiting event shown when they are more than keys 1-9
+  bool deleting_ = false;               // a number at the waiting list deletes the event instead of posting it
+  std::size_t to_delete_ = 0;           // the waiting event waiting for y/n
 
   bool is_prompt() const; // at cratchit>, workspace> or project>
   void show_keys(std::ostream& out) const;
@@ -165,7 +172,7 @@ private:
   std::optional<std::size_t> read_open_year(std::ostream& out);
   void on_year_key(charset::unicode::CodePoint key, std::ostream& out);
   void set_closed(bool closed, std::ostream& out);
-  void start_entry(std::ostream& out);
+  void start_entry(bool noting, std::ostream& out);
   void on_voucher_line(std::ostream& out);
   void show_readings(std::ostream& out);
   void on_choose_amount_key(charset::unicode::CodePoint key, std::ostream& out);
@@ -175,11 +182,19 @@ private:
   void on_series_key(charset::unicode::CodePoint key, std::ostream& out);
   void start_rows(std::ostream& out);
   void on_row(PathEditor::Result result, std::ostream& out);
-  void show_row(books::Transaction const& row, std::ostream& out) const;
+  void show_row(books::Posting const& row, std::ostream& out) const;
   void show_remaining(std::ostream& out) const;
   void show_accounts(std::string const& query, std::ostream& out) const;
   void on_confirm_save_key(charset::unicode::CodePoint key, std::ostream& out);
   void save_voucher(std::ostream& out);
+  void note_event(std::ostream& out);
+  void open_waiting(std::ostream& out);
+  void show_waiting(std::ostream& out);
+  void waiting_hint(std::ostream& out) const;
+  void on_waiting_key(charset::unicode::CodePoint key, std::ostream& out);
+  void post_waiting(std::size_t index, std::ostream& out);
+  void on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& out);
+  bool write_books(std::ostream& out); // writes books_ and shows the files written; false (error shown) on failure
 };
 
 // Supplies the next key press as a Unicode code point, or nothing at end of input

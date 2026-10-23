@@ -20,36 +20,38 @@ constexpr std::string_view dimensions_file = "dimensions.csv";
 constexpr std::string_view objects_file = "objects.csv";
 constexpr std::string_view opening_file = "opening.csv";
 constexpr std::string_view vouchers_file = "vouchers.csv";
-constexpr std::string_view transactions_file = "transactions.csv";
+constexpr std::string_view postings_file = "transactions.csv";
+constexpr std::string_view events_file = "events.csv";
 
 CsvRow const accounts_header{"account", "name", "type", "sru", "unit"};
 CsvRow const dimensions_header{"dimension", "name", "super"};
 CsvRow const objects_header{"dimension", "object", "name"};
 CsvRow const opening_header{"account", "amount"};
-CsvRow const vouchers_header{"series", "number", "date", "text", "registered", "signature"};
-CsvRow const transactions_header{"series", "number", "kind",     "account",  "objects",
-                                 "amount", "date",   "text",     "quantity", "signature"};
+CsvRow const vouchers_header{"series", "number", "date", "text", "amount", "registered", "signature"};
+CsvRow const events_header{"date", "text", "amount", "noted"};
+CsvRow const postings_header{"series", "number", "kind",     "account",  "objects",
+                             "amount", "date",   "text",     "quantity", "signature"};
 
-std::string_view kind_name(Transaction::Kind kind) {
+std::string_view kind_name(Posting::Kind kind) {
   switch (kind) {
-  case Transaction::Kind::added:
+  case Posting::Kind::added:
     return "added";
-  case Transaction::Kind::removed:
+  case Posting::Kind::removed:
     return "removed";
   default:
     return "normal";
   }
 }
 
-std::optional<Transaction::Kind> kind_from_name(std::string_view name) {
+std::optional<Posting::Kind> kind_from_name(std::string_view name) {
   if (name == "normal") {
-    return Transaction::Kind::normal;
+    return Posting::Kind::normal;
   }
   if (name == "added") {
-    return Transaction::Kind::added;
+    return Posting::Kind::added;
   }
   if (name == "removed") {
-    return Transaction::Kind::removed;
+    return Posting::Kind::removed;
   }
   return std::nullopt;
 }
@@ -173,30 +175,34 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
     if (!date) {
       return std::unexpected(date.error());
     }
-    auto const registered = optional_date_field(vouchers_path, row[4]);
+    auto const amount = amount_field(vouchers_path, row[4]);
+    if (!amount) {
+      return std::unexpected(amount.error());
+    }
+    auto const registered = optional_date_field(vouchers_path, row[5]);
     if (!registered) {
       return std::unexpected(registered.error());
     }
-    year.vouchers.push_back({row[0], row[1], *date, row[3], *registered, row[5], {}});
+    year.vouchers.push_back({row[0], row[1], {row[3], *amount, *date}, *registered, row[6], {}});
   }
-  auto const transactions_path = year_folder / transactions_file;
-  auto const transactions = read_table(transactions_path, transactions_header);
-  if (!transactions) {
-    return std::unexpected(transactions.error());
+  auto const postings_path = year_folder / postings_file;
+  auto const postings = read_table(postings_path, postings_header);
+  if (!postings) {
+    return std::unexpected(postings.error());
   }
-  for (auto const& row : *transactions) {
+  for (auto const& row : *postings) {
     auto const voucher = std::ranges::find_if(
         year.vouchers, [&](Voucher const& v) { return v.series == row[0] && v.number == row[1]; });
     if (voucher == year.vouchers.end()) {
       return std::unexpected(
-          std::format("{}: voucher {} {} is not in {}", transactions_path.string(), row[0], row[1], vouchers_file));
+          std::format("{}: voucher {} {} is not in {}", postings_path.string(), row[0], row[1], vouchers_file));
     }
     auto const kind = kind_from_name(row[2]);
     auto const objects = parse_objects(row[4]);
-    auto const amount = amount_field(transactions_path, row[5]);
-    auto const date = optional_date_field(transactions_path, row[6]);
+    auto const amount = amount_field(postings_path, row[5]);
+    auto const date = optional_date_field(postings_path, row[6]);
     if (!kind || !objects) {
-      return std::unexpected(std::format("{}: '{}' is not a kind or '{}' not objects", transactions_path.string(),
+      return std::unexpected(std::format("{}: '{}' is not a kind or '{}' not objects", postings_path.string(),
                                          row[2], row[4]));
     }
     if (!amount) {
@@ -205,7 +211,31 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
     if (!date) {
       return std::unexpected(date.error());
     }
-    voucher->transactions.push_back({*kind, row[3], *objects, *amount, *date, row[7], row[8], row[9]});
+    voucher->postings.push_back({*kind, row[3], *objects, *amount, *date, row[7], row[8], row[9]});
+  }
+  auto const events_path = year_folder / events_file;
+  std::error_code ec;
+  if (!fs::exists(events_path, ec)) {
+    return year;
+  }
+  auto const events = read_table(events_path, events_header);
+  if (!events) {
+    return std::unexpected(events.error());
+  }
+  for (auto const& row : *events) {
+    auto const date = date_field(events_path, row[0]);
+    if (!date) {
+      return std::unexpected(date.error());
+    }
+    auto const amount = amount_field(events_path, row[2]);
+    if (!amount) {
+      return std::unexpected(amount.error());
+    }
+    auto const noted = date_field(events_path, row[3]);
+    if (!noted) {
+      return std::unexpected(noted.error());
+    }
+    year.waiting.push_back({{row[1], *amount, *date}, *noted});
   }
   return year;
 }
@@ -236,6 +266,30 @@ bool number_less(std::string const& a, std::string const& b) {
 }
 
 } // namespace
+
+Amount debit(Postings const& postings) {
+  Amount total = 0;
+  for (auto const& posting : postings) {
+    if (posting.kind != Posting::Kind::removed && posting.amount > 0) {
+      total += posting.amount;
+    }
+  }
+  return total;
+}
+
+Amount credit(Postings const& postings) {
+  Amount total = 0;
+  for (auto const& posting : postings) {
+    if (posting.kind != Posting::Kind::removed && posting.amount < 0) {
+      total -= posting.amount;
+    }
+  }
+  return total;
+}
+
+Amount sum(Postings const& postings) {
+  return debit(postings) - credit(postings);
+}
 
 bool FiscalYear::holds(Date date) const {
   return start <= date && date <= end;
@@ -272,9 +326,9 @@ std::vector<YearBalances> balances(Books const& books) {
       balances.opening = year.reported_opening;
     }
     for (auto const& voucher : year.vouchers) {
-      for (auto const& transaction : voucher.transactions) {
-        if (transaction.kind != Transaction::Kind::removed) {
-          balances.change[transaction.account] += transaction.amount;
+      for (auto const& posting : voucher.postings) {
+        if (posting.kind != Posting::Kind::removed) {
+          balances.change[posting.account] += posting.amount;
         }
       }
     }
@@ -370,6 +424,7 @@ std::expected<Books, std::string> read_books(fs::path const& project_folder) {
 std::expected<std::vector<Written>, std::string> write_books(fs::path const& project_folder, Books const& books) {
   auto const folder = books_folder(project_folder);
   std::vector<std::pair<fs::path, std::string>> files;
+  std::vector<fs::path> gone; // files that hold nothing, removed if they exist
 
   PathValues entries{{"chart_type", books.chart_type},
                      {"company_id", books.company_id},
@@ -415,18 +470,28 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
     }
     files.emplace_back(year_folder / opening_file, csv_text(opening_header, rows));
     rows.clear();
-    std::vector<CsvRow> transaction_rows;
+    std::vector<CsvRow> posting_rows;
     for (auto const& voucher : year.vouchers) {
-      rows.push_back({voucher.series, voucher.number, format_iso_date(voucher.date), voucher.text,
-                      optional_date_text(voucher.registered), voucher.signature});
-      for (auto const& t : voucher.transactions) {
-        transaction_rows.push_back({voucher.series, voucher.number, std::string(kind_name(t.kind)), t.account,
+      rows.push_back({voucher.series, voucher.number, format_iso_date(voucher.event.date), voucher.event.heading,
+                      format_amount(voucher.event.amount), optional_date_text(voucher.registered), voucher.signature});
+      for (auto const& t : voucher.postings) {
+        posting_rows.push_back({voucher.series, voucher.number, std::string(kind_name(t.kind)), t.account,
                                     format_objects(t.objects), format_amount(t.amount), optional_date_text(t.date),
                                     t.text, t.quantity, t.signature});
       }
     }
     files.emplace_back(year_folder / vouchers_file, csv_text(vouchers_header, rows));
-    files.emplace_back(year_folder / transactions_file, csv_text(transactions_header, transaction_rows));
+    files.emplace_back(year_folder / postings_file, csv_text(postings_header, posting_rows));
+    rows.clear();
+    for (auto const& waiting : year.waiting) {
+      rows.push_back({format_iso_date(waiting.event.date), waiting.event.heading, format_amount(waiting.event.amount),
+                      format_iso_date(waiting.noted)});
+    }
+    if (rows.empty()) {
+      gone.push_back(year_folder / events_file);
+    } else {
+      files.emplace_back(year_folder / events_file, csv_text(events_header, rows));
+    }
   }
 
   std::vector<Written> written;
@@ -437,6 +502,16 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
     }
     if (*result) {
       written.push_back({fs::path(".cratchit") / "books" / file, **result});
+    }
+  }
+  // Removed after the writes, so a failed write keeps what the file held
+  for (auto const& file : gone) {
+    std::error_code ec;
+    if (fs::exists(folder / file, ec)) {
+      if (!fs::remove(folder / file, ec)) {
+        return std::unexpected(std::format("Cannot remove {}", (folder / file).string()));
+      }
+      written.push_back({fs::path(".cratchit") / "books" / file, false, true});
     }
   }
   return written;

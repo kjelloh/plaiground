@@ -197,9 +197,34 @@ import into a closed year is not stopped. Manual: new "Fiscal years", files, key
 341 tests pass, no warnings; checked with all 11 Fortnox samples via piped input (two pages, close/open, restart).
 In review.
 
+Task 29: Financial event = Event + Postings (refactor, same UI). `books::Event` (heading, amount, date) moved from
+entry.hpp to books.hpp. `books::Transaction` renamed `Posting`; `Postings` = `std::vector<Posting>` with `debit`,
+`credit`, `sum` (removed postings do not count). `Voucher` = series, number, `Event event`, registered, signature,
+`Postings postings` (was date, text, transactions). A voucher always carries its amount, without sign: entered =
+`Draft::target()`, imported = debit total (`voucher_of`). vouchers.csv gets an `amount` column
+(`series,number,date,text,amount,registered,signature`); old books without it fail to read (re-import needed).
+transactions.csv keeps its name. `Draft` holds `postings` (was `rows`); its debit/credit moved to the free functions.
+Import `difference` also names a differing amount. Manual: files table. 343 tests pass, no warnings (Debug, trace
+DEBUG); checked in a scratch folder: Fortnox sample imports, re-import gives "Nothing to import", voucher report. In review.
+
+Task 30: Waiting events (events waiting for postings). `books::WaitingEvent` (Event, noted date);
+`FiscalYear::waiting` in the order noted. Stored in `<start>/events.csv` (`date,text,amount,noted`), which exists only
+while the year has waiting events: `write_books` removes it after the other writes (`Written::removed`, shown as
+`Removed ...`). Year prompt: `n` notes an event (`event>` line, same parsing, refusals and `amount?>` as `e`, then
+`OK? (y/n)`; amount kept without sign); `w` lists them (`waiting?>`, 1-9, 0/9 scroll over 9): a number posts it
+(straight to `series>`, `-` there back to the list; `-` at `post>` with no rows drops the voucher, the event stays);
+saving the voucher takes the event off the list. `d` + number + `Delete it? (y/n)` deletes (`delete?>`). Closed year:
+`n` and posting refused, listing and deleting allowed. Key list shows `w  Waiting events (<n>)`. Logged (business):
+noted, deleted, saved voucher "from a waiting event". Fixed in passing: an empty `voucher>` line went back to
+`project>` instead of the year. Manual: new "Waiting events", files, year keys, prompt, log kinds. 347 tests pass, no
+warnings; checked in the app on a Fortnox sample (note two, post one as D 27, delete the other, file removed). In review.
+
 ## Next
 
-Task 29 (agreed plan): template vouchers. Picking an earlier voucher copies its accounts and scales its amounts to the
+Task 31 (agreed 2026-10-23): postings from account statements waiting for an event (file layout and statement format
+to agree first). Later: matching waiting events with statement postings.
+
+Template vouchers (agreed plan, was task 29). Picking an earlier voucher copies its accounts and scales its amounts to the
 new amount. Later: VAT helpers, source document reference, correction help, creating a new fiscal year, sync with
 Fortnox. Other possible: SIE export (and import->export round trip), BAS chart check, rename/remove projects.
 
@@ -297,8 +322,14 @@ Fortnox. Other possible: SIE export (and import->export round trip), BAS chart c
   vouchers only in an open year. No "new year" operation yet: years come from SIE import. The year prompt is the
   fiscal year itself, e.g. `2026/27>`.
 
+- 2026-10-23: A financial event has two parts: the Event (heading, amount, date: how it enters the books) and its
+  Postings (amounts to BAS accounts). A voucher always carries its amount, without sign for now (negative amounts are
+  new behaviour if needed). `Transaction` is called `Posting` in cratchit (SIE's #TRANS is not a transaction).
+  Events waiting for postings and postings waiting for an event are kept inside the books, on their fiscal year.
+
 ## Open questions
 
+- Rename `transactions.csv` to `postings.csv` to match the code?
 - Should an SIE import into a closed fiscal year be refused (it is allowed now)?
 - Should differing account data (name, SRU) from an older year's file be noted even when not taken?
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).

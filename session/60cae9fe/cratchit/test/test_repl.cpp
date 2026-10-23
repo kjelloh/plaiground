@@ -9,6 +9,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -860,10 +861,119 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
   auto const& saved = books->years.front().vouchers.back();
   EXPECT_EQ(saved.series, "A");
   EXPECT_EQ(saved.number, "3");
-  EXPECT_EQ(saved.text, "Bank cost march");
+  EXPECT_EQ(saved.event.heading, "Bank cost march");
+  EXPECT_EQ(saved.event.amount, 3500);
   EXPECT_EQ(cratchit::format_iso_date(*saved.registered), "2026-10-20");
-  ASSERT_EQ(saved.transactions.size(), 2u);
-  EXPECT_EQ(saved.transactions[1].amount, -3500);
+  ASSERT_EQ(saved.postings.size(), 2u);
+  EXPECT_EQ(saved.postings[1].amount, -3500);
+}
+
+TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const folder = root / "start" / "Test";
+  auto const events = folder / ".cratchit" / "books" / "2025-01-01" / "events.csv";
+  EXPECT_FALSE(fs::exists(events));
+  auto output = run("nBank cost march -35 2025-03-31\ny");
+  EXPECT_NE(output.find("2025> n\n"
+                        "Type the heading, amount and date of the event to post later, e.g. Telia faktura oktober "
+                        "1118,00 2026-10-22.\n"
+                        "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
+                        "event> Bank cost march -35 2025-03-31\n"
+                        "  Heading  Bank cost march\n"
+                        "  Amount   -35.00\n"
+                        "  Date     2025-03-31   (fiscal year 2025-01-01 - 2025-12-31)\n"
+                        "OK? (y/n) y\n"
+                        "Initiated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
+                        "Noted: 2025-03-31 Bank cost march 35.00 (1 waiting). Press w to post it.\n"
+                        "2025> \n"),
+            std::string::npos)
+      << output;
+  std::ifstream in(events);
+  std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+  EXPECT_EQ(text, "date,text,amount,noted\n2025-03-31,Bank cost march,35.00,2026-10-20\n");
+  in.close();
+
+  output = run("w1\n6570\n1930\n\ny");
+  EXPECT_NE(output.find("2025> w\n"
+                        "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
+                        "  1  2025-03-31         35.00  Bank cost march\n"
+                        "\n"
+                        "Press a number to post it, d to delete one, - to go back, h for help, q to quit.\n"
+                        "waiting?> 1\n"
+                        "Series (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Save as A 3? (y/n) y\n"
+                        "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
+                        "Updated .cratchit/books/2025-01-01/transactions.csv in " + folder.string() + "\n"
+                        "Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
+                        "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"
+                        "The event is no longer waiting (0 still waiting).\n"
+                        "2025> \n"),
+            std::string::npos)
+      << output;
+  EXPECT_FALSE(fs::exists(events));
+  auto const books = cratchit::books::read_books(folder);
+  ASSERT_TRUE(books.has_value()) << books.error();
+  EXPECT_TRUE(books->years.front().waiting.empty());
+  EXPECT_EQ(books->years.front().vouchers.back().event,
+            (cratchit::books::Event{"Bank cost march", 3500, cratchit::parse_iso_date("2025-03-31").value()}));
+}
+
+TEST_F(WorkspaceRepl, WaitingEventsStayUntilPostedOrDeleted) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const folder = root / "start" / "Test";
+  EXPECT_TRUE(run("w").ends_with(
+      "2025> w\nNo events are waiting in fiscal year 2025-01-01 - 2025-12-31. Press n to note one.\n2025> \n"));
+  run("nTelia 1118 2025-04-01\ny");
+  run("nKvitto 249 2025-04-02\ny");
+  // - at series> goes back to the list; - at post> with no rows drops the voucher, not the event
+  auto output = run("w2-1A-\n");
+  EXPECT_NE(output.find("waiting?> 2\nSeries"), std::string::npos) << output;
+  EXPECT_NE(output.find("series> -\nWaiting events in fiscal year 2025-01-01 - 2025-12-31:\n"), std::string::npos)
+      << output;
+  EXPECT_NE(output.find("post> -\nDropped the voucher. Nothing is saved. The event is still waiting.\n2025> \n"),
+            std::string::npos)
+      << output;
+  output = run("wd-d2n");
+  EXPECT_NE(output.find("waiting?> d\n"
+                        "Press the number of the event to delete, - not to delete.\n"
+                        "delete?> -\n"
+                        "Press a number to post it, d to delete one, - to go back, h for help, q to quit.\n"
+                        "waiting?> d\n"
+                        "Press the number of the event to delete, - not to delete.\n"
+                        "delete?> 2\n"
+                        "  2025-04-02        249.00  Kvitto\n"
+                        "Delete it? (y/n) n\n"
+                        "Waiting events in"),
+            std::string::npos)
+      << output;
+  output = run("wd1y");
+  EXPECT_NE(output.find("Delete it? (y/n) y\n"
+                        "Updated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
+                        "Deleted the waiting event 2025-04-01 \"Telia\" 1118.00.\n"
+                        "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
+                        "  1  2025-04-02        249.00  Kvitto\n"),
+            std::string::npos)
+      << output;
+  output = run("wd1y");
+  EXPECT_NE(output.find("Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
+                        "Deleted the waiting event 2025-04-02 \"Kvitto\" 249.00.\n"
+                        "No events are waiting now.\n"
+                        "2025> \n"),
+            std::string::npos)
+      << output;
+}
+
+TEST_F(WorkspaceRepl, EmptyVoucherLineGoesBackToTheYear) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  EXPECT_TRUE(run("e\n").ends_with("voucher> \n2025> \n")) << run("e\n");
 }
 
 TEST_F(WorkspaceRepl, VoucherLineIsRefusedAndKeptForEditing) {
@@ -966,6 +1076,8 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
                         "2025> \n"
                         "Keys at 2025>:\n"
                         "  e  Enter a voucher\n"
+                        "  n  Note an event to post later\n"
+                        "  w  Waiting events (0)\n"
                         "  r  Reports of this year\n"
                         "  c  Close the year for new vouchers\n"
                         "  l  Show the log\n"

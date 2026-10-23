@@ -81,6 +81,8 @@ std::string PathEditor::prompt() const {
     return "account> " + text_;
   case Kind::Voucher:
     return "voucher> " + text_;
+  case Kind::Event:
+    return "event> " + text_;
   case Kind::Row:
     return "post> " + text_;
   default:

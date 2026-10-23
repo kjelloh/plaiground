@@ -2,6 +2,31 @@
 
 ```#60cae9fe```
 
+## 20261023
+
+Today I decided to ask Claude to refactor the current design so we can treat a 'voucher' as having two parts.
+
+* One part is the Heading, Amount and Date (The overall thing about a financial event)
+* The other part is the aggregate of postings to BAS accounts for this event.
+
+Claude came back with a design and refactoring tasks that I found reasonable. So I accepted and let Claude do its thing.
+
+* The term 'Transaction' (inspired by SIE entry #TRANS) is now refactored to 'Posting' in code
+    * This makes sense as it is in fact not a transaction (not a from-to thing) so 'posting' is better.
+* The term Voucher remains the complete registered financial event in the books (Matches SIE #VER)
+    * So I think we will end up with Voucher being an Event + Postings?
+    * YES. Claude seems to confirm this.
+
+```text
+Step 1 is done: vouchers are now built from an Event and its Postings, and the UI works as before. The build has no warnings and all 343 tests pass. I also ran it in a scratch folder: a Fortnox sample imports, importing it again gives "Nothing to import", and the voucher report looks as before.
+``` 
+
+I went ahead and made Claude implement the 'enter events' UI also.
+
+```text
+Step 2 is done: you can now note events like invoices and receipts at the year prompt with n, and post or delete them later with w. The build has no warnings and all 347 tests pass. I also ran it in the app on a copy of your Fortnox sample: I noted two events, posted one as voucher D 27, and deleted the other.
+```
+
 ## 20261022
 
 I wonder if I still lack trust in the vibe coding process? What happens if I just go for it? Still task-by-tak though?

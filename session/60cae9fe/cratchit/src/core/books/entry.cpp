@@ -251,10 +251,10 @@ Guess guess_series(Books const& books, std::string_view heading) {
         continue;
       }
       std::size_t shared = 0;
-      for (auto const& word : words_of(voucher.text)) {
+      for (auto const& word : words_of(voucher.event.heading)) {
         shared += words.contains(word) ? 1 : 0;
       }
-      if (shared > 0 && (shared > best || (shared == best && voucher.date >= guess.like->date))) {
+      if (shared > 0 && (shared > best || (shared == best && voucher.event.date >= guess.like->event.date))) {
         best = shared;
         guess = {voucher.series, &voucher};
       }
@@ -305,47 +305,27 @@ std::vector<Account const*> find_accounts(Books const& books, std::string_view q
 }
 
 Amount Draft::remaining() const {
-  Amount sum = 0;
-  for (auto const& row : rows) {
-    sum += row.amount;
-  }
-  return -sum;
+  return -sum(postings);
 }
 
 Amount Draft::target() const {
   return event.amount < 0 ? -event.amount : event.amount;
 }
 
-Amount Draft::debit() const {
-  Amount sum = 0;
-  for (auto const& row : rows) {
-    sum += row.amount > 0 ? row.amount : 0;
-  }
-  return sum;
-}
-
-Amount Draft::credit() const {
-  Amount sum = 0;
-  for (auto const& row : rows) {
-    sum += row.amount < 0 ? -row.amount : 0;
-  }
-  return sum;
-}
-
 bool Draft::is_balanced() const {
-  return rows.size() >= 2 && debit() == target() && credit() == target();
+  return postings.size() >= 2 && debit(postings) == target() && credit(postings) == target();
 }
 
 std::string Draft::status() const {
-  if (rows.empty()) {
+  if (postings.empty()) {
     return "No rows.";
   }
   if (is_balanced()) {
     return "Balanced. Enter saves.";
   }
-  auto const totals = std::format("ebit {}, credit {}, amount {}", format_amount(debit()), format_amount(credit()),
-                                  format_amount(target()));
-  if (debit() > target() || credit() > target()) {
+  auto const totals = std::format("ebit {}, credit {}, amount {}", format_amount(debit(postings)),
+                                  format_amount(credit(postings)), format_amount(target()));
+  if (debit(postings) > target() || credit(postings) > target()) {
     return "D" + totals + ": more than the amount.";
   }
   if (remaining() != 0) {
@@ -355,7 +335,7 @@ std::string Draft::status() const {
 }
 
 Voucher Draft::voucher(std::string number, Date registered) const {
-  return {series, std::move(number), event.date, event.heading, registered, {}, rows};
+  return {series, std::move(number), {event.heading, target(), event.date}, registered, {}, postings};
 }
 
 } // namespace cratchit::books

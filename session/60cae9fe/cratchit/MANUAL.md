@@ -150,8 +150,9 @@ The project's books are in `.cratchit/books` in the project folder:
 | `dimensions.csv` | `dimension,name,super` (`super` only for a sub dimension). |
 | `objects.csv` | `dimension,object,name`. |
 | `<start>/opening.csv` | Per fiscal year, in a folder named by its start date: the opening balances the source reported, `account,amount`. |
-| `<start>/vouchers.csv` | The year's vouchers, imported and entered: `series,number,date,text,registered,signature`. A voucher entered in cratchit is registered on the day it is saved. |
-| `<start>/transactions.csv` | Their rows: `series,number,kind,account,objects,amount,date,text,quantity,signature`. |
+| `<start>/vouchers.csv` | The year's vouchers, imported and entered: `series,number,date,text,amount,registered,signature`. The amount is without sign: what the debit rows and the credit rows each add up to. An imported voucher gets its debit total (SIE gives no amount). A voucher entered in cratchit is registered on the day it is saved. |
+| `<start>/transactions.csv` | Their rows (postings): `series,number,kind,account,objects,amount,date,text,quantity,signature`. |
+| `<start>/events.csv` | The year's waiting events, in the order noted: `date,text,amount,noted` (see Waiting events). The amount is without sign; `noted` is the day it was noted. The file exists only while the year has waiting events: cratchit removes it when the last one is posted or deleted (`Removed ...`). |
 
 The `.csv` files are comma separated with a header line. A field holding a
 comma, a quote or a line break is quoted, with quotes doubled. Amounts have a
@@ -478,6 +479,8 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | Key    | What it does                                        |
 |--------|-----------------------------------------------------|
 | e      | Enters a voucher (see Entering a voucher). Only in an open year. |
+| n      | Notes an event to post later (see Waiting events). Only in an open year. |
+| w      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
 | r      | Shows the reports of this year (see Reports). `-` there comes back here. |
 | c      | Closes the year for new vouchers (shown when the year is open). |
 | o      | Opens the year for new vouchers (shown when it is closed). |
@@ -646,6 +649,74 @@ the file with the same series and number but other content is an error, so
 nothing is imported. Keep booking a fiscal year in one program only, cratchit
 or the other, until cratchit can sync them.
 
+### Waiting events
+
+An invoice or a receipt can be noted when it comes, and posted on the accounts
+later. A noted event waits in its fiscal year until you post it or delete it.
+It is not a voucher: it is in no series, has no number and is not in the
+reports.
+
+#### Noting an event
+
+Press `n` at the prompt of an open fiscal year. Type the heading, amount and
+date at `event>` as at `voucher>` (see Entering a voucher): the same rules,
+the same `amount?>` question for an unclear amount, and a date outside the
+year is refused. Press `y` to note it:
+
+```
+2026/27> n
+Type the heading, amount and date of the event to post later, e.g. Telia faktura oktober 1118,00 2026-10-22.
+No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.
+event> Telia faktura oktober 1118 2026-10-20
+  Heading  Telia faktura oktober
+  Amount   1118.00
+  Date     2026-10-20   (fiscal year 2026-05-01 - 2027-04-30)
+OK? (y/n) y
+Initiated .cratchit/books/2026-05-01/events.csv in ...
+Noted: 2026-10-20 Telia faktura oktober 1118.00 (1 waiting). Press w to post it.
+```
+
+The amount is kept without sign, as on a voucher. cratchit saves the event in
+the year's `events.csv` (see The files) and logs it.
+
+#### The waiting list
+
+Press `w` at the year prompt. The prompt is `waiting?>`:
+
+```
+Waiting events in fiscal year 2026-05-01 - 2027-04-30:
+  1  2026-10-20       1118.00  Telia faktura oktober
+  2  2026-10-21        249.00  Kvitto Clas Ohlson
+
+Press a number to post it, d to delete one, - to go back, h for help, q to quit.
+waiting?> 
+```
+
+They are listed in the order noted. With more than nine, keys 1-8 show eight
+at a time, `0` shows the ones before and `9` the ones after. With none,
+`w` says `No events are waiting in fiscal year ... Press n to note one.`
+
+| Key    | What it does |
+|--------|--------------|
+| 1-9    | Posts that event: the series, then the rows, as in Entering a voucher. Only in an open year. |
+| d      | Deletes one: the prompt becomes `delete?>`; press the number of the event, then `y` at `Delete it? (y/n)`. `-` at `delete?>` or `n` deletes nothing. |
+| -      | Goes back to the year prompt. |
+| h      | Opens this manual. |
+| q      | Quits cratchit. |
+
+When you post an event, its heading, amount and date are the voucher line,
+so cratchit goes straight to the series. `-` at `series>` goes back to the
+list. `-` at `post>` with no rows drops the voucher, and the event is still
+waiting. When the voucher is saved, the event leaves the list:
+
+```
+Saved voucher D 5 into fiscal year 2026-05-01 - 2027-04-30.
+The event is no longer waiting (1 still waiting).
+```
+
+Deleting an event removes it from the list for good (it is logged). Neither
+posting nor deleting changes any other waiting event.
+
 ### Importing an SIE file
 
 An SIE file is the books exported from another bookkeeping program, such as
@@ -782,8 +853,8 @@ shown again.
 
 At the prompt, each key acts as soon as you press it. You don't need to press Enter.
 Space and tab are ignored, except while you type a folder path, a name, an
-account number or a voucher line or row (see Typing a folder path, Creating a
-project and Entering a voucher).
+account number, a voucher or event line, or a row (see Typing a folder path,
+Creating a project, Entering a voucher and Waiting events).
 
 At the `cratchit>`, `workspace>`, `project>` and fiscal year (such as
 `2026/27>`) prompts, Enter lists the keys you can press there, for example:
@@ -848,7 +919,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, or saving an entered voucher. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher, or noting or deleting a waiting event. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, or an SIE file in an unknown encoding. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

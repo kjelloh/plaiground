@@ -108,6 +108,14 @@ TEST(Import, IdenticalVouchersAreSkipped) {
   EXPECT_EQ(plan.books.years[0].vouchers, books.years[0].vouchers);
 }
 
+TEST(Import, AnImportedVoucherCarriesItsDebitTotalAsAmount) {
+  auto const books = imported({sie_file(2025, "", "#VER A 1 20250201 \"Sale\" 20250205\n{\n#TRANS 1930 {} 500.00\n"
+                                                  "#TRANS 3010 {} -400.00\n#TRANS 2099 {} -100.00\n}\n")});
+  ASSERT_EQ(books.years.at(0).vouchers.size(), 1u);
+  EXPECT_EQ(books.years[0].vouchers[0].event.heading, "Sale");
+  EXPECT_EQ(books.years[0].vouchers[0].event.amount, 50000);
+}
+
 TEST(Import, NewVouchersOfAKnownYearAreAdded) {
   auto const books = imported({sie_file(2025, "", "#VER A 1 20250201 \"Sale\" 20250205\n{\n#TRANS 1930 {} 500.00\n"
                                                   "#TRANS 3010 {} -500.00\n}\n")});

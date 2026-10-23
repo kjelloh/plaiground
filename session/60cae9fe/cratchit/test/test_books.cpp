@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 using namespace std::chrono;
 using cratchit::books::Books;
 using cratchit::books::FiscalYear;
-using cratchit::books::Transaction;
+using cratchit::books::Posting;
 using cratchit::books::Voucher;
 
 namespace {
@@ -21,9 +21,9 @@ cratchit::Date date(int y, unsigned m, unsigned d) {
 
 Voucher voucher(std::string number, cratchit::Date when, std::string account, cratchit::Amount amount,
                 std::string other = "3010") {
-  return {"A", std::move(number), when, "Text, with \"quotes\"", date(2026, 1, 10), "", {
-      {Transaction::Kind::normal, std::move(account), {}, amount, {}, "", "", ""},
-      {Transaction::Kind::normal, std::move(other), {{"1", "100"}, {"6", "P 1"}}, -amount, when, "rad", "2", ""},
+  return {"A", std::move(number), {"Text, with \"quotes\"", amount < 0 ? -amount : amount, when}, date(2026, 1, 10), "", {
+      {Posting::Kind::normal, std::move(account), {}, amount, {}, "", "", ""},
+      {Posting::Kind::normal, std::move(other), {{"1", "100"}, {"6", "P 1"}}, -amount, when, "rad", "2", ""},
   }};
 }
 
@@ -39,7 +39,7 @@ Books sample() {
   FiscalYear y2025{date(2025, 1, 1), date(2025, 12, 31), {{"1930", 100000}, {"2099", -100000}}, {}};
   y2025.vouchers.push_back(voucher("1", date(2025, 2, 1), "1930", 50000));
   y2025.vouchers.push_back(voucher("2", date(2025, 3, 1), "6570", 1000, "1930"));
-  y2025.vouchers.back().transactions.push_back({Transaction::Kind::removed, "6110", {}, 999, {}, "", "", "Kim"});
+  y2025.vouchers.back().postings.push_back({Posting::Kind::removed, "6110", {}, 999, {}, "", "", "Kim"});
   FiscalYear y2026{date(2026, 1, 1), date(2026, 12, 31), {{"1930", 1}}, {}};
   y2026.vouchers.push_back(voucher("1", date(2026, 2, 1), "1930", 700));
   books.years = {y2025, y2026};
@@ -67,6 +67,17 @@ protected:
 };
 
 } // namespace
+
+TEST(Postings, SumsDoNotCountRemovedPostings) {
+  cratchit::books::Postings const postings{
+      {.account = "6570", .amount = 1000},
+      {.account = "1930", .amount = -1000},
+      {.kind = Posting::Kind::removed, .account = "6110", .amount = 999},
+  };
+  EXPECT_EQ(cratchit::books::debit(postings), 1000);
+  EXPECT_EQ(cratchit::books::credit(postings), 1000);
+  EXPECT_EQ(cratchit::books::sum(postings), 0);
+}
 
 TEST(Balances, CarriedFromTheYearBeforeOnlyForBalanceAccounts) {
   auto const all = cratchit::books::balances(sample());
@@ -132,7 +143,8 @@ TEST_F(BooksFiles, FileFormats) {
                                              "year.2026-01-01 = 2026-12-31\n");
   EXPECT_EQ(read_file(folder / "2025-01-01" / "opening.csv"), "account,amount\n1930,1000.00\n2099,-1000.00\n");
   EXPECT_EQ(read_file(folder / "2026-01-01" / "vouchers.csv"),
-            "series,number,date,text,registered,signature\nA,1,2026-02-01,\"Text, with \"\"quotes\"\"\",2026-01-10,\n");
+            "series,number,date,text,amount,registered,signature\n"
+            "A,1,2026-02-01,\"Text, with \"\"quotes\"\"\",7.00,2026-01-10,\n");
   EXPECT_EQ(read_file(folder / "2026-01-01" / "transactions.csv"),
             "series,number,kind,account,objects,amount,date,text,quantity,signature\n"
             "A,1,normal,1930,,7.00,,,,\n"
@@ -178,4 +190,28 @@ TEST_F(BooksFiles, ClosedYearsAreWrittenAndReadBack) {
   ASSERT_TRUE(back.has_value()) << back.error();
   EXPECT_TRUE(back->years[0].closed);
   EXPECT_FALSE(back->years[1].closed);
+}
+
+TEST_F(BooksFiles, WaitingEventsAreKeptOnlyWhileThereAreAny) {
+  auto books = sample();
+  ASSERT_TRUE(cratchit::books::write_books(root, books).has_value());
+  auto const events = root / ".cratchit" / "books" / "2026-01-01" / "events.csv";
+  EXPECT_FALSE(fs::exists(events));
+  books.years[1].waiting.push_back({{"Telia, oktober", 111800, date(2026, 10, 20)}, date(2026, 10, 23)});
+  auto const added = cratchit::books::write_books(root, books);
+  ASSERT_TRUE(added.has_value()) << added.error();
+  ASSERT_EQ(added->size(), 1u);
+  EXPECT_EQ(added->at(0).file, fs::path(".cratchit") / "books" / "2026-01-01" / "events.csv");
+  EXPECT_TRUE(added->at(0).created);
+  EXPECT_EQ(read_file(events), "date,text,amount,noted\n2026-10-20,\"Telia, oktober\",1118.00,2026-10-23\n");
+  auto const back = cratchit::books::read_books(root);
+  ASSERT_TRUE(back.has_value()) << back.error();
+  EXPECT_EQ(back->years[1].waiting, books.years[1].waiting);
+  EXPECT_TRUE(back->years[0].waiting.empty());
+  books.years[1].waiting.clear();
+  auto const removed = cratchit::books::write_books(root, books);
+  ASSERT_TRUE(removed.has_value()) << removed.error();
+  ASSERT_EQ(removed->size(), 1u);
+  EXPECT_TRUE(removed->at(0).removed);
+  EXPECT_FALSE(fs::exists(events));
 }

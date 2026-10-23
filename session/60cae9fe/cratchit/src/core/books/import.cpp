@@ -14,23 +14,25 @@ namespace {
 // Lists at most this many items in one note
 constexpr std::size_t max_listed = 10;
 
-Transaction::Kind kind_of(sie::Transaction::Kind kind) {
+Posting::Kind kind_of(sie::Transaction::Kind kind) {
   switch (kind) {
   case sie::Transaction::Kind::added:
-    return Transaction::Kind::added;
+    return Posting::Kind::added;
   case sie::Transaction::Kind::removed:
-    return Transaction::Kind::removed;
+    return Posting::Kind::removed;
   default:
-    return Transaction::Kind::normal;
+    return Posting::Kind::normal;
   }
 }
 
+// The voucher of a #VER; SIE gives no amount, so it is the debit total
 Voucher voucher_of(sie::Voucher const& voucher) {
-  Voucher result{voucher.series, voucher.number, voucher.date, voucher.text, voucher.registered, voucher.signature, {}};
+  Voucher result{voucher.series, voucher.number, {voucher.text, 0, voucher.date}, voucher.registered, voucher.signature,
+                 {}};
   for (auto const& t : voucher.transactions) {
-    result.transactions.push_back(
-        {kind_of(t.kind), t.account, t.objects, t.amount, t.date, t.text, t.quantity, t.signature});
+    result.postings.push_back({kind_of(t.kind), t.account, t.objects, t.amount, t.date, t.text, t.quantity, t.signature});
   }
+  result.event.amount = debit(result.postings);
   return result;
 }
 
@@ -38,29 +40,30 @@ std::string voucher_name(Voucher const& voucher) {
   return std::format("{} {}", voucher.series, voucher.number);
 }
 
-std::string_view kind_text(Transaction::Kind kind) {
+std::string_view kind_text(Posting::Kind kind) {
   switch (kind) {
-  case Transaction::Kind::added:
+  case Posting::Kind::added:
     return "added ";
-  case Transaction::Kind::removed:
+  case Posting::Kind::removed:
     return "removed ";
   default:
     return "";
   }
 }
 
-std::string transaction_text(Transaction const& t) {
+std::string posting_text(Posting const& t) {
   return std::format("{}row {} {}{}", kind_text(t.kind), t.account, format_amount(t.amount),
                      t.text.empty() ? "" : std::format(" \"{}\"", t.text));
 }
 
 // What differs between a voucher in the books and the one in the file
 std::string difference(Voucher const& books, Voucher const& file) {
-  if (books.date != file.date) {
-    return std::format("date {} in the books, {} in the file", format_iso_date(books.date), format_iso_date(file.date));
+  if (books.event.date != file.event.date) {
+    return std::format("date {} in the books, {} in the file", format_iso_date(books.event.date),
+                       format_iso_date(file.event.date));
   }
-  if (books.text != file.text) {
-    return std::format("text \"{}\" in the books, \"{}\" in the file", books.text, file.text);
+  if (books.event.heading != file.event.heading) {
+    return std::format("text \"{}\" in the books, \"{}\" in the file", books.event.heading, file.event.heading);
   }
   if (books.registered != file.registered) {
     return "the registration date differs";
@@ -68,13 +71,17 @@ std::string difference(Voucher const& books, Voucher const& file) {
   if (books.signature != file.signature) {
     return "the signature differs";
   }
-  for (std::size_t i = 0; i < std::min(books.transactions.size(), file.transactions.size()); ++i) {
-    if (books.transactions[i] != file.transactions[i]) {
-      return std::format("{} in the books, {} in the file", transaction_text(books.transactions[i]),
-                         transaction_text(file.transactions[i]));
+  for (std::size_t i = 0; i < std::min(books.postings.size(), file.postings.size()); ++i) {
+    if (books.postings[i] != file.postings[i]) {
+      return std::format("{} in the books, {} in the file", posting_text(books.postings[i]),
+                         posting_text(file.postings[i]));
     }
   }
-  return std::format("{} rows in the books, {} in the file", books.transactions.size(), file.transactions.size());
+  if (books.postings.size() == file.postings.size()) {
+    return std::format("amount {} in the books, {} in the file", format_amount(books.event.amount),
+                       format_amount(file.event.amount));
+  }
+  return std::format("{} rows in the books, {} in the file", books.postings.size(), file.postings.size());
 }
 
 std::map<std::string, Amount> by_account(std::vector<sie::Balance> const& balances, int year) {
@@ -117,15 +124,15 @@ std::string possible_causes(FiscalYear const& year, std::string const& account, 
   for (auto const& voucher : year.vouchers) {
     Amount sum = 0;
     bool touches = false;
-    for (auto const& t : voucher.transactions) {
-      if (t.account == account && t.kind != Transaction::Kind::removed) {
+    for (auto const& t : voucher.postings) {
+      if (t.account == account && t.kind != Posting::Kind::removed) {
         sum += t.amount;
         touches = true;
       }
     }
     if (touches && (sum == difference || sum == -difference)) {
-      causes.push_back(std::format("{} {} \"{}\"", voucher_name(voucher), format_iso_date(voucher.date),
-                                   voucher.text));
+      causes.push_back(std::format("{} {} \"{}\"", voucher_name(voucher), format_iso_date(voucher.event.date),
+                                   voucher.event.heading));
     }
   }
   if (causes.empty()) {

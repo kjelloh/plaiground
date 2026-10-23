@@ -12,19 +12,10 @@
 #include <string_view>
 #include <vector>
 
-// Entering a voucher by hand: the event line, the series, the rows
+// Entering a voucher by hand: the event line, the series, the postings
 namespace cratchit::books {
 
-// What the user types first: what happened, how much, and when
-struct Event {
-  std::string heading;
-  Amount amount = 0;
-  Date date;
-
-  bool operator==(Event const&) const = default;
-};
-
-// Heading, amount and date in any order, separated by spaces. The date is the
+// The event typed first (see Event): heading, amount and date in any order, separated by spaces. The date is the
 // last word that is a date (YYYY-MM-DD or YYYYMMDD); without one, today, if given. The
 // amount is the last other number: digits with an optional sign and a decimal
 // comma or point, e.g. -1118,00; a no-break space inside it is dropped. The
@@ -74,27 +65,23 @@ std::expected<Row, std::string> parse_row(std::string_view text);
 // Accounts whose number starts with query, or whose name contains it, ignoring case
 std::vector<Account const*> find_accounts(Books const& books, std::string_view query);
 
-// A voucher being entered
+// A voucher being entered: its event and the postings typed so far
 struct Draft {
   Event event;
   std::size_t year = 0; // index in books.years
   std::string series;
-  std::vector<Transaction> rows;
+  Postings postings;
 
-  // What the next row needs to make the rows add up to zero (minus their sum)
+  // What the next posting needs to make the postings add up to zero (minus their sum)
   Amount remaining() const;
 
   // The amount on the voucher line, without sign: what debit and credit must each add up to
   Amount target() const;
 
-  // The sum of the debit rows, and of the credit rows (without sign)
-  Amount debit() const;
-  Amount credit() const;
-
-  // At least two rows, debit and credit each adding up to the amount
+  // At least two postings, debit and credit each adding up to the amount
   bool is_balanced() const;
 
-  // Where the rows stand, e.g. "Remaining 223.60 (debit 1118.00, credit 894.40, amount 1118.00)."
+  // Where the postings stand, e.g. "Remaining 223.60 (debit 1118.00, credit 894.40, amount 1118.00)."
   std::string status() const;
 
   Voucher voucher(std::string number, Date registered) const;

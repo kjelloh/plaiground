@@ -7,14 +7,14 @@
 
 namespace cratchit {
 
-// Types a folder path, a file path, a name, an account number, a voucher line or
-// a voucher row, key by key in cratchit's own buffer, as the terminal is in
+// Types a folder path, a file path, a name, an account number, a voucher line,
+// an event line or a voucher row, key by key in cratchit's own buffer, as the terminal is in
 // single-key mode. In a path Tab completes folder names (and file names for a
 // file) like a shell. Writes its own echo.
 class PathEditor {
 public:
   enum class Result { Typing, Accepted, Cancelled };
-  enum class Kind { Path, File, Name, Account, Voucher, Row };
+  enum class Kind { Path, File, Name, Account, Voucher, Event, Row };
 
   // Start over with text in the buffer, e.g. the root folder
   void start(std::string text, Kind kind = Kind::Path);
@@ -24,7 +24,7 @@ public:
 
   std::string const& text() const;
 
-  // "path> ", "name> ", "account> ", "voucher> " or "post> " followed by the text so far
+  // "path> ", "name> ", "account> ", "voucher> ", "event> " or "post> " followed by the text so far
   std::string prompt() const;
 
 private:

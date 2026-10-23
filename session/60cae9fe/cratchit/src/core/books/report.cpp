@@ -113,16 +113,16 @@ std::vector<std::string> voucher_list(Books const& books, std::size_t year_index
   lines.push_back(std::format("{} voucher{}", year.vouchers.size(), year.vouchers.size() == 1 ? "" : "s"));
   for (auto const& voucher : year.vouchers) {
     lines.push_back("");
-    lines.push_back(std::format("{} {}  {}  {}{}", voucher.series, voucher.number, format_iso_date(voucher.date),
-                                voucher.text,
+    lines.push_back(std::format("{} {}  {}  {}{}", voucher.series, voucher.number, format_iso_date(voucher.event.date),
+                                voucher.event.heading,
                                 voucher.registered ? std::format("  (registered {})", format_iso_date(*voucher.registered))
                                                    : std::string{}));
-    for (auto const& t : voucher.transactions) {
-      auto const mark = t.kind == Transaction::Kind::added     ? "added"
-                        : t.kind == Transaction::Kind::removed ? "removed"
-                                                               : "";
+    for (auto const& t : voucher.postings) {
+      auto const mark = t.kind == Posting::Kind::added     ? "added"
+                        : t.kind == Posting::Kind::removed ? "removed"
+                                                           : "";
       auto text = t.text.empty() ? account_name(books, t.account) : t.text;
-      if (!t.signature.empty() && t.kind != Transaction::Kind::normal) {
+      if (!t.signature.empty() && t.kind != Posting::Kind::normal) {
         text += std::format(" (by {})", t.signature);
       }
       lines.push_back(std::format("  {:<8}{:<8}{:>15}  {}", mark, t.account, format_amount(t.amount), text));
@@ -137,13 +137,13 @@ std::optional<std::vector<std::string>> account_ledger(Books const& books, std::
   struct Entry {
     Date date;
     Voucher const* voucher;
-    Transaction const* transaction;
+    Posting const* posting;
   };
   std::vector<Entry> entries;
   for (auto const& voucher : year.vouchers) {
-    for (auto const& t : voucher.transactions) {
-      if (t.account == account && t.kind != Transaction::Kind::removed) {
-        entries.push_back({t.date.value_or(voucher.date), &voucher, &t});
+    for (auto const& t : voucher.postings) {
+      if (t.account == account && t.kind != Posting::Kind::removed) {
+        entries.push_back({t.date.value_or(voucher.event.date), &voucher, &t});
       }
     }
   }
@@ -159,11 +159,11 @@ std::optional<std::vector<std::string>> account_ledger(Books const& books, std::
   Amount balance = value_or_zero(all[year_index].opening, number);
   lines.push_back(std::format("{:<22}{:>15}{:>15}", "Opening balance", "", format_amount(balance)));
   for (auto const& entry : entries) {
-    balance += entry.transaction->amount;
-    auto const text = entry.transaction->text.empty() ? entry.voucher->text : entry.transaction->text;
+    balance += entry.posting->amount;
+    auto const text = entry.posting->text.empty() ? entry.voucher->event.heading : entry.posting->text;
     lines.push_back(std::format("{:<12}{:<10}{:>15}{:>15}  {}", format_iso_date(entry.date),
                                 std::format("{} {}", entry.voucher->series, entry.voucher->number),
-                                format_amount(entry.transaction->amount), format_amount(balance), text));
+                                format_amount(entry.posting->amount), format_amount(balance), text));
   }
   lines.push_back(std::format("{:<22}{:>15}{:>15}", "Closing balance", "", format_amount(balance)));
   return lines;

@@ -46,7 +46,8 @@ struct Object {
 // Dimension and object pairs
 using Objects = std::vector<std::pair<std::string, std::string>>;
 
-struct Transaction {
+// One amount posted to one account (debit positive, credit negative)
+struct Posting {
   enum class Kind {
     normal,
     added,   // added after the voucher was registered
@@ -57,25 +58,54 @@ struct Transaction {
   std::string account;
   Objects objects;
   Amount amount = 0;
-  std::optional<Date> date; // when not given, the voucher's date
+  std::optional<Date> date; // when not given, the event's date
   std::string text;
   std::string quantity;
   std::string signature;
 
-  bool operator==(Transaction const&) const = default;
+  bool operator==(Posting const&) const = default;
 };
 
-// A financial event. Once in the books it is never changed.
+// The postings of a financial event (removed ones are kept but do not count)
+using Postings = std::vector<Posting>;
+
+// The sum of the debit postings, and of the credit postings (without sign), not counting removed ones
+Amount debit(Postings const& postings);
+Amount credit(Postings const& postings);
+
+// The sum of the postings, not counting removed ones; zero when they balance
+Amount sum(Postings const& postings);
+
+// How a financial event enters the books: what happened, how much, and when.
+// In a voucher the amount is without sign: what the debit and the credit
+// postings each add up to.
+struct Event {
+  std::string heading;
+  Amount amount = 0;
+  Date date;
+
+  bool operator==(Event const&) const = default;
+};
+
+// A financial event in the books: the event and its postings, numbered in a
+// series. Once in the books it is never changed.
 struct Voucher {
   std::string series;
   std::string number;
-  Date date;
-  std::string text;
+  Event event;
   std::optional<Date> registered;
   std::string signature;
-  std::vector<Transaction> transactions;
+  Postings postings;
 
   bool operator==(Voucher const&) const = default;
+};
+
+// An event noted to be posted later, e.g. an invoice or a receipt
+struct WaitingEvent {
+  Event event; // the amount without sign, as in a voucher
+  Date noted;  // the day it was noted
+
+  bool operator==(WaitingEvent const&) const = default;
 };
 
 struct FiscalYear {
@@ -86,6 +116,7 @@ struct FiscalYear {
   std::map<std::string, Amount> reported_opening;
   std::vector<Voucher> vouchers;
   bool closed = false; // closed for new vouchers (open by default)
+  std::vector<WaitingEvent> waiting{}; // events waiting for postings, in the order noted
 
   // True when date is within the year
   bool holds(Date date) const;
@@ -119,7 +150,7 @@ AccountKind account_kind(Books const& books, std::string_view number);
 // The balances of one fiscal year, per account
 struct YearBalances {
   std::map<std::string, Amount> opening; // balance accounts only
-  std::map<std::string, Amount> change;  // the year's transactions (not removed ones)
+  std::map<std::string, Amount> change;  // the year's postings (not removed ones)
   std::map<std::string, Amount> closing; // opening + change
   bool carried = false; // opening carried from the year before's closing, not as reported
 };
@@ -133,7 +164,8 @@ std::vector<YearBalances> balances(Books const& books);
 // A file written by write_books
 struct Written {
   std::filesystem::path file; // relative to the project folder, e.g. .cratchit/books/accounts.csv
-  bool created = false;       // else updated
+  bool created = false;       // else updated (or removed)
+  bool removed = false;       // removed, as it has nothing left to hold
 };
 
 // The folder holding the books: <project folder>/.cratchit/books
@@ -144,7 +176,8 @@ std::filesystem::path books_folder(std::filesystem::path const& project_folder);
 std::expected<Books, std::string> read_books(std::filesystem::path const& project_folder);
 
 // Writes the books of a project, creating folders as needed. Only files whose
-// content changes are written; those are returned, in the order written.
+// content changes are written; those are returned, in the order written. A
+// year's events.csv exists only while the year has waiting events.
 std::expected<std::vector<Written>, std::string> write_books(std::filesystem::path const& project_folder,
                                                              Books const& books);
 

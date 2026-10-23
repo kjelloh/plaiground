@@ -33,7 +33,7 @@ std::string error_of(std::string_view text) {
 }
 
 Voucher voucher(std::string series, std::string number, Date date, std::string text) {
-  return {std::move(series), std::move(number), date, std::move(text), std::nullopt, {}, {}};
+  return {std::move(series), std::move(number), {std::move(text), 0, date}, std::nullopt, {}, {}};
 }
 
 Books two_years() {
@@ -179,31 +179,31 @@ TEST(Draft, RemainingAndBalance) {
   EXPECT_EQ(draft.remaining(), 0);
   EXPECT_FALSE(draft.is_balanced());
   EXPECT_EQ(draft.status(), "No rows.");
-  draft.rows.push_back({.account = "1930", .amount = -559000});
+  draft.postings.push_back({.account = "1930", .amount = -559000});
   EXPECT_EQ(draft.remaining(), 559000);
   EXPECT_EQ(draft.status(), "Remaining 5590.00 (debit 0.00, credit 5590.00, amount 5590.00).");
-  draft.rows.push_back({.account = "6540", .amount = 447200});
+  draft.postings.push_back({.account = "6540", .amount = 447200});
   EXPECT_EQ(draft.remaining(), 111800);
-  draft.rows.push_back({.account = "2641", .amount = 111800});
+  draft.postings.push_back({.account = "2641", .amount = 111800});
   EXPECT_TRUE(draft.is_balanced());
   EXPECT_EQ(draft.status(), "Balanced. Enter saves.");
-  EXPECT_EQ(draft.debit(), 559000);
-  EXPECT_EQ(draft.credit(), 559000);
+  EXPECT_EQ(debit(draft.postings), 559000);
+  EXPECT_EQ(credit(draft.postings), 559000);
   auto const saved = draft.voucher("13", today);
   EXPECT_EQ(saved.series, "D");
   EXPECT_EQ(saved.number, "13");
-  EXPECT_EQ(saved.text, "Telia");
+  EXPECT_EQ(saved.event, (Event{"Telia", 559000, today})); // the amount without sign
   EXPECT_EQ(saved.registered, today);
-  EXPECT_EQ(saved.transactions.size(), 3u);
+  EXPECT_EQ(saved.postings.size(), 3u);
 }
 
 TEST(Draft, RowsAddingUpToZeroAreNotEnough) {
   Draft draft{{"Telia", 111800, today}, 1, "D", {}};
-  draft.rows.push_back({.account = "2641", .amount = 22360});
-  draft.rows.push_back({.account = "6212", .amount = -22360});
+  draft.postings.push_back({.account = "2641", .amount = 22360});
+  draft.postings.push_back({.account = "6212", .amount = -22360});
   EXPECT_EQ(draft.remaining(), 0);
   EXPECT_FALSE(draft.is_balanced());
   EXPECT_EQ(draft.status(), "Debit 223.60, credit 223.60, amount 1118.00: debit and credit must each reach the amount.");
-  draft.rows.push_back({.account = "1930", .amount = -200000});
+  draft.postings.push_back({.account = "1930", .amount = -200000});
   EXPECT_EQ(draft.status(), "Debit 223.60, credit 2223.60, amount 1118.00: more than the amount.");
 }
