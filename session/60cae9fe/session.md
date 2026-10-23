@@ -4,6 +4,40 @@
 
 ## 20261023
 
+It is now afternoon and I will try to make Claude implement an account statement file reader.
+
+I am not yet sure if I want to create an 'account statement document' or directly to plain BAS account postings?
+
+Anyhow, I edited the following specification by going back and forth with Claude.
+
+* The reader shall turn account statement rows into BAS account postings
+* Any consolidation of postings into events and then vouchers are separate later operations.
+    * The reader shall only be concerned with creating valid BAS account postings.
+* The reader shall be able to read csv-files in at least UTF8 (using existing character set transcode mechanisms for simple detection)
+* It shall be able to consume any BOM in the file (so it does not turn up as garbage in read rows) 
+* It shall be able to detect and parse a file using separators from a small set (and implement at least one default one for now that works on examples I provide from Nordea and SKV)
+* It shall identify a continuous range of account statement rows that represents an account debit or credit.
+    * All rows must match the criteria of a valid debit or credit statement.
+    * All rows must share at least one Date column, one amount column and one text column (to be used as posting caption)
+    * All date values must be pure (date found in text counts as text, not a valid date)
+    * All amount values must be pure (amounts found in text counts as text, not a valid amount)
+    * An invalid row terminates the range
+* The reader shall be able to read an extra amount from some rows to handle optional Saldo amounts.
+* The reader shall apply an algorithm to determine the posted amount column from any saldo amount column.
+    * If only one column carries an amount for all rows then this must be the posted amount.
+    * It shall accumulate posted amount over the range both forward and backward to detect row order of postings
+    * It shall accumulate suspected posted amount and compare with suspected saldo amount (both ways if not yet determined)
+    * It shall apply these checks row-by-row (all rows must comply with the rules)
+* If no conflicts are detected the algorithm shall accept the identified columns content.
+* If rows order and amount types are confirmed it shall transform them into potential BAS account postings.
+    * Initially it shall use a BAS account that is either nullopt or a 'observe' BAS account for later assignment.
+* The reader shall NOT try to determine meta-data that is not explicitly in the file.
+    * None of e.g., The bank name, account name, bank account number, SKV account number etc. shall be assumed to be in the file
+    * Explicitly, linking postings in the file to a BAS account is a later separate step and NOT a task for the reader.
+* The reader shall NOT try to find separate open and close balance rows
+ 
+
+
 Today I decided to ask Claude to refactor the current design so we can treat a 'voucher' as having two parts.
 
 * One part is the Heading, Amount and Date (The overall thing about a financial event)
