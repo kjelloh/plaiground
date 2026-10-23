@@ -27,6 +27,23 @@ I went ahead and made Claude implement the 'enter events' UI also.
 Step 2 is done: you can now note events like invoices and receipts at the year prompt with n, and post or delete them later with w. The build has no warnings and all 347 tests pass. I also ran it in the app on a copy of your Fortnox sample: I noted two events, posted one as voucher D 27, and deleted the other.
 ```
 
+I now tried entering events.
+
+* It would be nice if we remained in 'notes' state so we can continue to enter events.
+    * Remove the 'y/n' confirmation (show the waiting list)
+    * Remain in 'notes' ode so the user can enter a new one directly
+* It would be nice to enter an event with a Euro amount (e.g., Anthropic Receipt)
+    * Store amount with currency
+    * Resolve in posting to BAS accounts (E.e., withdrawal from swedish bank account in SEK)?
+    * Allow to create SIE voucher (should be OK as SIE voucher has no amount of its own?)
+* Make empty enter in 'event' list waiting
+    * This makes it easy for user to check where in the list the are (what has been entered so far)
+* We actually would like an Event to carry negative amounts (e.g., credited invoice)
+    * I had an invoice credited and I think it would be nice to have the amount sig be carried along?
+    * On the other hand, it will be handled in BAS account posting anyways?
+    * But maybe a negative amount makes it easier for the user to get Debit/Credit correct?
+
+
 ## 20261022
 
 I wonder if I still lack trust in the vibe coding process? What happens if I just go for it? Still task-by-tak though?
