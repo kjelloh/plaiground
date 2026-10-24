@@ -123,9 +123,9 @@ TEST(ParseStatement, NordeaNewestFirstWithSaldoOnSomeRows) {
   ASSERT_EQ(document.postings.size(), 5u);
   EXPECT_EQ(document.postings[0], (Posting{Date{2024y, July, 3d}, -555, 568736, "PRIS ENL SPEC", 6}));
   EXPECT_EQ(document.postings[1], (Posting{Date{2024y, July, 8d}, 2000000, std::nullopt,
-                                           "32592317244,Insättning,UTDELNING HÖGDAL", 5}));
+                                           "32592317244 | Insättning | UTDELNING HÖGDAL", 5}));
   EXPECT_EQ(document.postings[2].text, "HÖGDAL,KJELL-OLOV"); // the same cell three times
-  EXPECT_EQ(document.postings[4].text, "5249-4309,PostNord Sverige AB,902887105820,Postbox");
+  EXPECT_EQ(document.postings[4].text, "5249-4309 | PostNord Sverige AB | 902887105820 | Postbox");
 }
 
 TEST(ParseStatement, SkvOldestFirstQuoted) {

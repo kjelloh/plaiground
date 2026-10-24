@@ -465,7 +465,7 @@ std::expected<Document, std::string> parse_statement(std::span<std::uint8_t cons
       if (cell.empty() || (before && *before == cell)) {
         continue;
       }
-      posting.text += (posting.text.empty() ? "" : ",") + cell;
+      posting.text += (posting.text.empty() ? "" : " | ") + cell;
       before = &cell;
     }
     posting.line = row->line;

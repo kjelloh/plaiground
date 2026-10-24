@@ -96,7 +96,7 @@ struct Document {
 // - The order is the saldo's; the dates must not go against it. Without a
 //   saldo, the dates tell (unknown when they are all the same).
 // - A single posting row must have exactly one amount (no saldo).
-// - The text joins the row's text cells with ',', leaving out empty cells
+// - The text joins the row's text cells with ' | ', leaving out empty cells
 //   and a cell equal to the one before.
 // Error text names the lines. Does not log.
 std::expected<Document, std::string> parse_statement(std::span<std::uint8_t const> bytes);

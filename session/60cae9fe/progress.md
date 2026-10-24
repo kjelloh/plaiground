@@ -262,7 +262,7 @@ date, amount, optional saldo, text, line; first/last line, notes). Posting rows:
 the postings are the longest run of same-shape rows (two equally long = error). Amount column = amount on every row;
 saldo candidates = amount or empty, >= 2 amounts; every pair and order is walked (rows without saldo carry the sum);
 exactly one must add up, dates must not go against it. No saldo: only with one amount column and no other candidate,
-order from the dates (+ note). One posting row: only with exactly one amount. Text: the other cells joined with `,`,
+order from the dates (+ note). One posting row: only with exactly one amount. Text: the other cells joined with ` | `,
 empty and repeated cells left out, columns the same on every row dropped (two rows or more). Opening = first saldo
 minus the amounts up to it; closing = last saldo plus the amounts after it. Does not log. No manual change (no user
 operation). 369 tests pass, no warnings. All 24 files in `_resources/_from_bank_or_skv` run through a scratch program
@@ -388,7 +388,7 @@ Fortnox. Other possible: SIE export (and import->export round trip), BAS chart c
 
 - 2026-10-24: Account statements are parsed into an in-memory document of valid postings (date, amount, text,
   optional saldo), found by cell content only. Files must have a UTF-8 BOM. A single posting row is accepted only with
-  exactly one amount. The posting text joins the text cells with `,` (for the user to edit). Opening and closing saldo
+  exactly one amount. The posting text joins the text cells with ` | ` (for the user to edit; no sample cell has `|`). Opening and closing saldo
   are kept as optional data when the saldo adds up. Using the document is designed later.
 
 ## Open questions
