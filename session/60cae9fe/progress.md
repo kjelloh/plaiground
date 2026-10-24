@@ -219,13 +219,26 @@ noted, deleted, saved voucher "from a waiting event". Fixed in passing: an empty
 `project>` instead of the year. Manual: new "Waiting events", files, year keys, prompt, log kinds. 347 tests pass, no
 warnings; checked in the app on a Fortnox sample (note two, post one as D 27, delete the other, file removed). In review.
 
+Task 31: Template vouchers. After the voucher line (and when posting a waiting event) `template?>` lists at most 5
+earlier vouchers like the event (`books::find_templates`): heading shares words (as `guess_series`), series A-N, amount
+not zero, at least two counted postings; ranked by shared words, then same sign of amount as the event (seed for
+negative amounts), then latest; one per posting pattern (account + side). Each shown with its rows. Enter = 1, a number
+picks, `n` none (series guessed as before), `-` back to the line (or the waiting list); `h` help. No candidate: straight to
+`series>`. The series default is the template's series; `-` at `series>` goes back to the template list when one was
+shown. `books::guide_of` scales each counted posting by amount / template amount (`scaled()` in `core/amount`, exact,
+half away from zero; a negative amount flips the rows) and the last row balances; accounts not in the books are left out
+with a note. `Draft::guide`, `Draft::from_template`, `Draft::suggestion()`: the guide row at the number of rows so far
+(unless balanced), the last one gets what remains. `post>` shows `Suggested <account> <amount> <name>` before the
+prompt; empty Enter takes it, a typed row replaces it, `-` steps back. Save log adds `with template D 3`. Manual: new
+"The template", series default, rows, waiting list. 355 tests pass, no warnings; checked with piped input on a Fortnox
+sample (Telia template D 3 scaled to 1245.00, saved as D 4). In review.
+
 ## Next
 
-Task 31 (agreed 2026-10-23): postings from account statements waiting for an event (file layout and statement format
+Task 32 (agreed 2026-10-23): postings from account statements waiting for an event (file layout and statement format
 to agree first). Later: matching waiting events with statement postings.
 
-Template vouchers (agreed plan, was task 29). Picking an earlier voucher copies its accounts and scales its amounts to the
-new amount. Later: VAT helpers, source document reference, correction help, creating a new fiscal year, sync with
+Later: VAT helpers, source document reference, correction help, creating a new fiscal year, sync with
 Fortnox. Other possible: SIE export (and import->export round trip), BAS chart check, rename/remove projects.
 
 ## Agreed in chat
@@ -327,8 +340,15 @@ Fortnox. Other possible: SIE export (and import->export round trip), BAS chart c
   new behaviour if needed). `Transaction` is called `Posting` in cratchit (SIE's #TRANS is not a transaction).
   Events waiting for postings and postings waiting for an event are kept inside the books, on their fiscal year.
 
+- 2026-10-24: Template vouchers: after the event, a few earlier vouchers like it are offered; the chosen one guides the
+  rows one at a time (Enter takes the suggestion), scaled to the new amount. Series step unchanged (default from the
+  template; without one, guessed as before). Matching is on heading words; amount sign is a tie-breaker, ready for
+  negative amounts (credit invoices).
+
 ## Open questions
 
+- Should a template's rounding row (e.g. 3740 Öres- och kronutjämning) be scaled like the others? Today it takes the
+  scaling remainder, so VAT ends up slightly off (Telia 1245.00: 2641 248.97, 3740 0.14).
 - Rename `transactions.csv` to `postings.csv` to match the code?
 - Should an SIE import into a closed fiscal year be refused (it is allowed now)?
 - Should differing account data (name, SRU) from an older year's file be noted even when not taken?

@@ -501,9 +501,10 @@ and an SIE import into it still works.
 ### Entering a voucher
 
 Press `e` at the prompt of an open fiscal year (see Fiscal years). A voucher
-(verifikation) records one financial event. You type it in three steps: what
-happened, the series, and the rows on the accounts. Nothing is saved until the
-rows balance and you press `y`.
+(verifikation) records one financial event. You type it in steps: what
+happened, an earlier voucher to use as a template (when there is one), the
+series, and the rows on the accounts. Nothing is saved until the rows balance
+and you press `y`.
 
 #### Heading, amount and date
 
@@ -558,6 +559,41 @@ Refused: 2027-05-03 is outside fiscal year 2026-05-01 - 2027-04-30.
 
 Enter on an empty line goes back to the year prompt.
 
+#### The template
+
+cratchit then looks for earlier vouchers like this one, to guide the rows.
+A voucher is like it when its text shares words with your heading (case,
+numbers and one-letter words do not count), it is in one of the series A-N,
+and it has an amount and at least two rows. The most shared words come first,
+then a voucher whose amount has the same sign as yours, then the latest.
+Vouchers with rows on the same accounts, on the same sides (debit or credit),
+show only once, as the best of them. At most five are listed, each with its
+rows:
+
+```
+Earlier vouchers like this one:
+  1  D 9  2026-10-22       1118.00  Telia faktura oktober
+      2440 -1118.00  6212 894.40  2641 223.60
+  2  E 4  2026-07-01        987.00  Betalning Telia
+      2440 987.00  1930 -987.00
+
+Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.
+template?> 
+```
+
+| Key    | What it does |
+|--------|--------------|
+| 1-5    | Uses that voucher as the template. |
+| Enter  | Uses the first one. |
+| n      | Uses no template: the series is guessed and the rows are typed as without one. |
+| -      | Goes back to the line (for a waiting event, to the waiting list). |
+| h      | Opens this manual. |
+| q      | Quits cratchit. |
+
+When no earlier voucher is like this one, cratchit goes straight to the
+series. A template account that is no longer in the books is left out, with
+`Account 6213 of D 9 is not in the books, so it is not suggested.`
+
 #### The series
 
 Each voucher goes in a series by its kind, as in Fortnox:
@@ -579,10 +615,11 @@ Each voucher goes in a series by its kind, as in Fortnox:
 | M | Momsrapport |
 | N | Lager |
 
-cratchit offers a series by default: that of the voucher in the books whose
-text shares the most words with your heading (case, numbers and one-letter
-words do not count; the latest voucher wins a tie). Without such a voucher
-it offers A. It shows which voucher the guess comes from:
+cratchit offers a series by default: the template's series. Without a
+template, that of the voucher in the books whose text shares the most words
+with your heading (case, numbers and one-letter words do not count; the
+latest voucher wins a tie), or A without such a voucher. It shows which
+voucher the default comes from:
 
 ```
 Series (Enter = D, as D 3 2026-05-18 "Faktura: Telia"):
@@ -590,7 +627,8 @@ Series (Enter = D, as D 3 2026-05-18 "Faktura: Telia"):
 
 The prompt is `series>`. Press Enter to take the default, or the letter of
 another series (upper or lower case). `-` goes back to the line. Here `h` is
-series H, so help is not offered; `q` quits.
+series H, so help is not offered; `q` quits. When templates were listed, `-`
+goes back to them instead.
 
 The voucher gets the next number in its series in the fiscal year: the
 highest number used plus one, or 1.
@@ -614,6 +652,32 @@ post> 2641
   Balanced. Enter saves.
 ```
 
+With a template, cratchit suggests its rows one at a time, before each
+`post>`. Each amount is the template's, scaled by your amount over the
+template's amount and rounded to the öre; the template's last row gets what
+remains, so the rows balance. A negative amount on the voucher line flips the
+suggested rows (debit becomes credit). Enter on an empty line takes the
+suggestion; a row you type takes its place instead. The next suggestion is
+always the template row after the rows you have, so `-` steps back to the
+suggestion before:
+
+```
+Rows from D 9 are suggested one at a time, scaled to the amount: Enter takes the suggestion,
+or type your own row instead.
+  Suggested 2440       -1245.00  Leverantörsskulder
+post> 
+  2440       -1245.00  Leverantörsskulder
+  Remaining 1245.00 (debit 0.00, credit 1245.00, amount 1245.00).
+  Suggested 6212         996.00  Mobiltelefon
+post> 6212 1000
+  6212        1000.00  Mobiltelefon
+  Remaining 245.00 (debit 1000.00, credit 1245.00, amount 1245.00).
+  Suggested 2641         245.00  Debiterad ingående moms
+post> 
+  2641         245.00  Debiterad ingående moms
+  Balanced. Enter saves.
+```
+
 Rows that add up to zero but not to the amount show
 `Debit 223.60, credit 223.60, amount 1118.00: debit and credit must each reach the amount.`
 More than the amount on either side shows `...: more than the amount.`
@@ -624,7 +688,7 @@ More than the amount on either side shows `...: more than the amount.`
 | account           | Adds a row with what remains. On the first row, the voucher's amount. When the rows add up to zero but not to the amount, cratchit asks you to type the amount. |
 | a number prefix or a word | When it is not an account in the books, lists the accounts whose number starts with it or whose name contains it (case does not matter), at most 20. |
 | -                 | Removes the last row. With no rows, drops the voucher: `Dropped the voucher. Nothing is saved.` |
-| Enter (empty)     | When the voucher balances (at least two rows, debit and credit each adding up to the amount), shows it and asks to save it. Else shows where the rows stand; the voucher cannot be saved. |
+| Enter (empty)     | When the voucher balances (at least two rows, debit and credit each adding up to the amount), shows it and asks to save it. Else adds the suggested row, when there is one. Else shows where the rows stand; the voucher cannot be saved. |
 
 Only accounts in the books can be used. Backspace erases while you type.
 
@@ -641,7 +705,8 @@ Save as D 4? (y/n)
 Press `y` to save, `n` or `-` to go back to the rows. cratchit adds the
 voucher to the fiscal year's files in the books (see The files), shows which
 files it updated, says `Saved voucher D 4 into fiscal year 2026-05-01 -
-2027-04-30.` and logs it. A saved voucher is never changed.
+2027-04-30.` and logs it (naming the template, if one was used). A saved
+voucher is never changed.
 
 The vouchers you enter are the truth of the books. A later SIE import keeps
 them: a voucher in the books that the file lacks is noted, and a voucher in
@@ -705,7 +770,8 @@ at a time, `0` shows the ones before and `9` the ones after. With none,
 | q      | Quits cratchit. |
 
 When you post an event, its heading, amount and date are the voucher line,
-so cratchit goes straight to the series. `-` at `series>` goes back to the
+so cratchit goes straight to the template (or the series). `-` at
+`template?>`, or at `series>` when no templates were listed, goes back to the
 list. `-` at `post>` with no rows drops the voucher, and the event is still
 waiting. When the voucher is saved, the event leaves the list:
 

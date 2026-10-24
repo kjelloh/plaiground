@@ -4,6 +4,7 @@
 #include <array>
 #include <format>
 #include <set>
+#include <utility>
 
 namespace cratchit::books {
 
@@ -263,6 +264,82 @@ Guess guess_series(Books const& books, std::string_view heading) {
   return guess;
 }
 
+std::vector<Voucher const*> find_templates(Books const& books, Event const& event, std::size_t most) {
+  struct Candidate {
+    Voucher const* voucher;
+    std::size_t shared;
+    bool same_sign;
+    std::size_t position; // in the books, later is higher
+  };
+  auto const words = words_of(event.heading);
+  std::vector<Candidate> candidates;
+  std::size_t position = 0;
+  for (auto const& year : books.years) {
+    for (auto const& voucher : year.vouchers) {
+      ++position;
+      auto const counted = std::ranges::count_if(
+          voucher.postings, [](Posting const& posting) { return posting.kind != Posting::Kind::removed; });
+      if (!series_name(voucher.series) || voucher.event.amount == 0 || counted < 2) {
+        continue;
+      }
+      std::size_t shared = 0;
+      for (auto const& word : words_of(voucher.event.heading)) {
+        shared += words.contains(word) ? 1 : 0;
+      }
+      if (shared > 0) {
+        candidates.push_back({&voucher, shared, (voucher.event.amount < 0) == (event.amount < 0), position});
+      }
+    }
+  }
+  std::ranges::sort(candidates, [](Candidate const& a, Candidate const& b) {
+    if (a.shared != b.shared) {
+      return a.shared > b.shared;
+    }
+    if (a.same_sign != b.same_sign) {
+      return a.same_sign;
+    }
+    if (a.voucher->event.date != b.voucher->event.date) {
+      return a.voucher->event.date > b.voucher->event.date;
+    }
+    return a.position > b.position;
+  });
+  std::set<std::set<std::pair<std::string, bool>>> patterns;
+  std::vector<Voucher const*> found;
+  for (auto const& candidate : candidates) {
+    std::set<std::pair<std::string, bool>> pattern;
+    for (auto const& posting : candidate.voucher->postings) {
+      if (posting.kind != Posting::Kind::removed) {
+        pattern.insert({posting.account, posting.amount > 0});
+      }
+    }
+    if (found.size() < most && patterns.insert(std::move(pattern)).second) {
+      found.push_back(candidate.voucher);
+    }
+  }
+  return found;
+}
+
+Guide guide_of(Books const& books, Voucher const& like, Amount amount) {
+  Guide guide;
+  for (auto const& posting : like.postings) {
+    if (posting.kind == Posting::Kind::removed) {
+      continue;
+    }
+    if (!books.account(posting.account)) {
+      guide.missing.push_back(posting.account);
+      continue;
+    }
+    Posting row;
+    row.account = posting.account;
+    row.amount = scaled(posting.amount, amount, like.event.amount);
+    guide.postings.push_back(std::move(row));
+  }
+  if (!guide.postings.empty()) {
+    guide.postings.back().amount -= sum(guide.postings);
+  }
+  return guide;
+}
+
 std::string next_number(FiscalYear const& year, std::string_view series) {
   long long highest = 0;
   for (auto const& voucher : year.vouchers) {
@@ -332,6 +409,17 @@ std::string Draft::status() const {
     return std::format("Remaining {} (d{}).", format_amount(remaining()), totals);
   }
   return "D" + totals + ": debit and credit must each reach the amount.";
+}
+
+std::optional<Posting> Draft::suggestion() const {
+  if (is_balanced() || postings.size() >= guide.size()) {
+    return std::nullopt;
+  }
+  auto row = guide[postings.size()];
+  if (postings.size() + 1 == guide.size() && remaining() != 0) {
+    row.amount = remaining();
+  }
+  return row;
 }
 
 Voucher Draft::voucher(std::string number, Date registered) const {

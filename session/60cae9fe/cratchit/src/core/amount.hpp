@@ -19,4 +19,9 @@ std::optional<Amount> parse_amount(std::string_view text);
 // With two decimals and a point, e.g. `-6498.77`, `13000.00`
 std::string format_amount(Amount amount);
 
+// value * by / per, rounded to the öre half away from zero, e.g. a posting of
+// one voucher scaled to the amount of another. Exact for any result that fits
+// an Amount (the product is never formed). per must not be zero.
+Amount scaled(Amount value, Amount by, Amount per);
+
 } // namespace cratchit

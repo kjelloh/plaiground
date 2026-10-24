@@ -48,6 +48,25 @@ struct Guess {
 // on a tie. Only vouchers in a series of series_names count. Else A.
 Guess guess_series(Books const& books, std::string_view heading);
 
+// Earlier vouchers like an event, to post it after: at most most of them, the
+// best first. A voucher is like the event when its text shares words with the
+// heading (as in guess_series), it is in a series of series_names, it has an
+// amount and at least two postings that count. More shared words is better,
+// then an amount of the same sign as the event's, then the latest. Vouchers
+// posting to the same accounts on the same sides show only once, as the best.
+std::vector<Voucher const*> find_templates(Books const& books, Event const& event, std::size_t most = 5);
+
+// The postings a template suggests for a new amount
+struct Guide {
+  Postings postings;                // account and amount only
+  std::vector<std::string> missing; // template accounts not in the books, left out
+};
+
+// The postings of like that count, each scaled by amount / like's amount (so a
+// negative amount flips them) and rounded to the öre; the last takes what
+// makes them add up to zero. Postings to accounts not in the books are left out.
+Guide guide_of(Books const& books, Voucher const& like, Amount amount);
+
 // The highest number in series in year, plus one; 1 for a series not used yet
 std::string next_number(FiscalYear const& year, std::string_view series);
 
@@ -71,6 +90,8 @@ struct Draft {
   std::size_t year = 0; // index in books.years
   std::string series;
   Postings postings;
+  Postings guide{};            // the rows suggested by a template, if one is used (see guide_of)
+  std::string from_template{}; // the template's series and number, e.g. "D 31"
 
   // What the next posting needs to make the postings add up to zero (minus their sum)
   Amount remaining() const;
@@ -83,6 +104,11 @@ struct Draft {
 
   // Where the postings stand, e.g. "Remaining 223.60 (debit 1118.00, credit 894.40, amount 1118.00)."
   std::string status() const;
+
+  // The guide's row for the next posting (the one at the number of postings
+  // so far), unless the postings balance. The guide's last row gets what
+  // remains, when something does.
+  std::optional<Posting> suggestion() const;
 
   Voucher voucher(std::string number, Date registered) const;
 };

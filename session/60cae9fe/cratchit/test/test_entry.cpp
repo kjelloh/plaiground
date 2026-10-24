@@ -207,3 +207,106 @@ TEST(Draft, RowsAddingUpToZeroAreNotEnough) {
   draft.postings.push_back({.account = "1930", .amount = -200000});
   EXPECT_EQ(draft.status(), "Debit 223.60, credit 2223.60, amount 1118.00: more than the amount.");
 }
+
+namespace {
+
+Voucher posted(std::string series, std::string number, Date date, std::string text, Amount amount,
+               std::vector<std::pair<std::string, Amount>> const& rows) {
+  Voucher result{std::move(series), std::move(number), {std::move(text), amount, date}, std::nullopt, {}, {}};
+  for (auto const& [account, row_amount] : rows) {
+    result.postings.push_back({.account = account, .amount = row_amount});
+  }
+  return result;
+}
+
+Books telia_books() {
+  Books books;
+  books.accounts = {{"1930", "Företagskonto", "", "", ""},
+                    {"2440", "Leverantörsskulder", "", "", ""},
+                    {"2641", "Debiterad ingående moms", "", "", ""},
+                    {"6212", "Mobiltelefon", "", "", ""}};
+  books.years.push_back({Date{2026y, May, 1d}, Date{2027y, April, 30d}, {}, {}, false});
+  auto& vouchers = books.years[0].vouchers;
+  vouchers.push_back(posted("D", "3", Date{2026y, June, 20d}, "Telia faktura juni", 98700,
+                            {{"2440", -98700}, {"6212", 78960}, {"2641", 19740}}));
+  vouchers.push_back(posted("D", "9", Date{2026y, October, 22d}, "Telia faktura oktober", 111800,
+                            {{"2440", -111800}, {"6212", 89440}, {"2641", 22360}}));
+  vouchers.push_back(posted("E", "4", Date{2026y, July, 1d}, "Betalning Telia", 98700,
+                            {{"2440", 98700}, {"1930", -98700}}));
+  vouchers.push_back(posted("A", "7", Date{2026y, July, 2d}, "Telia faktura rättelse", 1000,
+                            {{"1930", 1000}})); // one posting: no template
+  vouchers.push_back(posted("X", "1", Date{2026y, July, 3d}, "Telia faktura", 1000,
+                            {{"1930", 1000}, {"2440", -1000}})); // not a series offered
+  return books;
+}
+
+std::vector<std::string> names(std::vector<Voucher const*> const& vouchers) {
+  std::vector<std::string> result;
+  for (auto const* voucher : vouchers) {
+    result.push_back(voucher->series + " " + voucher->number);
+  }
+  return result;
+}
+
+} // namespace
+
+TEST(FindTemplates, MostSharedWordsThenLatestAndOncePerPattern) {
+  auto const books = telia_books();
+  // D 3 posts like D 9, so only the latest of them shows
+  EXPECT_EQ(names(find_templates(books, {"Telia faktura november", 124500, today})),
+            (std::vector<std::string>{"D 9", "E 4"}));
+  EXPECT_EQ(names(find_templates(books, {"Betalning Telia", 124500, today})), (std::vector<std::string>{"E 4", "D 9"}));
+  EXPECT_EQ(names(find_templates(books, {"Telia faktura november", 124500, today}, 1)),
+            (std::vector<std::string>{"D 9"}));
+  EXPECT_TRUE(find_templates(books, {"Lunch", 124500, today}).empty());
+}
+
+TEST(FindTemplates, AnAmountOfTheSameSignIsBetter) {
+  auto books = telia_books();
+  books.years[0].vouchers.push_back(posted("D", "10", Date{2026y, June, 1d}, "Telia faktura kredit", -20000,
+                                           {{"2440", 20000}, {"6212", -16000}, {"2641", -4000}}));
+  EXPECT_EQ(names(find_templates(books, {"Telia faktura", 124500, today})).front(), "D 9");
+  EXPECT_EQ(names(find_templates(books, {"Telia faktura", -124500, today})).front(), "D 10");
+}
+
+TEST(GuideOf, ScaledToTheAmountAndBalanced) {
+  auto const books = telia_books();
+  auto const& like = books.years[0].vouchers[1]; // D 9, 1118.00
+  auto const guide = guide_of(books, like, 124500);
+  ASSERT_EQ(guide.postings.size(), 3u);
+  EXPECT_EQ(guide.postings[0].account, "2440");
+  EXPECT_EQ(guide.postings[0].amount, -124500);
+  EXPECT_EQ(guide.postings[1].amount, 99600); // 894.40 * 1245 / 1118 = 995.996
+  EXPECT_EQ(guide.postings[2].amount, 24900); // what makes them add up to zero
+  EXPECT_TRUE(guide.missing.empty());
+  // A negative amount flips the postings
+  EXPECT_EQ(guide_of(books, like, -124500).postings[0].amount, 124500);
+}
+
+TEST(GuideOf, LeavesOutRemovedPostingsAndUnknownAccounts) {
+  auto const books = telia_books();
+  auto like = books.years[0].vouchers[1];
+  like.postings[1].account = "6213";
+  like.postings.push_back({.kind = Posting::Kind::removed, .account = "1930", .amount = 5});
+  auto const guide = guide_of(books, like, 111800);
+  ASSERT_EQ(guide.postings.size(), 2u);
+  EXPECT_EQ(guide.postings[1].account, "2641");
+  EXPECT_EQ(guide.postings[1].amount, 111800); // the last row balances the rows left
+  EXPECT_EQ(guide.missing, (std::vector<std::string>{"6213"}));
+}
+
+TEST(Draft, SuggestsTheGuideRowByRow) {
+  auto const books = telia_books();
+  Draft draft{{"Telia faktura november", 124500, today}, 0, "D", {}};
+  EXPECT_FALSE(draft.suggestion());
+  draft.guide = guide_of(books, books.years[0].vouchers[1], 124500).postings;
+  EXPECT_EQ(draft.suggestion()->amount, -124500);
+  draft.postings.push_back(*draft.suggestion());
+  EXPECT_EQ(draft.suggestion()->account, "6212");
+  draft.postings.push_back({.account = "6212", .amount = 100000}); // typed instead of the suggestion
+  EXPECT_EQ(draft.suggestion()->account, "2641");
+  EXPECT_EQ(draft.suggestion()->amount, 24500); // the last row: what remains
+  draft.postings.push_back(*draft.suggestion());
+  EXPECT_TRUE(draft.is_balanced());
+  EXPECT_FALSE(draft.suggestion());
+}

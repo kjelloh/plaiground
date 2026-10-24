@@ -111,6 +111,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_year_menu(out);
       } else if (mode_ == Mode::Waiting) {
         show_waiting(out);
+      } else if (mode_ == Mode::Template) {
+        show_templates(out);
       }
     }
     return Step::Continue;
@@ -234,6 +236,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::Waiting:
     on_waiting_key(key, out);
     break;
+  case Mode::Template:
+    on_template_key(key, out);
+    break;
   default:
     break;
   }
@@ -248,8 +253,8 @@ bool Repl::ignores(charset::unicode::CodePoint key) const {
   if (key == escape) {
     return true;
   }
-  // Enter lists the keys at a prompt, and takes the default series
-  if ((is_prompt() || mode_ == Mode::Series) && (key == U'\n' || key == U'\r')) {
+  // Enter lists the keys at a prompt, and takes the first template or the default series
+  if ((is_prompt() || mode_ == Mode::Template || mode_ == Mode::Series) && (key == U'\n' || key == U'\r')) {
     return false;
   }
   // Space and Enter show the next page of help or the log
@@ -344,6 +349,8 @@ std::string Repl::prompt() const {
     return "amount?> ";
   case Mode::ConfirmEvent:
     return "OK? (y/n) ";
+  case Mode::Template:
+    return "template?> ";
   case Mode::Series:
     return "series> ";
   case Mode::ConfirmSave:
@@ -1334,15 +1341,83 @@ void Repl::on_confirm_event_key(charset::unicode::CodePoint key, std::ostream& o
   if (key == U'y' && noting_) {
     note_event(out);
   } else if (key == U'y') {
-    guess_ = books::guess_series(books_, draft_->event.heading);
-    mode_ = Mode::Series;
-    show_series(out);
+    offer_templates(out);
   } else if (key == U'n' || key == U'-') {
     mode_ = Mode::Typing;
     out << editor_.prompt();
   } else {
     std::println(out, "Press y to go on, n to change the line.");
   }
+}
+
+// Earlier vouchers like the draft's event to post it after, or straight to the series when there are none
+void Repl::offer_templates(std::ostream& out) {
+  templates_ = books::find_templates(books_, draft_->event);
+  if (templates_.empty()) {
+    use_template(nullptr, out);
+    return;
+  }
+  mode_ = Mode::Template;
+  show_templates(out);
+}
+
+void Repl::show_templates(std::ostream& out) const {
+  std::println(out, "Earlier vouchers like this one:");
+  for (std::size_t i = 0; i < templates_.size(); ++i) {
+    auto const& like = *templates_[i];
+    std::println(out, "  {}  {} {}  {}  {:>12}  {}", i + 1, like.series, like.number, format_iso_date(like.event.date),
+                 format_amount(like.event.amount), like.event.heading);
+    std::string rows;
+    for (auto const& posting : like.postings) {
+      if (posting.kind != books::Posting::Kind::removed) {
+        rows += std::format("  {} {}", posting.account, format_amount(posting.amount));
+      }
+    }
+    std::println(out, "    {}", rows);
+  }
+  std::println(out, "");
+  std::println(out, "Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_template_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'\n' || key == U'\r') {
+    use_template(templates_.front(), out);
+  } else if (key >= U'1' && key <= U'9' && static_cast<std::size_t>(key - U'1') < templates_.size()) {
+    use_template(templates_[static_cast<std::size_t>(key - U'1')], out);
+  } else if (key == U'n') {
+    use_template(nullptr, out);
+  } else if (key == U'-' && from_waiting_) {
+    draft_.reset();
+    from_waiting_.reset();
+    mode_ = Mode::Waiting;
+    show_waiting(out);
+  } else if (key == U'-') {
+    purpose_ = Purpose::Voucher;
+    mode_ = Mode::Typing;
+    out << editor_.prompt();
+  } else {
+    std::println(out, "Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.");
+  }
+}
+
+// The template's rows guide the postings and its series is the default; without one, the guessed series
+void Repl::use_template(books::Voucher const* like, std::ostream& out) {
+  draft_->guide.clear();
+  draft_->from_template.clear();
+  if (like) {
+    auto guide = books::guide_of(books_, *like, draft_->event.amount);
+    for (auto const& account : guide.missing) {
+      std::println(out, "Account {} of {} {} is not in the books, so it is not suggested.", account, like->series,
+                   like->number);
+    }
+    draft_->guide = std::move(guide.postings);
+    draft_->from_template = std::format("{} {}", like->series, like->number);
+    guess_ = {like->series, like};
+  } else {
+    guess_ = books::guess_series(books_, draft_->event.heading);
+  }
+  mode_ = Mode::Series;
+  show_series(out);
 }
 
 void Repl::show_series(std::ostream& out) {
@@ -1360,6 +1435,11 @@ void Repl::show_series(std::ostream& out) {
 }
 
 void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-' && !templates_.empty()) {
+    mode_ = Mode::Template;
+    show_templates(out);
+    return;
+  }
   if (key == U'-' && from_waiting_) {
     draft_.reset();
     from_waiting_.reset();
@@ -1393,10 +1473,20 @@ void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
   std::println(out, "An account alone gets what remains (on the first row, the amount). A number prefix or a word of");
   std::println(out, "the name lists accounts. - removes the last row. Enter saves when debit and credit each add up");
   std::println(out, "to the amount.");
+  if (!draft_->guide.empty()) {
+    std::println(out, "Rows from {} are suggested one at a time, scaled to the amount: Enter takes the suggestion,",
+                 draft_->from_template);
+    std::println(out, "or type your own row instead.");
+  }
   start_rows(out);
 }
 
 void Repl::start_rows(std::ostream& out) {
+  if (auto const suggested = draft_->suggestion()) {
+    auto const* account = books_.account(suggested->account);
+    std::println(out, "  Suggested {:<6} {:>12}  {}", suggested->account, format_amount(suggested->amount),
+                 account ? account->name : "");
+  }
   purpose_ = Purpose::Row;
   editor_.start("", PathEditor::Kind::Row);
   mode_ = Mode::Typing;
@@ -1414,6 +1504,13 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
         show_row(row, out);
       }
       mode_ = Mode::ConfirmSave;
+      return;
+    }
+    if (auto const suggested = draft_->suggestion()) {
+      rows.push_back(*suggested);
+      show_row(rows.back(), out);
+      show_remaining(out);
+      start_rows(out);
       return;
     }
     if (rows.empty()) {
@@ -1527,9 +1624,10 @@ void Repl::save_voucher(std::ostream& out) {
   if (waited) {
     std::println(out, "The event is no longer waiting ({} still waiting).", year.waiting.size());
   }
-  LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}){} into project {} ({}), fiscal year {} - {}",
+  LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}){}{} into project {} ({}), fiscal year {} - {}",
                draft.series, number_, format_iso_date(draft.event.date), draft.event.heading, draft.postings.size(),
-               format_amount(books::debit(draft.postings)), waited ? " from a waiting event" : "", project_->name,
+               format_amount(books::debit(draft.postings)), waited ? " from a waiting event" : "",
+               draft.from_template.empty() ? "" : " with template " + draft.from_template, project_->name,
                project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
 }
 
@@ -1656,9 +1754,7 @@ void Repl::post_waiting(std::size_t index, std::ostream& out) {
   noting_ = false;
   from_waiting_ = index;
   draft_ = books::Draft{year.waiting[index].event, year_index, {}, {}};
-  guess_ = books::guess_series(books_, draft_->event.heading);
-  mode_ = Mode::Series;
-  show_series(out);
+  offer_templates(out);
 }
 
 void Repl::on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& out) {

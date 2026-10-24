@@ -37,7 +37,7 @@ struct WorkspacePlaces {
 // viewing the log, the workspace menu, choosing a workspace, in the workspace,
 // the project menu, creating or adding a project, in a project, importing an
 // SIE file, choosing and reading reports, choosing a fiscal year, in a fiscal
-// year, entering a voucher, noting an event, or the waiting events
+// year, entering a voucher (its template, series and rows), noting an event, or the waiting events
 class Repl {
 public:
   // page_lines is the number of help and log lines per page; 0 shows everything at once.
@@ -81,6 +81,7 @@ private:
     Year,
     ChooseAmount,
     ConfirmEvent,
+    Template,
     Series,
     ConfirmSave,
     Waiting,
@@ -117,6 +118,7 @@ private:
   Mode before_reports_ = Mode::Years;   // where - leaves the report menu for
   std::vector<books::Event> readings_;  // the readings of an unclear amount
   std::optional<books::Draft> draft_;   // the voucher being entered, in a year of books_
+  std::vector<books::Voucher const*> templates_; // the earlier vouchers offered as templates for the draft
   books::Guess guess_;                  // the series offered by default
   std::string number_;                  // the number the voucher is saved as
   bool noting_ = false;                 // the event line is noted to be posted later, not posted now
@@ -178,6 +180,10 @@ private:
   void on_choose_amount_key(charset::unicode::CodePoint key, std::ostream& out);
   void show_event(books::Event const& event, std::size_t year, std::ostream& out);
   void on_confirm_event_key(charset::unicode::CodePoint key, std::ostream& out);
+  void offer_templates(std::ostream& out);
+  void show_templates(std::ostream& out) const;
+  void on_template_key(charset::unicode::CodePoint key, std::ostream& out);
+  void use_template(books::Voucher const* like, std::ostream& out);
   void show_series(std::ostream& out);
   void on_series_key(charset::unicode::CodePoint key, std::ostream& out);
   void start_rows(std::ostream& out);

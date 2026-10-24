@@ -2,6 +2,14 @@
 
 ```#60cae9fe```
 
+## 20261024
+
+I have now decided to 'brute force' functionality by Vibe coding and don't care too much about code structure or design.
+
+So what's next?
+
+I asked Claude to vibe code a 'pick voucher template' as an option when editing and or posting a financial event.
+
 ## 20261023
 
 It is now afternoon and I will try to make Claude implement an account statement file reader.
@@ -310,6 +318,8 @@ After some forth and back I made Claude implement accounting vouchers.
 * I now discover we lack 'open fiscal year' (should list option 0,1,2,... for one key select current, previous, before previous...)
 
 I made Claude fix that.
+
+**Todo SIE Import, New voucher, VAT support, Template voucher from history**
 
 * I now discovered I would like import SIE file to list available SIE files if the path is a folder and I press enter
     * I would like each SIE file to be read for financial year and show at least that in the options list
