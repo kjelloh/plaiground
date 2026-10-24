@@ -289,14 +289,37 @@ Checked with piped input on a scratch project with all 11 Fortnox SIE years and 
 1920 for PlusGiro (15 of 15), 1630 for SKV (3 of 4), 1930 for Sparkonto (5 of 8); an overlapping file gives "Nothing to
 import"; at 2024/25 a file spanning the year imports 2 and lists 6 outside. In review.
 
+Task 36: Naming (no new behaviour). A line of a statement is an *entry*, an amount on a BAS account a *posting*:
+`statement::Posting` -> `statement::Entry`, `Document::postings` -> `entries`, `counted_postings` / `known_postings` ->
+`counted_entries` / `known_entries`, `StatementPlan::postings` -> `entries` (new records write `entries = <n>`; old
+records' `postings` line is not read). UI and messages say entries ("15 of 15 entries match postings on 1920 in the
+books", "Line 1 is not an entry."). A year's `transactions.csv` is now `postings.csv`: read from `transactions.csv`
+when `postings.csv` is missing, written as `postings.csv` with `transactions.csv` removed (`Initiated` / `Removed`).
+Manual: files table, statement section (with the entry/posting words). 377 tests pass, no warnings; checked on the
+scratch project with all 11 Fortnox years: one write renamed every year's file, vouchers read back. In review.
+
+Task 37: Waiting events carry postings, from statement entries. `WaitingEvent::postings` (each with date and text);
+`Posting::source` (stash:line of the entry; kept on waiting events only, cleared in `Draft::voucher`). Stored in
+`<start>/event_postings.csv` (`event,account,amount,date,text,source`, `event` = row in `events.csv` from 1), which exists
+only while some waiting event has postings; `events.csv` unchanged. `books::open_entries(books, imports, year)`: the
+imported entries (each once over overlapping files) in the year's days (or any fiscal year), by account and date,
+minus those booked by a posting on the account with the same date and amount, in a voucher (not removed) or a waiting
+event (each posting books one entry). `a` at `project>` and the year prompt: `entries?>` list (1-9, 0/9 scroll over 9);
+a number shows the entry (`entry?>`): `n` new waiting event (`heading>` prefilled with the entry text; date, amount
+without sign, the entry as its posting), `w` add it to a waiting event of its year (`event?>`); refused in a closed
+year; back to the list after, or to the prompt when none are left. The waiting list (and `event?>`) shows an event's
+postings and `Draft::status`. Posting a waiting event starts `post>` with its postings (shown first); a template's
+rows on accounts the event has are left out (`without_present`) and suggestions start after them
+(`Draft::guide_start`); a balanced event saves with Enter. The import ends "Press a to book them." Logged (business):
+event noted from an entry, entry added to an event. Manual: new "Statement entries", waiting list, files, key tables,
+log kinds. 381 tests pass, no warnings. Checked on the scratch project with all 11 Fortnox years: the 2026-10-20
+PlusGiro file lists exactly its 7 entries not in the books (earlier files: all booked); the Loopia entry became a
+waiting event and, with Fortnox's E 3 (1920/2440) as template, voucher E 4 (1920 -1308.75, 2440 1308.75). In review.
+
 ## Next
 
-Task 36: show and use the waiting statement postings (per account and fiscal year), e.g. post one as a voucher (its
-date, amount and text as the event, its account as one row) or match it to a waiting event. Later: matching waiting
-events with statement postings.
-
-Later: VAT helpers, source document reference, correction help, creating a new fiscal year, sync with
-Fortnox. Other possible: SIE export (and import->export round trip), BAS chart check, rename/remove projects.
+Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
+into a waiting event without making a voucher, several entries chosen at once.
 
 ## Agreed in chat
 
@@ -417,11 +440,15 @@ Fortnox. Other possible: SIE export (and import->export round trip), BAS chart c
   matching postings first (books, then earlier statements), then by saldo, and confirmed by the user. Key events of
   the import are logged.
 
+- 2026-10-24: Words: a statement line is an *entry* (`statement::Entry`), an amount on a BAS account a *posting*
+  (`books::Posting`, `postings.csv`, was `transactions.csv`). A waiting event may hold several postings, from entries of
+  different statement files, and is completed into a voucher posting by posting. Storage reuses the voucher design:
+  `events.csv` + `event_postings.csv`.
+
 ## Open questions
 
 - Should a template's rounding row (e.g. 3740 Öres- och kronutjämning) be scaled like the others? Today it takes the
   scaling remainder, so VAT ends up slightly off (Telia 1245.00: 2641 248.97, 3740 0.14).
-- Rename `transactions.csv` to `postings.csv` to match the code?
 - Should an SIE import into a closed fiscal year be refused (it is allowed now)?
 - Should differing account data (name, SRU) from an older year's file be noted even when not taken?
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).

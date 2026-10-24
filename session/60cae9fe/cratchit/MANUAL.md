@@ -151,8 +151,9 @@ The project's books are in `.cratchit/books` in the project folder:
 | `objects.csv` | `dimension,object,name`. |
 | `<start>/opening.csv` | Per fiscal year, in a folder named by its start date: the opening balances the source reported, `account,amount`. |
 | `<start>/vouchers.csv` | The year's vouchers, imported and entered: `series,number,date,text,amount,registered,signature`. The amount is without sign: what the debit rows and the credit rows each add up to. An imported voucher gets its debit total (SIE gives no amount). A voucher entered in cratchit is registered on the day it is saved. |
-| `<start>/transactions.csv` | Their rows (postings): `series,number,kind,account,objects,amount,date,text,quantity,signature`. |
+| `<start>/postings.csv` | Their rows (postings to BAS accounts): `series,number,kind,account,objects,amount,date,text,quantity,signature`. Books written before 2026-10-24 have it as `transactions.csv`; cratchit reads that and renames it on the next write (`Initiated ... postings.csv`, `Removed ... transactions.csv`). |
 | `<start>/events.csv` | The year's waiting events, in the order noted: `date,text,amount,noted` (see Waiting events). The amount is without sign; `noted` is the day it was noted. The file exists only while the year has waiting events: cratchit removes it when the last one is posted or deleted (`Removed ...`). |
+| `<start>/event_postings.csv` | The postings the waiting events have so far (see Statement entries): `event,account,amount,date,text,source`. `event` is the event's row in `events.csv` (1 for the first), `date` and `text` those of the statement entry, `source` the stashed statement file and line it came from. The file exists only while some waiting event has postings. |
 
 The `.csv` files are comma separated with a header line. A field holding a
 comma, a quote or a line break is quoted, with quotes doubled. Amounts have a
@@ -172,9 +173,9 @@ imported file, named `<date>_<n>_<file name>`, and next to it a record
 `.cratchit/statements` in the project folder keeps an unchanged copy of every
 imported account statement file, named `<date>_<n>_<file name>`, and next to
 it a record `<date>_<n>_<file name>.txt`: `imported`, `source`, `account` (the
-BAS account the statement is for), `from` and `to` (the days whose postings
-count), `postings` (in the file), `added`, `known` and `outside`. The
-statement postings are kept nowhere else: cratchit reads them from these
+BAS account the statement is for), `from` and `to` (the days whose entries
+count), `entries` (in the file), `added`, `known` and `outside`. The
+statement entries are kept nowhere else: cratchit reads them from these
 copies when it needs them.
 
 `log.txt`, next to `runtime.txt`, is the log (see The log). cratchit creates
@@ -435,6 +436,7 @@ The prompt is `project>`.
 | y      | Lists the fiscal years to open one (see Fiscal years). |
 | i      | Imports an SIE file (see Importing an SIE file).    |
 | s      | Imports an account statement (see Importing an account statement). |
+| a      | Lists the statement entries not yet booked, to make waiting events of them (see Statement entries). |
 | r      | Shows reports of the books (see Reports).           |
 | Enter  | Lists these keys.                                   |
 | h      | Opens this manual.                                  |
@@ -491,7 +493,8 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | n      | Notes an event to post later (see Waiting events). Only in an open year. |
 | w      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
 | v      | Views the vouchers, to correct one or use it as a template (see Viewing and correcting vouchers). |
-| s      | Imports an account statement, only its postings in this year (see Importing an account statement). |
+| s      | Imports an account statement, only its entries in this year (see Importing an account statement). |
+| a      | Lists the statement entries not yet booked in this year (see Statement entries). |
 | r      | Shows the reports of this year (see Reports). `-` there comes back here. |
 | c      | Closes the year for new vouchers (shown when the year is open). |
 | o      | Opens the year for new vouchers (shown when it is closed). |
@@ -863,11 +866,24 @@ at a time, `0` shows the ones before and `9` the ones after. With none,
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
 
+An event made from statement entries (see Statement entries) shows its
+postings under it, and where they stand:
+
+```
+  1  2026-09-28       1308.75  Websupport webhotell
+       1920       -1308.75  2026-09-28  PlusGiro
+       Remaining 1308.75 (debit 0.00, credit 1308.75, amount 1308.75).
+```
+
 When you post an event, its heading, amount and date are the voucher line,
 so cratchit goes straight to the template (or the series). `-` at
 `template?>`, or at `series>` when no templates were listed, goes back to the
-list. `-` at `post>` with no rows drops the voucher, and the event is still
-waiting. When the voucher is saved, the event leaves the list:
+list. The event's postings are the first rows at `post>`; a template's
+suggestions leave out a row on an account the event already has. An event
+whose postings balance is saved with Enter. `-` at `post>` removes the last
+row, the event's postings too; with no rows it drops the voucher, and the
+event is still waiting as it was. When the voucher is saved, the event leaves
+the list:
 
 ```
 Saved voucher D 5 into fiscal year 2026-05-01 - 2027-04-30.
@@ -875,7 +891,55 @@ The event is no longer waiting (1 still waiting).
 ```
 
 Deleting an event removes it from the list for good (it is logged). Neither
-posting nor deleting changes any other waiting event.
+posting nor deleting changes any other waiting event. The statement entries
+of a deleted event are not booked any more, so they are listed by `a` again.
+
+#### Statement entries
+
+The entries of the imported account statements (see Importing an account
+statement) wait to be booked. Press `a` at `project>`, or at a fiscal year's
+prompt for only that year's entries. The prompt is `entries?>`:
+
+```
+Statement entries not yet booked in fiscal year 2026-05-01 - 2027-04-30:
+  1  1920   2026-07-03         -3.70  AVGIFTER NORDEA
+  2  1920   2026-07-23       2292.00  Skatt | 5050-1030 SK5567828172
+  ...
+  7  1920   2026-09-28      -1308.75  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1
+
+Press a number to choose an entry, - to go back, h for help, q to quit.
+entries?> 
+```
+
+An entry is booked when a posting on its account has its date and amount:
+in a voucher, imported or entered, or in a waiting event. Each posting books
+one entry, and an entry in several statement files is listed once. With more
+than nine, keys 1-8 show eight at a time, `0` the ones before and `9` the
+ones after.
+
+A number shows the entry and where it is. The prompt is `entry?>`:
+
+| Key    | What it does |
+|--------|--------------|
+| n      | Makes a new waiting event with it. Type the heading at `heading>` (the entry's text is typed in for you to change). The event gets the entry's date and its amount without sign, and the entry as its posting on the statement's account. |
+| w      | Adds it to a waiting event of its fiscal year, chosen by number at `event?>`. The event's amount stays as it is. |
+| -      | Goes back to the list. |
+| h      | Opens this manual. |
+| q      | Quits cratchit. |
+
+Both are refused in a closed year. cratchit saves the event and its postings
+in the year's `events.csv` and `event_postings.csv` (see The files), shows
+where the postings stand, logs it and goes back to the list:
+
+```
+Noted: 2026-09-28 Websupport webhotell 1308.75 with 1920 -1308.75 (1 waiting). Remaining 1308.75 (debit 0.00, credit 1308.75, amount 1308.75).
+```
+
+Entries from different statements can meet in one event: a transfer from
+PlusGiro to the savings account is one entry on each statement, and the two
+make a balanced event, ready to be saved as a voucher (see The waiting
+list). The voucher keeps the postings' dates and texts, but not which
+statement line they came from.
 
 ### Importing an SIE file
 
@@ -982,10 +1046,14 @@ Unknown records in the file are ignored and noted, as SIE requires.
 ### Importing an account statement
 
 An account statement is a file from the bank or from Skatteverket listing the
-postings to one account: Nordea's CSV files and Skatteverket's "Bokförda
+entries of one account: Nordea's CSV files and Skatteverket's "Bokförda
 transaktioner" (CSV or .skv). Press `s` at `project>`, or at a fiscal year's
-prompt to import only the postings in that year. The postings wait for an
-event to be posted with; nothing is put on the accounts yet.
+prompt to import only the entries in that year. The entries wait to be
+booked (see Statement entries); nothing is put on the accounts yet.
+
+Each line of a statement is an *entry*. A *posting* is an amount on a BAS
+account, in a voucher (or an event): an entry becomes a posting when it is put
+on the account the statement is for.
 
 #### Choosing the file
 
@@ -996,7 +1064,7 @@ each read to show what it holds, at `statement?>`:
 ```
 Files in /Users/me/Downloads:
   1  PLUSGIROKONTO FTG 51 86 87-9 - 2026-10-20 11.05.39.csv
-       7 postings, 2026-07-03 - 2026-09-28, new
+       7 entries, 2026-07-03 - 2026-09-28, new
   2  bokf_trans_165567828172.skv
        The file does not start with a UTF-8 byte order mark (BOM), so its encoding is unknown. Save it as UTF-8 with a program that writes a BOM.
 
@@ -1011,26 +1079,26 @@ path. Enter on an empty path goes back to the prompt you came from.
 
 #### How cratchit reads a statement
 
-cratchit finds the postings by what the cells hold, not by the column names:
+cratchit finds the entries by what the cells hold, not by the column names:
 
 - The file must start with a UTF-8 byte order mark (BOM). Without one its
   encoding cannot be told, and cratchit asks you to save it as UTF-8 with a
   program that writes a BOM.
 - The cells are separated by `;`, tab or `,`, whichever gives the most lines
   with the same number of cells. Cells may be in double quotes.
-- A posting line has exactly one date (`2026-09-28` or `2026/09/28`, alone in
+- An entry line has exactly one date (`2026-09-28` or `2026/09/28`, alone in
   its cell) and at least one amount (`-1308,75`, `2 292`, `1997`, alone in its
   cell). A date or amount inside other text does not count.
-- The postings are the longest run of such lines in a row, with the same
+- The entries are the longest run of such lines in a row, with the same
   number of cells and the date in the same place. Lines before and after (a
-  header, "Ingående saldo ...") are not postings.
-- When a column can be the saldo (the balance after each posting), it must
+  header, "Ingående saldo ...") are not entries.
+- When a column can be the saldo (the balance after each entry), it must
   add up line by line: the saldo before plus the amounts since. A line without
   a saldo is fine (Nordea shows one per day). This also tells whether the file
-  lists the newest or the oldest posting first. Without a saldo, the dates tell.
-- A file with a single posting is read only when that line has a single
+  lists the newest or the oldest entry first. Without a saldo, the dates tell.
+- A file with a single entry is read only when that line has a single
   amount: one line cannot tell the amount from the saldo.
-- The text of a posting is the line's other cells joined with ` | `, without
+- The text of an entry is the line's other cells joined with ` | `, without
   empty cells, a cell that repeats the one before, or cells the same on every
   line (such as `SEK`).
 
@@ -1044,19 +1112,19 @@ The statement is shown, then cratchit asks which BAS account it is for, at
 
 ```
 Statement file /Users/me/Downloads/PLUSGIROKONTO FTG 51 86 87-9 - 2026-04-12 17.38.43.csv
-  Postings  15, 2026-01-07 - 2026-03-31 (lines 2-16, newest first)
+  Entries   15, 2026-01-07 - 2026-03-31 (lines 2-16, newest first)
   Saldo     9911.33 before, 6011.55 after; it adds up on every line that has one
 Notes:
-  - Line 1 is not a posting.
-Suggested account 1920 PlusGiro: 15 of 15 postings match postings on 1920 in the books.
+  - Line 1 is not an entry.
+Suggested account 1920 PlusGiro: 15 of 15 entries match postings on 1920 in the books.
 Type the BAS account the statement is for, e.g. 1930. A number prefix or a word of the name lists
 accounts. Enter accepts; Enter on an empty line imports nothing.
 account> 1920
 ```
 
 The suggestion is the account with the most postings in the books' vouchers
-on the same day with the same amount. Without such postings, the account
-whose imported statements hold the most of these postings. Without that, the
+that match an entry (same day, same amount). Without such postings, the
+account whose imported statements hold the most of these entries. Without that, the
 account whose latest imported statement ends with the saldo this one starts
 with. A tie suggests nothing. Press Enter to take it, or change it. A number
 prefix or a word that is not an account lists the matching accounts.
@@ -1069,12 +1137,12 @@ prefix or a word that is not an account lists the matching accounts.
   Known     0 (in statements already imported)
 Import it? (y/n) y
 Stashed the file as .cratchit/statements/2026-10-24_1_PLUSGIROKONTO FTG 51 86 87-9 - 2026-04-12 17.38.43.csv in ...
-Imported 15 postings for account 1920 (0 already known, 0 outside). They wait for an event.
+Imported 15 entries for account 1920 (0 already known, 0 outside). Press a to book them.
 ```
 
-A posting already in a statement imported for the account (same date,
+An entry already in a statement imported for the account (same date,
 amount, saldo and text) is known, and not imported again; files that overlap
-are fine. Postings outside every fiscal year in the books, or at a year's
+are fine. Entries outside every fiscal year in the books, or at a year's
 prompt outside that year, are listed as `Outside` and not imported:
 
 ```
@@ -1082,8 +1150,8 @@ prompt outside that year, are listed as `Outside` and not imported:
     2026-01-02         -1.85  AVGIFTER
 ```
 
-With nothing new, cratchit says `Nothing to import: no posting is new.` (or
-`... no posting is new inside the books.` when some are outside). `y`
+With nothing new, cratchit says `Nothing to import: no entry is new.` (or
+`... no entry is new inside the books.` when some are outside). `y`
 stashes an unchanged copy of the file with a record (see The files); `n`
 imports nothing. Reading the file, the account chosen and the import are
 logged.
@@ -1188,7 +1256,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects), noting or deleting a waiting event, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects), noting or deleting a waiting event, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, or an account statement it cannot read. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

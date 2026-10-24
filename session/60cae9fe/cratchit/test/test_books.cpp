@@ -145,7 +145,7 @@ TEST_F(BooksFiles, FileFormats) {
   EXPECT_EQ(read_file(folder / "2026-01-01" / "vouchers.csv"),
             "series,number,date,text,amount,registered,signature\n"
             "A,1,2026-02-01,\"Text, with \"\"quotes\"\"\",7.00,2026-01-10,\n");
-  EXPECT_EQ(read_file(folder / "2026-01-01" / "transactions.csv"),
+  EXPECT_EQ(read_file(folder / "2026-01-01" / "postings.csv"),
             "series,number,kind,account,objects,amount,date,text,quantity,signature\n"
             "A,1,normal,1930,,7.00,,,,\n"
             "A,1,normal,3010,\"1,100,6,P 1\",-7.00,2026-02-01,rad,2,\n");
@@ -214,4 +214,56 @@ TEST_F(BooksFiles, WaitingEventsAreKeptOnlyWhileThereAreAny) {
   ASSERT_EQ(removed->size(), 1u);
   EXPECT_TRUE(removed->at(0).removed);
   EXPECT_FALSE(fs::exists(events));
+}
+
+TEST_F(BooksFiles, TransactionsCsvIsReadAndBecomesPostingsCsv) {
+  auto const books = sample();
+  ASSERT_TRUE(cratchit::books::write_books(root, books).has_value());
+  auto const year = root / ".cratchit" / "books" / "2026-01-01";
+  fs::rename(year / "postings.csv", year / "transactions.csv");
+  auto const back = cratchit::books::read_books(root);
+  ASSERT_TRUE(back.has_value()) << back.error();
+  EXPECT_EQ(back->years[1].vouchers, books.years[1].vouchers);
+  auto const written = cratchit::books::write_books(root, *back);
+  ASSERT_TRUE(written.has_value()) << written.error();
+  ASSERT_EQ(written->size(), 2u);
+  EXPECT_EQ(written->at(0).file, fs::path(".cratchit") / "books" / "2026-01-01" / "postings.csv");
+  EXPECT_TRUE(written->at(0).created);
+  EXPECT_EQ(written->at(1).file, fs::path(".cratchit") / "books" / "2026-01-01" / "transactions.csv");
+  EXPECT_TRUE(written->at(1).removed);
+  EXPECT_TRUE(fs::exists(year / "postings.csv"));
+  EXPECT_FALSE(fs::exists(year / "transactions.csv"));
+}
+
+TEST_F(BooksFiles, WaitingEventPostingsAreKeptOnlyWhileThereAreAny) {
+  auto books = sample();
+  books.years[1].waiting.push_back({{"Telia", 111800, date(2026, 10, 20)}, date(2026, 10, 23)});
+  books.years[1].waiting.push_back({{"Till sparkonto", 5000000, date(2026, 1, 24)}, date(2026, 10, 24)});
+  cratchit::books::Posting out;
+  out.account = "1920";
+  out.amount = -5000000;
+  out.date = date(2026, 1, 24);
+  out.text = "PG TILL SPAR";
+  out.source = ".cratchit/statements/2026-10-24_1_pg.csv:12";
+  auto in = out;
+  in.account = "1930";
+  in.amount = 5000000;
+  in.source = ".cratchit/statements/2026-10-24_2_spar.csv:3";
+  books.years[1].waiting[1].postings = {out, in};
+  ASSERT_TRUE(cratchit::books::write_books(root, books).has_value());
+  auto const file = root / ".cratchit" / "books" / "2026-01-01" / "event_postings.csv";
+  EXPECT_EQ(read_file(file), "event,account,amount,date,text,source\n"
+                             "2,1920,-50000.00,2026-01-24,PG TILL SPAR,.cratchit/statements/2026-10-24_1_pg.csv:12\n"
+                             "2,1930,50000.00,2026-01-24,PG TILL SPAR,.cratchit/statements/2026-10-24_2_spar.csv:3\n");
+  auto const back = cratchit::books::read_books(root);
+  ASSERT_TRUE(back.has_value()) << back.error();
+  EXPECT_EQ(back->years[1].waiting, books.years[1].waiting);
+  books.years[1].waiting.erase(books.years[1].waiting.begin() + 1);
+  auto const removed = cratchit::books::write_books(root, books);
+  ASSERT_TRUE(removed.has_value()) << removed.error();
+  EXPECT_FALSE(fs::exists(file));
+  std::ofstream(file) << "event,account,amount,date,text,source\n3,1920,1.00,,,\n";
+  auto const bad = cratchit::books::read_books(root);
+  ASSERT_FALSE(bad.has_value());
+  EXPECT_NE(bad.error().find("event 3 is not in events.csv"), std::string::npos) << bad.error();
 }

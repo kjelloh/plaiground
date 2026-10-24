@@ -67,6 +67,10 @@ struct Guide {
 // makes them add up to zero. Postings to accounts not in the books are left out.
 Guide guide_of(Books const& books, Voucher const& like, Amount amount);
 
+// The guide without the rows the postings already have: for each posting, the
+// first row left on its account
+Postings without_present(Postings guide, Postings const& postings);
+
 // The highest number in series in year, plus one; 1 for a series not used yet
 std::string next_number(FiscalYear const& year, std::string_view series);
 
@@ -91,6 +95,7 @@ struct Draft {
   std::string series;
   Postings postings;
   Postings guide{};            // the rows suggested by a template, if one is used (see guide_of)
+  std::size_t guide_start{};   // the number of postings there were when the guide was set
   std::string from_template{}; // the template's series and number, e.g. "D 31"
   std::string corrects{};      // the voucher this one corrects (reverses), e.g. "D 4", if any
 
@@ -107,8 +112,8 @@ struct Draft {
   std::string status() const;
 
   // The guide's row for the next posting (the one at the number of postings
-  // so far), unless the postings balance. The guide's last row gets what
-  // remains, when something does.
+  // added since guide_start), unless the postings balance. The guide's last
+  // row gets what remains, when something does.
   std::optional<Posting> suggestion() const;
 
   Voucher voucher(std::string number, Date registered) const;

@@ -62,6 +62,7 @@ struct Posting {
   std::string text;
   std::string quantity;
   std::string signature;
+  std::string source{}; // the statement entry it came from (stashed file:line); kept on waiting events only
 
   bool operator==(Posting const&) const = default;
 };
@@ -100,10 +101,12 @@ struct Voucher {
   bool operator==(Voucher const&) const = default;
 };
 
-// An event noted to be posted later, e.g. an invoice or a receipt
+// An event noted to be posted later, e.g. an invoice or a receipt, with the
+// postings it has so far (e.g. from statement entries), to be completed into a voucher
 struct WaitingEvent {
   Event event; // the amount without sign, as in a voucher
   Date noted;  // the day it was noted
+  Postings postings{}; // each with its date and text
 
   bool operator==(WaitingEvent const&) const = default;
 };
@@ -177,7 +180,10 @@ std::expected<Books, std::string> read_books(std::filesystem::path const& projec
 
 // Writes the books of a project, creating folders as needed. Only files whose
 // content changes are written; those are returned, in the order written. A
-// year's events.csv exists only while the year has waiting events.
+// year's events.csv exists only while the year has waiting events, and its
+// event_postings.csv only while they have postings. A year's
+// postings are in postings.csv; transactions.csv, its name before, is read
+// when postings.csv is missing and removed on writing.
 std::expected<std::vector<Written>, std::string> write_books(std::filesystem::path const& project_folder,
                                                              Books const& books);
 

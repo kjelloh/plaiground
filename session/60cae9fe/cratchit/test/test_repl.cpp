@@ -799,6 +799,7 @@ TEST_F(WorkspaceRepl, EnterAndUnknownKeysListTheKeysOfAProject) {
                            "  y  Fiscal years\n"
                            "  i  Import an SIE file\n"
                            "  s  Import an account statement\n"
+                           "  a  Statement entries not yet booked\n"
                            "  r  Reports\n"
                            "  l  Show the log\n"
                            "  -  Back to workspace>\n"
@@ -863,7 +864,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
                         "  1930         -35.00  Bank\n"
                         "Save as A 3? (y/n) y\n"
                         "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
-                        "Updated .cratchit/books/2025-01-01/transactions.csv in " + folder.string() + "\n"
+                        "Updated .cratchit/books/2025-01-01/postings.csv in " + folder.string() + "\n"
                         "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"
                         "2025> \n"),
             std::string::npos)
@@ -922,7 +923,7 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
   EXPECT_EQ(output.find("Suggested"), std::string::npos) << output;
   EXPECT_NE(output.find("Save as A 3? (y/n) y\n"
                         "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
-                        "Updated .cratchit/books/2025-01-01/transactions.csv in " + folder.string() + "\n"
+                        "Updated .cratchit/books/2025-01-01/postings.csv in " + folder.string() + "\n"
                         "Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
                         "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"
                         "The event is no longer waiting (0 still waiting).\n"
@@ -1231,7 +1232,7 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
                         "path> " + (root / "start").string() + "/bank\n"
                         "Files in " + (root / "start" / "bank").string() + ":\n"
                         "  1  nordea.csv\n"
-                        "       3 postings, 2025-02-01 - 2026-01-02, new\n"
+                        "       3 entries, 2025-02-01 - 2026-01-02, new\n"
                         "  2  old.skv\n"
                         "       The file does not start with a UTF-8 byte order mark (BOM), so its encoding is unknown. "
                         "Save it as UTF-8 with a program that writes a BOM.\n"
@@ -1245,11 +1246,11 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
 
   output = run("sbank/nordea.csv\n\ny");
   EXPECT_NE(output.find("Statement file " + (root / "start" / "bank" / "nordea.csv").string() + "\n"
-                        "  Postings  3, 2025-02-01 - 2026-01-02 (lines 2-4, newest first)\n"
+                        "  Entries   3, 2025-02-01 - 2026-01-02 (lines 2-4, newest first)\n"
                         "  Saldo     0.00 before, 488.15 after; it adds up on every line that has one\n"
                         "Notes:\n"
-                        "  - Line 1 is not a posting.\n"
-                        "Suggested account 1930 Bank: 2 of 3 postings match postings on 1930 in the books.\n"
+                        "  - Line 1 is not an entry.\n"
+                        "Suggested account 1930 Bank: 2 of 3 entries match postings on 1930 in the books.\n"
                         "Type the BAS account the statement is for, e.g. 1930. A number prefix or a word of the name "
                         "lists\naccounts. Enter accepts; Enter on an empty line imports nothing.\n"
                         "account> 1930\n"
@@ -1260,7 +1261,7 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
                         "    2026-01-02         -1.85  AVGIFTER\n"
                         "Import it? (y/n) y\n"
                         "Stashed the file as .cratchit/statements/2026-10-20_1_nordea.csv in " + folder.string() + "\n"
-                        "Imported 2 postings for account 1930 (0 already known, 1 outside). They wait for an event.\n"
+                        "Imported 2 entries for account 1930 (0 already known, 1 outside). Press a to book them.\n"
                         "project> \n"),
             std::string::npos)
       << output;
@@ -1268,22 +1269,107 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
 
   // Again: the folder shows it, and nothing is new; at the year, the posting after it is left out too
   output = run("sbank\n1\n");
-  EXPECT_NE(output.find("       3 postings, 2025-02-01 - 2026-01-02, 2 already imported\n"), std::string::npos) << output;
-  EXPECT_NE(output.find("Suggested account 1930 Bank: 2 of 3 postings match postings on 1930 in the books.\n"),
+  EXPECT_NE(output.find("       3 entries, 2025-02-01 - 2026-01-02, 2 already imported\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("Suggested account 1930 Bank: 2 of 3 entries match postings on 1930 in the books.\n"),
             std::string::npos)
       << output;
-  EXPECT_TRUE(output.ends_with("Nothing to import: no posting is new inside the books.\nproject> \n")) << output;
+  EXPECT_TRUE(output.ends_with("Nothing to import: no entry is new inside the books.\nproject> \n")) << output;
   output = run("y0sbank/nordea.csv\n\n");
   EXPECT_NE(output.find("  Outside   1 (outside fiscal year 2025-01-01 - 2025-12-31), not imported:\n"),
             std::string::npos)
       << output;
-  EXPECT_TRUE(output.ends_with("Nothing to import: no posting is new inside the books.\n2025> \n")) << output;
+  EXPECT_TRUE(output.ends_with("Nothing to import: no entry is new inside the books.\n2025> \n")) << output;
   // An account that is not in the books lists the matches and asks again; an empty line imports nothing
   output = run("sbank/nordea.csv\n" + std::string(4, '\x7f') + "ban\n" + std::string(3, '\x7f') + "\n");
   EXPECT_NE(output.find("ban\nAccounts matching ban:\n  1930  Bank\n  6570  Bank costs\naccount> "),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with("Nothing is imported.\n2025> \n")) << output;
+}
+
+TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\ny");
+  auto const folder = root / "start" / "Test";
+  // A transfer from 1930 to 2099, in two statements; the bank cost is booked already
+  std::ofstream(root / "start" / "bank.csv", std::ios::binary)
+      << "\xEF\xBB\xBF" "Datum;Belopp;Text\n2025-04-02;-100,00;TILL 2099\n2025-03-01;-10,00;Bank cost\n";
+  std::ofstream(root / "start" / "other.csv", std::ios::binary)
+      << "\xEF\xBB\xBF" "Datum;Belopp;Text\n2025-04-02;100,00;FRÅN 1930\n";
+  run("sbank.csv\n\ny");
+  run("sother.csv\n2099\ny");
+  auto output = run("a1n" + std::string(9, '\x7f') + "Överföring\n1w1");
+  EXPECT_NE(output.find("project> a\n"
+                        "Statement entries not yet booked:\n"
+                        "  1  1930   2025-04-02       -100.00  TILL 2099\n"
+                        "  2  2099   2025-04-02        100.00  FRÅN 1930\n"
+                        "\n"
+                        "Press a number to choose an entry, - to go back, h for help, q to quit.\n"
+                        "entries?> 1\n"
+                        "  1930   2025-04-02       -100.00  Bank\n"
+                        "  TILL 2099\n"
+                        "  From .cratchit/statements/2026-10-20_1_bank.csv:2, fiscal year 2025-01-01 - 2025-12-31\n"
+                        "\n"
+                        "Press n for a new waiting event with it, - to go back, h for help, q to quit.\n"
+                        "entry?> n\n"
+                        "Type the heading of the event. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
+                        "heading> TILL 2099"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Initiated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
+                        "Initiated .cratchit/books/2025-01-01/event_postings.csv in " + folder.string() + "\n"
+                        "Noted: 2025-04-02 Överföring 100.00 with 1930 -100.00 (1 waiting). Remaining 100.00 "
+                        "(debit 0.00, credit 100.00, amount 100.00).\n"
+                        "Statement entries not yet booked:\n"
+                        "  1  2099   2025-04-02        100.00  FRÅN 1930\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("entry?> w\n"
+                        "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
+                        "  1  2025-04-02        100.00  Överföring\n"
+                        "       1930        -100.00  2025-04-02  Bank\n"
+                        "       Remaining 100.00 (debit 0.00, credit 100.00, amount 100.00).\n"
+                        "\n"
+                        "Press the number of the event to add the entry to, - to go back, h for help, q to quit.\n"
+                        "event?> 1\n"
+                        "Updated .cratchit/books/2025-01-01/event_postings.csv in " + folder.string() + "\n"
+                        "Added 2099 100.00 to 2025-04-02 \"Överföring\". Balanced. Enter saves.\n"
+                        "No statement entries are waiting now.\n"
+                        "project> \n"),
+            std::string::npos)
+      << output;
+
+  // Posted from the waiting list: the event's postings are the rows, and it balances
+  output = run("y0w1\n\ny");
+  EXPECT_NE(output.find("       1930        -100.00  2025-04-02  Bank\n"
+                        "       2099         100.00  2025-04-02  Result\n"
+                        "       Balanced. Enter saves.\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("The event's postings are the first rows:\n"
+                        "  1930        -100.00  Bank\n"
+                        "  2099         100.00  Result\n"
+                        "  Balanced. Enter saves.\n"
+                        "post> \n"
+                        "Voucher A 3 2025-04-02 \"Överföring\"\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
+                        "Removed .cratchit/books/2025-01-01/event_postings.csv in " + folder.string() + "\n"
+                        "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"),
+            std::string::npos)
+      << output;
+  auto const books = cratchit::books::read_books(folder);
+  ASSERT_TRUE(books.has_value()) << books.error();
+  auto const& saved = books->years.front().vouchers.back();
+  ASSERT_EQ(saved.postings.size(), 2u);
+  EXPECT_EQ(saved.postings[0].text, "TILL 2099");
+  EXPECT_EQ(saved.postings[0].date, cratchit::parse_iso_date("2025-04-02"));
+  EXPECT_TRUE(saved.postings[0].source.empty());
+  // Booked now, so nothing waits
+  EXPECT_TRUE(run("a").ends_with("2025> a\nNo statement entries are waiting in this fiscal year. Press s to import a "
+                                 "statement.\n2025> \n"));
 }
 
 TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
@@ -1308,7 +1394,8 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
                         "  n  Note an event to post later\n"
                         "  w  Waiting events (0)\n"
                         "  v  View vouchers (correct one, or use it as a template)\n"
-                        "  s  Import an account statement (only the postings in this year)\n"
+                        "  s  Import an account statement (only the entries in this year)\n"
+                        "  a  Statement entries not yet booked in this year\n"
                         "  r  Reports of this year\n"
                         "  c  Close the year for new vouchers\n"
                         "  l  Show the log\n"

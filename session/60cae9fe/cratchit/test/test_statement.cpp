@@ -119,13 +119,13 @@ TEST(ParseStatement, NordeaNewestFirstWithSaldoOnSomeRows) {
   EXPECT_EQ(document.last_line, 6u);
   EXPECT_EQ(document.opening, 569291);
   EXPECT_EQ(document.closing, 296485);
-  EXPECT_EQ(document.notes, (std::vector<std::string>{"Line 1 is not a posting."}));
-  ASSERT_EQ(document.postings.size(), 5u);
-  EXPECT_EQ(document.postings[0], (Posting{Date{2024y, July, 3d}, -555, 568736, "PRIS ENL SPEC", 6}));
-  EXPECT_EQ(document.postings[1], (Posting{Date{2024y, July, 8d}, 2000000, std::nullopt,
+  EXPECT_EQ(document.notes, (std::vector<std::string>{"Line 1 is not an entry."}));
+  ASSERT_EQ(document.entries.size(), 5u);
+  EXPECT_EQ(document.entries[0], (Entry{Date{2024y, July, 3d}, -555, 568736, "PRIS ENL SPEC", 6}));
+  EXPECT_EQ(document.entries[1], (Entry{Date{2024y, July, 8d}, 2000000, std::nullopt,
                                            "32592317244 | Insättning | UTDELNING HÖGDAL", 5}));
-  EXPECT_EQ(document.postings[2].text, "HÖGDAL,KJELL-OLOV"); // the same cell three times
-  EXPECT_EQ(document.postings[4].text, "5249-4309 | PostNord Sverige AB | 902887105820 | Postbox");
+  EXPECT_EQ(document.entries[2].text, "HÖGDAL,KJELL-OLOV"); // the same cell three times
+  EXPECT_EQ(document.entries[4].text, "5249-4309 | PostNord Sverige AB | 902887105820 | Postbox");
 }
 
 TEST(ParseStatement, SkvOldestFirstQuoted) {
@@ -135,9 +135,9 @@ TEST(ParseStatement, SkvOldestFirstQuoted) {
   EXPECT_EQ(document.order, Order::oldest_first);
   EXPECT_EQ(document.opening, 66600);
   EXPECT_EQ(document.closing, 66700);
-  EXPECT_EQ(document.notes, (std::vector<std::string>{"Lines 1, 3 and 7 are not postings."}));
-  ASSERT_EQ(document.postings.size(), 3u);
-  EXPECT_EQ(document.postings[1], (Posting{Date{2026y, July, 18d}, 229200, 295900, "Moms april 2026 - juni 2026", 5}));
+  EXPECT_EQ(document.notes, (std::vector<std::string>{"Lines 1, 3 and 7 are not entries."}));
+  ASSERT_EQ(document.entries.size(), 3u);
+  EXPECT_EQ(document.entries[1], (Entry{Date{2026y, July, 18d}, 229200, 295900, "Moms april 2026 - juni 2026", 5}));
 }
 
 TEST(ParseStatement, WithoutSaldoTheDatesTellTheOrder) {
@@ -145,7 +145,7 @@ TEST(ParseStatement, WithoutSaldoTheDatesTellTheOrder) {
   EXPECT_FALSE(document.saldo_column);
   EXPECT_FALSE(document.opening);
   EXPECT_EQ(document.order, Order::newest_first);
-  EXPECT_EQ(document.postings.front().text, "Interest");
+  EXPECT_EQ(document.entries.front().text, "Interest");
   EXPECT_EQ(document.notes.back(), "No saldo: the amounts are not checked.");
   EXPECT_EQ(parsed("2026-01-01;Fee;-1,85\n2026-01-01;Interest;1\n").order, Order::unknown);
   EXPECT_EQ(error_of("2026-01-02;a;1\n2026-01-01;b;1\n2026-01-03;c;1\n"), "Lines 1-3: the dates neither rise nor fall");
@@ -153,11 +153,11 @@ TEST(ParseStatement, WithoutSaldoTheDatesTellTheOrder) {
 
 TEST(ParseStatement, ASingleRowNeedsASingleAmount) {
   auto const document = parsed("2026-01-01;Fee;-1,85\n");
-  ASSERT_EQ(document.postings.size(), 1u);
-  EXPECT_EQ(document.postings.front().amount, -185);
+  ASSERT_EQ(document.entries.size(), 1u);
+  EXPECT_EQ(document.entries.front().amount, -185);
   EXPECT_EQ(document.text_columns, (std::vector<std::size_t>{1})); // one row: nothing is the same on every row
   EXPECT_EQ(error_of("Datum;Belopp;Saldo;Text\n2025/01/24;50000,00;117992,79;PG TILL SPAR\n"),
-            "Only one posting (line 2), with 2 amounts: which is the amount and which the saldo cannot be told from one "
+            "Only one entry (line 2), with 2 amounts: which is the amount and which the saldo cannot be told from one "
             "line");
 }
 
@@ -172,8 +172,8 @@ TEST(ParseStatement, ASaldoThatDoesNotAddUpIsAnError) {
 TEST(ParseStatement, AnInvalidRowEndsTheRun) {
   auto const document = parsed("2026-01-01;a;1;11\n2026-01-02;b;2;13\nSumma;3\n2026-01-03;c;3;16\n");
   EXPECT_EQ(document.last_line, 2u);
-  EXPECT_EQ(document.notes.front(), "Lines 3-4 are not postings.");
+  EXPECT_EQ(document.notes.front(), "Lines 3-4 are not entries.");
   EXPECT_EQ(error_of("2026-01-01;a;1\nSumma;1\n2026-01-03;c;3\n"),
-            "Two runs of 1 posting lines (lines 1-1 and 3-3): which are the postings?");
-  EXPECT_EQ(error_of("Datum;Belopp;Text\n"), "No postings: no line has exactly one date and an amount");
+            "Two runs of 1 entry lines (lines 1-1 and 3-3): which are the entries?");
+  EXPECT_EQ(error_of("Datum;Belopp;Text\n"), "No entries: no line has exactly one date and an amount");
 }

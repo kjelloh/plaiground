@@ -96,23 +96,23 @@ TEST_F(Statements, SavedWithARecordAndReadBack) {
   auto const record = read_path_values(root / "project" / ".cratchit" / "statements" / "2026-10-24_1_july.csv.txt");
   ASSERT_TRUE(record.has_value()) << record.error();
   EXPECT_EQ(format_path_values(*record), "imported = 2026-10-24\nsource = " + (root / "july.csv").string() +
-                                             "\naccount = 1920\nfrom = 2026-05-01\nto = 2027-04-30\npostings = 2\nadded = 2\nknown = 0\n"
+                                             "\naccount = 1920\nfrom = 2026-05-01\nto = 2027-04-30\nentries = 2\nadded = 2\nknown = 0\n"
                                              "outside = 0\n");
   auto const read = imports();
   ASSERT_EQ(read.size(), 1u);
   EXPECT_EQ(read[0].stashed, fs::path(".cratchit") / "statements" / "2026-10-24_1_july.csv");
   EXPECT_EQ(read[0].account, "1920");
   EXPECT_EQ(read[0].from, (Date{2026y, May, 1d}));
-  EXPECT_EQ(read[0].document.postings.size(), 2u);
+  EXPECT_EQ(read[0].document.entries.size(), 2u);
 }
 
 TEST_F(Statements, KnownPostingsCountOnceAcrossFiles) {
   import("july.csv", july, "1920");
   import("august.csv", august, "1920");
-  EXPECT_EQ(known_postings(imports(), "1920").size(), 3u);
+  EXPECT_EQ(known_entries(imports(), "1920").size(), 3u);
   EXPECT_EQ(most_known(imports(), document_of(august)), 2u);
   EXPECT_EQ(most_known(imports(), document_of(september)), 0u);
-  EXPECT_TRUE(known_postings(imports(), "1930").empty());
+  EXPECT_TRUE(known_entries(imports(), "1930").empty());
   // The same file again has nothing new
   auto const plan = plan_statement(books_2026(), imports(), document_of(august), "1920", nullptr);
   EXPECT_EQ(plan.known, 2u);
@@ -151,7 +151,7 @@ TEST_F(Statements, GuessByBookPostingsFirst) {
   auto const guess = guess_statement_account(books, {}, document_of(july));
   ASSERT_TRUE(guess);
   EXPECT_EQ(guess->account, "1920");
-  EXPECT_EQ(guess->reason, "2 of 2 postings match postings on 1920 in the books");
+  EXPECT_EQ(guess->reason, "2 of 2 entries match postings on 1920 in the books");
   // A tie suggests nothing
   books.years[0].vouchers.push_back(voucher_with("1630", 229200, Date{2026y, July, 23d}));
   EXPECT_FALSE(guess_statement_account(books, {}, document_of(july)));
@@ -162,10 +162,37 @@ TEST_F(Statements, ThenByImportedStatementsThenBySaldo) {
   auto guess = guess_statement_account(books_2026(), imports(), document_of(august));
   ASSERT_TRUE(guess);
   EXPECT_EQ(guess->account, "1920");
-  EXPECT_EQ(guess->reason, "1 of 2 postings are in statements imported for 1920");
+  EXPECT_EQ(guess->reason, "1 of 2 entries are in statements imported for 1920");
   import("august.csv", august, "1920");
   guess = guess_statement_account(books_2026(), imports(), document_of(september));
   ASSERT_TRUE(guess);
   EXPECT_EQ(guess->reason, "the latest statement imported for 1920 ends with saldo 8009.98, which this one starts with");
   EXPECT_FALSE(guess_statement_account(books_2026(), {}, document_of(september)));
+}
+
+TEST_F(Statements, OpenEntriesAreThoseNotBooked) {
+  import("july.csv", july, "1920");
+  import("august.csv", august, "1920"); // the Skatt entry is in both files
+  auto books = books_2026();
+  auto open = open_entries(books, imports(), nullptr);
+  ASSERT_EQ(open.size(), 3u);
+  EXPECT_EQ(open[0].entry.text, "AVGIFTER NORDEA");
+  EXPECT_EQ(open[0].source, ".cratchit/statements/2026-10-24_1_july.csv:3");
+  EXPECT_EQ(open[1].entry.text, "Skatt");
+  EXPECT_EQ(open[1].source, ".cratchit/statements/2026-10-24_1_august.csv:3"); // the first file (by name) with it
+  EXPECT_EQ(open[2].entry.text, "Fortnox");
+  // A voucher posting books one; so does a waiting event's posting
+  books.years[0].vouchers.push_back(voucher_with("1920", 229200, Date{2026y, July, 23d}));
+  WaitingEvent waiting{{"Fortnox", 92300, Date{2026y, August, 26d}}, Date{2026y, October, 24d}};
+  waiting.postings.push_back({.account = "1920", .amount = -92300, .date = Date{2026y, August, 26d}});
+  books.years[0].waiting.push_back(waiting);
+  open = open_entries(books, imports(), nullptr);
+  ASSERT_EQ(open.size(), 1u);
+  EXPECT_EQ(open[0].entry.text, "AVGIFTER NORDEA");
+  // The same amount on another account books nothing
+  books.years[0].vouchers.push_back(voucher_with("1930", -370, Date{2026y, July, 3d}));
+  EXPECT_EQ(open_entries(books, imports(), nullptr).size(), 1u);
+  // Only the days of a year
+  FiscalYear other{Date{2025y, May, 1d}, Date{2026y, April, 30d}, {}, {}, false};
+  EXPECT_TRUE(open_entries(books, imports(), &other).empty());
 }

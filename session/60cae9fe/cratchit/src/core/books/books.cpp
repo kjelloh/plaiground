@@ -20,8 +20,10 @@ constexpr std::string_view dimensions_file = "dimensions.csv";
 constexpr std::string_view objects_file = "objects.csv";
 constexpr std::string_view opening_file = "opening.csv";
 constexpr std::string_view vouchers_file = "vouchers.csv";
-constexpr std::string_view postings_file = "transactions.csv";
+constexpr std::string_view postings_file = "postings.csv";
+constexpr std::string_view old_postings_file = "transactions.csv"; // the name of postings.csv before 2026-10-24
 constexpr std::string_view events_file = "events.csv";
+constexpr std::string_view event_postings_file = "event_postings.csv";
 
 CsvRow const accounts_header{"account", "name", "type", "sru", "unit"};
 CsvRow const dimensions_header{"dimension", "name", "super"};
@@ -29,8 +31,14 @@ CsvRow const objects_header{"dimension", "object", "name"};
 CsvRow const opening_header{"account", "amount"};
 CsvRow const vouchers_header{"series", "number", "date", "text", "amount", "registered", "signature"};
 CsvRow const events_header{"date", "text", "amount", "noted"};
+// event is the row of the event in events.csv, 1 for the first
+CsvRow const event_postings_header{"event", "account", "amount", "date", "text", "source"};
 CsvRow const postings_header{"series", "number", "kind",     "account",  "objects",
                              "amount", "date",   "text",     "quantity", "signature"};
+
+bool all_digits(std::string_view text) {
+  return !text.empty() && std::ranges::all_of(text, [](char c) { return c >= '0' && c <= '9'; });
+}
 
 std::string_view kind_name(Posting::Kind kind) {
   switch (kind) {
@@ -185,7 +193,11 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
     }
     year.vouchers.push_back({row[0], row[1], {row[3], *amount, *date}, *registered, row[6], {}});
   }
-  auto const postings_path = year_folder / postings_file;
+  std::error_code ec;
+  auto postings_path = year_folder / postings_file;
+  if (!fs::exists(postings_path, ec) && fs::exists(year_folder / old_postings_file, ec)) {
+    postings_path = year_folder / old_postings_file;
+  }
   auto const postings = read_table(postings_path, postings_header);
   if (!postings) {
     return std::unexpected(postings.error());
@@ -214,7 +226,6 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
     voucher->postings.push_back({*kind, row[3], *objects, *amount, *date, row[7], row[8], row[9]});
   }
   auto const events_path = year_folder / events_file;
-  std::error_code ec;
   if (!fs::exists(events_path, ec)) {
     return year;
   }
@@ -236,6 +247,35 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
       return std::unexpected(noted.error());
     }
     year.waiting.push_back({{row[1], *amount, *date}, *noted});
+  }
+  auto const event_postings_path = year_folder / event_postings_file;
+  if (!fs::exists(event_postings_path, ec)) {
+    return year;
+  }
+  auto const event_postings = read_table(event_postings_path, event_postings_header);
+  if (!event_postings) {
+    return std::unexpected(event_postings.error());
+  }
+  for (auto const& row : *event_postings) {
+    auto const event = all_digits(row[0]) && row[0].size() < 9 ? std::stoul(row[0]) : 0;
+    if (event == 0 || event > year.waiting.size()) {
+      return std::unexpected(std::format("{}: event {} is not in {}", event_postings_path.string(), row[0], events_file));
+    }
+    auto const amount = amount_field(event_postings_path, row[2]);
+    if (!amount) {
+      return std::unexpected(amount.error());
+    }
+    auto const date = optional_date_field(event_postings_path, row[3]);
+    if (!date) {
+      return std::unexpected(date.error());
+    }
+    Posting posting;
+    posting.account = row[1];
+    posting.amount = *amount;
+    posting.date = *date;
+    posting.text = row[4];
+    posting.source = row[5];
+    year.waiting[event - 1].postings.push_back(std::move(posting));
   }
   return year;
 }
@@ -482,6 +522,7 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
     }
     files.emplace_back(year_folder / vouchers_file, csv_text(vouchers_header, rows));
     files.emplace_back(year_folder / postings_file, csv_text(postings_header, posting_rows));
+    gone.push_back(year_folder / old_postings_file);
     rows.clear();
     for (auto const& waiting : year.waiting) {
       rows.push_back({format_iso_date(waiting.event.date), waiting.event.heading, format_amount(waiting.event.amount),
@@ -491,6 +532,18 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
       gone.push_back(year_folder / events_file);
     } else {
       files.emplace_back(year_folder / events_file, csv_text(events_header, rows));
+    }
+    rows.clear();
+    for (std::size_t i = 0; i < year.waiting.size(); ++i) {
+      for (auto const& posting : year.waiting[i].postings) {
+        rows.push_back({std::to_string(i + 1), posting.account, format_amount(posting.amount),
+                        optional_date_text(posting.date), posting.text, posting.source});
+      }
+    }
+    if (rows.empty()) {
+      gone.push_back(year_folder / event_postings_file);
+    } else {
+      files.emplace_back(year_folder / event_postings_file, csv_text(event_postings_header, rows));
     }
   }
 

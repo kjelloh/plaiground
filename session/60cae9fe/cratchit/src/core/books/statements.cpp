@@ -19,17 +19,17 @@ namespace fs = std::filesystem;
 
 fs::path const statements_folder = fs::path(".cratchit") / "statements";
 
-// What tells statement postings apart
+// What tells statement entries apart
 using Key = std::tuple<Date, Amount, std::optional<Amount>, std::string>;
 
-Key key_of(statement::Posting const& posting) {
-  return {posting.date, posting.amount, posting.saldo, posting.text};
+Key key_of(statement::Entry const& entry) {
+  return {entry.date, entry.amount, entry.saldo, entry.text};
 }
 
-std::map<Key, std::size_t> counts_of(std::vector<statement::Posting> const& postings) {
+std::map<Key, std::size_t> counts_of(std::vector<statement::Entry> const& entries) {
   std::map<Key, std::size_t> counts;
-  for (auto const& posting : postings) {
-    ++counts[key_of(posting)];
+  for (auto const& entry : entries) {
+    ++counts[key_of(entry)];
   }
   return counts;
 }
@@ -100,32 +100,32 @@ std::expected<std::vector<StatementImport>, std::string> read_statement_imports(
   return imports;
 }
 
-std::vector<statement::Posting> counted_postings(StatementImport const& import) {
-  std::vector<statement::Posting> postings;
-  for (auto const& posting : import.document.postings) {
-    if ((!import.from || posting.date >= *import.from) && (!import.to || posting.date <= *import.to)) {
-      postings.push_back(posting);
+std::vector<statement::Entry> counted_entries(StatementImport const& import) {
+  std::vector<statement::Entry> entries;
+  for (auto const& entry : import.document.entries) {
+    if ((!import.from || entry.date >= *import.from) && (!import.to || entry.date <= *import.to)) {
+      entries.push_back(entry);
     }
   }
-  return postings;
+  return entries;
 }
 
-std::vector<statement::Posting> known_postings(std::vector<StatementImport> const& imports, std::string_view account) {
+std::vector<statement::Entry> known_entries(std::vector<StatementImport> const& imports, std::string_view account) {
   std::map<Key, std::size_t> most;
-  std::map<Key, statement::Posting> first;
+  std::map<Key, statement::Entry> first;
   for (auto const& import : imports) {
     if (import.account != account) {
       continue;
     }
-    auto const postings = counted_postings(import);
-    for (auto const& [key, count] : counts_of(postings)) {
+    auto const entries = counted_entries(import);
+    for (auto const& [key, count] : counts_of(entries)) {
       most[key] = std::max(most[key], count);
     }
-    for (auto const& posting : postings) {
-      first.try_emplace(key_of(posting), posting);
+    for (auto const& entry : entries) {
+      first.try_emplace(key_of(entry), entry);
     }
   }
-  std::vector<statement::Posting> known;
+  std::vector<statement::Entry> known;
   for (auto const& [key, count] : most) {
     known.insert(known.end(), count, first.at(key));
   }
@@ -139,10 +139,10 @@ std::size_t most_known(std::vector<StatementImport> const& imports, statement::D
   }
   std::size_t most = 0;
   for (auto const& account : accounts) {
-    auto known = counts_of(known_postings(imports, account));
+    auto known = counts_of(known_entries(imports, account));
     std::size_t count = 0;
-    for (auto const& posting : document.postings) {
-      auto const it = known.find(key_of(posting));
+    for (auto const& entry : document.entries) {
+      auto const it = known.find(key_of(entry));
       if (it != known.end() && it->second > 0) {
         --it->second;
         ++count;
@@ -153,9 +153,66 @@ std::size_t most_known(std::vector<StatementImport> const& imports, statement::D
   return most;
 }
 
+std::vector<OpenEntry> open_entries(Books const& books, std::vector<StatementImport> const& imports,
+                                    FiscalYear const* year) {
+  // Each entry once: per account and key, as many as the file with the most of them has
+  std::map<std::pair<std::string, Key>, std::vector<OpenEntry>> collected;
+  for (auto const& import : imports) {
+    std::map<Key, std::vector<statement::Entry>> here;
+    for (auto const& entry : counted_entries(import)) {
+      here[key_of(entry)].push_back(entry);
+    }
+    for (auto const& [key, entries] : here) {
+      auto& kept = collected[{import.account, key}];
+      for (auto i = kept.size(); i < entries.size(); ++i) {
+        kept.push_back({import.account, entries[i],
+                        std::format("{}:{}", import.stashed.generic_string(), entries[i].line)});
+      }
+    }
+  }
+  // The postings that book them: account, date and amount
+  std::map<std::tuple<std::string, Date, Amount>, std::size_t> booked;
+  for (auto const& fiscal : books.years) {
+    for (auto const& voucher : fiscal.vouchers) {
+      for (auto const& posting : voucher.postings) {
+        if (posting.kind != Posting::Kind::removed) {
+          ++booked[{posting.account, posting.date.value_or(voucher.event.date), posting.amount}];
+        }
+      }
+    }
+    for (auto const& waiting : fiscal.waiting) {
+      for (auto const& posting : waiting.postings) {
+        ++booked[{posting.account, posting.date.value_or(waiting.event.date), posting.amount}];
+      }
+    }
+  }
+  std::vector<OpenEntry> open;
+  for (auto const& [account_key, entries] : collected) {
+    open.insert(open.end(), entries.begin(), entries.end());
+  }
+  std::ranges::stable_sort(open, [](OpenEntry const& a, OpenEntry const& b) {
+    return std::tie(a.account, a.entry.date) < std::tie(b.account, b.entry.date);
+  });
+  std::erase_if(open, [&](OpenEntry const& open_entry) {
+    auto const& entry = open_entry.entry;
+    bool const inside = year ? year->holds(entry.date)
+                             : std::ranges::any_of(books.years, [&](FiscalYear const& y) { return y.holds(entry.date); });
+    if (!inside) {
+      return true;
+    }
+    auto const it = booked.find({open_entry.account, entry.date, entry.amount});
+    if (it != booked.end() && it->second > 0) {
+      --it->second;
+      return true;
+    }
+    return false;
+  });
+  return open;
+}
+
 std::optional<AccountGuess> guess_statement_account(Books const& books, std::vector<StatementImport> const& imports,
                                                     statement::Document const& document) {
-  auto const n = document.postings.size();
+  auto const n = document.entries.size();
   // Book postings by account: their dates and amounts
   std::map<std::string, std::set<std::pair<Date, Amount>>> booked;
   for (auto const& year : books.years) {
@@ -184,12 +241,12 @@ std::optional<AccountGuess> guess_statement_account(Books const& books, std::vec
   };
   std::map<std::string, std::size_t> in_books;
   for (auto const& [account, dated] : booked) {
-    for (auto const& posting : document.postings) {
-      in_books[account] += dated.contains({posting.date, posting.amount}) ? 1 : 0;
+    for (auto const& entry : document.entries) {
+      in_books[account] += dated.contains({entry.date, entry.amount}) ? 1 : 0;
     }
   }
   if (auto const account = best_of(in_books)) {
-    return AccountGuess{*account, std::format("{} of {} postings match postings on {} in the books",
+    return AccountGuess{*account, std::format("{} of {} entries match postings on {} in the books",
                                               in_books[*account], n, *account)};
   }
   std::set<std::string> accounts;
@@ -198,9 +255,9 @@ std::optional<AccountGuess> guess_statement_account(Books const& books, std::vec
   }
   std::map<std::string, std::size_t> in_statements;
   for (auto const& account : accounts) {
-    auto known = counts_of(known_postings(imports, account));
-    for (auto const& posting : document.postings) {
-      auto const it = known.find(key_of(posting));
+    auto known = counts_of(known_entries(imports, account));
+    for (auto const& entry : document.entries) {
+      auto const it = known.find(key_of(entry));
       if (it != known.end() && it->second > 0) {
         --it->second;
         ++in_statements[account];
@@ -208,15 +265,15 @@ std::optional<AccountGuess> guess_statement_account(Books const& books, std::vec
     }
   }
   if (auto const account = best_of(in_statements)) {
-    return AccountGuess{*account, std::format("{} of {} postings are in statements imported for {}",
+    return AccountGuess{*account, std::format("{} of {} entries are in statements imported for {}",
                                               in_statements[*account], n, *account)};
   }
   if (document.opening) {
     for (auto const& account : accounts) {
       StatementImport const* latest = nullptr;
       for (auto const& import : imports) {
-        if (import.account == account && !import.document.postings.empty() &&
-            (!latest || import.document.postings.back().date >= latest->document.postings.back().date)) {
+        if (import.account == account && !import.document.entries.empty() &&
+            (!latest || import.document.entries.back().date >= latest->document.entries.back().date)) {
           latest = &import;
         }
       }
@@ -234,7 +291,7 @@ StatementPlan plan_statement(Books const& books, std::vector<StatementImport> co
                              statement::Document const& document, std::string account, FiscalYear const* year) {
   StatementPlan plan;
   plan.account = std::move(account);
-  plan.postings = document.postings.size();
+  plan.entries = document.entries.size();
   if (year) {
     plan.from = year->start;
     plan.to = year->end;
@@ -242,20 +299,20 @@ StatementPlan plan_statement(Books const& books, std::vector<StatementImport> co
     plan.from = books.years.front().start;
     plan.to = books.years.back().end;
   }
-  auto known = counts_of(known_postings(imports, plan.account));
-  for (auto const& posting : document.postings) {
-    bool const inside = year ? year->holds(posting.date)
-                             : std::ranges::any_of(books.years, [&](FiscalYear const& y) { return y.holds(posting.date); });
+  auto known = counts_of(known_entries(imports, plan.account));
+  for (auto const& entry : document.entries) {
+    bool const inside = year ? year->holds(entry.date)
+                             : std::ranges::any_of(books.years, [&](FiscalYear const& y) { return y.holds(entry.date); });
     if (!inside) {
       ++plan.outside;
       continue;
     }
-    auto const it = known.find(key_of(posting));
+    auto const it = known.find(key_of(entry));
     if (it != known.end() && it->second > 0) {
       --it->second;
       ++plan.known;
     } else {
-      plan.added.push_back(posting);
+      plan.added.push_back(entry);
     }
   }
   return plan;
@@ -286,7 +343,7 @@ std::expected<SavedStatement, std::string> save_statement(fs::path const& projec
         {"account", plan.account},
         {"from", plan.from ? format_iso_date(*plan.from) : std::string{}},
         {"to", plan.to ? format_iso_date(*plan.to) : std::string{}},
-        {"postings", std::to_string(plan.postings)},
+        {"entries", std::to_string(plan.entries)},
         {"added", std::to_string(plan.added.size())},
         {"known", std::to_string(plan.known)},
         {"outside", std::to_string(plan.outside)},

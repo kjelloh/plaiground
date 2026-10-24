@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-// Account statements: the postings to one account (bank or tax account) as a
+// Account statements: the entries of one account (bank or tax account) as a
 // file from the bank or SKV lists them, found by the content of the cells only.
 // Nothing about the bank, the account or BAS accounts is taken from the file.
 namespace cratchit::statement {
@@ -48,21 +48,21 @@ std::optional<Date> date_of(std::string_view cell);
 // point with one or two decimals (-1308,75). At most 15 digits before the decimals.
 std::optional<Amount> amount_of(std::string_view cell);
 
-// One posting to the account
-struct Posting {
+// One entry of the statement: an amount into or out of the account
+struct Entry {
   Date date;
   Amount amount = 0;           // into the account positive, out of it negative
   std::optional<Amount> saldo; // the account's balance after it, when the row has one
   std::string text;            // the row's other cells, see Document::text_columns
   std::size_t line = 0;        // in the file
 
-  bool operator==(Posting const&) const = default;
+  bool operator==(Entry const&) const = default;
 };
 
-// How the file lists the postings
+// How the file lists the entries
 enum class Order { oldest_first, newest_first, unknown };
 
-// The postings of a statement file and how they were found. Columns count from 0.
+// The entries of a statement file and how they were found. Columns count from 0.
 struct Document {
   char separator = ';';
   std::size_t date_column = 0;
@@ -72,19 +72,19 @@ struct Document {
   // saldo, and (with two rows or more) those holding the same on every row
   std::vector<std::size_t> text_columns;
   Order order = Order::unknown;
-  // The saldo before the first posting and after the last, when there is a saldo column
+  // The saldo before the first entry and after the last, when there is a saldo column
   std::optional<Amount> opening;
   std::optional<Amount> closing;
-  std::vector<Posting> postings; // oldest first (as listed when the order is unknown)
-  std::size_t first_line = 0;    // the range of posting rows in the file
+  std::vector<Entry> entries; // oldest first (as listed when the order is unknown)
+  std::size_t first_line = 0;    // the range of entry rows in the file
   std::size_t last_line = 0;
-  std::vector<std::string> notes; // worth knowing, e.g. the lines that are not postings
+  std::vector<std::string> notes; // worth knowing, e.g. the lines that are not entries
 };
 
-// Finds the postings of a statement file:
+// Finds the entries of a statement file:
 // - The rows are split by the separator found (see find_separator). A
-//   posting row has exactly one date cell and at least one amount cell.
-// - The postings are the longest run of consecutive posting rows with the
+//   entry row has exactly one date cell and at least one amount cell.
+// - The entries are the longest run of consecutive entry rows with the
 //   same number of cells and the date in the same column. Any other row ends
 //   a run. Two longest runs are an error.
 // - The amount is in a column with an amount on every row; a saldo column has
@@ -95,7 +95,7 @@ struct Document {
 //   column, there is no saldo; else it is an error.
 // - The order is the saldo's; the dates must not go against it. Without a
 //   saldo, the dates tell (unknown when they are all the same).
-// - A single posting row must have exactly one amount (no saldo).
+// - A single entry row must have exactly one amount (no saldo).
 // - The text joins the row's text cells with ' | ', leaving out empty cells
 //   and a cell equal to the one before.
 // Error text names the lines. Does not log.

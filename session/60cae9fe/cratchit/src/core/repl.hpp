@@ -94,6 +94,9 @@ private:
     ConfirmRight,
     StatementFiles,
     ConfirmStatement,
+    EntryList,
+    EntryChoice,
+    AddToEvent,
   };
   // What the text typed in the editor is for
   enum class Purpose {
@@ -107,6 +110,7 @@ private:
     Row,
     StatementFile,
     StatementAccount,
+    EventHeading,
   };
 
   WorkspacePlaces places_;
@@ -161,6 +165,12 @@ private:
   std::optional<statement::Document> statement_;    // its postings
   std::optional<books::AccountGuess> statement_guess_;
   std::optional<books::StatementPlan> statement_plan_; // the import waiting for y/n
+  Mode before_entries_ = Mode::Project;             // where the list of statement entries was opened
+  std::vector<books::OpenEntry> open_entries_;      // the statement entries not yet booked
+  std::size_t first_entry_ = 0;                     // the first entry shown when they are more than keys 1-9
+  std::size_t chosen_entry_ = 0;                    // the entry chosen, an index into open_entries_
+  std::size_t entry_year_ = 0;                      // its fiscal year, an index into books_.years
+  std::size_t first_target_ = 0;                    // the first waiting event shown to add the entry to
 
   bool is_prompt() const; // at cratchit>, workspace> or project>
   void show_keys(std::ostream& out) const;
@@ -230,6 +240,17 @@ private:
   void on_statement_account(PathEditor::Result result, std::ostream& out);
   void on_confirm_statement_key(charset::unicode::CodePoint key, std::ostream& out);
   void import_statement(std::ostream& out);
+  void open_entries(std::ostream& out);
+  bool read_entries(std::ostream& out); // reads the books and the open entries; false (error shown) on failure
+  void show_entries(std::ostream& out) const;
+  void on_entry_list_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_entry_choice(std::ostream& out) const;
+  void on_entry_choice_key(charset::unicode::CodePoint key, std::ostream& out);
+  void on_event_heading(PathEditor::Result result, std::ostream& out);
+  void show_targets(std::ostream& out) const;
+  void on_add_to_event_key(charset::unicode::CodePoint key, std::ostream& out);
+  void back_to_entries(std::ostream& out);
+  books::Posting posting_of(books::OpenEntry const& entry) const;
   void on_voucher_line(std::ostream& out);
   void show_readings(std::ostream& out);
   void on_choose_amount_key(charset::unicode::CodePoint key, std::ostream& out);
@@ -252,6 +273,7 @@ private:
   void open_waiting(std::ostream& out);
   void show_waiting(std::ostream& out);
   void waiting_hint(std::ostream& out) const;
+  void show_event_postings(books::WaitingEvent const& waiting, std::ostream& out) const;
   void on_waiting_key(charset::unicode::CodePoint key, std::ostream& out);
   void post_waiting(std::size_t index, std::ostream& out);
   void on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& out);

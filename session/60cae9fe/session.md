@@ -43,7 +43,17 @@ Time for next task to parse account statements into something to use as base for
 I have now vibe coded 'import account statement' file(s)
 
 * There is a UI from project and year (pruned to that year)
-* Imported postings are stashed in a statements file in dot-folder named after start-date 
+* Imported postings are stashed in a statements file in dot-folder named after start-date
+
+And now I have vibe coded 'statement entry to waiting event'
+
+* I can view the unbooked statement entries
+* I can turn a statement entry into a waiting event
+
+The UI is very cluttered compared to my previous cratchit. But maybe that is what we need. And I can always clean this up later?
+
+* We have statement::Entry to represent an entry in an account statement
+* We have books::Posting to represent posting to a BAS account
 
 ## 20261023
 

@@ -319,6 +319,16 @@ std::vector<Voucher const*> find_templates(Books const& books, Event const& even
   return found;
 }
 
+Postings without_present(Postings guide, Postings const& postings) {
+  for (auto const& posting : postings) {
+    auto const it = std::ranges::find(guide, posting.account, &Posting::account);
+    if (it != guide.end()) {
+      guide.erase(it);
+    }
+  }
+  return guide;
+}
+
 Guide guide_of(Books const& books, Voucher const& like, Amount amount) {
   Guide guide;
   for (auto const& posting : like.postings) {
@@ -412,18 +422,23 @@ std::string Draft::status() const {
 }
 
 std::optional<Posting> Draft::suggestion() const {
-  if (is_balanced() || postings.size() >= guide.size()) {
+  if (is_balanced() || postings.size() < guide_start || postings.size() - guide_start >= guide.size()) {
     return std::nullopt;
   }
-  auto row = guide[postings.size()];
-  if (postings.size() + 1 == guide.size() && remaining() != 0) {
+  auto const next = postings.size() - guide_start;
+  auto row = guide[next];
+  if (next + 1 == guide.size() && remaining() != 0) {
     row.amount = remaining();
   }
   return row;
 }
 
 Voucher Draft::voucher(std::string number, Date registered) const {
-  return {series, std::move(number), {event.heading, target(), event.date}, registered, {}, postings};
+  Voucher result{series, std::move(number), {event.heading, target(), event.date}, registered, {}, postings};
+  for (auto& posting : result.postings) {
+    posting.source.clear(); // not kept in the voucher (yet)
+  }
+  return result;
 }
 
 } // namespace cratchit::books

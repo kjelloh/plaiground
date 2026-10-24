@@ -310,3 +310,22 @@ TEST(Draft, SuggestsTheGuideRowByRow) {
   EXPECT_TRUE(draft.is_balanced());
   EXPECT_FALSE(draft.suggestion());
 }
+
+TEST(Draft, SuggestionsFollowThePostingsAnEventAlreadyHas) {
+  auto const books = telia_books();
+  Draft draft{{"Telia faktura november", 124500, today}, 0, "D", {}};
+  draft.postings.push_back({.account = "2440", .amount = -124500, .source = ".cratchit/statements/x.csv:2"});
+  draft.guide = without_present(guide_of(books, books.years[0].vouchers[1], 124500).postings, draft.postings);
+  draft.guide_start = draft.postings.size();
+  ASSERT_EQ(draft.guide.size(), 2u);
+  EXPECT_EQ(draft.suggestion()->account, "6212");
+  EXPECT_EQ(draft.suggestion()->amount, 99600);
+  draft.postings.push_back(*draft.suggestion());
+  EXPECT_EQ(draft.suggestion()->account, "2641");
+  EXPECT_EQ(draft.suggestion()->amount, 24900);
+  draft.postings.push_back(*draft.suggestion());
+  EXPECT_TRUE(draft.is_balanced());
+  EXPECT_TRUE(draft.voucher("4", today).postings.front().source.empty());
+  draft.postings.clear(); // fewer than the event had
+  EXPECT_FALSE(draft.suggestion());
+}

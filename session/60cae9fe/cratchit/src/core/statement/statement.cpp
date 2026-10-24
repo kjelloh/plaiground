@@ -52,7 +52,7 @@ std::string columns_text(std::vector<std::size_t> const& columns) {
   return text;
 }
 
-bool is_posting_row(Row const& row) {
+bool is_entry_row(Row const& row) {
   auto const dates = std::ranges::count_if(row.cells, [](std::string const& cell) { return date_of(cell).has_value(); });
   return dates == 1 && std::ranges::any_of(row.cells, [](std::string const& cell) { return amount_of(cell).has_value(); });
 }
@@ -303,14 +303,14 @@ std::expected<Document, std::string> parse_statement(std::span<std::uint8_t cons
   }
   auto const rows = split(*text, *separator);
 
-  // The runs of posting rows of the same shape
+  // The runs of entry rows of the same shape
   struct Run {
     std::size_t first = 0; // index in rows
     std::size_t size = 0;
   };
   std::vector<Run> runs;
   for (std::size_t i = 0; i < rows.size(); ++i) {
-    if (!is_posting_row(rows[i])) {
+    if (!is_entry_row(rows[i])) {
       continue;
     }
     auto const& last = runs.empty() ? Run{} : runs.back();
@@ -323,14 +323,14 @@ std::expected<Document, std::string> parse_statement(std::span<std::uint8_t cons
     }
   }
   if (runs.empty()) {
-    return std::unexpected("No postings: no line has exactly one date and an amount");
+    return std::unexpected("No entries: no line has exactly one date and an amount");
   }
   std::ranges::stable_sort(runs, [](Run const& a, Run const& b) { return a.size > b.size; });
   auto const line_range = [&](Run const& run) {
     return std::format("{}-{}", rows[run.first].line, rows[run.first + run.size - 1].line);
   };
   if (runs.size() > 1 && runs[0].size == runs[1].size) {
-    return std::unexpected(std::format("Two runs of {} posting lines (lines {} and {}): which are the postings?",
+    return std::unexpected(std::format("Two runs of {} entry lines (lines {} and {}): which are the entries?",
                                        runs[0].size, line_range(runs[0]), line_range(runs[1])));
   }
   auto const run = runs.front();
@@ -373,7 +373,7 @@ std::expected<Document, std::string> parse_statement(std::span<std::uint8_t cons
       return amount_of(cell).has_value();
     });
     if (amounts != 1) {
-      return std::unexpected(std::format("Only one posting ({}), with {} amounts: which is the amount and which the "
+      return std::unexpected(std::format("Only one entry ({}), with {} amounts: which is the amount and which the "
                                          "saldo cannot be told from one line",
                                          first_line_text, amounts));
     }
@@ -453,11 +453,11 @@ std::expected<Document, std::string> parse_statement(std::span<std::uint8_t cons
   }
   auto const& oldest_first = document.order == Order::newest_first ? reversed : listed;
   for (auto const* row : oldest_first) {
-    Posting posting;
-    posting.date = *date_of(row->cells[document.date_column]);
-    posting.amount = *amount_of(row->cells[document.amount_column]);
+    Entry entry;
+    entry.date = *date_of(row->cells[document.date_column]);
+    entry.amount = *amount_of(row->cells[document.amount_column]);
     if (document.saldo_column) {
-      posting.saldo = amount_of(row->cells[*document.saldo_column]);
+      entry.saldo = amount_of(row->cells[*document.saldo_column]);
     }
     std::string const* before = nullptr;
     for (auto const c : document.text_columns) {
@@ -465,11 +465,11 @@ std::expected<Document, std::string> parse_statement(std::span<std::uint8_t cons
       if (cell.empty() || (before && *before == cell)) {
         continue;
       }
-      posting.text += (posting.text.empty() ? "" : " | ") + cell;
+      entry.text += (entry.text.empty() ? "" : " | ") + cell;
       before = &cell;
     }
-    posting.line = row->line;
-    document.postings.push_back(std::move(posting));
+    entry.line = row->line;
+    document.entries.push_back(std::move(entry));
   }
 
   std::vector<std::size_t> other_lines;
@@ -481,7 +481,7 @@ std::expected<Document, std::string> parse_statement(std::span<std::uint8_t cons
   }
   if (!other_lines.empty()) {
     document.notes.insert(document.notes.begin(),
-                          lines_text(other_lines) + (other_lines.size() == 1 ? " is not a posting." : " are not postings."));
+                          lines_text(other_lines) + (other_lines.size() == 1 ? " is not an entry." : " are not entries."));
   }
   return document;
 }

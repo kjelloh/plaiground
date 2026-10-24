@@ -132,6 +132,12 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_voucher(out);
       } else if (mode_ == Mode::StatementFiles) {
         show_statement_files(out);
+      } else if (mode_ == Mode::EntryList) {
+        show_entries(out);
+      } else if (mode_ == Mode::EntryChoice) {
+        show_entry_choice(out);
+      } else if (mode_ == Mode::AddToEvent) {
+        show_targets(out);
       }
     }
     return Step::Continue;
@@ -244,6 +250,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
       start_import(out);
     } else if (key == U's') {
       start_statement(out);
+    } else if (key == U'a') {
+      open_entries(out);
     } else if (key == U'r') {
       before_reports_ = Mode::Years;
       open_years(out);
@@ -281,6 +289,15 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     break;
   case Mode::StatementFiles:
     on_statement_files_key(key, out);
+    break;
+  case Mode::EntryList:
+    on_entry_list_key(key, out);
+    break;
+  case Mode::EntryChoice:
+    on_entry_choice_key(key, out);
+    break;
+  case Mode::AddToEvent:
+    on_add_to_event_key(key, out);
     break;
   default:
     break;
@@ -321,6 +338,7 @@ void Repl::show_keys(std::ostream& out) const {
     std::println(out, "  y  Fiscal years");
     std::println(out, "  i  Import an SIE file");
     std::println(out, "  s  Import an account statement");
+    std::println(out, "  a  Statement entries not yet booked");
     std::println(out, "  r  Reports");
   } else {
     auto const* year = books_.year_starting(open_year_);
@@ -328,7 +346,8 @@ void Repl::show_keys(std::ostream& out) const {
     std::println(out, "  n  Note an event to post later");
     std::println(out, "  w  Waiting events ({})", year ? year->waiting.size() : 0);
     std::println(out, "  v  View vouchers (correct one, or use it as a template)");
-    std::println(out, "  s  Import an account statement (only the postings in this year)");
+    std::println(out, "  s  Import an account statement (only the entries in this year)");
+    std::println(out, "  a  Statement entries not yet booked in this year");
     std::println(out, "  r  Reports of this year");
     if (year && year->closed) {
       std::println(out, "  o  Open the year for new vouchers");
@@ -421,6 +440,12 @@ std::string Repl::prompt() const {
     return "statement?> ";
   case Mode::ConfirmStatement:
     return "Import it? (y/n) ";
+  case Mode::EntryList:
+    return "entries?> ";
+  case Mode::EntryChoice:
+    return "entry?> ";
+  case Mode::AddToEvent:
+    return "event?> ";
   default:
     return "cratchit> ";
   }
@@ -553,6 +578,10 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
   }
   if (purpose_ == Purpose::StatementAccount) {
     on_statement_account(result, out);
+    return;
+  }
+  if (purpose_ == Purpose::EventHeading) {
+    on_event_heading(result, out);
     return;
   }
   if (purpose_ == Purpose::Account) {
@@ -1292,6 +1321,8 @@ void Repl::on_year_key(charset::unicode::CodePoint key, std::ostream& out) {
     open_vouchers(out);
   } else if (key == U's') {
     start_statement(out);
+  } else if (key == U'a') {
+    open_entries(out);
   } else if (key == U'r') {
     if (auto const index = read_open_year(out)) {
       year_ = *index;
@@ -1495,7 +1526,8 @@ void Repl::use_template(books::Voucher const* like, std::ostream& out, bool reve
       std::println(out, "Account {} of {} {} is not in the books, so it is not suggested.", account, like->series,
                    like->number);
     }
-    draft_->guide = std::move(guide.postings);
+    draft_->guide = books::without_present(std::move(guide.postings), draft_->postings);
+    draft_->guide_start = draft_->postings.size();
     draft_->from_template = std::format("{} {}", like->series, like->number);
     guess_ = {like->series, like};
   } else {
@@ -1566,6 +1598,13 @@ void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
     std::println(out, "Rows from {} are suggested one at a time, scaled to the amount: Enter takes the suggestion,",
                  draft_->from_template);
     std::println(out, "or type your own row instead.");
+  }
+  if (!draft_->postings.empty()) {
+    std::println(out, "The event's postings are the first rows:");
+    for (auto const& row : draft_->postings) {
+      show_row(row, out);
+    }
+    show_remaining(out);
   }
   start_rows(out);
 }
@@ -1787,9 +1826,10 @@ void Repl::show_waiting(std::ostream& out) {
     std::println(out, "  0  ...up");
   }
   for (auto i = first; i < last; ++i) {
-    auto const& event = year.waiting[i].event;
-    std::println(out, "  {}  {}  {:>12}  {}", i - first + 1, format_iso_date(event.date), format_amount(event.amount),
-                 event.heading);
+    auto const& waiting = year.waiting[i];
+    std::println(out, "  {}  {}  {:>12}  {}", i - first + 1, format_iso_date(waiting.event.date),
+                 format_amount(waiting.event.amount), waiting.event.heading);
+    show_event_postings(waiting, out);
   }
   if (last < n) {
     std::println(out, "  9  ...down");
@@ -1852,7 +1892,7 @@ void Repl::post_waiting(std::size_t index, std::ostream& out) {
   from_waiting_ = index;
   template_key_.reset();
   correcting_.reset();
-  draft_ = books::Draft{year.waiting[index].event, year_index, {}, {}};
+  draft_ = books::Draft{year.waiting[index].event, year_index, {}, year.waiting[index].postings};
   offer_templates(out);
 }
 
@@ -2115,9 +2155,9 @@ std::expected<statement::Document, std::string> read_statement(fs::path const& f
 }
 
 std::string first_and_last(statement::Document const& document) {
-  return document.postings.empty() ? std::string{}
-                                   : std::format("{} - {}", format_iso_date(document.postings.front().date),
-                                                 format_iso_date(document.postings.back().date));
+  return document.entries.empty() ? std::string{}
+                                   : std::format("{} - {}", format_iso_date(document.entries.front().date),
+                                                 format_iso_date(document.entries.back().date));
 }
 
 } // namespace
@@ -2207,8 +2247,8 @@ void Repl::show_statement_files(std::ostream& out) const {
       continue;
     }
     auto const known = books::most_known(statement_imports_, *document);
-    auto const count = document->postings.size();
-    std::println(out, "       {} posting{}, {}, {}", count, count == 1 ? "" : "s", first_and_last(*document),
+    auto const count = document->entries.size();
+    std::println(out, "       {} entr{}, {}, {}", count, count == 1 ? "y" : "ies", first_and_last(*document),
                  known == 0       ? "new"
                  : known == count ? "already imported"
                                   : std::format("{} already imported", known));
@@ -2252,9 +2292,9 @@ void Repl::check_statement(fs::path const& file, std::ostream& out) {
   statement_file_ = file;
   statement_ = std::move(*document);
   auto const& doc = *statement_;
-  auto const count = doc.postings.size();
+  auto const count = doc.entries.size();
   std::println(out, "Statement file {}", file.string());
-  std::println(out, "  Postings  {}, {} (lines {}-{}, {})", count, first_and_last(doc), doc.first_line, doc.last_line,
+  std::println(out, "  Entries   {}, {} (lines {}-{}, {})", count, first_and_last(doc), doc.first_line, doc.last_line,
                doc.order == statement::Order::oldest_first   ? "oldest first"
                : doc.order == statement::Order::newest_first ? "newest first"
                                                              : "order unknown");
@@ -2270,7 +2310,7 @@ void Repl::check_statement(fs::path const& file, std::ostream& out) {
       std::println(out, "  - {}", note);
     }
   }
-  LOG_BUSINESS("Read statement file {}: {} postings {}, saldo {}", file.string(), count, first_and_last(doc),
+  LOG_BUSINESS("Read statement file {}: {} entries {}, saldo {}", file.string(), count, first_and_last(doc),
                doc.saldo_column ? "checked" : "none");
   statement_guess_ = books::guess_statement_account(books_, statement_imports_, doc);
   if (statement_guess_) {
@@ -2278,7 +2318,7 @@ void Repl::check_statement(fs::path const& file, std::ostream& out) {
     std::println(out, "Suggested account {} {}: {}.", statement_guess_->account, account ? account->name : "",
                  statement_guess_->reason);
   } else {
-    std::println(out, "No account suggested: no postings or saldo match.");
+    std::println(out, "No account suggested: no entries or saldo match.");
   }
   start_statement_account(statement_guess_ ? statement_guess_->account : "", out);
 }
@@ -2317,19 +2357,19 @@ void Repl::on_statement_account(PathEditor::Result result, std::ostream& out) {
     std::println(out, "  Outside   {} ({}), not imported:", plan.outside,
                  year ? std::format("outside fiscal year {} - {}", format_iso_date(year->start), format_iso_date(year->end))
                       : "outside every fiscal year in the books");
-    for (auto const& posting : statement_->postings) {
-      bool const inside = year ? year->holds(posting.date)
+    for (auto const& entry : statement_->entries) {
+      bool const inside = year ? year->holds(entry.date)
                                : std::ranges::any_of(books_.years, [&](books::FiscalYear const& y) {
-                                   return y.holds(posting.date);
+                                   return y.holds(entry.date);
                                  });
       if (!inside) {
-        std::println(out, "    {}  {:>12}  {}", format_iso_date(posting.date), format_amount(posting.amount),
-                     posting.text);
+        std::println(out, "    {}  {:>12}  {}", format_iso_date(entry.date), format_amount(entry.amount),
+                     entry.text);
       }
     }
   }
   if (plan.added.empty()) {
-    std::println(out, "Nothing to import: no posting is new{}.", plan.outside > 0 ? " inside the books" : "");
+    std::println(out, "Nothing to import: no entry is new{}.", plan.outside > 0 ? " inside the books" : "");
     LOG_BUSINESS("Statement file {} for account {}: nothing new ({} known, {} outside)", statement_file_.string(),
                  typed, plan.known, plan.outside);
     mode_ = before_statement_;
@@ -2361,14 +2401,264 @@ void Repl::import_statement(std::ostream& out) {
     return;
   }
   std::println(out, "Stashed the file as {} in {}", saved->stashed.generic_string(), project_->folder.string());
-  std::println(out, "Imported {} posting{} for account {} ({} already known, {} outside). They wait for an event.",
-               plan.added.size(), plan.added.size() == 1 ? "" : "s", plan.account, plan.known, plan.outside);
-  LOG_BUSINESS("Imported statement file {} for account {} into project {} ({}): {} postings added, {} already known, "
+  std::println(out, "Imported {} entr{} for account {} ({} already known, {} outside). Press a to book them.",
+               plan.added.size(), plan.added.size() == 1 ? "y" : "ies", plan.account, plan.known, plan.outside);
+  LOG_BUSINESS("Imported statement file {} for account {} into project {} ({}): {} entries added, {} already known, "
                "{} outside{}, stashed as {}",
                statement_file_.string(), plan.account, project_->name, project_->uuid, plan.added.size(), plan.known,
                plan.outside,
                plan.from ? std::format(" (days {} - {})", format_iso_date(*plan.from), format_iso_date(*plan.to)) : "",
                saved->stashed.generic_string());
+}
+
+// A waiting event's postings, if any, and where they stand
+void Repl::show_event_postings(books::WaitingEvent const& waiting, std::ostream& out) const {
+  if (waiting.postings.empty()) {
+    return;
+  }
+  for (auto const& posting : waiting.postings) {
+    auto const* account = books_.account(posting.account);
+    std::println(out, "       {:<6} {:>12}  {}  {}", posting.account, format_amount(posting.amount),
+                 posting.date ? format_iso_date(*posting.date) : "", account ? account->name : "");
+  }
+  std::println(out, "       {}", books::Draft{waiting.event, 0, {}, waiting.postings}.status());
+}
+
+books::Posting Repl::posting_of(books::OpenEntry const& entry) const {
+  books::Posting posting;
+  posting.account = entry.account;
+  posting.amount = entry.entry.amount;
+  posting.date = entry.entry.date;
+  posting.text = entry.entry.text;
+  posting.source = entry.source;
+  return posting;
+}
+
+bool Repl::read_entries(std::ostream& out) {
+  if (before_entries_ == Mode::Year) {
+    if (!read_open_year(out)) {
+      return false;
+    }
+  } else {
+    auto books = books::read_books(project_->folder);
+    if (!books) {
+      std::println(out, "Error: {}", books.error());
+      return false;
+    }
+    books_ = std::move(*books);
+  }
+  auto const imports = books::read_statement_imports(project_->folder);
+  if (!imports) {
+    std::println(out, "Error: {}", imports.error());
+    return false;
+  }
+  auto const* year = before_entries_ == Mode::Year ? books_.year_starting(open_year_) : nullptr;
+  open_entries_ = books::open_entries(books_, *imports, year);
+  return true;
+}
+
+// The statement entries not yet booked, at the project or (only its days) the year prompt
+void Repl::open_entries(std::ostream& out) {
+  before_entries_ = mode_;
+  if (!read_entries(out)) {
+    return;
+  }
+  if (open_entries_.empty()) {
+    std::println(out, "No statement entries are waiting{}. Press s to import a statement.",
+                 before_entries_ == Mode::Year ? " in this fiscal year" : "");
+    return;
+  }
+  first_entry_ = 0;
+  mode_ = Mode::EntryList;
+  show_entries(out);
+}
+
+// Back to the list after an entry is used, or to where it was opened when none are left
+void Repl::back_to_entries(std::ostream& out) {
+  if (!read_entries(out)) {
+    mode_ = before_entries_;
+    return;
+  }
+  if (open_entries_.empty()) {
+    std::println(out, "No statement entries are waiting now.");
+    mode_ = before_entries_;
+    return;
+  }
+  first_entry_ = std::min(first_entry_, (open_entries_.size() - 1) / range_size * range_size);
+  mode_ = Mode::EntryList;
+  show_entries(out);
+}
+
+// Numbered from 1, by account and date; over 9, keys 1-8 with 0 up and 9 down
+void Repl::show_entries(std::ostream& out) const {
+  auto const n = open_entries_.size();
+  auto const first = n <= max_keys ? 0 : first_entry_;
+  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
+  auto const* year = before_entries_ == Mode::Year ? books_.year_starting(open_year_) : nullptr;
+  std::println(out, "Statement entries not yet booked{}:",
+               year ? std::format(" in fiscal year {} - {}", format_iso_date(year->start), format_iso_date(year->end))
+                    : "");
+  if (first > 0) {
+    std::println(out, "  0  ...up");
+  }
+  for (auto i = first; i < last; ++i) {
+    auto const& open = open_entries_[i];
+    std::println(out, "  {}  {:<6} {}  {:>12}  {}", i - first + 1, open.account, format_iso_date(open.entry.date),
+                 format_amount(open.entry.amount), open.entry.text);
+  }
+  if (last < n) {
+    std::println(out, "  9  ...down");
+  }
+  std::println(out, "");
+  std::println(out, "Press a number to choose an entry, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_entry_list_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const n = open_entries_.size();
+  if (key == U'-') {
+    mode_ = before_entries_;
+  } else if (n > max_keys && key == U'0' && first_entry_ > 0) {
+    first_entry_ -= range_size;
+    show_entries(out);
+  } else if (n > max_keys && key == U'9' && first_entry_ + range_size < n) {
+    first_entry_ += range_size;
+    show_entries(out);
+  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
+             (n > max_keys ? first_entry_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
+    chosen_entry_ = (n > max_keys ? first_entry_ : 0) + static_cast<std::size_t>(key - U'1');
+    auto const date = open_entries_[chosen_entry_].entry.date;
+    entry_year_ = static_cast<std::size_t>(
+        std::ranges::find_if(books_.years, [&](books::FiscalYear const& y) { return y.holds(date); }) -
+        books_.years.begin());
+    mode_ = Mode::EntryChoice;
+    show_entry_choice(out);
+  } else {
+    std::println(out, "Press a number to choose an entry, - to go back, h for help, q to quit.");
+  }
+}
+
+void Repl::show_entry_choice(std::ostream& out) const {
+  auto const& open = open_entries_[chosen_entry_];
+  auto const* account = books_.account(open.account);
+  auto const& year = books_.years[entry_year_];
+  std::println(out, "  {:<6} {}  {:>12}  {}", open.account, format_iso_date(open.entry.date),
+               format_amount(open.entry.amount), account ? account->name : "");
+  std::println(out, "  {}", open.entry.text);
+  std::println(out, "  From {}, fiscal year {} - {}", open.source, format_iso_date(year.start), format_iso_date(year.end));
+  std::println(out, "");
+  std::println(out, "Press n for a new waiting event with it{}, - to go back, h for help, q to quit.",
+               year.waiting.empty() ? "" : ", w to add it to a waiting event");
+}
+
+void Repl::on_entry_choice_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const& year = books_.years[entry_year_];
+  if (key == U'-') {
+    mode_ = Mode::EntryList;
+    show_entries(out);
+  } else if ((key == U'n' || key == U'w') && year.closed) {
+    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press o at its prompt to open it.",
+                 format_iso_date(year.start), format_iso_date(year.end));
+  } else if (key == U'n') {
+    std::println(out, "Type the heading of the event. Backspace erases, Enter accepts. Enter on an empty line goes back.");
+    purpose_ = Purpose::EventHeading;
+    editor_.start(open_entries_[chosen_entry_].entry.text, PathEditor::Kind::Heading);
+    mode_ = Mode::Typing;
+    out << editor_.prompt();
+  } else if (key == U'w' && !year.waiting.empty()) {
+    first_target_ = 0;
+    mode_ = Mode::AddToEvent;
+    show_targets(out);
+  } else {
+    show_entry_choice(out);
+  }
+}
+
+// A new waiting event from the entry: its date, its amount without sign, the heading typed, and the entry as its posting
+void Repl::on_event_heading(PathEditor::Result result, std::ostream& out) {
+  auto const heading = trimmed(editor_.text());
+  if (result == PathEditor::Result::Cancelled || heading.empty()) {
+    mode_ = Mode::EntryChoice;
+    show_entry_choice(out);
+    return;
+  }
+  auto const open = open_entries_[chosen_entry_];
+  auto& year = books_.years[entry_year_];
+  auto const amount = open.entry.amount < 0 ? -open.entry.amount : open.entry.amount;
+  books::WaitingEvent waiting{{heading, amount, open.entry.date}, parse_iso_date(places_.today).value_or(open.entry.date),
+                              {posting_of(open)}};
+  year.waiting.push_back(waiting);
+  if (!write_books(out)) {
+    year.waiting.pop_back();
+    mode_ = Mode::EntryChoice;
+    return;
+  }
+  auto const status = books::Draft{waiting.event, 0, {}, waiting.postings}.status();
+  std::println(out, "Noted: {} {} {} with {} {} ({} waiting). {}", format_iso_date(waiting.event.date), heading,
+               format_amount(amount), open.account, format_amount(open.entry.amount), year.waiting.size(), status);
+  LOG_BUSINESS("Noted waiting event {} \"{}\" {} from statement entry {} {} {} ({}) in project {} ({}), fiscal year "
+               "{} - {}",
+               format_iso_date(waiting.event.date), heading, format_amount(amount), open.account,
+               format_iso_date(open.entry.date), format_amount(open.entry.amount), open.source, project_->name,
+               project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
+  back_to_entries(out);
+}
+
+// The waiting events of the entry's year, to add it to; numbered from 1, over 9 keys 1-8 with 0 up and 9 down
+void Repl::show_targets(std::ostream& out) const {
+  auto const& year = books_.years[entry_year_];
+  auto const n = year.waiting.size();
+  auto const first = n <= max_keys ? 0 : first_target_;
+  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
+  std::println(out, "Waiting events in fiscal year {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
+  if (first > 0) {
+    std::println(out, "  0  ...up");
+  }
+  for (auto i = first; i < last; ++i) {
+    auto const& waiting = year.waiting[i];
+    std::println(out, "  {}  {}  {:>12}  {}", i - first + 1, format_iso_date(waiting.event.date),
+                 format_amount(waiting.event.amount), waiting.event.heading);
+    show_event_postings(waiting, out);
+  }
+  if (last < n) {
+    std::println(out, "  9  ...down");
+  }
+  std::println(out, "");
+  std::println(out, "Press the number of the event to add the entry to, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_add_to_event_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto& year = books_.years[entry_year_];
+  auto const n = year.waiting.size();
+  if (key == U'-') {
+    mode_ = Mode::EntryChoice;
+    show_entry_choice(out);
+  } else if (n > max_keys && key == U'0' && first_target_ > 0) {
+    first_target_ -= range_size;
+    show_targets(out);
+  } else if (n > max_keys && key == U'9' && first_target_ + range_size < n) {
+    first_target_ += range_size;
+    show_targets(out);
+  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
+             (n > max_keys ? first_target_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
+    auto& waiting = year.waiting[(n > max_keys ? first_target_ : 0) + static_cast<std::size_t>(key - U'1')];
+    auto const open = open_entries_[chosen_entry_];
+    waiting.postings.push_back(posting_of(open));
+    if (!write_books(out)) {
+      waiting.postings.pop_back();
+      return;
+    }
+    auto const status = books::Draft{waiting.event, 0, {}, waiting.postings}.status();
+    std::println(out, "Added {} {} to {} \"{}\". {}", open.account, format_amount(open.entry.amount),
+                 format_iso_date(waiting.event.date), waiting.event.heading, status);
+    LOG_BUSINESS("Added statement entry {} {} {} ({}) to waiting event {} \"{}\" in project {} ({}), fiscal year {} - "
+                 "{}: {}",
+                 open.account, format_iso_date(open.entry.date), format_amount(open.entry.amount), open.source,
+                 format_iso_date(waiting.event.date), waiting.event.heading, project_->name, project_->uuid,
+                 format_iso_date(year.start), format_iso_date(year.end), status);
+    back_to_entries(out);
+  } else {
+    std::println(out, "Press the number of the event to add the entry to, - to go back, h for help, q to quit.");
+  }
 }
 
 void run_repl(Repl& repl, KeySource const& next_key, std::ostream& out) {

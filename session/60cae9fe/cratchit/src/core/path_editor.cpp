@@ -85,6 +85,8 @@ std::string PathEditor::prompt() const {
     return "event> " + text_;
   case Kind::Row:
     return "post> " + text_;
+  case Kind::Heading:
+    return "heading> " + text_;
   default:
     return "path> " + text_;
   }
