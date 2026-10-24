@@ -7,6 +7,8 @@
 
 #include <algorithm>
 #include <format>
+#include <fstream>
+#include <iterator>
 #include <print>
 #include <string>
 #include <utility>
@@ -128,6 +130,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_vouchers(out);
       } else if (mode_ == Mode::VoucherView) {
         show_voucher(out);
+      } else if (mode_ == Mode::StatementFiles) {
+        show_statement_files(out);
       }
     }
     return Step::Continue;
@@ -176,6 +180,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     return Step::Continue;
   case Mode::ConfirmRight:
     on_confirm_right_key(key, out);
+    return Step::Continue;
+  case Mode::ConfirmStatement:
+    on_confirm_statement_key(key, out);
     return Step::Continue;
   default:
     break;
@@ -235,6 +242,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
       open_year_menu(out);
     } else if (key == U'i') {
       start_import(out);
+    } else if (key == U's') {
+      start_statement(out);
     } else if (key == U'r') {
       before_reports_ = Mode::Years;
       open_years(out);
@@ -269,6 +278,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     break;
   case Mode::VoucherView:
     on_voucher_view_key(key, out);
+    break;
+  case Mode::StatementFiles:
+    on_statement_files_key(key, out);
     break;
   default:
     break;
@@ -308,6 +320,7 @@ void Repl::show_keys(std::ostream& out) const {
   } else if (mode_ == Mode::Project) {
     std::println(out, "  y  Fiscal years");
     std::println(out, "  i  Import an SIE file");
+    std::println(out, "  s  Import an account statement");
     std::println(out, "  r  Reports");
   } else {
     auto const* year = books_.year_starting(open_year_);
@@ -315,6 +328,7 @@ void Repl::show_keys(std::ostream& out) const {
     std::println(out, "  n  Note an event to post later");
     std::println(out, "  w  Waiting events ({})", year ? year->waiting.size() : 0);
     std::println(out, "  v  View vouchers (correct one, or use it as a template)");
+    std::println(out, "  s  Import an account statement (only the postings in this year)");
     std::println(out, "  r  Reports of this year");
     if (year && year->closed) {
       std::println(out, "  o  Open the year for new vouchers");
@@ -403,6 +417,10 @@ std::string Repl::prompt() const {
   }
   case Mode::ConfirmRight:
     return "Enter the right voucher now? (y/n) ";
+  case Mode::StatementFiles:
+    return "statement?> ";
+  case Mode::ConfirmStatement:
+    return "Import it? (y/n) ";
   default:
     return "cratchit> ";
   }
@@ -527,6 +545,14 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
       return;
     }
     check_import(file, out);
+    return;
+  }
+  if (purpose_ == Purpose::StatementFile) {
+    on_statement_path(result, out);
+    return;
+  }
+  if (purpose_ == Purpose::StatementAccount) {
+    on_statement_account(result, out);
     return;
   }
   if (purpose_ == Purpose::Account) {
@@ -1264,6 +1290,8 @@ void Repl::on_year_key(charset::unicode::CodePoint key, std::ostream& out) {
     open_waiting(out);
   } else if (key == U'v') {
     open_vouchers(out);
+  } else if (key == U's') {
+    start_statement(out);
   } else if (key == U'r') {
     if (auto const index = read_open_year(out)) {
       year_ = *index;
@@ -2072,6 +2100,275 @@ void Repl::on_confirm_right_key(charset::unicode::CodePoint key, std::ostream& o
   } else {
     std::println(out, "Press y to enter the right voucher, n not to.");
   }
+}
+
+namespace {
+
+// The postings of a statement file, or why there are none
+std::expected<statement::Document, std::string> read_statement(fs::path const& file) {
+  std::ifstream in(file, std::ios::binary);
+  if (!in) {
+    return std::unexpected(std::format("Cannot read {}", file.string()));
+  }
+  std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+  return statement::parse_statement(bytes);
+}
+
+std::string first_and_last(statement::Document const& document) {
+  return document.postings.empty() ? std::string{}
+                                   : std::format("{} - {}", format_iso_date(document.postings.front().date),
+                                                 format_iso_date(document.postings.back().date));
+}
+
+} // namespace
+
+// The path of a statement file at the project or year prompt; a folder lists its files
+void Repl::start_statement(std::ostream& out) {
+  auto const in_year = mode_ == Mode::Year;
+  if (in_year) {
+    if (!read_open_year(out)) {
+      return;
+    }
+  } else {
+    auto books = books::read_books(project_->folder);
+    if (!books) {
+      std::println(out, "Error: {}", books.error());
+      return;
+    }
+    books_ = std::move(*books);
+  }
+  if (books_.years.empty()) {
+    std::println(out, "No books yet. Press i to import an SIE file.");
+    return;
+  }
+  auto imports = books::read_statement_imports(project_->folder);
+  if (!imports) {
+    std::println(out, "Error: {}", imports.error());
+    return;
+  }
+  statement_imports_ = std::move(*imports);
+  before_statement_ = mode_;
+  purpose_ = Purpose::StatementFile;
+  editor_.start((places_.start_folder / "").string(), PathEditor::Kind::File);
+  mode_ = Mode::Typing;
+  std::println(out, "Type the path of the account statement file, or of a folder to list its files. Tab completes a");
+  std::println(out, "folder or file name, Backspace erases, Enter accepts. Enter on an empty path goes back.");
+  out << editor_.prompt();
+}
+
+void Repl::on_statement_path(PathEditor::Result result, std::ostream& out) {
+  if (result == PathEditor::Result::Cancelled) {
+    mode_ = before_statement_;
+    return;
+  }
+  auto const path = typed_folder(places_.start_folder);
+  std::error_code ec;
+  if (fs::is_directory(path, ec)) {
+    statement_files_.clear();
+    for (auto const& entry : fs::directory_iterator(path, ec)) {
+      if (entry.is_regular_file(ec) && !entry.path().filename().string().starts_with('.')) {
+        statement_files_.push_back(entry.path());
+      }
+    }
+    std::ranges::sort(statement_files_);
+    if (statement_files_.empty()) {
+      std::println(out, "No files in {}.", path.string());
+      out << editor_.prompt();
+      return;
+    }
+    first_statement_ = 0;
+    mode_ = Mode::StatementFiles;
+    show_statement_files(out);
+    return;
+  }
+  if (!fs::is_regular_file(path, ec)) {
+    std::println(out, "No file or folder {}.", path.string());
+    out << editor_.prompt();
+    return;
+  }
+  check_statement(path, out);
+}
+
+// Numbered from 1; over 9, keys 1-8 with 0 up and 9 down. Each file is read to show what it holds.
+void Repl::show_statement_files(std::ostream& out) const {
+  auto const n = statement_files_.size();
+  auto const first = n <= max_keys ? 0 : first_statement_;
+  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
+  std::println(out, "Files in {}:", statement_files_.front().parent_path().string());
+  if (first > 0) {
+    std::println(out, "  0  ...up");
+  }
+  for (auto i = first; i < last; ++i) {
+    auto const& file = statement_files_[i];
+    std::println(out, "  {}  {}", i - first + 1, file.filename().string());
+    auto const document = read_statement(file);
+    if (!document) {
+      std::println(out, "       {}", document.error());
+      continue;
+    }
+    auto const known = books::most_known(statement_imports_, *document);
+    auto const count = document->postings.size();
+    std::println(out, "       {} posting{}, {}, {}", count, count == 1 ? "" : "s", first_and_last(*document),
+                 known == 0       ? "new"
+                 : known == count ? "already imported"
+                                  : std::format("{} already imported", known));
+  }
+  if (last < n) {
+    std::println(out, "  9  ...down");
+  }
+  std::println(out, "");
+  std::println(out, "Press a number to import that file, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_statement_files_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const n = statement_files_.size();
+  if (key == U'-') {
+    mode_ = Mode::Typing;
+    out << editor_.prompt();
+  } else if (n > max_keys && key == U'0' && first_statement_ > 0) {
+    first_statement_ -= range_size;
+    show_statement_files(out);
+  } else if (n > max_keys && key == U'9' && first_statement_ + range_size < n) {
+    first_statement_ += range_size;
+    show_statement_files(out);
+  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
+             (n > max_keys ? first_statement_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
+    check_statement(statement_files_[(n > max_keys ? first_statement_ : 0) + static_cast<std::size_t>(key - U'1')], out);
+  } else {
+    std::println(out, "Press a number to import that file, - to go back, h for help, q to quit.");
+  }
+}
+
+// Reads the statement, shows what it holds, and asks for its BAS account
+void Repl::check_statement(fs::path const& file, std::ostream& out) {
+  auto document = read_statement(file);
+  if (!document) {
+    std::println(out, "Error: {}: {}", file.string(), document.error());
+    std::println(out, "Nothing is imported.");
+    LOG_DESIGN_INSUFFICIENCY("Statement file {} refused: {}", file.string(), document.error());
+    mode_ = before_statement_;
+    return;
+  }
+  statement_file_ = file;
+  statement_ = std::move(*document);
+  auto const& doc = *statement_;
+  auto const count = doc.postings.size();
+  std::println(out, "Statement file {}", file.string());
+  std::println(out, "  Postings  {}, {} (lines {}-{}, {})", count, first_and_last(doc), doc.first_line, doc.last_line,
+               doc.order == statement::Order::oldest_first   ? "oldest first"
+               : doc.order == statement::Order::newest_first ? "newest first"
+                                                             : "order unknown");
+  if (doc.opening && doc.closing) {
+    std::println(out, "  Saldo     {} before, {} after; it adds up on every line that has one",
+                 format_amount(*doc.opening), format_amount(*doc.closing));
+  } else {
+    std::println(out, "  Saldo     none in the file");
+  }
+  if (!doc.notes.empty()) {
+    std::println(out, "Notes:");
+    for (auto const& note : doc.notes) {
+      std::println(out, "  - {}", note);
+    }
+  }
+  LOG_BUSINESS("Read statement file {}: {} postings {}, saldo {}", file.string(), count, first_and_last(doc),
+               doc.saldo_column ? "checked" : "none");
+  statement_guess_ = books::guess_statement_account(books_, statement_imports_, doc);
+  if (statement_guess_) {
+    auto const* account = books_.account(statement_guess_->account);
+    std::println(out, "Suggested account {} {}: {}.", statement_guess_->account, account ? account->name : "",
+                 statement_guess_->reason);
+  } else {
+    std::println(out, "No account suggested: no postings or saldo match.");
+  }
+  start_statement_account(statement_guess_ ? statement_guess_->account : "", out);
+}
+
+void Repl::start_statement_account(std::string const& account, std::ostream& out) {
+  std::println(out, "Type the BAS account the statement is for, e.g. 1930. A number prefix or a word of the name lists");
+  std::println(out, "accounts. Enter accepts; Enter on an empty line imports nothing.");
+  purpose_ = Purpose::StatementAccount;
+  editor_.start(account, PathEditor::Kind::Account);
+  mode_ = Mode::Typing;
+  out << editor_.prompt();
+}
+
+void Repl::on_statement_account(PathEditor::Result result, std::ostream& out) {
+  auto const typed = trimmed(editor_.text());
+  if (result == PathEditor::Result::Cancelled || typed.empty()) {
+    std::println(out, "Nothing is imported.");
+    mode_ = before_statement_;
+    return;
+  }
+  auto const* account = books_.account(typed);
+  if (!account) {
+    show_accounts(typed, out);
+    out << editor_.prompt();
+    return;
+  }
+  bool const suggested = statement_guess_ && statement_guess_->account == typed;
+  LOG_BUSINESS("Statement file {} is for account {}{}", statement_file_.string(), typed,
+               suggested ? std::format(", as suggested ({})", statement_guess_->reason) : ", as typed");
+  auto const* year = before_statement_ == Mode::Year ? books_.year_starting(open_year_) : nullptr;
+  auto plan = books::plan_statement(books_, statement_imports_, *statement_, typed, year);
+  std::println(out, "  Account   {} {}", account->number, account->name);
+  std::println(out, "  New       {}", plan.added.size());
+  std::println(out, "  Known     {} (in statements already imported)", plan.known);
+  if (plan.outside > 0) {
+    std::println(out, "  Outside   {} ({}), not imported:", plan.outside,
+                 year ? std::format("outside fiscal year {} - {}", format_iso_date(year->start), format_iso_date(year->end))
+                      : "outside every fiscal year in the books");
+    for (auto const& posting : statement_->postings) {
+      bool const inside = year ? year->holds(posting.date)
+                               : std::ranges::any_of(books_.years, [&](books::FiscalYear const& y) {
+                                   return y.holds(posting.date);
+                                 });
+      if (!inside) {
+        std::println(out, "    {}  {:>12}  {}", format_iso_date(posting.date), format_amount(posting.amount),
+                     posting.text);
+      }
+    }
+  }
+  if (plan.added.empty()) {
+    std::println(out, "Nothing to import: no posting is new{}.", plan.outside > 0 ? " inside the books" : "");
+    LOG_BUSINESS("Statement file {} for account {}: nothing new ({} known, {} outside)", statement_file_.string(),
+                 typed, plan.known, plan.outside);
+    mode_ = before_statement_;
+    return;
+  }
+  statement_plan_ = std::move(plan);
+  mode_ = Mode::ConfirmStatement;
+}
+
+void Repl::on_confirm_statement_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
+    import_statement(out);
+  } else if (key == U'n' || key == U'-') {
+    std::println(out, "Nothing is imported.");
+    statement_plan_.reset();
+    mode_ = before_statement_;
+  } else {
+    std::println(out, "Press y to import the statement, n not to.");
+  }
+}
+
+void Repl::import_statement(std::ostream& out) {
+  mode_ = before_statement_;
+  auto const plan = std::move(*statement_plan_);
+  statement_plan_.reset();
+  auto const saved = books::save_statement(project_->folder, statement_file_, plan, places_.today);
+  if (!saved) {
+    std::println(out, "Error: {}", saved.error());
+    return;
+  }
+  std::println(out, "Stashed the file as {} in {}", saved->stashed.generic_string(), project_->folder.string());
+  std::println(out, "Imported {} posting{} for account {} ({} already known, {} outside). They wait for an event.",
+               plan.added.size(), plan.added.size() == 1 ? "" : "s", plan.account, plan.known, plan.outside);
+  LOG_BUSINESS("Imported statement file {} for account {} into project {} ({}): {} postings added, {} already known, "
+               "{} outside{}, stashed as {}",
+               statement_file_.string(), plan.account, project_->name, project_->uuid, plan.added.size(), plan.known,
+               plan.outside,
+               plan.from ? std::format(" (days {} - {})", format_iso_date(*plan.from), format_iso_date(*plan.to)) : "",
+               saved->stashed.generic_string());
 }
 
 void run_repl(Repl& repl, KeySource const& next_key, std::ostream& out) {

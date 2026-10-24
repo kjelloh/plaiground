@@ -270,10 +270,30 @@ operation). 369 tests pass, no warnings. All 24 files in `_resources/_from_bank_
 Sparkonto file's opening equals the previous file's closing), 4 single-posting files refused (2-3 amounts), the old
 ISO-8859-1 `bokf_trans_165567828172.skv` refused (no BOM). In review.
 
+Task 35: Import an account statement (`core/books/statements`, repl). `s` at `project>` and at the year prompt (only
+the postings in that year; the rest listed as `Outside`, not imported). `path>` from the start folder (Tab completes
+files); a folder lists its files at `statement?>` (1-9, 0/9 scroll over 9), each read: postings, dates, `new` / `<n>
+already imported` / `already imported`, or the parse error. A chosen file shows postings, saldo before/after, notes,
+then `account>` prefilled with `guess_statement_account`: most postings with the same date and amount on an account in
+the books' vouchers, else most postings in statements imported for an account, else the account whose latest
+statement ends with this one's opening saldo; a tie suggests nothing. Not an account: lists matches. Then New / Known
+/ Outside and `Import it? (y/n)`; nothing new: "Nothing to import". Postings are derived, not stored (agreed b):
+`save_statement` stashes the file as `.cratchit/statements/<today>_<n>_<file>` + `.txt` record (imported, source,
+account, from, to, postings, added, known, outside); `read_statement_imports` reads them back, `counted_postings`
+keeps a stash's `from`-`to` days (a year's days at its prompt, else first year start to last year end, so a posting
+left out stays out), `known_postings` counts a posting once over overlapping files (most copies in one file),
+`most_known` for the folder list. Logged (business): read, account chosen (as suggested + reason, or typed), imported,
+nothing new; a file that cannot be read (design insufficiency). No view of the waiting statement postings yet.
+Manual: new "Importing an account statement", files, project and year keys, log kinds. 376 tests pass, no warnings.
+Checked with piped input on a scratch project with all 11 Fortnox SIE years and the 24 statement files: suggestions
+1920 for PlusGiro (15 of 15), 1630 for SKV (3 of 4), 1930 for Sparkonto (5 of 8); an overlapping file gives "Nothing to
+import"; at 2024/25 a file spanning the year imports 2 and lists 6 outside. In review.
+
 ## Next
 
-Task 35: use the statement document: postings waiting for an event (file layout to agree first), the BAS account of
-the statement's account (e.g. 1920) set for the whole document. Later: matching waiting events with statement postings.
+Task 36: show and use the waiting statement postings (per account and fiscal year), e.g. post one as a voucher (its
+date, amount and text as the event, its account as one row) or match it to a waiting event. Later: matching waiting
+events with statement postings.
 
 Later: VAT helpers, source document reference, correction help, creating a new fiscal year, sync with
 Fortnox. Other possible: SIE export (and import->export round trip), BAS chart check, rename/remove projects.
@@ -390,6 +410,12 @@ Fortnox. Other possible: SIE export (and import->export round trip), BAS chart c
   optional saldo), found by cell content only. Files must have a UTF-8 BOM. A single posting row is accepted only with
   exactly one amount. The posting text joins the text cells with ` | ` (for the user to edit; no sample cell has `|`). Opening and closing saldo
   are kept as optional data when the saldo adds up. Using the document is designed later.
+
+- 2026-10-24: Statements are imported on request (`s` at `project>` and at a year, the year limiting to its days), not
+  from a watched folder; a folder path lists its files. Files are stashed in `.cratchit/statements` with a record;
+  the postings are derived from the stashes, not stored in a file of their own. The BAS account is suggested by
+  matching postings first (books, then earlier statements), then by saldo, and confirmed by the user. Key events of
+  the import are logged.
 
 ## Open questions
 

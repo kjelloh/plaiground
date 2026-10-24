@@ -20,6 +20,7 @@ add_executable(cratchit_tests
   test_project.cpp
   test_repl.cpp
   test_report.cpp
+  test_statements.cpp
   test_sie_check.cpp
   test_sie_document.cpp
   test_sie_file.cpp

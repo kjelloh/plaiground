@@ -3,6 +3,7 @@
 #include "core/books/books.hpp"
 #include "core/books/entry.hpp"
 #include "core/books/import.hpp"
+#include "core/books/statements.hpp"
 #include "core/charset/unicode.hpp"
 #include "core/help.hpp"
 #include "core/log_view.hpp"
@@ -91,9 +92,22 @@ private:
     VoucherList,
     VoucherView,
     ConfirmRight,
+    StatementFiles,
+    ConfirmStatement,
   };
   // What the text typed in the editor is for
-  enum class Purpose { Workspace, ProjectName, ProjectFolder, ExistingProject, SieFile, Account, Voucher, Row };
+  enum class Purpose {
+    Workspace,
+    ProjectName,
+    ProjectFolder,
+    ExistingProject,
+    SieFile,
+    Account,
+    Voucher,
+    Row,
+    StatementFile,
+    StatementAccount,
+  };
 
   WorkspacePlaces places_;
   std::filesystem::path log_file_;
@@ -139,6 +153,14 @@ private:
   std::optional<books::VoucherKey> template_key_; // the template chosen before the voucher line, if any
   std::optional<books::VoucherKey> correcting_;   // the voucher being corrected (its rows reversed), if any
   std::optional<books::VoucherKey> corrected_;    // the voucher just corrected, for entering the right one
+  Mode before_statement_ = Mode::Project;           // where a statement import started (project or year prompt)
+  std::vector<books::StatementImport> statement_imports_; // the statements already imported
+  std::vector<std::filesystem::path> statement_files_;    // the files listed in a folder
+  std::size_t first_statement_ = 0;                 // the first file shown when they are more than keys 1-9
+  std::filesystem::path statement_file_;            // the file being imported
+  std::optional<statement::Document> statement_;    // its postings
+  std::optional<books::AccountGuess> statement_guess_;
+  std::optional<books::StatementPlan> statement_plan_; // the import waiting for y/n
 
   bool is_prompt() const; // at cratchit>, workspace> or project>
   void show_keys(std::ostream& out) const;
@@ -199,6 +221,15 @@ private:
   void show_voucher(std::ostream& out) const;
   void on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& out);
   void on_confirm_right_key(charset::unicode::CodePoint key, std::ostream& out);
+  void start_statement(std::ostream& out);
+  void on_statement_path(PathEditor::Result result, std::ostream& out);
+  void show_statement_files(std::ostream& out) const;
+  void on_statement_files_key(charset::unicode::CodePoint key, std::ostream& out);
+  void check_statement(std::filesystem::path const& file, std::ostream& out);
+  void start_statement_account(std::string const& account, std::ostream& out);
+  void on_statement_account(PathEditor::Result result, std::ostream& out);
+  void on_confirm_statement_key(charset::unicode::CodePoint key, std::ostream& out);
+  void import_statement(std::ostream& out);
   void on_voucher_line(std::ostream& out);
   void show_readings(std::ostream& out);
   void on_choose_amount_key(charset::unicode::CodePoint key, std::ostream& out);

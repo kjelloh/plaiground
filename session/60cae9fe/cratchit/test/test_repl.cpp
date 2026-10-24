@@ -798,6 +798,7 @@ TEST_F(WorkspaceRepl, EnterAndUnknownKeysListTheKeysOfAProject) {
   std::string const keys = "Keys at project>:\n"
                            "  y  Fiscal years\n"
                            "  i  Import an SIE file\n"
+                           "  s  Import an account statement\n"
                            "  r  Reports\n"
                            "  l  Show the log\n"
                            "  -  Back to workspace>\n"
@@ -1210,6 +1211,81 @@ TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
       << closed;
 }
 
+TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\ny");
+  auto const folder = root / "start" / "Test";
+  fs::create_directories(root / "start" / "bank");
+  // Two postings match the books' postings on 1930; one is after the fiscal year
+  std::ofstream(root / "start" / "bank" / "nordea.csv", std::ios::binary)
+      << "\xEF\xBB\xBF" "Datum;Belopp;Text;Saldo;\n"
+         "2026/01/02;-1,85;AVGIFTER;488,15;\n"
+         "2025/03/01;-10,00;Bank cost;490,00;\n"
+         "2025/02/01;500,00;Sale;500,00;\n";
+  std::ofstream(root / "start" / "bank" / "old.skv", std::ios::binary) << "2025-04-05;Ränta;1;\n";
+  auto output = run("sbank\n2");
+  EXPECT_NE(output.find("project> s\n"
+                        "Type the path of the account statement file, or of a folder to list its files. Tab completes a\n"
+                        "folder or file name, Backspace erases, Enter accepts. Enter on an empty path goes back.\n"
+                        "path> " + (root / "start").string() + "/bank\n"
+                        "Files in " + (root / "start" / "bank").string() + ":\n"
+                        "  1  nordea.csv\n"
+                        "       3 postings, 2025-02-01 - 2026-01-02, new\n"
+                        "  2  old.skv\n"
+                        "       The file does not start with a UTF-8 byte order mark (BOM), so its encoding is unknown. "
+                        "Save it as UTF-8 with a program that writes a BOM.\n"
+                        "\n"
+                        "Press a number to import that file, - to go back, h for help, q to quit.\n"
+                        "statement?> 2\n"
+                        "Error: " + (root / "start" / "bank" / "old.skv").string() + ": The file does not start"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Nothing is imported.\nproject> \n")) << output;
+
+  output = run("sbank/nordea.csv\n\ny");
+  EXPECT_NE(output.find("Statement file " + (root / "start" / "bank" / "nordea.csv").string() + "\n"
+                        "  Postings  3, 2025-02-01 - 2026-01-02 (lines 2-4, newest first)\n"
+                        "  Saldo     0.00 before, 488.15 after; it adds up on every line that has one\n"
+                        "Notes:\n"
+                        "  - Line 1 is not a posting.\n"
+                        "Suggested account 1930 Bank: 2 of 3 postings match postings on 1930 in the books.\n"
+                        "Type the BAS account the statement is for, e.g. 1930. A number prefix or a word of the name "
+                        "lists\naccounts. Enter accepts; Enter on an empty line imports nothing.\n"
+                        "account> 1930\n"
+                        "  Account   1930 Bank\n"
+                        "  New       2\n"
+                        "  Known     0 (in statements already imported)\n"
+                        "  Outside   1 (outside every fiscal year in the books), not imported:\n"
+                        "    2026-01-02         -1.85  AVGIFTER\n"
+                        "Import it? (y/n) y\n"
+                        "Stashed the file as .cratchit/statements/2026-10-20_1_nordea.csv in " + folder.string() + "\n"
+                        "Imported 2 postings for account 1930 (0 already known, 1 outside). They wait for an event.\n"
+                        "project> \n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(fs::exists(folder / ".cratchit" / "statements" / "2026-10-20_1_nordea.csv.txt"));
+
+  // Again: the folder shows it, and nothing is new; at the year, the posting after it is left out too
+  output = run("sbank\n1\n");
+  EXPECT_NE(output.find("       3 postings, 2025-02-01 - 2026-01-02, 2 already imported\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("Suggested account 1930 Bank: 2 of 3 postings match postings on 1930 in the books.\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Nothing to import: no posting is new inside the books.\nproject> \n")) << output;
+  output = run("y0sbank/nordea.csv\n\n");
+  EXPECT_NE(output.find("  Outside   1 (outside fiscal year 2025-01-01 - 2025-12-31), not imported:\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Nothing to import: no posting is new inside the books.\n2025> \n")) << output;
+  // An account that is not in the books lists the matches and asks again; an empty line imports nothing
+  output = run("sbank/nordea.csv\n" + std::string(4, '\x7f') + "ban\n" + std::string(3, '\x7f') + "\n");
+  EXPECT_NE(output.find("ban\nAccounts matching ban:\n  1930  Bank\n  6570  Bank costs\naccount> "),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Nothing is imported.\n2025> \n")) << output;
+}
+
 TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
   run("1pnTest\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -1232,6 +1308,7 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
                         "  n  Note an event to post later\n"
                         "  w  Waiting events (0)\n"
                         "  v  View vouchers (correct one, or use it as a template)\n"
+                        "  s  Import an account statement (only the postings in this year)\n"
                         "  r  Reports of this year\n"
                         "  c  Close the year for new vouchers\n"
                         "  l  Show the log\n"

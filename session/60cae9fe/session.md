@@ -40,6 +40,11 @@ Time for next task to parse account statements into something to use as base for
     * I asked for text joining with ','
     * I asked for identifying open and close balance by matching running posted amounts against them (open slado + running posts = close saldo)
 
+I have now vibe coded 'import account statement' file(s)
+
+* There is a UI from project and year (pruned to that year)
+* Imported postings are stashed in a statements file in dot-folder named after start-date 
+
 ## 20261023
 
 It is now afternoon and I will try to make Claude implement an account statement file reader.
