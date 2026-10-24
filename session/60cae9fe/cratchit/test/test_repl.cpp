@@ -1107,6 +1107,109 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\n2025> \n")) << output;
 }
 
+TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  run("eBank cost march 35 2025-03-31\ny\n\n\n\n\ny");
+  auto output = run("vxa1");
+  EXPECT_NE(output.find("2025> v\n"
+                        "Series in fiscal year 2025-01-01 - 2025-12-31:\n"
+                        "  A  Redovisning                         3 vouchers, last A 3 2025-03-31\n"
+                        "\n"
+                        "Press a letter to list that series, - to go back, q to quit.\n"
+                        "series?> x\n"
+                        "Press a letter to list that series, - to go back, q to quit.\n"
+                        "series?> a\n"
+                        "Vouchers A in fiscal year 2025-01-01 - 2025-12-31, newest first:\n"
+                        "  1  A 3     2025-03-31         35.00  Bank cost march  (entered)\n"
+                        "  2  A 2     2025-03-01         10.00  Bank cost  (imported)\n"
+                        "  3  A 1     2025-02-01        500.00  Sale  (imported)\n"
+                        "\n"
+                        "Press a number to view it, - to go back, h for help, q to quit.\n"
+                        "voucher?> 1\n"
+                        "Voucher A 3 2025-03-31 \"Bank cost march\" 35.00\n"
+                        "  6570          35.00  Bank costs\n"
+                        "  1930         -35.00  Bank\n"
+                        "  Registered 2026-10-20, entered in cratchit\n"
+                        "\n"
+                        "Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.\n"
+                        "A 3> \n"),
+            std::string::npos)
+      << output;
+  // An imported voucher is not corrected
+  output = run("va3c-");
+  EXPECT_NE(output.find("A 1> c\nA 1 came with an SIE import, so cratchit does not correct it. Correct it in the program "
+                        "it\ncame from and import the file again.\nA 1> -\nVouchers A"),
+            std::string::npos)
+      << output;
+  // The correction reverses the rows, in the same series, and then the right voucher can follow
+  output = run("va1c 2025-04-01\ny\n\n\n\nyy" + std::string(5, '\x7f') + "40 2025-03-31\ny\n\n\n\ny");
+  EXPECT_NE(output.find("A 3> c\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-04-01\n"
+                        "  Heading  Rättelse av A 3: Bank cost march\n"
+                        "  Amount   35.00\n"
+                        "  Date     2025-04-01   (fiscal year 2025-01-01 - 2025-12-31)\n"
+                        "OK? (y/n) y\n"
+                        "Series (Enter = A, as A 3 2025-03-31 \"Bank cost march\"):\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("The rows of A 3, reversed, are suggested one at a time: Enter takes the suggestion,\n"
+                        "or type your own row instead.\n"
+                        "  Suggested 6570         -35.00  Bank costs\n"
+                        "post> \n"
+                        "  6570         -35.00  Bank costs\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Saved voucher A 4 into fiscal year 2025-01-01 - 2025-12-31.\n"
+                        "A 4 reverses A 3. The right voucher can follow, with A 3 as the template.\n"
+                        "Enter the right voucher now? (y/n) y\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("voucher> Bank cost march 35.00"), std::string::npos) << output;
+  EXPECT_NE(output.find("  Heading  Bank cost march\n  Amount   40.00\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("OK? (y/n) y\nSeries (Enter = A, as A 3 2025-03-31 \"Bank cost march\"):\n"), std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Rows from A 3 are suggested one at a time, scaled to the amount: Enter takes the suggestion,\n"
+                        "or type your own row instead.\n"
+                        "  Suggested 6570          40.00  Bank costs\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Saved voucher A 5 into fiscal year 2025-01-01 - 2025-12-31.\n2025> \n")) << output;
+  auto const books = cratchit::books::read_books(root / "start" / "Test");
+  ASSERT_TRUE(books.has_value()) << books.error();
+  auto const& vouchers = books->years.front().vouchers;
+  ASSERT_EQ(vouchers.size(), 5u);
+  EXPECT_EQ(vouchers[3].event.heading, "Rättelse av A 3: Bank cost march");
+  EXPECT_EQ(vouchers[3].postings[0].amount, -3500);
+  EXPECT_EQ(vouchers[3].postings[1].amount, 3500);
+  EXPECT_EQ(vouchers[4].postings[0].amount, 4000);
+}
+
+TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  // No template list: the viewed voucher is the template, even with no shared word
+  auto const output = run("va1tLunch 20 2025-04-02\ny\n\n");
+  EXPECT_NE(output.find("A 2> t\nType the heading"), std::string::npos) << output;
+  EXPECT_NE(output.find("OK? (y/n) y\nSeries (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"), std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Rows from A 2 are suggested one at a time, scaled to the amount: Enter takes the suggestion,\n"
+                        "or type your own row instead.\n"
+                        "  Suggested 6570          20.00  Bank costs\n"
+                        "post> \n"
+                        "  6570          20.00  Bank costs\n"),
+            std::string::npos)
+      << output;
+  // A closed year refuses it
+  auto const closed = run("cva1t");
+  EXPECT_NE(closed.find("A 2> t\nFiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press o to open it.\n"
+                        "A 2> "),
+            std::string::npos)
+      << closed;
+}
+
 TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
   run("1pnTest\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -1128,6 +1231,7 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
                         "  e  Enter a voucher\n"
                         "  n  Note an event to post later\n"
                         "  w  Waiting events (0)\n"
+                        "  v  View vouchers (correct one, or use it as a template)\n"
                         "  r  Reports of this year\n"
                         "  c  Close the year for new vouchers\n"
                         "  l  Show the log\n"

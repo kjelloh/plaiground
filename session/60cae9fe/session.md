@@ -10,6 +10,21 @@ So what's next?
 
 I asked Claude to vibe code a 'pick voucher template' as an option when editing and or posting a financial event.
 
+I tested the 'pick template'.
+
+* It seems to work sufficiently?
+* I think what I now need most is a way to remove vouchers I have posted?
+    * I need this anyhow for live application of cratchit.
+    * And this will enable me to test and revert on my current example data.
+
+So I asked Claude to implement view and edit existing vouchers.
+
+```text
+Both tasks are done: you can view the vouchers of a fiscal year, correct a voucher you entered in cratchit, and start a new voucher from any viewed one. 
+```
+
+I made a quick view run-through and it seems to work just fine.
+
 ## 20261023
 
 It is now afternoon and I will try to make Claude implement an account statement file reader.

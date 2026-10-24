@@ -2,9 +2,13 @@
 
 #include "core/path_value.hpp"
 #include "core/sie/check.hpp"
+#include "core/sie/file.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <format>
+#include <fstream>
+#include <iterator>
 #include <set>
 
 namespace cratchit::books {
@@ -503,6 +507,42 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
     saved.record = record;
     return saved;
   }
+}
+
+std::expected<std::set<VoucherKey>, std::string> imported_vouchers(std::filesystem::path const& project_folder) {
+  namespace fs = std::filesystem;
+  std::set<VoucherKey> keys;
+  auto const imports = project_folder / ".cratchit" / "imports";
+  std::error_code ec;
+  if (!fs::is_directory(imports, ec)) {
+    return keys;
+  }
+  for (auto const& entry : fs::directory_iterator(imports, ec)) {
+    if (!entry.is_regular_file(ec) || entry.path().extension() == ".txt") {
+      continue;
+    }
+    std::ifstream in(entry.path(), std::ios::binary);
+    if (!in) {
+      return std::unexpected(std::format("Cannot read {}", entry.path().string()));
+    }
+    std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    auto const lexed = sie::lex_bytes(bytes);
+    if (!lexed) {
+      return std::unexpected(std::format("{}: {}", entry.path().string(), lexed.error()));
+    }
+    auto const document = sie::parse_document(lexed->lines).document;
+    auto const year = document.year(0);
+    if (!year) {
+      return std::unexpected(std::format("{}: no fiscal year 0", entry.path().string()));
+    }
+    for (auto const& voucher : document.vouchers) {
+      keys.insert({year->start, voucher.series, voucher.number});
+    }
+  }
+  if (ec) {
+    return std::unexpected(std::format("Cannot list {}: {}", imports.string(), ec.message()));
+  }
+  return keys;
 }
 
 } // namespace cratchit::books

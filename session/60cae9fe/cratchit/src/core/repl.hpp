@@ -17,6 +17,7 @@
 #include <functional>
 #include <optional>
 #include <ostream>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -86,6 +87,10 @@ private:
     ConfirmSave,
     Waiting,
     ConfirmDelete,
+    VoucherSeries,
+    VoucherList,
+    VoucherView,
+    ConfirmRight,
   };
   // What the text typed in the editor is for
   enum class Purpose { Workspace, ProjectName, ProjectFolder, ExistingProject, SieFile, Account, Voucher, Row };
@@ -126,6 +131,14 @@ private:
   std::size_t first_waiting_ = 0;       // the first waiting event shown when they are more than keys 1-9
   bool deleting_ = false;               // a number at the waiting list deletes the event instead of posting it
   std::size_t to_delete_ = 0;           // the waiting event waiting for y/n
+  std::set<books::VoucherKey> imported_; // the vouchers that came with an SIE import, when viewing vouchers
+  std::string view_series_;             // the series whose vouchers are listed
+  std::vector<std::size_t> listed_vouchers_; // the vouchers listed, newest first, indexes into the open year's vouchers
+  std::size_t first_voucher_ = 0;       // the first voucher shown when they are more than keys 1-9
+  std::size_t viewed_ = 0;              // the voucher shown, an index into the open year's vouchers
+  std::optional<books::VoucherKey> template_key_; // the template chosen before the voucher line, if any
+  std::optional<books::VoucherKey> correcting_;   // the voucher being corrected (its rows reversed), if any
+  std::optional<books::VoucherKey> corrected_;    // the voucher just corrected, for entering the right one
 
   bool is_prompt() const; // at cratchit>, workspace> or project>
   void show_keys(std::ostream& out) const;
@@ -174,7 +187,18 @@ private:
   std::optional<std::size_t> read_open_year(std::ostream& out);
   void on_year_key(charset::unicode::CodePoint key, std::ostream& out);
   void set_closed(bool closed, std::ostream& out);
-  void start_entry(bool noting, std::ostream& out);
+  bool start_entry(bool noting, std::ostream& out, std::string const& line = "");
+  books::Voucher const* voucher_of(books::VoucherKey const& key) const;
+  books::VoucherKey key_of(books::Voucher const& voucher) const; // in the open year
+  void open_vouchers(std::ostream& out);
+  void show_voucher_series(std::ostream& out) const;
+  void on_voucher_series_key(charset::unicode::CodePoint key, std::ostream& out);
+  void list_vouchers(std::ostream& out);
+  void show_vouchers(std::ostream& out) const;
+  void on_voucher_list_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_voucher(std::ostream& out) const;
+  void on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& out);
+  void on_confirm_right_key(charset::unicode::CodePoint key, std::ostream& out);
   void on_voucher_line(std::ostream& out);
   void show_readings(std::ostream& out);
   void on_choose_amount_key(charset::unicode::CodePoint key, std::ostream& out);
@@ -183,7 +207,7 @@ private:
   void offer_templates(std::ostream& out);
   void show_templates(std::ostream& out) const;
   void on_template_key(charset::unicode::CodePoint key, std::ostream& out);
-  void use_template(books::Voucher const* like, std::ostream& out);
+  void use_template(books::Voucher const* like, std::ostream& out, bool reverse = false);
   void show_series(std::ostream& out);
   void on_series_key(charset::unicode::CodePoint key, std::ostream& out);
   void start_rows(std::ostream& out);

@@ -21,6 +21,17 @@ constexpr charset::unicode::CodePoint ctrl_d = U'\x04';
 // Esc does nothing: arrow keys also start with it, so the two can't be told apart
 constexpr charset::unicode::CodePoint escape = U'\x1b';
 
+// Voucher numbers in order: by value when both are digits, else as text
+bool number_less(std::string const& a, std::string const& b) {
+  auto const digits = [](std::string const& text) {
+    return !text.empty() && std::ranges::all_of(text, [](char c) { return c >= '0' && c <= '9'; });
+  };
+  if (digits(a) && digits(b) && a.size() != b.size()) {
+    return a.size() < b.size();
+  }
+  return a < b;
+}
+
 bool is_whitespace(charset::unicode::CodePoint key) {
   return key == U'\n' || key == U'\r' || key == U' ' || key == U'\t';
 }
@@ -113,6 +124,10 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_waiting(out);
       } else if (mode_ == Mode::Template) {
         show_templates(out);
+      } else if (mode_ == Mode::VoucherList) {
+        show_vouchers(out);
+      } else if (mode_ == Mode::VoucherView) {
+        show_voucher(out);
       }
     }
     return Step::Continue;
@@ -151,6 +166,16 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     return Step::Continue;
   case Mode::ConfirmDelete:
     on_confirm_delete_key(key, out);
+    return Step::Continue;
+  case Mode::VoucherSeries:
+    // h is series H here, so help is not offered
+    if (key == U'q') {
+      return Step::Quit;
+    }
+    on_voucher_series_key(key, out);
+    return Step::Continue;
+  case Mode::ConfirmRight:
+    on_confirm_right_key(key, out);
     return Step::Continue;
   default:
     break;
@@ -239,6 +264,12 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::Template:
     on_template_key(key, out);
     break;
+  case Mode::VoucherList:
+    on_voucher_list_key(key, out);
+    break;
+  case Mode::VoucherView:
+    on_voucher_view_key(key, out);
+    break;
   default:
     break;
   }
@@ -283,6 +314,7 @@ void Repl::show_keys(std::ostream& out) const {
     std::println(out, "  e  Enter a voucher");
     std::println(out, "  n  Note an event to post later");
     std::println(out, "  w  Waiting events ({})", year ? year->waiting.size() : 0);
+    std::println(out, "  v  View vouchers (correct one, or use it as a template)");
     std::println(out, "  r  Reports of this year");
     if (year && year->closed) {
       std::println(out, "  o  Open the year for new vouchers");
@@ -359,6 +391,18 @@ std::string Repl::prompt() const {
     return deleting_ ? "delete?> " : "waiting?> ";
   case Mode::ConfirmDelete:
     return "Delete it? (y/n) ";
+  case Mode::VoucherSeries:
+    return "series?> ";
+  case Mode::VoucherList:
+    return "voucher?> ";
+  case Mode::VoucherView: {
+    auto const* year = books_.year_starting(open_year_);
+    return year && viewed_ < year->vouchers.size()
+               ? std::format("{} {}> ", year->vouchers[viewed_].series, year->vouchers[viewed_].number)
+               : "voucher> ";
+  }
+  case Mode::ConfirmRight:
+    return "Enter the right voucher now? (y/n) ";
   default:
     return "cratchit> ";
   }
@@ -1218,6 +1262,8 @@ void Repl::on_year_key(charset::unicode::CodePoint key, std::ostream& out) {
     start_entry(true, out);
   } else if (key == U'w') {
     open_waiting(out);
+  } else if (key == U'v') {
+    open_vouchers(out);
   } else if (key == U'r') {
     if (auto const index = read_open_year(out)) {
       year_ = *index;
@@ -1252,28 +1298,31 @@ void Repl::set_closed(bool closed, std::ostream& out) {
                format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid);
 }
 
-// The voucher line of a new voucher, or of an event to note when noting
-void Repl::start_entry(bool noting, std::ostream& out) {
+// The voucher line of a new voucher, or of an event to note when noting, starting with line; false when refused
+bool Repl::start_entry(bool noting, std::ostream& out, std::string const& line) {
   auto const index = read_open_year(out);
   if (!index) {
-    return;
+    return false;
   }
   auto const& year = books_.years[*index];
   if (year.closed) {
     std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press o to open it.", format_iso_date(year.start),
                  format_iso_date(year.end));
-    return;
+    return false;
   }
   draft_.reset();
   noting_ = noting;
   from_waiting_.reset();
+  template_key_.reset();
+  correcting_.reset();
   purpose_ = Purpose::Voucher;
-  editor_.start("", noting ? PathEditor::Kind::Event : PathEditor::Kind::Voucher);
+  editor_.start(line, noting ? PathEditor::Kind::Event : PathEditor::Kind::Voucher);
   mode_ = Mode::Typing;
   std::println(out, "Type the heading, amount and date of the {}, e.g. Telia faktura oktober 1118,00 2026-10-22.",
                noting ? "event to post later" : "voucher");
   std::println(out, "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.");
   out << editor_.prompt();
+  return true;
 }
 
 // The heading, amount and date typed: shown for y/n, offered as readings when the
@@ -1340,6 +1389,9 @@ void Repl::show_event(books::Event const& event, std::size_t year, std::ostream&
 void Repl::on_confirm_event_key(charset::unicode::CodePoint key, std::ostream& out) {
   if (key == U'y' && noting_) {
     note_event(out);
+  } else if (key == U'y' && (correcting_ || template_key_)) {
+    templates_.clear();
+    use_template(voucher_of(correcting_ ? *correcting_ : *template_key_), out, correcting_.has_value());
   } else if (key == U'y') {
     offer_templates(out);
   } else if (key == U'n' || key == U'-') {
@@ -1401,11 +1453,16 @@ void Repl::on_template_key(charset::unicode::CodePoint key, std::ostream& out) {
 }
 
 // The template's rows guide the postings and its series is the default; without one, the guessed series
-void Repl::use_template(books::Voucher const* like, std::ostream& out) {
+// reverse (to correct like) flips the rows
+void Repl::use_template(books::Voucher const* like, std::ostream& out, bool reverse) {
   draft_->guide.clear();
   draft_->from_template.clear();
+  draft_->corrects.clear();
+  if (like && reverse) {
+    draft_->corrects = std::format("{} {}", like->series, like->number);
+  }
   if (like) {
-    auto guide = books::guide_of(books_, *like, draft_->event.amount);
+    auto guide = books::guide_of(books_, *like, reverse ? -draft_->event.amount : draft_->event.amount);
     for (auto const& account : guide.missing) {
       std::println(out, "Account {} of {} {} is not in the books, so it is not suggested.", account, like->series,
                    like->number);
@@ -1473,7 +1530,11 @@ void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
   std::println(out, "An account alone gets what remains (on the first row, the amount). A number prefix or a word of");
   std::println(out, "the name lists accounts. - removes the last row. Enter saves when debit and credit each add up");
   std::println(out, "to the amount.");
-  if (!draft_->guide.empty()) {
+  if (!draft_->guide.empty() && !draft_->corrects.empty()) {
+    std::println(out, "The rows of {}, reversed, are suggested one at a time: Enter takes the suggestion,",
+                 draft_->corrects);
+    std::println(out, "or type your own row instead.");
+  } else if (!draft_->guide.empty()) {
     std::println(out, "Rows from {} are suggested one at a time, scaled to the amount: Enter takes the suggestion,",
                  draft_->from_template);
     std::println(out, "or type your own row instead.");
@@ -1627,8 +1688,16 @@ void Repl::save_voucher(std::ostream& out) {
   LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}){}{} into project {} ({}), fiscal year {} - {}",
                draft.series, number_, format_iso_date(draft.event.date), draft.event.heading, draft.postings.size(),
                format_amount(books::debit(draft.postings)), waited ? " from a waiting event" : "",
-               draft.from_template.empty() ? "" : " with template " + draft.from_template, project_->name,
-               project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
+               !draft.corrects.empty()        ? " correcting " + draft.corrects
+               : draft.from_template.empty() ? ""
+                                             : " with template " + draft.from_template,
+               project_->name, project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
+  if (correcting_) {
+    corrected_ = std::exchange(correcting_, std::nullopt);
+    std::println(out, "{} {} reverses {}. The right voucher can follow, with {} as the template.", draft.series, number_,
+                 draft.corrects, draft.corrects);
+    mode_ = Mode::ConfirmRight;
+  }
 }
 
 bool Repl::write_books(std::ostream& out) {
@@ -1753,6 +1822,8 @@ void Repl::post_waiting(std::size_t index, std::ostream& out) {
   }
   noting_ = false;
   from_waiting_ = index;
+  template_key_.reset();
+  correcting_.reset();
   draft_ = books::Draft{year.waiting[index].event, year_index, {}, {}};
   offer_templates(out);
 }
@@ -1787,6 +1858,219 @@ void Repl::on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& 
     show_waiting(out);
   } else {
     std::println(out, "Press y to delete the event, n not to.");
+  }
+}
+
+books::Voucher const* Repl::voucher_of(books::VoucherKey const& key) const {
+  auto const* year = books_.year_starting(key.year);
+  if (!year) {
+    return nullptr;
+  }
+  auto const it = std::ranges::find_if(year->vouchers, [&](books::Voucher const& voucher) {
+    return voucher.series == key.series && voucher.number == key.number;
+  });
+  return it == year->vouchers.end() ? nullptr : &*it;
+}
+
+books::VoucherKey Repl::key_of(books::Voucher const& voucher) const {
+  return {open_year_, voucher.series, voucher.number};
+}
+
+// The series of the open year's vouchers, to list one of them
+void Repl::open_vouchers(std::ostream& out) {
+  auto const index = read_open_year(out);
+  if (!index) {
+    return;
+  }
+  auto const& year = books_.years[*index];
+  if (year.vouchers.empty()) {
+    std::println(out, "No vouchers in fiscal year {} - {}.", format_iso_date(year.start), format_iso_date(year.end));
+    return;
+  }
+  auto imported = books::imported_vouchers(project_->folder);
+  if (!imported) {
+    std::println(out, "Error: {}", imported.error());
+    return;
+  }
+  imported_ = std::move(*imported);
+  mode_ = Mode::VoucherSeries;
+  show_voucher_series(out);
+}
+
+void Repl::show_voucher_series(std::ostream& out) const {
+  auto const& year = *books_.year_starting(open_year_);
+  std::set<std::string> series;
+  for (auto const& voucher : year.vouchers) {
+    series.insert(voucher.series);
+  }
+  std::println(out, "Series in fiscal year {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
+  for (auto const& letter : series) {
+    std::size_t count = 0;
+    books::Voucher const* last = nullptr;
+    for (auto const& voucher : year.vouchers) {
+      if (voucher.series == letter) {
+        ++count;
+        if (!last || number_less(last->number, voucher.number)) {
+          last = &voucher;
+        }
+      }
+    }
+    auto const name = books::series_name(letter);
+    std::println(out, "  {}  {:<32} {:>4} voucher{}, last {} {} {}", letter, name ? name->name : "", count,
+                 count == 1 ? "" : "s", last->series, last->number, format_iso_date(last->event.date));
+  }
+  std::println(out, "");
+  std::println(out, "Press a letter to list that series, - to go back, q to quit.");
+}
+
+void Repl::on_voucher_series_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::Year;
+    return;
+  }
+  std::string letter;
+  if (key >= U'a' && key <= U'z') {
+    letter = static_cast<char>(key - U'a' + U'A');
+  } else if (key >= U'A' && key <= U'Z') {
+    letter = static_cast<char>(key);
+  }
+  auto const& year = *books_.year_starting(open_year_);
+  if (letter.empty() ||
+      std::ranges::none_of(year.vouchers, [&](books::Voucher const& voucher) { return voucher.series == letter; })) {
+    std::println(out, "Press a letter to list that series, - to go back, q to quit.");
+    return;
+  }
+  view_series_ = letter;
+  list_vouchers(out);
+}
+
+// The vouchers of the series, newest (highest number) first
+void Repl::list_vouchers(std::ostream& out) {
+  auto const& year = *books_.year_starting(open_year_);
+  listed_vouchers_.clear();
+  for (std::size_t i = 0; i < year.vouchers.size(); ++i) {
+    if (year.vouchers[i].series == view_series_) {
+      listed_vouchers_.push_back(i);
+    }
+  }
+  std::ranges::sort(listed_vouchers_, [&](std::size_t a, std::size_t b) {
+    return number_less(year.vouchers[b].number, year.vouchers[a].number);
+  });
+  first_voucher_ = 0;
+  mode_ = Mode::VoucherList;
+  show_vouchers(out);
+}
+
+// Numbered from 1, newest first; over 9, keys 1-8 with 0 up and 9 down
+void Repl::show_vouchers(std::ostream& out) const {
+  auto const& year = *books_.year_starting(open_year_);
+  auto const n = listed_vouchers_.size();
+  auto const first = n <= max_keys ? 0 : first_voucher_;
+  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
+  std::println(out, "Vouchers {} in fiscal year {} - {}, newest first:", view_series_, format_iso_date(year.start),
+               format_iso_date(year.end));
+  if (first > 0) {
+    std::println(out, "  0  ...up");
+  }
+  for (auto i = first; i < last; ++i) {
+    auto const& voucher = year.vouchers[listed_vouchers_[i]];
+    std::println(out, "  {}  {} {:<4}  {}  {:>12}  {}  ({})", i - first + 1, voucher.series, voucher.number,
+                 format_iso_date(voucher.event.date), format_amount(voucher.event.amount), voucher.event.heading,
+                 imported_.contains(key_of(voucher)) ? "imported" : "entered");
+  }
+  if (last < n) {
+    std::println(out, "  9  ...down");
+  }
+  std::println(out, "");
+  std::println(out, "Press a number to view it, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_voucher_list_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const n = listed_vouchers_.size();
+  if (key == U'-') {
+    mode_ = Mode::VoucherSeries;
+    show_voucher_series(out);
+  } else if (n > max_keys && key == U'0' && first_voucher_ > 0) {
+    first_voucher_ -= range_size;
+    show_vouchers(out);
+  } else if (n > max_keys && key == U'9' && first_voucher_ + range_size < n) {
+    first_voucher_ += range_size;
+    show_vouchers(out);
+  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
+             (n > max_keys ? first_voucher_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
+    viewed_ = listed_vouchers_[(n > max_keys ? first_voucher_ : 0) + static_cast<std::size_t>(key - U'1')];
+    mode_ = Mode::VoucherView;
+    show_voucher(out);
+  } else {
+    std::println(out, "Press a number to view it, - to go back, h for help, q to quit.");
+  }
+}
+
+void Repl::show_voucher(std::ostream& out) const {
+  auto const& voucher = books_.year_starting(open_year_)->vouchers[viewed_];
+  std::println(out, "Voucher {} {} {} \"{}\" {}", voucher.series, voucher.number, format_iso_date(voucher.event.date),
+               voucher.event.heading, format_amount(voucher.event.amount));
+  for (auto const& posting : voucher.postings) {
+    auto const* account = books_.account(posting.account);
+    auto const mark = posting.kind == books::Posting::Kind::added     ? "  (added)"
+                      : posting.kind == books::Posting::Kind::removed ? "  (removed)"
+                                                                      : "";
+    std::println(out, "  {:<6} {:>12}  {}{}", posting.account, format_amount(posting.amount),
+                 account ? account->name : "", mark);
+  }
+  auto const imported = imported_.contains(key_of(voucher));
+  if (voucher.registered) {
+    std::println(out, "  Registered {}, {}", format_iso_date(*voucher.registered),
+                 imported ? "imported from an SIE file" : "entered in cratchit");
+  } else {
+    std::println(out, "  {}", imported ? "Imported from an SIE file" : "Entered in cratchit");
+  }
+  std::println(out, "");
+  std::println(out, "Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.");
+}
+
+void Repl::on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const voucher = books_.year_starting(open_year_)->vouchers[viewed_];
+  auto const viewed = key_of(voucher);
+  if (key == U'-') {
+    mode_ = Mode::VoucherList;
+    show_vouchers(out);
+  } else if (key == U'c' && imported_.contains(viewed)) {
+    std::println(out, "{} {} came with an SIE import, so cratchit does not correct it. Correct it in the program it",
+                 voucher.series, voucher.number);
+    std::println(out, "came from and import the file again.");
+  } else if (key == U'c') {
+    // The line is the correction's heading and amount; no date means today
+    auto const line = std::format("Rättelse av {} {}: {} {}", voucher.series, voucher.number, voucher.event.heading,
+                                  format_amount(voucher.event.amount));
+    if (start_entry(false, out, line)) {
+      correcting_ = viewed;
+    }
+  } else if (key == U't') {
+    if (start_entry(false, out)) {
+      template_key_ = viewed;
+    }
+  } else {
+    std::println(out, "Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.");
+  }
+}
+
+// After a correction is saved: the right voucher, with the corrected one as its template
+void Repl::on_confirm_right_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
+    auto const corrected = *std::exchange(corrected_, std::nullopt);
+    auto const* voucher = voucher_of(corrected);
+    auto const line = voucher ? std::format("{} {}", voucher->event.heading, format_amount(voucher->event.amount)) : "";
+    if (start_entry(false, out, line)) {
+      template_key_ = corrected;
+    } else {
+      mode_ = Mode::Year;
+    }
+  } else if (key == U'n' || key == U'-') {
+    corrected_.reset();
+    mode_ = Mode::Year;
+  } else {
+    std::println(out, "Press y to enter the right voucher, n not to.");
   }
 }
 

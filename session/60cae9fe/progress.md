@@ -233,9 +233,26 @@ prompt; empty Enter takes it, a typed row replaces it, `-` steps back. Save log 
 "The template", series default, rows, waiting list. 355 tests pass, no warnings; checked with piped input on a Fortnox
 sample (Telia template D 3 scaled to 1245.00, saved as D 4). In review.
 
+Task 32: View vouchers. `v` at the year prompt: `series?>` lists the year's series (name, count, last number and date;
+letter picks, `h` is series H so no help, `-` back to the year), `voucher?>` lists one series newest (highest number)
+first (1-9, 0/9 scroll over 9) marked `(entered)` / `(imported)`, a number shows the voucher at prompt `D 4>` (rows with
+`(added)`/`(removed)`, registered, origin). Origin is derived, not stored: `books::imported_vouchers(project folder)` reads
+the stashed SIE copies in `.cratchit/imports` (not the .txt records; `lex_bytes`, no logging) and gives `VoucherKey`s
+(year start, series, number); anything else is entered. No file format change, so existing books keep working.
+Key list shows `v`. In review.
+
+Task 33: Correct and template from a voucher. At `D 4>`: `c` corrects an entered voucher (imported: refused, "correct it
+in the program it came from and import the file again"): the voucher line starts as `Rättelse av D 4: <heading>
+<amount>` (no date = today), then `OK?`, series (default the corrected one's), rows = the corrected rows reversed
+(`guide_of` with the negated amount). Saved: `D 5 reverses D 4. ...` + `Enter the right voucher now? (y/n)`; `y`
+starts the line with the old heading and amount and the old voucher as template. `t` starts a voucher with the viewed
+one as the template (no template list). Both only in an open year. `Draft::corrects`; save log adds `correcting D 4`.
+No deletion of vouchers. Manual: new "Viewing and correcting vouchers", year keys, saving, log. 358 tests pass, no
+warnings; checked with piped input on a Fortnox sample (imported D 3 refused, D 4 corrected by D 5). In review.
+
 ## Next
 
-Task 32 (agreed 2026-10-23): postings from account statements waiting for an event (file layout and statement format
+Task 34 (agreed 2026-10-23): postings from account statements waiting for an event (file layout and statement format
 to agree first). Later: matching waiting events with statement postings.
 
 Later: VAT helpers, source document reference, correction help, creating a new fiscal year, sync with
@@ -344,6 +361,10 @@ Fortnox. Other possible: SIE export (and import->export round trip), BAS chart c
   rows one at a time (Enter takes the suggestion), scaled to the new amount. Series step unchanged (default from the
   template; without one, guessed as before). Matching is on heading words; amount sign is a tie-breaker, ready for
   negative amounts (credit invoices).
+
+- 2026-10-24: Vouchers are never edited or deleted; a wrong voucher is corrected with a new voucher reversing it, in
+  the same series, optionally followed by the right one. Imported vouchers are not corrected in cratchit (for now).
+  Whether a voucher is imported is derived from the stashed SIE files, not stored.
 
 ## Open questions
 

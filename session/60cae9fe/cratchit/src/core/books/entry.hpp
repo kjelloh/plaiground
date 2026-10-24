@@ -92,6 +92,7 @@ struct Draft {
   Postings postings;
   Postings guide{};            // the rows suggested by a template, if one is used (see guide_of)
   std::string from_template{}; // the template's series and number, e.g. "D 31"
+  std::string corrects{};      // the voucher this one corrects (reverses), e.g. "D 4", if any
 
   // What the next posting needs to make the postings add up to zero (minus their sum)
   Amount remaining() const;

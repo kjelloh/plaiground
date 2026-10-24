@@ -5,7 +5,9 @@
 
 #include <cstddef>
 #include <expected>
+#include <compare>
 #include <filesystem>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -76,5 +78,19 @@ struct Saved {
 // notes. Must not be called for a plan with errors.
 std::expected<Saved, std::string> save_import(std::filesystem::path const& project_folder, ImportPlan const& plan,
                                               ImportSource const& source);
+
+// A voucher by the start of its fiscal year, its series and its number
+struct VoucherKey {
+  Date year;
+  std::string series;
+  std::string number;
+
+  auto operator<=>(VoucherKey const&) const = default;
+};
+
+// The vouchers that came with an SIE import: those of the stashed copies in
+// .cratchit/imports (every file there but the .txt records). No such folder
+// gives none. Error text names a stashed file that cannot be read. Does not log.
+std::expected<std::set<VoucherKey>, std::string> imported_vouchers(std::filesystem::path const& project_folder);
 
 } // namespace cratchit::books

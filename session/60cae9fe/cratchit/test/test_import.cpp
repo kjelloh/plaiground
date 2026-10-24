@@ -285,3 +285,16 @@ TEST_F(SaveImport, WritesBooksStashesTheFileAndRecordsTheImport) {
   EXPECT_EQ(again->stashed, fs::path(".cratchit") / "imports" / "2026-10-22_2_export.se");
   EXPECT_TRUE(again->written.empty());
 }
+
+TEST_F(SaveImport, ImportedVouchersAreThoseOfTheStashedFiles) {
+  auto const none = cratchit::books::imported_vouchers(root / "project");
+  ASSERT_TRUE(none.has_value()) << none.error();
+  EXPECT_TRUE(none->empty());
+  auto const plan = plan_import({}, fresh, parse_sie(file_2025()));
+  cratchit::books::ImportSource const from{source, "CP437", "Test 1.0", std::nullopt, "2026-10-22"};
+  ASSERT_TRUE(cratchit::books::save_import(root / "project", plan, from).has_value());
+  auto const keys = cratchit::books::imported_vouchers(root / "project");
+  ASSERT_TRUE(keys.has_value()) << keys.error();
+  cratchit::Date const start = year_month_day(year{2025}, January, day{1});
+  EXPECT_EQ(*keys, (std::set<cratchit::books::VoucherKey>{{start, "A", "1"}, {start, "A", "2"}}));
+}

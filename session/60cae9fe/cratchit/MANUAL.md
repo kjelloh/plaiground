@@ -481,6 +481,7 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | e      | Enters a voucher (see Entering a voucher). Only in an open year. |
 | n      | Notes an event to post later (see Waiting events). Only in an open year. |
 | w      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
+| v      | Views the vouchers, to correct one or use it as a template (see Viewing and correcting vouchers). |
 | r      | Shows the reports of this year (see Reports). `-` there comes back here. |
 | c      | Closes the year for new vouchers (shown when the year is open). |
 | o      | Opens the year for new vouchers (shown when it is closed). |
@@ -706,13 +707,96 @@ Press `y` to save, `n` or `-` to go back to the rows. cratchit adds the
 voucher to the fiscal year's files in the books (see The files), shows which
 files it updated, says `Saved voucher D 4 into fiscal year 2026-05-01 -
 2027-04-30.` and logs it (naming the template, if one was used). A saved
-voucher is never changed.
+voucher is never changed or deleted. A wrong one is corrected with a new
+voucher (see Viewing and correcting vouchers).
 
 The vouchers you enter are the truth of the books. A later SIE import keeps
 them: a voucher in the books that the file lacks is noted, and a voucher in
 the file with the same series and number but other content is an error, so
 nothing is imported. Keep booking a fiscal year in one program only, cratchit
 or the other, until cratchit can sync them.
+
+### Viewing and correcting vouchers
+
+Press `v` at the prompt of a fiscal year. cratchit lists the series used in
+the year; press a letter to list that series (the prompt is `series?>`; here
+`h` is series H, so help is not offered; `-` goes back to the year):
+
+```
+Series in fiscal year 2026-05-01 - 2027-04-30:
+  A  Redovisning                        12 vouchers, last A 12 2026-10-02
+  D  Leverantörsfakturor                 4 vouchers, last D 4 2026-10-24
+
+Press a letter to list that series, - to go back, q to quit.
+series?> d
+Vouchers D in fiscal year 2026-05-01 - 2027-04-30, newest first:
+  1  D 4     2026-10-24       1245.00  Faktura Telia november  (entered)
+  2  D 3     2026-05-18       2359.00  Faktura: Telia  (imported)
+  ...
+
+Press a number to view it, - to go back, h for help, q to quit.
+voucher?> 
+```
+
+Newest first means the highest number first. With more than nine, keys 1-8
+show eight at a time, `0` shows the ones before and `9` the ones after.
+A voucher is *imported* when it is in one of the SIE files the project has
+imported (the copies in `.cratchit/imports`, see The files); else it was
+*entered* in cratchit.
+
+A number shows the voucher, with its rows (`(added)` and `(removed)` mark rows
+changed after it was registered, as in the voucher report). The prompt is
+the voucher itself, such as `D 4>`:
+
+```
+Voucher D 4 2026-10-24 "Faktura Telia november" 1245.00
+  2440       -1245.00  Leverantörsskulder
+  6212         995.89  Mobiltelefon
+  2641         248.97  Debiterad ingående moms
+  3740           0.14  Öres- och kronutjämning
+  Registered 2026-10-24, entered in cratchit
+
+Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.
+D 4> 
+```
+
+| Key    | What it does |
+|--------|--------------|
+| c      | Corrects the voucher with a new one (below). Only for an entered voucher, in an open year. |
+| t      | Enters a new voucher with this one as the template: the voucher line, then the series and the rows, as in Entering a voucher, without the list of templates. Only in an open year. |
+| -      | Goes back to the list. |
+| h      | Opens this manual. |
+| q      | Quits cratchit. |
+
+#### Correcting a voucher
+
+A correction is a new voucher that reverses the wrong one: the same rows with
+the opposite signs, so together they add up to nothing. The wrong voucher
+stays in the books as it is. `c` starts the voucher line with the correction's
+heading and amount, for you to change or accept; without a date it is dated
+today (asked for when today is outside the year):
+
+```
+voucher> Rättelse av D 4: Faktura Telia november 1245.00
+```
+
+Then, as in Entering a voucher: `OK? (y/n)`, the series (by default the
+corrected voucher's series), and the rows, with the corrected voucher's rows
+reversed as the suggestions (`The rows of D 4, reversed, are suggested one at
+a time`). When it is saved, cratchit offers to enter the right voucher:
+
+```
+Saved voucher D 5 into fiscal year 2026-05-01 - 2027-04-30.
+D 5 reverses D 4. The right voucher can follow, with D 4 as the template.
+Enter the right voucher now? (y/n) 
+```
+
+`y` starts the voucher line with the corrected voucher's heading and amount,
+and its rows are the template. `n` goes back to the year prompt.
+
+An imported voucher is not corrected in cratchit:
+`D 3 came with an SIE import, so cratchit does not correct it. Correct it in
+the program it came from and import the file again.`
 
 ### Waiting events
 
@@ -985,7 +1069,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher, or noting or deleting a waiting event. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects), or noting or deleting a waiting event. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, or an SIE file in an unknown encoding. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 
