@@ -250,10 +250,30 @@ one as the template (no template list). Both only in an open year. `Draft::corre
 No deletion of vouchers. Manual: new "Viewing and correcting vouchers", year keys, saving, log. 358 tests pass, no
 warnings; checked with piped input on a Fortnox sample (imported D 3 refused, D 4 corrected by D 5). In review.
 
+Task 34: Account statement document (`core/statement`, namespace `cratchit::statement`), in memory only, no UI yet.
+`decode`: the file must start with a UTF-8 BOM (else "Save it as UTF-8 with a program that writes a BOM"), then strict
+UTF-8 via the push buffers (error names the line). `split(text, separator)`: quoted cells with doubled quotes, CR
+dropped, trimmed; the empty cell after a line-ending separator is left out only when every line ends with one (Nordea).
+`find_separator`: `;`, tab or `,`, most rows with the same cell count (>= 3). `date_of`: pure `YYYY-MM-DD` /
+`YYYY/MM/DD`. `amount_of`: pure `-`, digits in optional spaced groups of three (space, U+00A0, U+202F), decimal comma
+or point with 1-2 decimals, max 15 digits. `parse_statement(bytes)` -> `Document` (separator, date/amount/saldo/text
+columns, `Order` oldest_first/newest_first/unknown, optional `opening`/`closing` saldo, `postings` oldest first:
+date, amount, optional saldo, text, line; first/last line, notes). Posting rows: exactly one date cell and an amount;
+the postings are the longest run of same-shape rows (two equally long = error). Amount column = amount on every row;
+saldo candidates = amount or empty, >= 2 amounts; every pair and order is walked (rows without saldo carry the sum);
+exactly one must add up, dates must not go against it. No saldo: only with one amount column and no other candidate,
+order from the dates (+ note). One posting row: only with exactly one amount. Text: the other cells joined with `,`,
+empty and repeated cells left out, columns the same on every row dropped (two rows or more). Opening = first saldo
+minus the amounts up to it; closing = last saldo plus the amounts after it. Does not log. No manual change (no user
+operation). 369 tests pass, no warnings. All 24 files in `_resources/_from_bank_or_skv` run through a scratch program
+(not in the repo): 19 parse (Nordea newest first, saldo col 9; SKV oldest first, saldo col 4; each Plusgiro and
+Sparkonto file's opening equals the previous file's closing), 4 single-posting files refused (2-3 amounts), the old
+ISO-8859-1 `bokf_trans_165567828172.skv` refused (no BOM). In review.
+
 ## Next
 
-Task 34 (agreed 2026-10-23): postings from account statements waiting for an event (file layout and statement format
-to agree first). Later: matching waiting events with statement postings.
+Task 35: use the statement document: postings waiting for an event (file layout to agree first), the BAS account of
+the statement's account (e.g. 1920) set for the whole document. Later: matching waiting events with statement postings.
 
 Later: VAT helpers, source document reference, correction help, creating a new fiscal year, sync with
 Fortnox. Other possible: SIE export (and import->export round trip), BAS chart check, rename/remove projects.
@@ -365,6 +385,11 @@ Fortnox. Other possible: SIE export (and import->export round trip), BAS chart c
 - 2026-10-24: Vouchers are never edited or deleted; a wrong voucher is corrected with a new voucher reversing it, in
   the same series, optionally followed by the right one. Imported vouchers are not corrected in cratchit (for now).
   Whether a voucher is imported is derived from the stashed SIE files, not stored.
+
+- 2026-10-24: Account statements are parsed into an in-memory document of valid postings (date, amount, text,
+  optional saldo), found by cell content only. Files must have a UTF-8 BOM. A single posting row is accepted only with
+  exactly one amount. The posting text joins the text cells with `,` (for the user to edit). Opening and closing saldo
+  are kept as optional data when the saldo adds up. Using the document is designed later.
 
 ## Open questions
 

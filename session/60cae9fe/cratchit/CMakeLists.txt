@@ -49,6 +49,7 @@ add_library(cratchit_core
   src/core/sie/document.cpp
   src/core/sie/file.cpp
   src/core/sie/lexer.cpp
+  src/core/statement/statement.cpp
   src/core/terminal.cpp
   src/core/terminal_encoding.cpp
   src/core/version.cpp

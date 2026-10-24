@@ -25,6 +25,21 @@ Both tasks are done: you can view the vouchers of a fiscal year, correct a vouch
 
 I made a quick view run-through and it seems to work just fine.
 
+* I now tried the following prompt:
+
+```
+Time for next task to parse account statements into something to use as base for creating appropriate events and vouchers. I have added a larger set of account statements in _resources/_from_bank_or_skv. I think I want a parser that creats some form of 'account statement document' in memory. I think I want it to hold only valid debit and credit posting to the account. A valid account posting shall have at least the Date, posted amount and a caption text. The account statement file may list the postings in forward or reverse order. It may provide an optional saldo amount. It would be nice if the parser is able to identify the Date and the posted amount on column content only. That is, we expect a valid row to contain only one pure date column and at least one pure amount column. Maybe we can assemble a text by somehow assemble identified text columns into one text? If possible, I want the parser to verify Saldo amounts by running a row-by-row accumulation to verify that posted amounts add up to the running saldo amount where ther is one. I want to leave using the account statement document for now to first see what we can design? What can you propose?
+```
+
+* Now Claude also picked up my spec in this session document (which turned out to be a good thing)!
+* It cae back with questions about single line statement files, encoding, text joining and opening closing saldo.
+    * I asked it to accept single line if there is only a single amount and date field (assuming this should always mean it is a debit/credit entry?)
+    * I asked it to reject the file if no BOM and UTF8 did not work (seems safe for now?)
+    * Also, fall back to any Latin-based encoding may not work world-wide?
+    * I mean, For slavic languages, different scandinavian langues etc., we can assume we know what sub-set of Latin we are dealing with?
+    * I asked for text joining with ','
+    * I asked for identifying open and close balance by matching running posted amounts against them (open slado + running posts = close saldo)
+
 ## 20261023
 
 It is now afternoon and I will try to make Claude implement an account statement file reader.

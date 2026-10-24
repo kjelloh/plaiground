@@ -24,6 +24,7 @@ add_executable(cratchit_tests
   test_sie_document.cpp
   test_sie_file.cpp
   test_sie_lexer.cpp
+  test_statement.cpp
   test_terminal_encoding.cpp
   test_utf8.cpp
   test_version.cpp
