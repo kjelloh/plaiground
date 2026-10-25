@@ -844,7 +844,9 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
                         "OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
-                        "      6570 D 10.00  1930 C 10.00\n"
+                        "       Account        Debit       Credit\n"
+                        "       6570           10.00               Bank costs\n"
+                        "       1930                        10.00  Bank\n"
                         "\n"
                         "Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, "
                         "q to quit.\n"
@@ -1038,13 +1040,17 @@ TEST_F(WorkspaceRepl, QuestionMarkHintsTheCounterAccounts) {
                          "    6570   D   1  Bank costs\n"
                          "  Latest:\n"
                          "    A 2      2025-03-01         10.00  Bank cost\n"
-                         "        6570 D 10.00  1930 C 10.00\n";
+                         "      Account        Debit       Credit\n"
+                         "      6570           10.00               Bank costs\n"
+                         "      1930                        10.00  Bank\n";
   auto const hint_6570 = "Hint for 6570 D Bank costs, from vouchers and waiting events with 6570 on debit:\n"
                          "  Counter accounts in the latest 1:\n"
                          "    1930   C   1  Bank\n"
                          "  Latest:\n"
                          "    A 2      2025-03-01         10.00  Bank cost\n"
-                         "        6570 D 10.00  1930 C 10.00\n";
+                         "      Account        Debit       Credit\n"
+                         "      6570           10.00               Bank costs\n"
+                         "      1930                        10.00  Bank\n";
   EXPECT_NE(output.find("to the amount. ? shows the counter accounts used before with the rows' accounts, ? 1930 with 1930.\n"
                         "post> ?\n"
                         "No rows yet. Type ? and an account for its hint, e.g. ? 1930.\n"),
@@ -1139,9 +1145,13 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   EXPECT_NE(output.find("OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
-                        "      6570 D 10.00  1930 C 10.00\n"
+                        "       Account        Debit       Credit\n"
+                        "       6570           10.00               Bank costs\n"
+                        "       1930                        10.00  Bank\n"
                         "  2  A 1  2025-02-01        500.00  Sale\n"
-                        "      1930 D 500.00  3010 C 500.00\n"),
+                        "       Account        Debit       Credit\n"
+                        "       1930          500.00               Bank\n"
+                        "       3010                       500.00  Sales\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("template?> 2\nSeries (Enter = A, as A 1 2025-02-01 \"Sale\"):\n"), std::string::npos) << output;

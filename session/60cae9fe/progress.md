@@ -382,6 +382,11 @@ Read only, nothing logged. Manual: new "The hint", rows table, postings> keys. 4
 trace DEBUG). Checked on The ITfied AB (Anthropic waiting event, dropped, nothing written): 1920 C gives 2440 (8),
 6570 (4), ...; the latest 5 are mostly waiting events with only the 1920 posting. In review.
 
+Task 44: Template list (`template?>`) and the hint's latest list show each voucher's or event's rows in the Debit and
+Credit columns (`Repl::show_counted_rows`: `posting_heading` + `posting_row` with the account name, removed rows left
+out, no Total), with the voucher's own amounts. `posting_brief` is kept for the match view's "Not in the voucher"
+sentence only. Manual: The template, The hint. 407 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -516,7 +521,9 @@ into a waiting event without making a voucher, several entries chosen at once.
 
 - 2026-10-25: Posting lists show the amount without sign in a Debit or a Credit column (zero as debit), with a heading
   and a Total line where a whole voucher or a waiting event's postings are shown; a removed posting stays in its column,
-  marked, and does not count in the totals. Template lists use the one-line form `1930 C 1118.00`. Labels Debit/Credit.
+  marked, and does not count in the totals. Template lists and the hint's latest list show the rows in the columns too (heading, no Total, removed rows left
+  out; was the one-line form, changed 2026-10-25). The one-line form `1930 C 1118.00` stays only inside a sentence (the
+  match view's "Not in the voucher"). Labels Debit/Credit.
   Input stays signed; balances (trial balance, ledger balance) stay signed.
 
 - 2026-10-25: With a template (also `t` and the reversed rows of a correction), the whole suggested voucher is shown

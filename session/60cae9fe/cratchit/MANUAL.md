@@ -582,14 +582,20 @@ and it has an amount and at least two rows. The most shared words come first,
 then a voucher whose amount has the same sign as yours, then the latest.
 Vouchers with rows on the same accounts, on the same sides (debit or credit),
 show only once, as the best of them. At most five are listed, each with its
-rows on one line: the account, `D` (debit) or `C` (credit) and the amount:
+rows (removed rows left out) in the Debit and Credit columns, with the amounts
+of that voucher:
 
 ```
 Earlier vouchers like this one:
   1  D 9  2026-10-22       1118.00  Telia faktura oktober
-      2440 C 1118.00  6212 D 894.40  2641 D 223.60
+       Account        Debit       Credit
+       2440                      1118.00  Leverantörsskulder
+       6212          894.40               Mobiltelefon
+       2641          223.60               Debiterad ingående moms
   2  E 4  2026-07-01        987.00  Betalning Telia
-      2440 D 987.00  1930 C 987.00
+       Account        Debit       Credit
+       2440          987.00               Leverantörsskulder
+       1930                       987.00  Företagskonto
 
 Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.
 template?> 
@@ -778,7 +784,8 @@ Which accounts go against the ones you have? `?` at `post>` (or at
 credit), cratchit looks through the vouchers and waiting events of all fiscal
 years with that account on the same side, the latest first. It counts the
 accounts on the other side (the counter accounts) in the latest 20 of them,
-the most used first, and lists the latest 5 with their rows:
+the most used first, and lists the latest 5 with their rows in the Debit and
+Credit columns:
 
 ```
 post> ?
@@ -788,9 +795,12 @@ Hint for 1920 C PlusGiro, from vouchers and waiting events with 1920 on credit:
     6570   D   4  Bankkostnader
   Latest:
     waiting  2026-09-28       1308.75  LOOPIA AB | Webhotell
-        1920 C 1308.75
+      Account        Debit       Credit
+      1920                      1308.75  PlusGiro
     E 4      2026-09-20       1245.00  Telia
-        2440 D 1245.00  1920 C 1245.00
+      Account        Debit       Credit
+      2440         1245.00               Leverantörsskulder
+      1920                      1245.00  PlusGiro
 ```
 
 The number after the side is in how many of the counted vouchers and waiting

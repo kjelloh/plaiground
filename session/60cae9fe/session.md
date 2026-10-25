@@ -125,6 +125,10 @@ I now want cratchit to help with identifying waiting events that are in fact the
 
 This time I got something that seems to work (quick try seems ok)?
 
+Some time later and I have now actually registered ALL my current vouchers using this vibe coded cratchit.
+
+* I will now sleep on it and maybe redo it from scratch to pick up any more UI tweaks that I need to get done before I go on with VAT return resport, closing the books, generate voucher for printing etc.
+
 ## 20261024
 
 I have now decided to 'brute force' functionality by Vibe coding and don't care too much about code structure or design.

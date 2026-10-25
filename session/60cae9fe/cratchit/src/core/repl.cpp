@@ -1509,13 +1509,7 @@ void Repl::show_templates(std::ostream& out) const {
     auto const& like = *templates_[i];
     std::println(out, "  {}  {} {}  {}  {:>12}  {}", i + 1, like.series, like.number, format_iso_date(like.event.date),
                  format_amount(like.event.amount), like.event.heading);
-    std::string rows;
-    for (auto const& posting : like.postings) {
-      if (posting.kind != books::Posting::Kind::removed) {
-        rows += "  " + books::posting_brief(posting);
-      }
-    }
-    std::println(out, "    {}", rows);
+    show_counted_rows(like.postings, "       ", out);
   }
   std::println(out, "");
   std::println(out, "Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.");
@@ -1858,13 +1852,7 @@ void Repl::show_hints(std::vector<books::AccountSide> const& sides, std::ostream
       }
       std::println(out, "    {:<8} {}  {:>12}  {}", label, format_iso_date(event->date), format_amount(event->amount),
                    event->heading);
-      std::string rows;
-      for (auto const& posting : *postings) {
-        if (posting.kind != books::Posting::Kind::removed) {
-          rows += "  " + books::posting_brief(posting);
-        }
-      }
-      std::println(out, "      {}", rows);
+      show_counted_rows(*postings, "      ", out);
     }
   }
 }
@@ -2864,6 +2852,17 @@ void Repl::import_statement(std::ostream& out) {
 }
 
 // A waiting event's postings, if any, and where they stand
+// The column heading and the counted postings (not removed ones) with the account names, each line after indent
+void Repl::show_counted_rows(books::Postings const& postings, std::string_view indent, std::ostream& out) const {
+  std::println(out, "{}{}", indent, books::posting_heading());
+  for (auto const& posting : postings) {
+    if (posting.kind != books::Posting::Kind::removed) {
+      auto const* account = books_.account(posting.account);
+      std::println(out, "{}{}", indent, books::posting_row(posting.account, posting.amount, account ? account->name : ""));
+    }
+  }
+}
+
 void Repl::show_event_postings(books::WaitingEvent const& waiting, std::ostream& out) const {
   if (waiting.postings.empty()) {
     return;

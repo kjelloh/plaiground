@@ -291,6 +291,7 @@ private:
   void open_waiting(std::ostream& out);
   void show_waiting(std::ostream& out);
   void waiting_hint(std::ostream& out) const;
+  void show_counted_rows(books::Postings const& postings, std::string_view indent, std::ostream& out) const;
   void show_event_postings(books::WaitingEvent const& waiting, std::ostream& out) const;
   void on_waiting_key(charset::unicode::CodePoint key, std::ostream& out);
   void post_waiting(std::size_t index, std::ostream& out);
