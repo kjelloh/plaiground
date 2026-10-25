@@ -342,6 +342,19 @@ before. Waiting events: event postings first, then the suggestions. Manual: The 
 389 tests pass, no warnings (Debug, trace DEBUG). Not covered by a REPL test: a waiting event with some postings plus
 a template (covered by the Draft test). In review.
 
+Task 41: Flip the template at `postings>`. The save prompt `Save as D 10? (y/n)` (whole suggested voucher and the
+preview after Enter at `post>`) is now the prompt `postings>` with a key list: `s` save as D 10, `f` flip the
+template's rows (only with a guide: template, `t`, `c`), `-` change the rows (was `n`/`-`), `h`, `q`; Enter lists the
+keys (`Keys at postings>:`), an unknown key prints `Unknown key.` and the list. `Draft::flip_guide()` negates the guide,
+toggles `Draft::flipped` and drops the postings after `guide_start` (a waiting event's own postings stay, unflipped);
+`Repl::apply_guide` (the step after the series, moved out of `on_series_key`) applies it again: whole voucher at
+`postings>` when it balances (`Suggested from A 2, scaled to the amount and flipped:` / `The rows of D 4, reversed and
+flipped:`), else row by row at `post>`. Flipping twice gives the template back. No flip at `post>`, none of a single
+posting, no special case for corrections. Save log adds `, flipped`. Manual: new "Flipping the template", The rows,
+Saving (postings> key table), correcting, waiting list, Using the prompt, log kinds. 391 tests pass, no warnings
+(Debug, trace DEBUG). Not covered by a REPL test: flipping with a waiting event's postings (covered by the Draft test).
+In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -482,6 +495,10 @@ into a waiting event without making a voucher, several entries chosen at once.
 - 2026-10-25: With a template (also `t` and the reversed rows of a correction), the whole suggested voucher is shown
   after the series to save with `y`; `n` puts the rows in place at `post>` to change them from the end (`-` steps back
   to a suggestion). Only when the rows balance; else row by row as before.
+
+- 2026-10-25: Flip works on the template only (flip it, then apply it again), offered as `f` at the `postings>`
+  prompt (which replaced `Save as ...? (y/n)`), not at `post>` and not on single postings. No special detection for
+  corrections.
 
 ## Open questions
 

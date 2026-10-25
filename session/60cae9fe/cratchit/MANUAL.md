@@ -682,10 +682,17 @@ Voucher D 10 2026-11-20 "Telia faktura november"
   6212          996.00               Mobiltelefon
   2641          249.00               Debiterad ingående moms
   Total        1245.00      1245.00
-Save as D 10? (y/n) 
+
+  s  Save as D 10
+  f  Flip the template's rows (debit becomes credit)
+  -  Change the rows
+  h  Help (the manual)
+  q  Quit
+postings> 
 ```
 
-`y` saves it (see Saving). `n` or `-` goes to `post>` with the suggested rows
+`s` saves it (see Saving). `f` flips the template (see Flipping the
+template). `-` goes to `post>` with the suggested rows
 in place, to change them from the end: `-` removes the last row, and that row
 is then suggested again before `post>`. Enter on an empty line takes the
 suggestion; a row you type takes its place instead. The next suggestion is
@@ -719,6 +726,34 @@ postings do not fit the template, the whole voucher is not offered:
 cratchit goes to `post>` and suggests the rows one at a time, as above,
 starting with `Rows from D 9 are suggested one at a time`.
 
+#### Flipping the template
+
+Sometimes the template's rows are on the wrong sides for this voucher, for
+example when a credit note (kreditfaktura) is entered with an invoice as its
+template. Press `f` at `postings>` to flip the template: each of its rows
+changes side (debit becomes credit, credit becomes debit), and the rows are
+suggested again from the flipped template. Rows you typed or changed after the
+template's rows are replaced. The amount on the voucher line stays as it is.
+
+```
+postings> f
+Suggested from D 9, scaled to the amount and flipped:
+Voucher D 10 2026-11-20 "Telia kreditfaktura"
+  Account        Debit       Credit
+  2440         1245.00               Leverantörsskulder
+  6212                       996.00  Mobiltelefon
+  2641                       249.00  Debiterad ingående moms
+  Total        1245.00      1245.00
+```
+
+`f` again flips it back. When the flipped rows balance, the whole voucher is
+shown at `postings>` again; else they are suggested one at a time at `post>`
+(`Rows from D 9 are suggested one at a time, scaled to the amount and
+flipped`). Only the template is flipped: the postings a waiting event already
+has stay as they are (see The waiting list), and a single row cannot be
+flipped. `f` is offered only when the voucher has a template (also with `t`
+and when correcting, see Viewing and correcting vouchers).
+
 Rows that add up to zero but not to the amount show
 `Debit 223.60, credit 223.60, amount 1118.00: debit and credit must each reach the amount.`
 More than the amount on either side shows `...: more than the amount.`
@@ -742,13 +777,30 @@ Voucher D 4 2026-10-22 "Telia faktura oktober"
   6212          894.40               Mobiltelefon
   2641          223.60               Debiterad ingående moms
   Total        1118.00      1118.00
-Save as D 4? (y/n)
+
+  s  Save as D 4
+  -  Change the rows
+  h  Help (the manual)
+  q  Quit
+postings> 
 ```
 
-Press `y` to save, `n` or `-` to go back to the rows. cratchit adds the
+The prompt is `postings>`:
+
+| Key    | What it does |
+|--------|--------------|
+| s      | Saves the voucher. |
+| f      | Flips the template's rows (see Flipping the template). Only listed when the voucher has a template. |
+| -      | Goes back to the rows at `post>`. |
+| Enter  | Lists these keys. Any other key prints `Unknown key.` and the list. |
+| h      | Opens this manual. |
+| q      | Quits cratchit. |
+
+Press `s` to save. cratchit adds the
 voucher to the fiscal year's files in the books (see The files), shows which
 files it updated, says `Saved voucher D 4 into fiscal year 2026-05-01 -
-2027-04-30.` and logs it (naming the template, if one was used). A saved
+2027-04-30.` and logs it (naming the template, if one was used, and whether it
+was flipped). A saved
 voucher is never changed or deleted. A wrong one is corrected with a new
 voucher (see Viewing and correcting vouchers).
 
@@ -826,8 +878,9 @@ voucher> Rättelse av D 4: Faktura Telia november 1245.00
 
 Then, as in Entering a voucher: `OK? (y/n)`, the series (by default the
 corrected voucher's series), and the corrected voucher's rows reversed, shown
-as the whole voucher to save (`The rows of D 4, reversed:`, then `Save as D 5?
-(y/n)`; `n` puts the rows in place at `post>` to change them, as in The rows).
+as the whole voucher to save (`The rows of D 4, reversed:`, then `postings>`:
+`s` saves, `f` flips the rows, `-` puts the rows in place at `post>` to change
+them, as in The rows).
 When it is saved, cratchit offers to enter the right voucher:
 
 ```
@@ -916,7 +969,8 @@ so cratchit goes straight to the template (or the series). `-` at
 list. The event's postings are the first rows; a template's suggestions
 follow them, leaving out a row on an account the event already has. When the
 event's postings and the suggestions balance together, the whole voucher is
-shown to save as it is (see The rows); else they are at `post>`. An event
+shown to save as it is (see The rows); else they are at `post>`. `f` at
+`postings>` flips only the template's rows, never the event's postings. An event
 whose postings balance on their own is saved with Enter at `post>`. `-` at `post>` removes the last
 row, the event's postings too; with no rows it drops the voucher, and the
 event is still waiting as it was. When the voucher is saved, the event leaves
@@ -1231,8 +1285,9 @@ Space and tab are ignored, except while you type a folder path, a name, an
 account number, a voucher or event line, or a row (see Typing a folder path,
 Creating a project, Entering a voucher and Waiting events).
 
-At the `cratchit>`, `workspace>`, `project>` and fiscal year (such as
-`2026/27>`) prompts, Enter lists the keys you can press there, for example:
+At the `cratchit>`, `workspace>`, `project>`, fiscal year (such as
+`2026/27>`) and `postings>` prompts, Enter lists the keys you can press there,
+for example:
 
 ```
 project> 
@@ -1294,7 +1349,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects), noting or deleting a waiting event, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), noting or deleting a waiting event, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, or an account statement it cannot read. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

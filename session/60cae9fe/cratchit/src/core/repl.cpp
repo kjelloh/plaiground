@@ -172,9 +172,6 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     }
     on_series_key(key, out);
     return Step::Continue;
-  case Mode::ConfirmSave:
-    on_confirm_save_key(key, out);
-    return Step::Continue;
   case Mode::ConfirmDelete:
     on_confirm_delete_key(key, out);
     return Step::Continue;
@@ -282,6 +279,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::Template:
     on_template_key(key, out);
     break;
+  case Mode::Postings:
+    on_postings_key(key, out);
+    break;
   case Mode::VoucherList:
     on_voucher_list_key(key, out);
     break;
@@ -314,8 +314,9 @@ bool Repl::ignores(charset::unicode::CodePoint key) const {
   if (key == escape) {
     return true;
   }
-  // Enter lists the keys at a prompt, and takes the first template or the default series
-  if ((is_prompt() || mode_ == Mode::Template || mode_ == Mode::Series) && (key == U'\n' || key == U'\r')) {
+  // Enter lists the keys at a prompt and at postings>, and takes the first template or the default series
+  if ((is_prompt() || mode_ == Mode::Postings || mode_ == Mode::Template || mode_ == Mode::Series) &&
+      (key == U'\n' || key == U'\r')) {
     return false;
   }
   // Space and Enter show the next page of help or the log
@@ -419,8 +420,8 @@ std::string Repl::prompt() const {
     return "template?> ";
   case Mode::Series:
     return "series> ";
-  case Mode::ConfirmSave:
-    return std::format("Save as {} {}? (y/n) ", draft_->series, number_);
+  case Mode::Postings:
+    return "postings> ";
   case Mode::Waiting:
     return deleting_ ? "delete?> " : "waiting?> ";
   case Mode::ConfirmDelete:
@@ -1585,19 +1586,24 @@ void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
   }
   draft_->series = letter;
   number_ = books::next_number(books_.years[draft_->year], letter);
-  // The guide's whole voucher, when it balances, to save as it is
+  apply_guide(out);
+}
+
+// The guide's whole voucher, when it balances, to save as it is; else the rows at post>
+void Repl::apply_guide(std::ostream& out) {
+  whole_suggested_ = false;
   auto whole = *draft_;
   whole.postings = draft_->suggested_postings();
   if (whole.postings.size() > draft_->postings.size() && whole.is_balanced()) {
     if (draft_->corrects.empty()) {
-      std::println(out, "Suggested from {}, scaled to the amount:", draft_->from_template);
+      std::println(out, "Suggested from {}, scaled to the amount{}:", draft_->from_template,
+                   draft_->flipped ? " and flipped" : "");
     } else {
-      std::println(out, "The rows of {}, reversed:", draft_->corrects);
+      std::println(out, "The rows of {}, reversed{}:", draft_->corrects, draft_->flipped ? " and flipped" : "");
     }
     draft_->postings = std::move(whole.postings);
-    show_draft(out);
     whole_suggested_ = true;
-    mode_ = Mode::ConfirmSave;
+    open_postings(out);
     return;
   }
   show_row_help(out);
@@ -1623,12 +1629,12 @@ void Repl::show_row_help(std::ostream& out) const {
     std::println(out, "The suggested rows are in place. - removes the last one and suggests it again: Enter takes the");
     std::println(out, "suggestion, or type your own row instead.");
   } else if (!draft_->guide.empty() && !draft_->corrects.empty()) {
-    std::println(out, "The rows of {}, reversed, are suggested one at a time: Enter takes the suggestion,",
-                 draft_->corrects);
+    std::println(out, "The rows of {}, reversed{}, are suggested one at a time: Enter takes the suggestion,",
+                 draft_->corrects, draft_->flipped ? " and flipped" : "");
     std::println(out, "or type your own row instead.");
   } else if (!draft_->guide.empty()) {
-    std::println(out, "Rows from {} are suggested one at a time, scaled to the amount: Enter takes the suggestion,",
-                 draft_->from_template);
+    std::println(out, "Rows from {} are suggested one at a time, scaled to the amount{}: Enter takes the suggestion,",
+                 draft_->from_template, draft_->flipped ? " and flipped" : "");
     std::println(out, "or type your own row instead.");
   }
 }
@@ -1661,8 +1667,7 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
   auto const text = trimmed(editor_.text());
   if (result == PathEditor::Result::Cancelled || text.empty()) {
     if (draft_->is_balanced()) {
-      show_draft(out);
-      mode_ = Mode::ConfirmSave;
+      open_postings(out);
       return;
     }
     if (auto const suggested = draft_->suggestion()) {
@@ -1749,11 +1754,32 @@ void Repl::show_accounts(std::string const& query, std::ostream& out) const {
   }
 }
 
-void Repl::on_confirm_save_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U'y') {
+// The voucher as it would be saved, at postings>
+void Repl::open_postings(std::ostream& out) {
+  show_draft(out);
+  std::println(out, "");
+  show_postings_keys(out);
+  mode_ = Mode::Postings;
+}
+
+void Repl::show_postings_keys(std::ostream& out) const {
+  std::println(out, "  s  Save as {} {}", draft_->series, number_);
+  if (!draft_->guide.empty()) {
+    std::println(out, "  f  Flip the template's rows (debit becomes credit)");
+  }
+  std::println(out, "  -  Change the rows");
+  std::println(out, "  h  Help (the manual)");
+  std::println(out, "  q  Quit");
+}
+
+void Repl::on_postings_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U's') {
     whole_suggested_ = false;
     save_voucher(out);
-  } else if (key == U'n' || key == U'-') {
+  } else if (key == U'f' && !draft_->guide.empty()) {
+    draft_->flip_guide();
+    apply_guide(out);
+  } else if (key == U'-') {
     if (whole_suggested_) {
       show_row_help(out);
       show_remaining(out);
@@ -1761,7 +1787,11 @@ void Repl::on_confirm_save_key(charset::unicode::CodePoint key, std::ostream& ou
     }
     start_rows(out);
   } else {
-    std::println(out, "Press y to save the voucher, n to change the rows.");
+    if (key != U'\n' && key != U'\r') {
+      std::println(out, "Unknown key.");
+    }
+    std::println(out, "Keys at postings>:");
+    show_postings_keys(out);
   }
 }
 
@@ -1789,12 +1819,13 @@ void Repl::save_voucher(std::ostream& out) {
   if (waited) {
     std::println(out, "The event is no longer waiting ({} still waiting).", year.waiting.size());
   }
-  LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}){}{} into project {} ({}), fiscal year {} - {}",
+  LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}){}{}{} into project {} ({}), fiscal year {} - {}",
                draft.series, number_, format_iso_date(draft.event.date), draft.event.heading, draft.postings.size(),
                format_amount(books::debit(draft.postings)), waited ? " from a waiting event" : "",
                !draft.corrects.empty()        ? " correcting " + draft.corrects
                : draft.from_template.empty() ? ""
                                              : " with template " + draft.from_template,
+               draft.flipped ? ", flipped" : "",
                project_->name, project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
   if (correcting_) {
     corrected_ = std::exchange(correcting_, std::nullopt);

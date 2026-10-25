@@ -90,6 +90,16 @@ At this stage I get a string intuition that Claude gets very confused about the 
     * Then I got cold feet and aborted.
     * It is hard now to know how to prompt to get a design I can trust?
 
+I am now starting to feel what I heard others working with agentic coding has described.
+
+* The fun part of implementing the code and get a reward for each bit that gets working is taken away.
+    * Watching Claude do the 'fun' part is boring an unsatisfying.
+* I also feel out-of-touch
+    * When I don't tell the computer with code myself, I feel weary that the code does not in fact do what I want?
+    * Also, I lack the insight to catch things I have not thought about (Claude implements and I get to test a back box)
+
+
+
 ## 20261024
 
 I have now decided to 'brute force' functionality by Vibe coding and don't care too much about code structure or design.

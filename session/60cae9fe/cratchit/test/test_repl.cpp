@@ -40,6 +40,17 @@ std::string const main_keys = "Keys at cratchit>:\n"
                               "  h  Help (the manual)\n"
                               "  q  Quit\n";
 
+// The keys listed at postings> after the voucher; f only with a template
+std::string postings_keys(std::string const& voucher, bool flip) {
+  return "\n"
+         "  s  Save as " + voucher + "\n" +
+         (flip ? "  f  Flip the template's rows (debit becomes credit)\n" : "") +
+         "  -  Change the rows\n"
+         "  h  Help (the manual)\n"
+         "  q  Quit\n"
+         "postings> ";
+}
+
 } // namespace
 
 TEST(Repl, HOpensHelp) {
@@ -820,7 +831,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
   write_sie(root / "start" / "test.se", good_sie());
   run("itest.se\nyy0");
   auto const folder = root / "start" / "Test";
-  auto const output = run("eBank cost march 35 2025-03-31\ny\n\ny");
+  auto const output = run("eBank cost march 35 2025-03-31\ny\n\ns");
   EXPECT_NE(output.find("2025> e\n"
                         "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 "
                         "2026-10-22.\n"
@@ -850,8 +861,8 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
                         "  Account        Debit       Credit\n"
                         "  6570           35.00               Bank costs\n"
                         "  1930                        35.00  Bank\n"
-                        "  Total          35.00        35.00\n"
-                        "Save as A 3? (y/n) y\n"
+                        "  Total          35.00        35.00\n" +
+                            postings_keys("A 3", true) + "s\n"
                         "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
                         "Updated .cratchit/books/2025-01-01/postings.csv in " + folder.string() + "\n"
                         "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"
@@ -897,7 +908,7 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
   EXPECT_EQ(text, "date,text,amount,noted\n2025-03-31,Bank cost march,35.00,2026-10-20\n");
   in.close();
 
-  output = run("w1n\n6570\n1930\n\ny");
+  output = run("w1n\n6570\n1930\n\ns");
   EXPECT_NE(output.find("2025> w\n"
                         "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  1  2025-03-31         35.00  Bank cost march\n"
@@ -910,7 +921,7 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
   EXPECT_NE(output.find("template?> n\nSeries (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"), std::string::npos)
       << output;
   EXPECT_EQ(output.find("Suggested"), std::string::npos) << output;
-  EXPECT_NE(output.find("Save as A 3? (y/n) y\n"
+  EXPECT_NE(output.find(postings_keys("A 3", false) + "s\n"
                         "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
                         "Updated .cratchit/books/2025-01-01/postings.csv in " + folder.string() + "\n"
                         "Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
@@ -1080,8 +1091,8 @@ TEST_F(WorkspaceRepl, RowsMustAddUpToTheAmountToSave) {
                                "  1930                        10.00  Bank\n"
                                "  6570           25.00               Bank costs\n"
                                "  1930                        25.00  Bank\n"
-                               "  Total          35.00        35.00\n"
-                               "Save as A 3? (y/n) \n"))
+                               "  Total          35.00        35.00\n" +
+                               postings_keys("A 3", false) + "\n"))
       << output;
 }
 
@@ -1090,7 +1101,7 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   write_sie(root / "start" / "test.se", good_sie());
   run("itest.se\nyy0");
   // 2 picks A 1; - at series> goes back to the list, - there back to the line
-  auto const output = run("eBank cost sale 25 2025-04-01\ny2--\ny1\nn-\n-\n3010 -20\n\n-\n-\n-\n");
+  auto const output = run("eBank cost sale 25 2025-04-01\ny2--\ny1\n--\n-\n3010 -20\n\n-\n-\n-\n");
   EXPECT_NE(output.find("OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
@@ -1102,15 +1113,16 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   EXPECT_NE(output.find("template?> 2\nSeries (Enter = A, as A 1 2025-02-01 \"Sale\"):\n"), std::string::npos) << output;
   EXPECT_NE(output.find("series> -\nEarlier vouchers like this one:\n"), std::string::npos) << output;
   EXPECT_NE(output.find("template?> -\nvoucher> Bank cost sale 25 2025-04-01"), std::string::npos) << output;
-  // The whole voucher is suggested, scaled to 25.00; n puts its rows in place, - steps back to a suggestion
+  // The whole voucher is suggested, scaled to 25.00; - puts its rows in place, - steps back to a suggestion
   EXPECT_NE(output.find("series> \n"
                         "Suggested from A 2, scaled to the amount:\n"
                         "Voucher A 3 2025-04-01 \"Bank cost sale\"\n"
                         "  Account        Debit       Credit\n"
                         "  6570           25.00               Bank costs\n"
                         "  1930                        25.00  Bank\n"
-                        "  Total          25.00        25.00\n"
-                        "Save as A 3? (y/n) n\n"
+                        "  Total          25.00        25.00\n" +
+                            postings_keys("A 3", true) + "-\n"
+                        
                         "Voucher A 3 (Redovisning) 2025-04-01 \"Bank cost sale\" 25.00\n"),
             std::string::npos)
       << output;
@@ -1145,11 +1157,60 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\n2025> \n")) << output;
 }
 
+TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  // Enter takes template A 2 and series A; f flips, x and Enter list the keys, f flips back, f again and s saves
+  auto const output = run("eBank refund 35 2025-04-03\ny\n\nfx\nffs");
+  auto const flipped = std::string("f\n"
+                                   "Suggested from A 2, scaled to the amount and flipped:\n"
+                                   "Voucher A 3 2025-04-03 \"Bank refund\"\n"
+                                   "  Account        Debit       Credit\n"
+                                   "  6570                        35.00  Bank costs\n"
+                                   "  1930           35.00               Bank\n"
+                                   "  Total          35.00        35.00\n") +
+                       postings_keys("A 3", true);
+  EXPECT_NE(output.find("series> \n"
+                        "Suggested from A 2, scaled to the amount:\n"
+                        "Voucher A 3 2025-04-03 \"Bank refund\"\n"
+                        "  Account        Debit       Credit\n"
+                        "  6570           35.00               Bank costs\n"
+                        "  1930                        35.00  Bank\n"
+                        "  Total          35.00        35.00\n" +
+                        postings_keys("A 3", true) + flipped + "x\n"
+                        "Unknown key.\n"
+                        "Keys at postings>:\n"
+                        "  s  Save as A 3\n"
+                        "  f  Flip the template's rows (debit becomes credit)\n"
+                        "  -  Change the rows\n"
+                        "  h  Help (the manual)\n"
+                        "  q  Quit\n"
+                        "postings> \n"
+                        "Keys at postings>:\n"
+                        "  s  Save as A 3\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("postings> f\nSuggested from A 2, scaled to the amount:\n"), std::string::npos) << output;
+  EXPECT_NE(output.find(flipped + "s\n"), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n2025> \n")) << output;
+  auto const books = cratchit::books::read_books(root / "start" / "Test");
+  ASSERT_TRUE(books.has_value()) << books.error();
+  auto const& saved = books->years.front().vouchers.back();
+  EXPECT_EQ(saved.event.amount, 3500);
+  ASSERT_EQ(saved.postings.size(), 2u);
+  EXPECT_EQ(saved.postings[0].amount, -3500);
+  EXPECT_EQ(saved.postings[1].amount, 3500);
+  // Without a template, f is not offered
+  auto const plain = run("eLunch 20 2025-04-04\ny\n6570 20\n1930\n\nf-\n-\n-\n");
+  EXPECT_NE(plain.find(postings_keys("A 4", false) + "f\nUnknown key.\n"), std::string::npos) << plain;
+}
+
 TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
   run("1pnTest\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("itest.se\nyy0");
-  run("eBank cost march 35 2025-03-31\ny\n\ny");
+  run("eBank cost march 35 2025-03-31\ny\n\ns");
   auto output = run("vxa1");
   EXPECT_NE(output.find("2025> v\n"
                         "Series in fiscal year 2025-01-01 - 2025-12-31:\n"
@@ -1184,7 +1245,7 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
             std::string::npos)
       << output;
   // The correction reverses the rows, in the same series, and then the right voucher can follow
-  output = run("va1c 2025-04-01\ny\nyy" + std::string(5, '\x7f') + "40 2025-03-31\ny\ny");
+  output = run("va1c 2025-04-01\ny\nsy" + std::string(5, '\x7f') + "40 2025-03-31\ny\ns");
   EXPECT_NE(output.find("A 3> c\n"), std::string::npos) << output;
   EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-04-01\n"
                         "  Heading  Rättelse av A 3: Bank cost march\n"
@@ -1200,8 +1261,8 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
                         "  Account        Debit       Credit\n"
                         "  6570                        35.00  Bank costs\n"
                         "  1930           35.00               Bank\n"
-                        "  Total          35.00        35.00\n"
-                        "Save as A 4? (y/n) y\n"),
+                        "  Total          35.00        35.00\n" +
+                            postings_keys("A 4", true) + "s\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("Saved voucher A 4 into fiscal year 2025-01-01 - 2025-12-31.\n"
@@ -1244,8 +1305,8 @@ TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
                         "  Account        Debit       Credit\n"
                         "  6570           20.00               Bank costs\n"
                         "  1930                        20.00  Bank\n"
-                        "  Total          20.00        20.00\n"
-                        "Save as A 3? (y/n) "),
+                        "  Total          20.00        20.00\n" +
+                            postings_keys("A 3", true)),
             std::string::npos)
       << output;
   // A closed year refuses it
@@ -1387,7 +1448,7 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
       << output;
 
   // Posted from the waiting list: the event's postings are the rows, and it balances
-  output = run("y0w1\n\ny");
+  output = run("y0w1\n\ns");
   EXPECT_NE(output.find("       Account        Debit       Credit\n"
                         "       1930                       100.00  2025-04-02  Bank\n"
                         "       2099          100.00               2025-04-02  Result\n"

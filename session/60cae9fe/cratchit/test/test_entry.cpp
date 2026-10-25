@@ -350,3 +350,34 @@ TEST(Draft, SuggestedPostingsAreTheWholeVoucher) {
   EXPECT_EQ(draft.suggested_postings().size(), 3u);
   EXPECT_EQ(draft.suggested_postings()[0].account, "2440");
 }
+
+TEST(Draft, FlipGuideFlipsTheRowsAndSuggestsThemAgain) {
+  auto const books = telia_books();
+  Draft draft{{"Telia kreditfaktura", 124500, today}, 0, "D", {}};
+  draft.postings = {{.account = "2440", .amount = 124500}}; // e.g. a waiting event's posting
+  draft.guide = without_present(guide_of(books, books.years[0].vouchers[1], 124500).postings, draft.postings);
+  draft.guide_start = 1;
+  draft.postings = draft.suggested_postings();
+  ASSERT_EQ(draft.postings.size(), 3u);
+  draft.flip_guide();
+  EXPECT_TRUE(draft.flipped);
+  ASSERT_EQ(draft.postings.size(), 1u); // the postings before the guide are kept, not flipped
+  EXPECT_EQ(draft.postings[0].amount, 124500);
+  ASSERT_EQ(draft.guide.size(), 2u);
+  EXPECT_EQ(draft.guide[0].amount, -99600);
+  EXPECT_EQ(draft.guide[1].amount, -24900);
+  auto const flipped = draft.suggested_postings();
+  ASSERT_EQ(flipped.size(), 3u);
+  EXPECT_EQ(flipped[1].amount, -99600);
+  EXPECT_EQ(flipped[2].amount, -24900);
+  draft.postings = flipped;
+  EXPECT_TRUE(draft.is_balanced());
+  // Twice gives the guide as it was
+  draft.flip_guide();
+  EXPECT_FALSE(draft.flipped);
+  EXPECT_EQ(draft.guide[0].amount, 99600);
+  // Fewer postings than guide_start (the event's postings removed) are left as they are
+  draft.postings.clear();
+  draft.flip_guide();
+  EXPECT_TRUE(draft.postings.empty());
+}

@@ -98,6 +98,7 @@ struct Draft {
   std::size_t guide_start{};   // the number of postings there were when the guide was set
   std::string from_template{}; // the template's series and number, e.g. "D 31"
   std::string corrects{};      // the voucher this one corrects (reverses), e.g. "D 4", if any
+  bool flipped = false;        // the guide's rows are flipped (see flip_guide)
 
   // What the next posting needs to make the postings add up to zero (minus their sum)
   Amount remaining() const;
@@ -118,6 +119,10 @@ struct Draft {
 
   // The postings followed by every suggestion in turn: the whole voucher the guide suggests
   Postings suggested_postings() const;
+
+  // Flips the guide's rows (debit becomes credit) and drops the postings after guide_start,
+  // so the guide suggests them again. Flipping twice gives the guide as it was.
+  void flip_guide();
 
   Voucher voucher(std::string number, Date registered) const;
 };

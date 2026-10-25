@@ -441,6 +441,16 @@ Postings Draft::suggested_postings() const {
   return draft.postings;
 }
 
+void Draft::flip_guide() {
+  for (auto& row : guide) {
+    row.amount = -row.amount;
+  }
+  flipped = !flipped;
+  if (postings.size() > guide_start) {
+    postings.resize(guide_start);
+  }
+}
+
 Voucher Draft::voucher(std::string number, Date registered) const {
   Voucher result{series, std::move(number), {event.heading, target(), event.date}, registered, {}, postings};
   for (auto& posting : result.postings) {

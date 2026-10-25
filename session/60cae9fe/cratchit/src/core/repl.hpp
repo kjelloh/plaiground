@@ -85,7 +85,7 @@ private:
     ConfirmEvent,
     Template,
     Series,
-    ConfirmSave,
+    Postings,
     Waiting,
     ConfirmDelete,
     VoucherSeries,
@@ -263,6 +263,7 @@ private:
   void use_template(books::Voucher const* like, std::ostream& out, bool reverse = false);
   void show_series(std::ostream& out);
   void on_series_key(charset::unicode::CodePoint key, std::ostream& out);
+  void apply_guide(std::ostream& out);
   void show_row_help(std::ostream& out) const;
   void show_draft(std::ostream& out) const;
   void start_rows(std::ostream& out);
@@ -270,7 +271,9 @@ private:
   void show_row(books::Posting const& row, std::ostream& out) const;
   void show_remaining(std::ostream& out) const;
   void show_accounts(std::string const& query, std::ostream& out) const;
-  void on_confirm_save_key(charset::unicode::CodePoint key, std::ostream& out);
+  void open_postings(std::ostream& out);
+  void show_postings_keys(std::ostream& out) const;
+  void on_postings_key(charset::unicode::CodePoint key, std::ostream& out);
   void save_voucher(std::ostream& out);
   void note_event(std::ostream& out);
   void open_waiting(std::ostream& out);
