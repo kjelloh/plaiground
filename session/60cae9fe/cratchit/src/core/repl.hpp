@@ -2,6 +2,7 @@
 
 #include "core/books/books.hpp"
 #include "core/books/entry.hpp"
+#include "core/books/hint.hpp"
 #include "core/books/import.hpp"
 #include "core/books/match.hpp"
 #include "core/books/statements.hpp"
@@ -21,6 +22,7 @@
 #include <ostream>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace cratchit {
@@ -279,6 +281,8 @@ private:
   void show_row(books::Posting const& row, std::ostream& out) const;
   void show_remaining(std::ostream& out) const;
   void show_accounts(std::string const& query, std::ostream& out) const;
+  void on_hint_line(std::string_view query, std::ostream& out) const;
+  void show_hints(std::vector<books::AccountSide> const& sides, std::ostream& out) const;
   void open_postings(std::ostream& out);
   void show_postings_keys(std::ostream& out) const;
   void on_postings_key(charset::unicode::CodePoint key, std::ostream& out);

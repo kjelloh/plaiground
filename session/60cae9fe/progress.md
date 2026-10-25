@@ -371,6 +371,17 @@ table, log kinds. 399 tests pass, no warnings (Debug, trace DEBUG). Checked on T
 after): 3 matches (VAT payout 1630 + arrival 1920 fits; Loopia payment vs invoice D 6; VAT decision vs payout,
 both on 1630), merged the VAT pair into one balanced event. In review.
 
+Task 43: Hint of counter accounts (`core/books/hint`). `books::hint_for(books, account, debit, excluded)`: the vouchers
+and waiting events of all years with a counted posting on the account on the same side (zero and up = debit), latest
+first (by date, then the later in the books); counts the accounts on the other side in the latest `hint_counted` = 20
+(most first, then the latest) and lists the latest `hint_listed` = 5 (constants in hint.hpp). `sides_in(postings)`:
+each account and side once. `?` line at `post>`: hints for every account and side in the rows (no rows: asks for an
+account); `? 1930`: that account on its side in the rows, both sides when not in the rows; not an account lists the
+matches. `?` key at `postings>` (listed). The waiting event being posted is left out. Row help line mentions `?`.
+Read only, nothing logged. Manual: new "The hint", rows table, postings> keys. 407 tests pass, no warnings (Debug,
+trace DEBUG). Checked on The ITfied AB (Anthropic waiting event, dropped, nothing written): 1920 C gives 2440 (8),
+6570 (4), ...; the latest 5 are mostly waiting events with only the 1920 posting. In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -520,6 +531,9 @@ into a waiting event without making a voucher, several entries chosen at once.
 - 2026-10-25: Flip works on the template only (flip it, then apply it again), offered as `f` at the `postings>`
   prompt (which replaced `Save as ...? (y/n)`), not at `post>` and not on single postings. No special detection for
   corrections.
+
+- 2026-10-25: Hint of counter accounts on request only (`?` at `post>` and `postings>`), from vouchers and waiting
+  events with the account on the same side as in the rows; counts and list length are constants to tweak later.
 
 ## Open questions
 

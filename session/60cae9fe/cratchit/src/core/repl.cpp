@@ -1,6 +1,7 @@
 #include "core/repl.hpp"
 
 #include "core/books/columns.hpp"
+#include "core/books/hint.hpp"
 #include "core/books/report.hpp"
 #include "core/charset/utf8.hpp"
 #include "core/log.hpp"
@@ -1652,7 +1653,7 @@ void Repl::show_row_help(std::ostream& out) const {
   std::println(out, "Type one row per line: an account and an amount, debit positive, credit negative, e.g. 1930 -1118.");
   std::println(out, "An account alone gets what remains (on the first row, the amount). A number prefix or a word of");
   std::println(out, "the name lists accounts. - removes the last row. Enter saves when debit and credit each add up");
-  std::println(out, "to the amount.");
+  std::println(out, "to the amount. ? shows the counter accounts used before with the rows' accounts, ? 1930 with 1930.");
   if (whole_suggested_) {
     std::println(out, "The suggested rows are in place. - removes the last one and suggests it again: Enter takes the");
     std::println(out, "suggestion, or type your own row instead.");
@@ -1728,6 +1729,11 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
     start_rows(out);
     return;
   }
+  if (text.starts_with('?')) {
+    on_hint_line(trimmed(text.substr(1)), out);
+    start_rows(out);
+    return;
+  }
   auto const row = books::parse_row(text);
   if (!row) {
     std::println(out, "{}", row.error());
@@ -1782,6 +1788,87 @@ void Repl::show_accounts(std::string const& query, std::ostream& out) const {
   }
 }
 
+// ? at post>: the hints for every account in the rows, or for the account typed after it
+void Repl::on_hint_line(std::string_view query, std::ostream& out) const {
+  auto sides = books::sides_in(draft_->postings);
+  if (query.empty()) {
+    if (sides.empty()) {
+      std::println(out, "No rows yet. Type ? and an account for its hint, e.g. ? 1930.");
+      return;
+    }
+    show_hints(sides, out);
+    return;
+  }
+  if (!books_.account(query)) {
+    show_accounts(std::string{query}, out);
+    return;
+  }
+  std::erase_if(sides, [&](books::AccountSide const& side) { return side.account != query; });
+  if (sides.empty()) {
+    // Not in the rows: both sides
+    sides = {{std::string{query}, true}, {std::string{query}, false}};
+  }
+  show_hints(sides, out);
+}
+
+// For each account and side: the counter accounts in the latest vouchers and waiting events with it, and the latest of them
+void Repl::show_hints(std::vector<books::AccountSide> const& sides, std::ostream& out) const {
+  std::optional<books::HintSource> excluded;
+  if (from_waiting_) {
+    excluded = books::HintSource{draft_->year, *from_waiting_, true};
+  }
+  auto const name_of = [&](std::string const& number) {
+    auto const* account = books_.account(number);
+    return account ? account->name : std::string{};
+  };
+  for (auto const& side : sides) {
+    auto const hint = books::hint_for(books_, side.account, side.debit, excluded);
+    auto const side_word = side.debit ? "debit" : "credit";
+    if (hint.latest.empty()) {
+      std::println(out, "Hint for {} {} {}: no voucher or waiting event has {} on {}.", side.account,
+                   side.debit ? "D" : "C", name_of(side.account), side.account, side_word);
+      continue;
+    }
+    std::println(out, "Hint for {} {} {}, from vouchers and waiting events with {} on {}:", side.account,
+                 side.debit ? "D" : "C", name_of(side.account), side.account, side_word);
+    if (hint.counters.empty()) {
+      std::println(out, "  No counter accounts in the latest {}.", hint.counted);
+    } else {
+      std::println(out, "  Counter accounts in the latest {}:", hint.counted);
+      for (auto const& counter : hint.counters) {
+        std::println(out, "    {:<6} {}  {:>2}  {}", counter.account, side.debit ? "C" : "D", counter.count,
+                     name_of(counter.account));
+      }
+    }
+    std::println(out, "  Latest:");
+    for (auto const& source : hint.latest) {
+      auto const& year = books_.years[source.year];
+      std::string label;
+      books::Event const* event = nullptr;
+      books::Postings const* postings = nullptr;
+      if (source.waiting) {
+        label = "waiting";
+        event = &year.waiting[source.index].event;
+        postings = &year.waiting[source.index].postings;
+      } else {
+        auto const& voucher = year.vouchers[source.index];
+        label = voucher.series + " " + voucher.number;
+        event = &voucher.event;
+        postings = &voucher.postings;
+      }
+      std::println(out, "    {:<8} {}  {:>12}  {}", label, format_iso_date(event->date), format_amount(event->amount),
+                   event->heading);
+      std::string rows;
+      for (auto const& posting : *postings) {
+        if (posting.kind != books::Posting::Kind::removed) {
+          rows += "  " + books::posting_brief(posting);
+        }
+      }
+      std::println(out, "      {}", rows);
+    }
+  }
+}
+
 // The voucher as it would be saved, at postings>
 void Repl::open_postings(std::ostream& out) {
   show_draft(out);
@@ -1795,6 +1882,7 @@ void Repl::show_postings_keys(std::ostream& out) const {
   if (!draft_->guide.empty()) {
     std::println(out, "  f  Flip the template's rows (debit becomes credit)");
   }
+  std::println(out, "  ?  Hint: the counter accounts used before with the rows' accounts");
   std::println(out, "  -  Change the rows");
   std::println(out, "  h  Help (the manual)");
   std::println(out, "  q  Quit");
@@ -1807,6 +1895,8 @@ void Repl::on_postings_key(charset::unicode::CodePoint key, std::ostream& out) {
   } else if (key == U'f' && !draft_->guide.empty()) {
     draft_->flip_guide();
     apply_guide(out);
+  } else if (key == U'?') {
+    show_hints(books::sides_in(draft_->postings), out);
   } else if (key == U'-') {
     if (whole_suggested_) {
       show_row_help(out);

@@ -9,6 +9,7 @@ add_executable(cratchit_tests
   test_data_folder.cpp
   test_date.cpp
   test_entry.cpp
+  test_hint.cpp
   test_help.cpp
   test_import.cpp
   test_key_input.cpp

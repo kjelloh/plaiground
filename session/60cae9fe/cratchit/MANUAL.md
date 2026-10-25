@@ -685,6 +685,7 @@ Voucher D 10 2026-11-20 "Telia faktura november"
 
   s  Save as D 10
   f  Flip the template's rows (debit becomes credit)
+  ?  Hint: the counter accounts used before with the rows' accounts
   -  Change the rows
   h  Help (the manual)
   q  Quit
@@ -764,9 +765,41 @@ More than the amount on either side shows `...: more than the amount.`
 | account           | Adds a row with what remains. On the first row, the voucher's amount. When the rows add up to zero but not to the amount, cratchit asks you to type the amount. |
 | a number prefix or a word | When it is not an account in the books, lists the accounts whose number starts with it or whose name contains it (case does not matter), at most 20. |
 | -                 | Removes the last row. With no rows, drops the voucher: `Dropped the voucher. Nothing is saved.` |
+| ?                 | Shows the hint for every account in the rows (see The hint). |
+| ? account         | Shows the hint for that account: on its side in the rows, or on both sides when it is not in the rows. Not an account: lists the matches, as above. |
 | Enter (empty)     | When the voucher balances (at least two rows, debit and credit each adding up to the amount), shows it and asks to save it. Else adds the suggested row, when there is one. Else shows where the rows stand; the voucher cannot be saved. |
 
 Only accounts in the books can be used. Backspace erases while you type.
+
+#### The hint
+
+Which accounts go against the ones you have? `?` at `post>` (or at
+`postings>`) reminds you. For each account in the rows, on its side (debit or
+credit), cratchit looks through the vouchers and waiting events of all fiscal
+years with that account on the same side, the latest first. It counts the
+accounts on the other side (the counter accounts) in the latest 20 of them,
+the most used first, and lists the latest 5 with their rows:
+
+```
+post> ?
+Hint for 1920 C PlusGiro, from vouchers and waiting events with 1920 on credit:
+  Counter accounts in the latest 20:
+    2440   D   8  Leverantörsskulder
+    6570   D   4  Bankkostnader
+  Latest:
+    waiting  2026-09-28       1308.75  LOOPIA AB | Webhotell
+        1920 C 1308.75
+    E 4      2026-09-20       1245.00  Telia
+        2440 D 1245.00  1920 C 1245.00
+```
+
+The number after the side is in how many of the counted vouchers and waiting
+events the counter account is. A waiting event is marked `waiting`; one with
+only the hinted account's posting counts but adds no counter account. The
+waiting event being posted is left out. `? 2440` shows the hint for one
+account; when it is not in the rows, for both its sides. With no rows, `?`
+asks for an account. The hint changes nothing: `post>` comes back with the
+same rows and suggestion.
 
 #### Saving
 
@@ -779,6 +812,7 @@ Voucher D 4 2026-10-22 "Telia faktura oktober"
   Total        1118.00      1118.00
 
   s  Save as D 4
+  ?  Hint: the counter accounts used before with the rows' accounts
   -  Change the rows
   h  Help (the manual)
   q  Quit
@@ -791,6 +825,7 @@ The prompt is `postings>`:
 |--------|--------------|
 | s      | Saves the voucher. |
 | f      | Flips the template's rows (see Flipping the template). Only listed when the voucher has a template. |
+| ?      | Shows the hint for every account in the rows (see The hint). |
 | -      | Goes back to the rows at `post>`. |
 | Enter  | Lists these keys. Any other key prints `Unknown key.` and the list. |
 | h      | Opens this manual. |

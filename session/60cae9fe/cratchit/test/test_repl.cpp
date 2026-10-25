@@ -45,6 +45,7 @@ std::string postings_keys(std::string const& voucher, bool flip) {
   return "\n"
          "  s  Save as " + voucher + "\n" +
          (flip ? "  f  Flip the template's rows (debit becomes credit)\n" : "") +
+         "  ?  Hint: the counter accounts used before with the rows' accounts\n"
          "  -  Change the rows\n"
          "  h  Help (the manual)\n"
          "  q  Quit\n"
@@ -1027,6 +1028,39 @@ TEST_F(WorkspaceRepl, VoucherLineIsRefusedAndKeptForEditing) {
       << output;
 }
 
+TEST_F(WorkspaceRepl, QuestionMarkHintsTheCounterAccounts) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const output = run("eLunch 10 2025-05-05\nyb?\n1930 -10\n?\n? 6570\n? bank\n6570\n\n?-\n-\n-\n");
+  auto const hint_1930 = "Hint for 1930 C Bank, from vouchers and waiting events with 1930 on credit:\n"
+                         "  Counter accounts in the latest 1:\n"
+                         "    6570   D   1  Bank costs\n"
+                         "  Latest:\n"
+                         "    A 2      2025-03-01         10.00  Bank cost\n"
+                         "        6570 D 10.00  1930 C 10.00\n";
+  auto const hint_6570 = "Hint for 6570 D Bank costs, from vouchers and waiting events with 6570 on debit:\n"
+                         "  Counter accounts in the latest 1:\n"
+                         "    1930   C   1  Bank\n"
+                         "  Latest:\n"
+                         "    A 2      2025-03-01         10.00  Bank cost\n"
+                         "        6570 D 10.00  1930 C 10.00\n";
+  EXPECT_NE(output.find("to the amount. ? shows the counter accounts used before with the rows' accounts, ? 1930 with 1930.\n"
+                        "post> ?\n"
+                        "No rows yet. Type ? and an account for its hint, e.g. ? 1930.\n"),
+            std::string::npos)
+      << output;
+  // An account in the rows: its side; not in the rows: both sides; not an account: the matches
+  EXPECT_NE(output.find(std::string{"post> ?\n"} + hint_1930 + "post> ? 6570\n" + hint_6570 +
+                        "Hint for 6570 C Bank costs: no voucher or waiting event has 6570 on credit.\n"
+                        "post> ? bank\nAccounts matching bank:\n  1930  Bank\n  6570  Bank costs\npost> 6570\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find(postings_keys("B 1", false) + "?\n" + hint_1930 + hint_6570 + "postings> -\n"),
+            std::string::npos)
+      << output;
+}
+
 TEST_F(WorkspaceRepl, RowsListAccountsRemoveAndDrop) {
   run("1pnTest\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -1183,6 +1217,7 @@ TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
                         "Keys at postings>:\n"
                         "  s  Save as A 3\n"
                         "  f  Flip the template's rows (debit becomes credit)\n"
+                        "  ?  Hint: the counter accounts used before with the rows' accounts\n"
                         "  -  Change the rows\n"
                         "  h  Help (the manual)\n"
                         "  q  Quit\n"
