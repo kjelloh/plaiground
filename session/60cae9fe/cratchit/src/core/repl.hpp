@@ -144,6 +144,7 @@ private:
   std::vector<books::Voucher const*> templates_; // the earlier vouchers offered as templates for the draft
   books::Guess guess_;                  // the series offered by default
   std::string number_;                  // the number the voucher is saved as
+  bool whole_suggested_ = false;        // the guide's whole voucher is shown to save as it is
   bool noting_ = false;                 // the event line is noted to be posted later, not posted now
   std::optional<std::size_t> from_waiting_; // the waiting event being posted, an index into its year's waiting
   std::size_t first_waiting_ = 0;       // the first waiting event shown when they are more than keys 1-9
@@ -262,6 +263,8 @@ private:
   void use_template(books::Voucher const* like, std::ostream& out, bool reverse = false);
   void show_series(std::ostream& out);
   void on_series_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_row_help(std::ostream& out) const;
+  void show_draft(std::ostream& out) const;
   void start_rows(std::ostream& out);
   void on_row(PathEditor::Result result, std::ostream& out);
   void show_row(books::Posting const& row, std::ostream& out) const;

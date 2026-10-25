@@ -820,7 +820,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
   write_sie(root / "start" / "test.se", good_sie());
   run("itest.se\nyy0");
   auto const folder = root / "start" / "Test";
-  auto const output = run("eBank cost march 35 2025-03-31\ny\n\n\n\n\ny");
+  auto const output = run("eBank cost march 35 2025-03-31\ny\n\ny");
   EXPECT_NE(output.find("2025> e\n"
                         "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 "
                         "2026-10-22.\n"
@@ -845,20 +845,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
                         "\n"
                         "Press a letter or Enter to choose, - to go back, q to quit.\n"
                         "series> \n"
-                        "Voucher A 3 (Redovisning) 2025-03-31 \"Bank cost march\" 35.00\n"),
-            std::string::npos)
-      << output;
-  EXPECT_NE(output.find("Rows from A 2 are suggested one at a time, scaled to the amount: Enter takes the suggestion,\n"
-                        "or type your own row instead.\n"
-                        "  Suggested 6570           35.00               Bank costs\n"
-                        "post> \n"
-                        "  6570           35.00               Bank costs\n"
-                        "  Remaining -35.00 (debit 35.00, credit 0.00, amount 35.00).\n"
-                        "  Suggested 1930                        35.00  Bank\n"
-                        "post> \n"
-                        "  1930                        35.00  Bank\n"
-                        "  Balanced. Enter saves.\n"
-                        "post> \n"
+                        "Suggested from A 2, scaled to the amount:\n"
                         "Voucher A 3 2025-03-31 \"Bank cost march\"\n"
                         "  Account        Debit       Credit\n"
                         "  6570           35.00               Bank costs\n"
@@ -1103,7 +1090,7 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   write_sie(root / "start" / "test.se", good_sie());
   run("itest.se\nyy0");
   // 2 picks A 1; - at series> goes back to the list, - there back to the line
-  auto const output = run("eBank cost sale 25 2025-04-01\ny2--\ny1\n3010 -20\n\n-\n-\n-\n");
+  auto const output = run("eBank cost sale 25 2025-04-01\ny2--\ny1\nn-\n-\n3010 -20\n\n-\n-\n-\n");
   EXPECT_NE(output.find("OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
@@ -1115,8 +1102,32 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   EXPECT_NE(output.find("template?> 2\nSeries (Enter = A, as A 1 2025-02-01 \"Sale\"):\n"), std::string::npos) << output;
   EXPECT_NE(output.find("series> -\nEarlier vouchers like this one:\n"), std::string::npos) << output;
   EXPECT_NE(output.find("template?> -\nvoucher> Bank cost sale 25 2025-04-01"), std::string::npos) << output;
-  // The suggestion is scaled to 25.00; a typed row replaces it, and the last row takes what remains
-  EXPECT_NE(output.find("Rows from A 2 are suggested"), std::string::npos) << output;
+  // The whole voucher is suggested, scaled to 25.00; n puts its rows in place, - steps back to a suggestion
+  EXPECT_NE(output.find("series> \n"
+                        "Suggested from A 2, scaled to the amount:\n"
+                        "Voucher A 3 2025-04-01 \"Bank cost sale\"\n"
+                        "  Account        Debit       Credit\n"
+                        "  6570           25.00               Bank costs\n"
+                        "  1930                        25.00  Bank\n"
+                        "  Total          25.00        25.00\n"
+                        "Save as A 3? (y/n) n\n"
+                        "Voucher A 3 (Redovisning) 2025-04-01 \"Bank cost sale\" 25.00\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("The suggested rows are in place. - removes the last one and suggests it again: Enter takes the\n"
+                        "suggestion, or type your own row instead.\n"
+                        "  Balanced. Enter saves.\n"
+                        "post> -\n"
+                        "Removed  1930                        25.00  Bank\n"
+                        "  Remaining -25.00 (debit 25.00, credit 0.00, amount 25.00).\n"
+                        "  Suggested 1930                        25.00  Bank\n"
+                        "post> -\n"
+                        "Removed  6570           25.00               Bank costs\n"
+                        "  No rows.\n"
+                        "  Suggested 6570           25.00               Bank costs\n"),
+            std::string::npos)
+      << output;
+  // A typed row replaces the suggestion, and the last row takes what remains
   EXPECT_NE(output.find("  Suggested 6570           25.00               Bank costs\n"
                         "post> 3010 -20\n"
                         "  3010                        20.00  Sales\n"
@@ -1138,7 +1149,7 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
   run("1pnTest\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("itest.se\nyy0");
-  run("eBank cost march 35 2025-03-31\ny\n\n\n\n\ny");
+  run("eBank cost march 35 2025-03-31\ny\n\ny");
   auto output = run("vxa1");
   EXPECT_NE(output.find("2025> v\n"
                         "Series in fiscal year 2025-01-01 - 2025-12-31:\n"
@@ -1173,7 +1184,7 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
             std::string::npos)
       << output;
   // The correction reverses the rows, in the same series, and then the right voucher can follow
-  output = run("va1c 2025-04-01\ny\n\n\n\nyy" + std::string(5, '\x7f') + "40 2025-03-31\ny\n\n\n\ny");
+  output = run("va1c 2025-04-01\ny\nyy" + std::string(5, '\x7f') + "40 2025-03-31\ny\ny");
   EXPECT_NE(output.find("A 3> c\n"), std::string::npos) << output;
   EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-04-01\n"
                         "  Heading  Rättelse av A 3: Bank cost march\n"
@@ -1183,11 +1194,14 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
                         "Series (Enter = A, as A 3 2025-03-31 \"Bank cost march\"):\n"),
             std::string::npos)
       << output;
-  EXPECT_NE(output.find("The rows of A 3, reversed, are suggested one at a time: Enter takes the suggestion,\n"
-                        "or type your own row instead.\n"
-                        "  Suggested 6570                        35.00  Bank costs\n"
-                        "post> \n"
-                        "  6570                        35.00  Bank costs\n"),
+  EXPECT_NE(output.find("series> \n"
+                        "The rows of A 3, reversed:\n"
+                        "Voucher A 4 2025-04-01 \"Rättelse av A 3: Bank cost march\"\n"
+                        "  Account        Debit       Credit\n"
+                        "  6570                        35.00  Bank costs\n"
+                        "  1930           35.00               Bank\n"
+                        "  Total          35.00        35.00\n"
+                        "Save as A 4? (y/n) y\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("Saved voucher A 4 into fiscal year 2025-01-01 - 2025-12-31.\n"
@@ -1199,9 +1213,10 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
   EXPECT_NE(output.find("  Heading  Bank cost march\n  Amount   40.00\n"), std::string::npos) << output;
   EXPECT_NE(output.find("OK? (y/n) y\nSeries (Enter = A, as A 3 2025-03-31 \"Bank cost march\"):\n"), std::string::npos)
       << output;
-  EXPECT_NE(output.find("Rows from A 3 are suggested one at a time, scaled to the amount: Enter takes the suggestion,\n"
-                        "or type your own row instead.\n"
-                        "  Suggested 6570           40.00               Bank costs\n"),
+  EXPECT_NE(output.find("Suggested from A 3, scaled to the amount:\n"
+                        "Voucher A 5 2025-03-31 \"Bank cost march\"\n"
+                        "  Account        Debit       Credit\n"
+                        "  6570           40.00               Bank costs\n"),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with("Saved voucher A 5 into fiscal year 2025-01-01 - 2025-12-31.\n2025> \n")) << output;
@@ -1220,15 +1235,17 @@ TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
   write_sie(root / "start" / "test.se", good_sie());
   run("itest.se\nyy0");
   // No template list: the viewed voucher is the template, even with no shared word
-  auto const output = run("va1tLunch 20 2025-04-02\ny\n\n");
+  auto const output = run("va1tLunch 20 2025-04-02\ny\n");
   EXPECT_NE(output.find("A 2> t\nType the heading"), std::string::npos) << output;
   EXPECT_NE(output.find("OK? (y/n) y\nSeries (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"), std::string::npos)
       << output;
-  EXPECT_NE(output.find("Rows from A 2 are suggested one at a time, scaled to the amount: Enter takes the suggestion,\n"
-                        "or type your own row instead.\n"
-                        "  Suggested 6570           20.00               Bank costs\n"
-                        "post> \n"
-                        "  6570           20.00               Bank costs\n"),
+  EXPECT_NE(output.find("Suggested from A 2, scaled to the amount:\n"
+                        "Voucher A 3 2025-04-02 \"Lunch\"\n"
+                        "  Account        Debit       Credit\n"
+                        "  6570           20.00               Bank costs\n"
+                        "  1930                        20.00  Bank\n"
+                        "  Total          20.00        20.00\n"
+                        "Save as A 3? (y/n) "),
             std::string::npos)
       << output;
   // A closed year refuses it

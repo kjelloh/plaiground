@@ -1585,21 +1585,22 @@ void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
   }
   draft_->series = letter;
   number_ = books::next_number(books_.years[draft_->year], letter);
-  std::println(out, "Voucher {} {} ({}) {} \"{}\" {}", letter, number_, books::series_name(letter)->name,
-               format_iso_date(draft_->event.date), draft_->event.heading, format_amount(draft_->event.amount));
-  std::println(out, "Type one row per line: an account and an amount, debit positive, credit negative, e.g. 1930 -1118.");
-  std::println(out, "An account alone gets what remains (on the first row, the amount). A number prefix or a word of");
-  std::println(out, "the name lists accounts. - removes the last row. Enter saves when debit and credit each add up");
-  std::println(out, "to the amount.");
-  if (!draft_->guide.empty() && !draft_->corrects.empty()) {
-    std::println(out, "The rows of {}, reversed, are suggested one at a time: Enter takes the suggestion,",
-                 draft_->corrects);
-    std::println(out, "or type your own row instead.");
-  } else if (!draft_->guide.empty()) {
-    std::println(out, "Rows from {} are suggested one at a time, scaled to the amount: Enter takes the suggestion,",
-                 draft_->from_template);
-    std::println(out, "or type your own row instead.");
+  // The guide's whole voucher, when it balances, to save as it is
+  auto whole = *draft_;
+  whole.postings = draft_->suggested_postings();
+  if (whole.postings.size() > draft_->postings.size() && whole.is_balanced()) {
+    if (draft_->corrects.empty()) {
+      std::println(out, "Suggested from {}, scaled to the amount:", draft_->from_template);
+    } else {
+      std::println(out, "The rows of {}, reversed:", draft_->corrects);
+    }
+    draft_->postings = std::move(whole.postings);
+    show_draft(out);
+    whole_suggested_ = true;
+    mode_ = Mode::ConfirmSave;
+    return;
   }
+  show_row_help(out);
   if (!draft_->postings.empty()) {
     std::println(out, "The event's postings are the first rows:");
     for (auto const& row : draft_->postings) {
@@ -1608,6 +1609,39 @@ void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
     show_remaining(out);
   }
   start_rows(out);
+}
+
+// The voucher line and how to type rows; with the guide's whole voucher in place, how to change it
+void Repl::show_row_help(std::ostream& out) const {
+  std::println(out, "Voucher {} {} ({}) {} \"{}\" {}", draft_->series, number_, books::series_name(draft_->series)->name,
+               format_iso_date(draft_->event.date), draft_->event.heading, format_amount(draft_->event.amount));
+  std::println(out, "Type one row per line: an account and an amount, debit positive, credit negative, e.g. 1930 -1118.");
+  std::println(out, "An account alone gets what remains (on the first row, the amount). A number prefix or a word of");
+  std::println(out, "the name lists accounts. - removes the last row. Enter saves when debit and credit each add up");
+  std::println(out, "to the amount.");
+  if (whole_suggested_) {
+    std::println(out, "The suggested rows are in place. - removes the last one and suggests it again: Enter takes the");
+    std::println(out, "suggestion, or type your own row instead.");
+  } else if (!draft_->guide.empty() && !draft_->corrects.empty()) {
+    std::println(out, "The rows of {}, reversed, are suggested one at a time: Enter takes the suggestion,",
+                 draft_->corrects);
+    std::println(out, "or type your own row instead.");
+  } else if (!draft_->guide.empty()) {
+    std::println(out, "Rows from {} are suggested one at a time, scaled to the amount: Enter takes the suggestion,",
+                 draft_->from_template);
+    std::println(out, "or type your own row instead.");
+  }
+}
+
+// The voucher as it would be saved
+void Repl::show_draft(std::ostream& out) const {
+  std::println(out, "Voucher {} {} {} \"{}\"", draft_->series, number_, format_iso_date(draft_->event.date),
+               draft_->event.heading);
+  std::println(out, "  {}", books::posting_heading());
+  for (auto const& row : draft_->postings) {
+    show_row(row, out);
+  }
+  std::println(out, "  {}", books::posting_total(draft_->postings));
 }
 
 void Repl::start_rows(std::ostream& out) {
@@ -1627,13 +1661,7 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
   auto const text = trimmed(editor_.text());
   if (result == PathEditor::Result::Cancelled || text.empty()) {
     if (draft_->is_balanced()) {
-      std::println(out, "Voucher {} {} {} \"{}\"", draft_->series, number_, format_iso_date(draft_->event.date),
-                   draft_->event.heading);
-      std::println(out, "  {}", books::posting_heading());
-      for (auto const& row : rows) {
-        show_row(row, out);
-      }
-      std::println(out, "  {}", books::posting_total(rows));
+      show_draft(out);
       mode_ = Mode::ConfirmSave;
       return;
     }
@@ -1723,8 +1751,14 @@ void Repl::show_accounts(std::string const& query, std::ostream& out) const {
 
 void Repl::on_confirm_save_key(charset::unicode::CodePoint key, std::ostream& out) {
   if (key == U'y') {
+    whole_suggested_ = false;
     save_voucher(out);
   } else if (key == U'n' || key == U'-') {
+    if (whole_suggested_) {
+      show_row_help(out);
+      show_remaining(out);
+      whole_suggested_ = false;
+    }
     start_rows(out);
   } else {
     std::println(out, "Press y to save the voucher, n to change the rows.");

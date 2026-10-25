@@ -329,3 +329,24 @@ TEST(Draft, SuggestionsFollowThePostingsAnEventAlreadyHas) {
   draft.postings.clear(); // fewer than the event had
   EXPECT_FALSE(draft.suggestion());
 }
+
+TEST(Draft, SuggestedPostingsAreTheWholeVoucher) {
+  auto const books = telia_books();
+  Draft draft{{"Telia faktura november", 124500, today}, 0, "D", {}};
+  EXPECT_TRUE(draft.suggested_postings().empty());
+  draft.guide = guide_of(books, books.years[0].vouchers[1], 124500).postings;
+  auto const all = draft.suggested_postings();
+  ASSERT_EQ(all.size(), 3u);
+  EXPECT_EQ(all[0].amount, -124500);
+  EXPECT_EQ(all[1].amount, 99600);
+  EXPECT_EQ(all[2].amount, 24900);
+  EXPECT_TRUE(draft.postings.empty()); // the draft itself is not changed
+  draft.postings = all;
+  EXPECT_TRUE(draft.is_balanced());
+  // After the postings an event already has
+  draft.postings = {{.account = "2440", .amount = -124500}};
+  draft.guide = without_present(draft.guide, draft.postings);
+  draft.guide_start = 1;
+  EXPECT_EQ(draft.suggested_postings().size(), 3u);
+  EXPECT_EQ(draft.suggested_postings()[0].account, "2440");
+}

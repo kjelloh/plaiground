@@ -433,6 +433,14 @@ std::optional<Posting> Draft::suggestion() const {
   return row;
 }
 
+Postings Draft::suggested_postings() const {
+  auto draft = *this;
+  while (auto const row = draft.suggestion()) {
+    draft.postings.push_back(*row);
+  }
+  return draft.postings;
+}
+
 Voucher Draft::voucher(std::string number, Date registered) const {
   Voucher result{series, std::move(number), {event.heading, target(), event.date}, registered, {}, postings};
   for (auto& posting : result.postings) {

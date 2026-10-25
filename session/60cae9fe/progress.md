@@ -332,6 +332,16 @@ a waiting event's postings (heading + rows + Total, then the status), template l
 columns, balance still signed). Trial balance, statement entries and import messages unchanged. Manual: rows, template
 list, saving, voucher view, waiting list, reports. 388 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 40: Whole suggested voucher. `Draft::suggested_postings()`: the postings followed by every `suggestion()` in turn.
+After the series, when a guide exists (template, `t`, the reversed rows of `c`) and the postings plus suggestions
+balance, the whole voucher is shown (`Suggested from D 9, scaled to the amount:` / `The rows of D 4, reversed:`, then
+`show_draft`: voucher line, heading, rows, Total) at `Save as D 10? (y/n)`: `y` saves, `n`/`-` goes to `post>` with
+the rows in place (`show_row_help` with "The suggested rows are in place. - removes the last one and suggests it
+again ..."; `Repl::whole_suggested_`). Not balancing (e.g. a waiting event's postings that do not fit): row by row as
+before. Waiting events: event postings first, then the suggestions. Manual: The rows, correcting, waiting list.
+389 tests pass, no warnings (Debug, trace DEBUG). Not covered by a REPL test: a waiting event with some postings plus
+a template (covered by the Draft test). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -468,6 +478,10 @@ into a waiting event without making a voucher, several entries chosen at once.
   and a Total line where a whole voucher or a waiting event's postings are shown; a removed posting stays in its column,
   marked, and does not count in the totals. Template lists use the one-line form `1930 C 1118.00`. Labels Debit/Credit.
   Input stays signed; balances (trial balance, ledger balance) stay signed.
+
+- 2026-10-25: With a template (also `t` and the reversed rows of a correction), the whole suggested voucher is shown
+  after the series to save with `y`; `n` puts the rows in place at `post>` to change them from the end (`-` steps back
+  to a suggestion). Only when the rows balance; else row by row as before.
 
 ## Open questions
 

@@ -75,7 +75,12 @@ That could serve as a good base fo the user to get guidance towards creating a c
 
 So I now decided to drip-feed Claude to get through these changes with some confidence in the cratchit behavior.
 
-* Crahcit now manages the waiting list in date order (oldest first)
+* Cratchit now manages the waiting list in date order (oldest first)
+
+I continued with small changes.
+
+* Cratchit now formats posting amount into debit and credit column.
+* Now creates f a full listing of postings from template. 
 
 ## 20261024
 

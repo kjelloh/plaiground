@@ -116,6 +116,9 @@ struct Draft {
   // row gets what remains, when something does.
   std::optional<Posting> suggestion() const;
 
+  // The postings followed by every suggestion in turn: the whole voucher the guide suggests
+  Postings suggested_postings() const;
+
   Voucher voucher(std::string number, Date registered) const;
 };
 

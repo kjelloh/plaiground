@@ -667,21 +667,42 @@ post> 2641
   Balanced. Enter saves.
 ```
 
-With a template, cratchit suggests its rows one at a time, before each
-`post>`. Each amount is the template's, scaled by your amount over the
+With a template, cratchit suggests all its rows at once, right after the
+series. Each amount is the template's, scaled by your amount over the
 template's amount and rounded to the öre; the template's last row gets what
 remains, so the rows balance. A negative amount on the voucher line flips the
-suggested rows (debit becomes credit). Enter on an empty line takes the
-suggestion; a row you type takes its place instead. The next suggestion is
-always the template row after the rows you have, so `-` steps back to the
-suggestion before:
+suggested rows (debit becomes credit). The whole voucher is shown, ready to
+save as it is:
 
 ```
-Rows from D 9 are suggested one at a time, scaled to the amount: Enter takes the suggestion,
-or type your own row instead.
-  Suggested 2440                      1245.00  Leverantörsskulder
-post> 
+Suggested from D 9, scaled to the amount:
+Voucher D 10 2026-11-20 "Telia faktura november"
+  Account        Debit       Credit
   2440                      1245.00  Leverantörsskulder
+  6212          996.00               Mobiltelefon
+  2641          249.00               Debiterad ingående moms
+  Total        1245.00      1245.00
+Save as D 10? (y/n) 
+```
+
+`y` saves it (see Saving). `n` or `-` goes to `post>` with the suggested rows
+in place, to change them from the end: `-` removes the last row, and that row
+is then suggested again before `post>`. Enter on an empty line takes the
+suggestion; a row you type takes its place instead. The next suggestion is
+always the template row after the rows you have, and the template's last row
+gets what remains. To change the middle row of three, press `-` twice, type
+your row, then Enter for the last one:
+
+```
+The suggested rows are in place. - removes the last one and suggests it again: Enter takes the
+suggestion, or type your own row instead.
+  Balanced. Enter saves.
+post> -
+Removed  2641          249.00               Debiterad ingående moms
+  Remaining 249.00 (debit 996.00, credit 1245.00, amount 1245.00).
+  Suggested 2641          249.00               Debiterad ingående moms
+post> -
+Removed  6212          996.00               Mobiltelefon
   Remaining 1245.00 (debit 0.00, credit 1245.00, amount 1245.00).
   Suggested 6212          996.00               Mobiltelefon
 post> 6212 1000
@@ -692,6 +713,11 @@ post>
   2641          245.00               Debiterad ingående moms
   Balanced. Enter saves.
 ```
+
+When the suggested rows do not balance, for example when a waiting event's
+postings do not fit the template, the whole voucher is not offered:
+cratchit goes to `post>` and suggests the rows one at a time, as above,
+starting with `Rows from D 9 are suggested one at a time`.
 
 Rows that add up to zero but not to the amount show
 `Debit 223.60, credit 223.60, amount 1118.00: debit and credit must each reach the amount.`
@@ -799,9 +825,10 @@ voucher> Rättelse av D 4: Faktura Telia november 1245.00
 ```
 
 Then, as in Entering a voucher: `OK? (y/n)`, the series (by default the
-corrected voucher's series), and the rows, with the corrected voucher's rows
-reversed as the suggestions (`The rows of D 4, reversed, are suggested one at
-a time`). When it is saved, cratchit offers to enter the right voucher:
+corrected voucher's series), and the corrected voucher's rows reversed, shown
+as the whole voucher to save (`The rows of D 4, reversed:`, then `Save as D 5?
+(y/n)`; `n` puts the rows in place at `post>` to change them, as in The rows).
+When it is saved, cratchit offers to enter the right voucher:
 
 ```
 Saved voucher D 5 into fiscal year 2026-05-01 - 2027-04-30.
@@ -886,9 +913,11 @@ postings under it, and where they stand:
 When you post an event, its heading, amount and date are the voucher line,
 so cratchit goes straight to the template (or the series). `-` at
 `template?>`, or at `series>` when no templates were listed, goes back to the
-list. The event's postings are the first rows at `post>`; a template's
-suggestions leave out a row on an account the event already has. An event
-whose postings balance is saved with Enter. `-` at `post>` removes the last
+list. The event's postings are the first rows; a template's suggestions
+follow them, leaving out a row on an account the event already has. When the
+event's postings and the suggestions balance together, the whole voucher is
+shown to save as it is (see The rows); else they are at `post>`. An event
+whose postings balance on their own is saved with Enter at `post>`. `-` at `post>` removes the last
 row, the event's postings too; with no rows it drops the voucher, and the
 event is still waiting as it was. When the voucher is saved, the event leaves
 the list:
