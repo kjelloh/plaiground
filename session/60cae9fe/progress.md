@@ -316,6 +316,13 @@ log kinds. 381 tests pass, no warnings. Checked on the scratch project with all 
 PlusGiro file lists exactly its 7 entries not in the books (earlier files: all booked); the Loopia entry became a
 waiting event and, with Fortnox's E 3 (1920/2440) as template, voucher E 4 (1920 -1308.75, 2440 1308.75). In review.
 
+Task 38: Waiting events by date. `FiscalYear::waiting` is kept oldest date first, ties in the order noted.
+`FiscalYear::place_waiting(event)` is the only way an event enters the list (inserted after those of the same date,
+returns its index; used by `n` and by `n` on a statement entry, a failed write erases that index). `read_books` sorts
+stably after linking `event_postings.csv` rows, so files written in noted order read in date order with their
+postings and are rewritten sorted on the next write (no format change). Both lists (`waiting?>`, `event?>`) follow.
+Manual: waiting list, `event?>`, files table. 384 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -444,6 +451,9 @@ into a waiting event without making a voucher, several entries chosen at once.
   (`books::Posting`, `postings.csv`, was `transactions.csv`). A waiting event may hold several postings, from entries of
   different statement files, and is completed into a voucher posting by posting. Storage reuses the voucher design:
   `events.csv` + `event_postings.csv`.
+
+- 2026-10-25: Waiting events are listed by date, oldest first, ties in the order noted. The order is kept in the books
+  (`place_waiting` is the only way in), so a future date edit re-places the event through the same function.
 
 ## Open questions
 

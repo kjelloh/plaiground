@@ -152,7 +152,7 @@ The project's books are in `.cratchit/books` in the project folder:
 | `<start>/opening.csv` | Per fiscal year, in a folder named by its start date: the opening balances the source reported, `account,amount`. |
 | `<start>/vouchers.csv` | The year's vouchers, imported and entered: `series,number,date,text,amount,registered,signature`. The amount is without sign: what the debit rows and the credit rows each add up to. An imported voucher gets its debit total (SIE gives no amount). A voucher entered in cratchit is registered on the day it is saved. |
 | `<start>/postings.csv` | Their rows (postings to BAS accounts): `series,number,kind,account,objects,amount,date,text,quantity,signature`. Books written before 2026-10-24 have it as `transactions.csv`; cratchit reads that and renames it on the next write (`Initiated ... postings.csv`, `Removed ... transactions.csv`). |
-| `<start>/events.csv` | The year's waiting events, in the order noted: `date,text,amount,noted` (see Waiting events). The amount is without sign; `noted` is the day it was noted. The file exists only while the year has waiting events: cratchit removes it when the last one is posted or deleted (`Removed ...`). |
+| `<start>/events.csv` | The year's waiting events, by date (oldest first, the same date in the order noted): `date,text,amount,noted` (see Waiting events). The amount is without sign; `noted` is the day it was noted. The file exists only while the year has waiting events: cratchit removes it when the last one is posted or deleted (`Removed ...`). |
 | `<start>/event_postings.csv` | The postings the waiting events have so far (see Statement entries): `event,account,amount,date,text,source`. `event` is the event's row in `events.csv` (1 for the first), `date` and `text` those of the statement entry, `source` the stashed statement file and line it came from. The file exists only while some waiting event has postings. |
 
 The `.csv` files are comma separated with a header line. A field holding a
@@ -854,7 +854,8 @@ Press a number to post it, d to delete one, - to go back, h for help, q to quit.
 waiting?> 
 ```
 
-They are listed in the order noted. With more than nine, keys 1-8 show eight
+They are listed by date, oldest first; events with the same date in the order
+noted. With more than nine, keys 1-8 show eight
 at a time, `0` shows the ones before and `9` the ones after. With none,
 `w` says `No events are waiting in fiscal year ... Press n to note one.`
 
@@ -922,7 +923,7 @@ A number shows the entry and where it is. The prompt is `entry?>`:
 | Key    | What it does |
 |--------|--------------|
 | n      | Makes a new waiting event with it. Type the heading at `heading>` (the entry's text is typed in for you to change). The event gets the entry's date and its amount without sign, and the entry as its posting on the statement's account. |
-| w      | Adds it to a waiting event of its fiscal year, chosen by number at `event?>`. The event's amount stays as it is. |
+| w      | Adds it to a waiting event of its fiscal year, chosen by number at `event?>` (listed as in the waiting list). The event's amount stays as it is. |
 | -      | Goes back to the list. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |

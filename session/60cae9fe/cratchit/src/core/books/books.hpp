@@ -119,10 +119,14 @@ struct FiscalYear {
   std::map<std::string, Amount> reported_opening;
   std::vector<Voucher> vouchers;
   bool closed = false; // closed for new vouchers (open by default)
-  std::vector<WaitingEvent> waiting{}; // events waiting for postings, in the order noted
+  // Events waiting for postings, oldest date first, ties in the order noted.
+  // Add them with place_waiting only, so the order holds.
+  std::vector<WaitingEvent> waiting{};
 
   // True when date is within the year
   bool holds(Date date) const;
+  // Places event among the waiting events by its date, after those of the same date; its index
+  std::size_t place_waiting(WaitingEvent event);
 };
 
 struct Address {

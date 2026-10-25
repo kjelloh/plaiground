@@ -985,6 +985,24 @@ TEST_F(WorkspaceRepl, WaitingEventsStayUntilPostedOrDeleted) {
       << output;
 }
 
+TEST_F(WorkspaceRepl, WaitingEventsAreListedOldestFirst) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  run("nTelia 1118 2025-04-01\ny");
+  run("nHyra 5000 2025-05-01\ny");
+  run("nKvitto 249 2025-03-15\ny");
+  run("nTelia rest 10 2025-04-01\ny");
+  auto const output = run("w");
+  EXPECT_NE(output.find("Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
+                        "  1  2025-03-15        249.00  Kvitto\n"
+                        "  2  2025-04-01       1118.00  Telia\n"
+                        "  3  2025-04-01         10.00  Telia rest\n"
+                        "  4  2025-05-01       5000.00  Hyra\n"),
+            std::string::npos)
+      << output;
+}
+
 TEST_F(WorkspaceRepl, EmptyVoucherLineGoesBackToTheYear) {
   run("1pnTest\n1");
   write_sie(root / "start" / "test.se", good_sie());

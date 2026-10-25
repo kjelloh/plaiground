@@ -249,34 +249,36 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
     year.waiting.push_back({{row[1], *amount, *date}, *noted});
   }
   auto const event_postings_path = year_folder / event_postings_file;
-  if (!fs::exists(event_postings_path, ec)) {
-    return year;
-  }
-  auto const event_postings = read_table(event_postings_path, event_postings_header);
-  if (!event_postings) {
-    return std::unexpected(event_postings.error());
-  }
-  for (auto const& row : *event_postings) {
-    auto const event = all_digits(row[0]) && row[0].size() < 9 ? std::stoul(row[0]) : 0;
-    if (event == 0 || event > year.waiting.size()) {
-      return std::unexpected(std::format("{}: event {} is not in {}", event_postings_path.string(), row[0], events_file));
+  if (fs::exists(event_postings_path, ec)) {
+    auto const event_postings = read_table(event_postings_path, event_postings_header);
+    if (!event_postings) {
+      return std::unexpected(event_postings.error());
     }
-    auto const amount = amount_field(event_postings_path, row[2]);
-    if (!amount) {
-      return std::unexpected(amount.error());
+    for (auto const& row : *event_postings) {
+      auto const event = all_digits(row[0]) && row[0].size() < 9 ? std::stoul(row[0]) : 0;
+      if (event == 0 || event > year.waiting.size()) {
+        return std::unexpected(
+            std::format("{}: event {} is not in {}", event_postings_path.string(), row[0], events_file));
+      }
+      auto const amount = amount_field(event_postings_path, row[2]);
+      if (!amount) {
+        return std::unexpected(amount.error());
+      }
+      auto const date = optional_date_field(event_postings_path, row[3]);
+      if (!date) {
+        return std::unexpected(date.error());
+      }
+      Posting posting;
+      posting.account = row[1];
+      posting.amount = *amount;
+      posting.date = *date;
+      posting.text = row[4];
+      posting.source = row[5];
+      year.waiting[event - 1].postings.push_back(std::move(posting));
     }
-    auto const date = optional_date_field(event_postings_path, row[3]);
-    if (!date) {
-      return std::unexpected(date.error());
-    }
-    Posting posting;
-    posting.account = row[1];
-    posting.amount = *amount;
-    posting.date = *date;
-    posting.text = row[4];
-    posting.source = row[5];
-    year.waiting[event - 1].postings.push_back(std::move(posting));
   }
+  // Files written before the date order are in the order noted
+  std::ranges::stable_sort(year.waiting, {}, [](WaitingEvent const& waiting) { return waiting.event.date; });
   return year;
 }
 
@@ -333,6 +335,12 @@ Amount sum(Postings const& postings) {
 
 bool FiscalYear::holds(Date date) const {
   return start <= date && date <= end;
+}
+
+std::size_t FiscalYear::place_waiting(WaitingEvent event) {
+  auto const at = std::ranges::upper_bound(waiting, event.event.date, {},
+                                           [](WaitingEvent const& other) { return other.event.date; });
+  return static_cast<std::size_t>(waiting.insert(at, std::move(event)) - waiting.begin());
 }
 
 FiscalYear const* Books::year_starting(Date start) const {

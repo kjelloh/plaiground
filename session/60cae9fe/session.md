@@ -44,7 +44,38 @@ So I asked Claude and after some back and forth ti implemented a solution.
 * So I reverted and tried again.
 * The solution was partly my fault and partly Claude just not piecing the UI together in a logical way.
 
+OK, I now realize I have tackled this 'credit invoice' all wrong.
 
+* For a credit invoice we need to cancel the 'cost'
+* But depedning on whether the original invoice is payed or not we need to do different things.
+* If it is not yet payed, then we shall cancel the debt to the vendor.
+* If it is payed, then we should book an asset (place a return liability on the vendor)
+
+This is a more elaborated. So what UI can we imagine that works sufficient enough for now?
+
+* Maybe provide some hints on existing postings in the book for the amount?
+    * In that way the user can see what is in the books and draw a conclusion on how to deal with the credit invoice?
+
+What does Claude have to say about this now? I placed an open question to see what Claude knows about return credit invoices in book keeping. 
+
+* It suggested to store signed amounts in events (vouchers)
+    * But I am not ready to open that can of worms?
+    * The sign in double accounting is tricky (I '-' always Credit? And if so, is '-' actually 'opposite what is normal?)
+    * I think I want to pass positive amounts around for now?
+* I discovered that events are not sorted in Date order!
+    * We need to fix this.
+
+So I think we go for a smaller simpler fix for now.
+
+1. Make the waiting events list in date order (oldest on top)
+2. Allow the user to 'flip' a template
+3. Add some 'hint' about existing postings in the books to the template account or any with the same amount.
+
+That could serve as a good base fo the user to get guidance towards creating a correct credit invoice?
+
+So I now decided to drip-feed Claude to get through these changes with some confidence in the cratchit behavior.
+
+* Crahcit now manages the waiting list in date order (oldest first)
 
 ## 20261024
 

@@ -1786,9 +1786,9 @@ void Repl::note_event(std::ostream& out) {
   draft_.reset();
   auto& year = books_.years[draft.year];
   books::Event const event{draft.event.heading, draft.target(), draft.event.date};
-  year.waiting.push_back({event, parse_iso_date(places_.today).value_or(event.date)});
+  auto const placed = year.place_waiting({event, parse_iso_date(places_.today).value_or(event.date)});
   if (!write_books(out)) {
-    year.waiting.pop_back();
+    year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(placed));
     return;
   }
   std::println(out, "Noted: {} {} {} ({} waiting). Press w to post it.", format_iso_date(event.date), event.heading,
@@ -2586,9 +2586,9 @@ void Repl::on_event_heading(PathEditor::Result result, std::ostream& out) {
   auto const amount = open.entry.amount < 0 ? -open.entry.amount : open.entry.amount;
   books::WaitingEvent waiting{{heading, amount, open.entry.date}, parse_iso_date(places_.today).value_or(open.entry.date),
                               {posting_of(open)}};
-  year.waiting.push_back(waiting);
+  auto const placed = year.place_waiting(waiting);
   if (!write_books(out)) {
-    year.waiting.pop_back();
+    year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(placed));
     mode_ = Mode::EntryChoice;
     return;
   }
