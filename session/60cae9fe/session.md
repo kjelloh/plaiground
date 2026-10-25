@@ -82,6 +82,14 @@ I continued with small changes.
 * Cratchit now formats posting amount into debit and credit column.
 * Now creates f a full listing of postings from template. 
 
+At this stage I get a string intuition that Claude gets very confused about the UI we now have?
+
+* I feel I have to pick really small changes to have it propose an acceptable design.
+* I asked for a '-' navigation from 'post' all the way back to the waiting list.
+    * I even allowed Claude to go ahead.
+    * Then I got cold feet and aborted.
+    * It is hard now to know how to prompt to get a design I can trust?
+
 ## 20261024
 
 I have now decided to 'brute force' functionality by Vibe coding and don't care too much about code structure or design.
