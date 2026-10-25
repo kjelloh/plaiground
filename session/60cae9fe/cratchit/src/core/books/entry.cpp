@@ -242,6 +242,17 @@ std::optional<SeriesName> series_name(std::string_view letter) {
   return it == all_series.end() ? std::nullopt : std::optional(*it);
 }
 
+std::vector<std::string> shared_words(std::string_view a, std::string_view b) {
+  auto const in_b = words_of(b);
+  std::vector<std::string> shared;
+  for (auto const& word : words_of(a)) {
+    if (in_b.contains(word)) {
+      shared.push_back(word);
+    }
+  }
+  return shared;
+}
+
 Guess guess_series(Books const& books, std::string_view heading) {
   auto const words = words_of(heading);
   Guess guess;

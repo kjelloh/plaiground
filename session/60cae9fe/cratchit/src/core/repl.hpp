@@ -3,6 +3,7 @@
 #include "core/books/books.hpp"
 #include "core/books/entry.hpp"
 #include "core/books/import.hpp"
+#include "core/books/match.hpp"
 #include "core/books/statements.hpp"
 #include "core/charset/unicode.hpp"
 #include "core/help.hpp"
@@ -39,7 +40,7 @@ struct WorkspacePlaces {
 // viewing the log, the workspace menu, choosing a workspace, in the workspace,
 // the project menu, creating or adding a project, in a project, importing an
 // SIE file, choosing and reading reports, choosing a fiscal year, in a fiscal
-// year, entering a voucher (its template, series and rows), noting an event, or the waiting events
+// year, entering a voucher (its template, series and rows), noting an event, or the waiting events and their matches
 class Repl {
 public:
   // page_lines is the number of help and log lines per page; 0 shows everything at once.
@@ -97,6 +98,9 @@ private:
     EntryList,
     EntryChoice,
     AddToEvent,
+    Matches,
+    MatchChoice,
+    ConfirmBooked,
   };
   // What the text typed in the editor is for
   enum class Purpose {
@@ -172,6 +176,10 @@ private:
   std::size_t chosen_entry_ = 0;                    // the entry chosen, an index into open_entries_
   std::size_t entry_year_ = 0;                      // its fiscal year, an index into books_.years
   std::size_t first_target_ = 0;                    // the first waiting event shown to add the entry to
+  std::vector<books::Match> matches_;               // the possible matches among the open year's waiting events
+  std::size_t first_match_ = 0;                     // the first match shown when they are more than keys 1-9
+  std::size_t chosen_match_ = 0;                    // the match chosen, an index into matches_
+  bool merging_ = false;                            // the event line is the one event the chosen match makes
 
   bool is_prompt() const; // at cratchit>, workspace> or project>
   void show_keys(std::ostream& out) const;
@@ -283,6 +291,15 @@ private:
   void on_waiting_key(charset::unicode::CodePoint key, std::ostream& out);
   void post_waiting(std::size_t index, std::ostream& out);
   void on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& out);
+  void open_matches(std::ostream& out);
+  void back_to_matches(std::ostream& out);
+  void show_matches(std::ostream& out) const;
+  void on_matches_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_match(std::ostream& out) const;
+  void match_hint(std::ostream& out) const;
+  void on_match_choice_key(charset::unicode::CodePoint key, std::ostream& out);
+  void merge_events(std::ostream& out);
+  void on_confirm_booked_key(charset::unicode::CodePoint key, std::ostream& out);
   bool write_books(std::ostream& out); // writes books_ and shows the files written; false (error shown) on failure
 };
 

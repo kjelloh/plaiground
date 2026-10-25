@@ -48,6 +48,9 @@ struct Guess {
 // on a tie. Only vouchers in a series of series_names count. Else A.
 Guess guess_series(Books const& books, std::string_view heading);
 
+// The words two headings share, compared as in guess_series, in alphabetical order
+std::vector<std::string> shared_words(std::string_view a, std::string_view b);
+
 // Earlier vouchers like an event, to post it after: at most most of them, the
 // best first. A voucher is like the event when its text shares words with the
 // heading (as in guess_series), it is in a series of series_names, it has an

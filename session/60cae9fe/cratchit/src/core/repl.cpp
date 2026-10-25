@@ -139,6 +139,10 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
         show_entry_choice(out);
       } else if (mode_ == Mode::AddToEvent) {
         show_targets(out);
+      } else if (mode_ == Mode::Matches) {
+        show_matches(out);
+      } else if (mode_ == Mode::MatchChoice) {
+        show_match(out);
       }
     }
     return Step::Continue;
@@ -174,6 +178,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     return Step::Continue;
   case Mode::ConfirmDelete:
     on_confirm_delete_key(key, out);
+    return Step::Continue;
+  case Mode::ConfirmBooked:
+    on_confirm_booked_key(key, out);
     return Step::Continue;
   case Mode::VoucherSeries:
     // h is series H here, so help is not offered
@@ -300,6 +307,12 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::AddToEvent:
     on_add_to_event_key(key, out);
     break;
+  case Mode::Matches:
+    on_matches_key(key, out);
+    break;
+  case Mode::MatchChoice:
+    on_match_choice_key(key, out);
+    break;
   default:
     break;
   }
@@ -425,6 +438,7 @@ std::string Repl::prompt() const {
   case Mode::Waiting:
     return deleting_ ? "delete?> " : "waiting?> ";
   case Mode::ConfirmDelete:
+  case Mode::ConfirmBooked:
     return "Delete it? (y/n) ";
   case Mode::VoucherSeries:
     return "series?> ";
@@ -448,6 +462,11 @@ std::string Repl::prompt() const {
     return "entry?> ";
   case Mode::AddToEvent:
     return "event?> ";
+  case Mode::Matches:
+    return "match?> ";
+  case Mode::MatchChoice:
+    return chosen_match_ < matches_.size() && matches_[chosen_match_].kind == books::Match::Kind::books ? "booked?> "
+                                                                                                         : "same?> ";
   default:
     return "cratchit> ";
   }
@@ -548,6 +567,12 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
     return;
   }
   if (purpose_ == Purpose::Voucher) {
+    if (result == PathEditor::Result::Cancelled && merging_) {
+      merging_ = false;
+      mode_ = Mode::MatchChoice;
+      show_match(out);
+      return;
+    }
     if (result == PathEditor::Result::Cancelled) {
       mode_ = Mode::Year;
       return;
@@ -1373,6 +1398,7 @@ bool Repl::start_entry(bool noting, std::ostream& out, std::string const& line) 
   }
   draft_.reset();
   noting_ = noting;
+  merging_ = false;
   from_waiting_.reset();
   template_key_.reset();
   correcting_.reset();
@@ -1448,7 +1474,9 @@ void Repl::show_event(books::Event const& event, std::size_t year, std::ostream&
 }
 
 void Repl::on_confirm_event_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U'y' && noting_) {
+  if (key == U'y' && merging_) {
+    merge_events(out);
+  } else if (key == U'y' && noting_) {
     note_event(out);
   } else if (key == U'y' && (correcting_ || template_key_)) {
     templates_.clear();
@@ -1910,7 +1938,8 @@ void Repl::waiting_hint(std::ostream& out) const {
   if (deleting_) {
     std::println(out, "Press the number of the event to delete, - not to delete.");
   } else {
-    std::println(out, "Press a number to post it, d to delete one, - to go back, h for help, q to quit.");
+    std::println(out, "Press a number to post it, d to delete one, m to find matches, - to go back, h for help, q to "
+                      "quit.");
   }
 }
 
@@ -1925,6 +1954,8 @@ void Repl::on_waiting_key(charset::unicode::CodePoint key, std::ostream& out) {
   } else if (key == U'd' && !deleting_) {
     deleting_ = true;
     waiting_hint(out);
+  } else if (key == U'm' && !deleting_) {
+    open_matches(out);
   } else if (n > max_keys && key == U'0' && first_waiting_ > 0) {
     first_waiting_ -= range_size;
     show_waiting(out);
@@ -1957,6 +1988,7 @@ void Repl::post_waiting(std::size_t index, std::ostream& out) {
     return;
   }
   noting_ = false;
+  merging_ = false;
   from_waiting_ = index;
   template_key_.reset();
   correcting_.reset();
@@ -1992,6 +2024,265 @@ void Repl::on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& 
     deleting_ = false;
     mode_ = Mode::Waiting;
     show_waiting(out);
+  } else {
+    std::println(out, "Press y to delete the event, n not to.");
+  }
+}
+
+// The possible matches among the open year's waiting events, or a note that there are none
+void Repl::open_matches(std::ostream& out) {
+  matches_ = books::find_matches(*books_.year_starting(open_year_));
+  if (matches_.empty()) {
+    std::println(out, "No possible matches among the waiting events (the same amount, at most {} days apart).",
+                 books::match_window_days);
+    waiting_hint(out);
+    return;
+  }
+  first_match_ = 0;
+  mode_ = Mode::Matches;
+  show_matches(out);
+}
+
+// Back to the matches after one is used, found again; to the waiting list when none are left
+void Repl::back_to_matches(std::ostream& out) {
+  auto const& year = *books_.year_starting(open_year_);
+  if (year.waiting.empty()) {
+    std::println(out, "No events are waiting now.");
+    mode_ = Mode::Year;
+    return;
+  }
+  matches_ = books::find_matches(year);
+  if (matches_.empty()) {
+    std::println(out, "No more possible matches.");
+    first_waiting_ = std::min(first_waiting_, (year.waiting.size() - 1) / range_size * range_size);
+    mode_ = Mode::Waiting;
+    show_waiting(out);
+    return;
+  }
+  first_match_ = std::min(first_match_, (matches_.size() - 1) / range_size * range_size);
+  mode_ = Mode::Matches;
+  show_matches(out);
+}
+
+// Numbered from 1, the likely ones first; over 9, keys 1-8 with 0 up and 9 down
+void Repl::show_matches(std::ostream& out) const {
+  auto const& year = *books_.year_starting(open_year_);
+  auto const n = matches_.size();
+  auto const first = n <= max_keys ? 0 : first_match_;
+  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
+  std::println(out, "Possible matches in fiscal year {} - {} (the same amount, at most {} days apart):",
+               format_iso_date(year.start), format_iso_date(year.end), books::match_window_days);
+  if (first > 0) {
+    std::println(out, "  0  ...up");
+  }
+  for (auto i = first; i < last; ++i) {
+    auto const& match = matches_[i];
+    auto const same = match.kind == books::Match::Kind::same;
+    auto const& event = year.waiting[match.waiting].event;
+    std::println(out, "  {}  {:<5}  {}  {:>12}  {}", i - first + 1, same ? "same" : "books", format_iso_date(event.date),
+                 format_amount(event.amount), event.heading);
+    if (same) {
+      auto const& other = year.waiting[match.other].event;
+      std::println(out, "            {}  {:>12}  {}", format_iso_date(other.date), format_amount(other.amount),
+                   other.heading);
+    } else {
+      auto const& voucher = year.vouchers[match.other];
+      std::println(out, "{:>10}  {}  {:>12}  {}", std::format("{} {}", voucher.series, voucher.number),
+                   format_iso_date(voucher.event.date), format_amount(voucher.event.amount), voucher.event.heading);
+    }
+    std::string why = match.days == 0 ? "the same day" : std::format("{} day{} apart", match.days, match.days == 1 ? "" : "s");
+    if (!match.words.empty()) {
+      why += ", shared words:";
+      for (auto const& word : match.words) {
+        why += " " + word;
+      }
+    }
+    if (match.fits) {
+      why += same ? ", the postings balance together on different accounts" : ", its postings are in the voucher";
+    }
+    std::println(out, "            {}", why);
+  }
+  if (last < n) {
+    std::println(out, "  9  ...down");
+  }
+  std::println(out, "");
+  std::println(out, "Press a number to look at one, - to go back to the waiting list, h for help, q to quit.");
+}
+
+void Repl::on_matches_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const n = matches_.size();
+  if (key == U'-') {
+    mode_ = Mode::Waiting;
+    show_waiting(out);
+  } else if (n > max_keys && key == U'0' && first_match_ > 0) {
+    first_match_ -= range_size;
+    show_matches(out);
+  } else if (n > max_keys && key == U'9' && first_match_ + range_size < n) {
+    first_match_ += range_size;
+    show_matches(out);
+  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
+             (n > max_keys ? first_match_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
+    chosen_match_ = (n > max_keys ? first_match_ : 0) + static_cast<std::size_t>(key - U'1');
+    mode_ = Mode::MatchChoice;
+    show_match(out);
+  } else {
+    std::println(out, "Press a number to look at one, - to go back to the waiting list, h for help, q to quit.");
+  }
+}
+
+// The two events of the chosen match in full, with their postings
+void Repl::show_match(std::ostream& out) const {
+  auto const& year = *books_.year_starting(open_year_);
+  auto const& match = matches_[chosen_match_];
+  auto const& waiting = year.waiting[match.waiting];
+  auto const show = [&](books::WaitingEvent const& shown) {
+    std::println(out, "  {}  {:>12}  {}", format_iso_date(shown.event.date), format_amount(shown.event.amount),
+                 shown.event.heading);
+    show_event_postings(shown, out);
+  };
+  show(waiting);
+  if (match.kind == books::Match::Kind::same) {
+    auto const& other = year.waiting[match.other];
+    show(other);
+    if (!waiting.postings.empty() || !other.postings.empty()) {
+      auto const one = books::merged(waiting, other, waiting.event);
+      books::Draft const together{one.event, 0, {}, one.postings};
+      std::string both; // the accounts both events have postings on
+      for (auto const& posting : waiting.postings) {
+        if (std::ranges::any_of(other.postings, [&](books::Posting const& p) { return p.account == posting.account; }) &&
+            both.find(posting.account) == std::string::npos) {
+          both += (both.empty() ? "" : ", ") + posting.account;
+        }
+      }
+      std::println(out, "  Together: {}",
+                   !together.is_balanced() ? together.status()
+                   : both.empty()          ? std::string{"the postings balance."}
+                                           : std::format("the postings balance, but both events post to {}.", both));
+    }
+  } else {
+    auto const& voucher = year.vouchers[match.other];
+    std::println(out, "  Voucher {} {} {} \"{}\" {}", voucher.series, voucher.number,
+                 format_iso_date(voucher.event.date), voucher.event.heading, format_amount(voucher.event.amount));
+    std::println(out, "       {}", books::posting_heading());
+    for (auto const& posting : voucher.postings) {
+      auto const* account = books_.account(posting.account);
+      auto const mark = posting.kind == books::Posting::Kind::removed ? "  (removed)" : "";
+      std::println(out, "       {}",
+                   books::posting_row(posting.account, posting.amount,
+                                      std::format("{}{}", account ? account->name : "", mark)));
+    }
+    std::println(out, "       {}", books::posting_total(voucher.postings));
+    auto const left = books::unbooked(waiting, voucher);
+    if (!left.empty()) {
+      std::string briefs;
+      for (auto const& posting : left) {
+        briefs += std::format("{}{} {}", briefs.empty() ? "" : ", ", books::posting_brief(posting),
+                              posting.date ? format_iso_date(*posting.date) : "");
+      }
+      std::println(out, "  Not in the voucher: {}. Deleting the event drops {}; a statement entry is listed by a again.",
+                   briefs, left.size() == 1 ? "it" : "them");
+    }
+  }
+  std::println(out, "");
+  match_hint(out);
+}
+
+void Repl::match_hint(std::ostream& out) const {
+  if (matches_[chosen_match_].kind == books::Match::Kind::same) {
+    std::println(out, "Press s to make them one event, - to go back, h for help, q to quit.");
+  } else {
+    std::println(out, "Press d to delete the waiting event as already in the books, - to go back, h for help, q to "
+                      "quit.");
+  }
+}
+
+void Repl::on_match_choice_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const& year = *books_.year_starting(open_year_);
+  auto const& match = matches_[chosen_match_];
+  if (key == U'-') {
+    mode_ = Mode::Matches;
+    show_matches(out);
+  } else if (key == U's' && match.kind == books::Match::Kind::same) {
+    // The line starts as the older event's heading, amount and date (the list is by date, so the first)
+    auto const& event = year.waiting[match.waiting].event;
+    draft_.reset();
+    noting_ = false;
+    merging_ = true;
+    from_waiting_.reset();
+    template_key_.reset();
+    correcting_.reset();
+    purpose_ = Purpose::Voucher;
+    editor_.start(std::format("{} {} {}", event.heading, format_amount(event.amount), format_iso_date(event.date)),
+                  PathEditor::Kind::Event);
+    mode_ = Mode::Typing;
+    std::println(out, "Type the heading, amount and date of the one event; the older event's are typed in for you.");
+    std::println(out, "Backspace erases, Enter accepts. Enter on an empty line goes back.");
+    out << editor_.prompt();
+  } else if (key == U'd' && match.kind == books::Match::Kind::books) {
+    mode_ = Mode::ConfirmBooked;
+  } else {
+    match_hint(out);
+  }
+}
+
+// The chosen match's two waiting events replaced by the one event typed, with the postings of both
+void Repl::merge_events(std::ostream& out) {
+  auto const match = matches_[chosen_match_];
+  auto const draft = std::move(*draft_);
+  draft_.reset();
+  merging_ = false;
+  auto& year = books_.years[draft.year];
+  auto const before = year.waiting;
+  auto const& a = before[match.waiting];
+  auto const& b = before[match.other];
+  auto const one = books::merged(a, b, {draft.event.heading, draft.target(), draft.event.date});
+  year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(match.other));
+  year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(match.waiting));
+  year.place_waiting(one);
+  if (!write_books(out)) {
+    year.waiting = before;
+    mode_ = Mode::MatchChoice;
+    return;
+  }
+  books::Draft const draft_of_one{one.event, 0, {}, one.postings};
+  auto const status = one.postings.empty()        ? "No postings."
+                      : draft_of_one.is_balanced() ? "Its postings balance: post it from the waiting list."
+                                                   : draft_of_one.status();
+  std::println(out, "Made one event: {} {} {} ({} waiting). {}", format_iso_date(one.event.date), one.event.heading,
+               format_amount(one.event.amount), year.waiting.size(), status);
+  LOG_BUSINESS("Made one waiting event {} \"{}\" {} of {} \"{}\" {} and {} \"{}\" {} in project {} ({}), fiscal year "
+               "{} - {}: {}",
+               format_iso_date(one.event.date), one.event.heading, format_amount(one.event.amount),
+               format_iso_date(a.event.date), a.event.heading, format_amount(a.event.amount),
+               format_iso_date(b.event.date), b.event.heading, format_amount(b.event.amount), project_->name,
+               project_->uuid, format_iso_date(year.start), format_iso_date(year.end), status);
+  back_to_matches(out);
+}
+
+void Repl::on_confirm_booked_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
+    auto& year = books_.years[static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data())];
+    auto const match = matches_[chosen_match_];
+    auto const deleted = year.waiting[match.waiting];
+    auto const& voucher = year.vouchers[match.other];
+    year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(match.waiting));
+    if (!write_books(out)) {
+      year.waiting.insert(year.waiting.begin() + static_cast<std::ptrdiff_t>(match.waiting), deleted);
+      mode_ = Mode::MatchChoice;
+      return;
+    }
+    std::println(out, "Deleted the waiting event {} \"{}\" {}: it is in the books as {} {}.",
+                 format_iso_date(deleted.event.date), deleted.event.heading, format_amount(deleted.event.amount),
+                 voucher.series, voucher.number);
+    LOG_BUSINESS("Deleted waiting event {} \"{}\" {} as already in the books as {} {} from project {} ({}), fiscal "
+                 "year {} - {}",
+                 format_iso_date(deleted.event.date), deleted.event.heading, format_amount(deleted.event.amount),
+                 voucher.series, voucher.number, project_->name, project_->uuid, format_iso_date(year.start),
+                 format_iso_date(year.end));
+    back_to_matches(out);
+  } else if (key == U'n' || key == U'-') {
+    mode_ = Mode::MatchChoice;
+    show_match(out);
   } else {
     std::println(out, "Press y to delete the event, n not to.");
   }

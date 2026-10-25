@@ -913,7 +913,7 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
                         "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  1  2025-03-31         35.00  Bank cost march\n"
                         "\n"
-                        "Press a number to post it, d to delete one, - to go back, h for help, q to quit.\n"
+                        "Press a number to post it, d to delete one, m to find matches, - to go back, h for help, q to quit.\n"
                         "waiting?> 1\n"
                         "Earlier vouchers like this one:\n"),
             std::string::npos)
@@ -959,7 +959,7 @@ TEST_F(WorkspaceRepl, WaitingEventsStayUntilPostedOrDeleted) {
   EXPECT_NE(output.find("waiting?> d\n"
                         "Press the number of the event to delete, - not to delete.\n"
                         "delete?> -\n"
-                        "Press a number to post it, d to delete one, - to go back, h for help, q to quit.\n"
+                        "Press a number to post it, d to delete one, m to find matches, - to go back, h for help, q to quit.\n"
                         "waiting?> d\n"
                         "Press the number of the event to delete, - not to delete.\n"
                         "delete?> 2\n"
@@ -1551,6 +1551,62 @@ TEST_F(WorkspaceRepl, NoDateOutsideTheYearAsksForIt) {
   run("itest.se\nyy0");
   auto const output = run("eBank 35\n");
   EXPECT_NE(output.find("voucher> Bank 35\nNo date, and today is outside the fiscal year. Type the date.\n"),
+            std::string::npos)
+      << output;
+}
+
+TEST_F(WorkspaceRepl, MAtTheWaitingListFindsMatchesToMakeOneOrDelete) {
+  run("1pnTest\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("itest.se\nyy0");
+  auto const folder = root / "start" / "Test";
+  EXPECT_NE(run("nHyra 5000 2025-04-01\nyw").find("d to delete one, m to find matches, - to go back"), std::string::npos);
+  EXPECT_NE(run("wm").find("waiting?> m\n"
+                           "No possible matches among the waiting events (the same amount, at most 4 days apart).\n"),
+            std::string::npos);
+  run("nBank fee 10 2025-03-03\ny");
+  run("nKvitto 249 2025-04-02\ny");
+  run("nKvitto Clas 249 2025-04-04\ny");
+  auto output = run("wm");
+  EXPECT_NE(output.find("waiting?> m\n"
+                        "Possible matches in fiscal year 2025-01-01 - 2025-12-31 (the same amount, at most 4 days "
+                        "apart):\n"
+                        "  1  books  2025-03-03         10.00  Bank fee\n"
+                        "       A 2  2025-03-01         10.00  Bank cost\n"
+                        "            2 days apart, shared words: bank\n"
+                        "  2  same   2025-04-02        249.00  Kvitto\n"
+                        "            2025-04-04        249.00  Kvitto Clas\n"
+                        "            2 days apart, shared words: kvitto\n"
+                        "\n"
+                        "Press a number to look at one, - to go back to the waiting list, h for help, q to quit.\n"
+                        "match?> \n"),
+            std::string::npos)
+      << output;
+  // s makes one event of the two: the older event's line to change, then OK
+  output = run("wm2s\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\bKvitto Clas Ohlson 249 2025-04-02\ny");
+  EXPECT_NE(output.find("same?> s\n"
+                        "Type the heading, amount and date of the one event; the older event's are typed in for you.\n"
+                        "Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
+                        "event> Kvitto 249.00 2025-04-02"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("OK? (y/n) y\n"
+                        "Updated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
+                        "Made one event: 2025-04-02 Kvitto Clas Ohlson 249.00 (3 waiting). No postings.\n"
+                        "Possible matches in"),
+            std::string::npos)
+      << output;
+  // d deletes the waiting event as already in the books; no matches left goes back to the waiting list
+  output = run("wm1dy");
+  EXPECT_NE(output.find("  Voucher A 2 2025-03-01 \"Bank cost\" 10.00\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("booked?> d\n"
+                        "Delete it? (y/n) y\n"
+                        "Updated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
+                        "Deleted the waiting event 2025-03-03 \"Bank fee\" 10.00: it is in the books as A 2.\n"
+                        "No more possible matches.\n"
+                        "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
+                        "  1  2025-04-01       5000.00  Hyra\n"
+                        "  2  2025-04-02        249.00  Kvitto Clas Ohlson\n"),
             std::string::npos)
       << output;
 }

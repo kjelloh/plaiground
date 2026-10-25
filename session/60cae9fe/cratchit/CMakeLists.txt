@@ -28,6 +28,7 @@ add_library(cratchit_core
   src/core/books/columns.cpp
   src/core/books/entry.cpp
   src/core/books/import.cpp
+  src/core/books/match.cpp
   src/core/books/report.cpp
   src/core/books/statements.cpp
   src/core/charset/cp437.cpp

@@ -15,6 +15,7 @@ add_executable(cratchit_tests
   test_log.cpp
   test_log_view.cpp
   test_manual.cpp
+  test_match.cpp
   test_pager.cpp
   test_path_editor.cpp
   test_path_value.cpp

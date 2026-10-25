@@ -108,7 +108,22 @@ I challanged Claude to implement a 'merge event' mechanism to identify 'same eve
     * No hint or guide to candidate events?
     * Kind of brain-dead UI?
 
-So I reverted the changes and went fresh with a new prompt.
+* So I reverted the changes and went fresh with a new prompt.
+
+```text
+I now want cratchit to help with identifying 'same event' from the events in the waiting list. For an event to be 'the same' it must be the same amount. And the events can not be further apart than bank days or over a week end. That is because in sweden and using 'fakturametoden' an invoice and following payment is always separate events. I want the listing to chanage so that 'same event' candidates are grouped in the listing. If possible, I would also like the mechanism to try and pick up if the event is already in the books. What can  you propose?
+```
+
+* That prompt gave no good design. I tried a new one.
+
+```
+I now want cratchit to help with identifying waiting events that are in fact the same event. When in 'edit waiting list' mode I want an option with a good name for finding 'same event' and pick to make 'same'. I also want this mechanism to sugest that events may already be in the books. I want 'same event' to be possible only if within days. Define a time window to apply for now. I want the result of the check to be a new list where the user can pick and apply (edit) suggested foiund 'sameness'. What can you propose?
+```
+
+* This time I got something that I liked.
+* But then I missed to answer Claudes questions before I started and decided to abort and start again.
+
+This time I got something that seems to work (quick try seems ok)?
 
 ## 20261024
 

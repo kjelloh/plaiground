@@ -935,7 +935,7 @@ Waiting events in fiscal year 2026-05-01 - 2027-04-30:
   1  2026-10-20       1118.00  Telia faktura oktober
   2  2026-10-21        249.00  Kvitto Clas Ohlson
 
-Press a number to post it, d to delete one, - to go back, h for help, q to quit.
+Press a number to post it, d to delete one, m to find matches, - to go back, h for help, q to quit.
 waiting?> 
 ```
 
@@ -948,6 +948,7 @@ at a time, `0` shows the ones before and `9` the ones after. With none,
 |--------|--------------|
 | 1-9    | Posts that event: the series, then the rows, as in Entering a voucher. Only in an open year. |
 | d      | Deletes one: the prompt becomes `delete?>`; press the number of the event, then `y` at `Delete it? (y/n)`. `-` at `delete?>` or `n` deletes nothing. |
+| m      | Finds waiting events that may be the same event, or already in the books (see Finding matches). |
 | -      | Goes back to the year prompt. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
@@ -984,6 +985,88 @@ The event is no longer waiting (1 still waiting).
 Deleting an event removes it from the list for good (it is logged). Neither
 posting nor deleting changes any other waiting event. The statement entries
 of a deleted event are not booked any more, so they are listed by `a` again.
+
+#### Finding matches
+
+One event can end up waiting twice: a receipt noted with `n` and the card
+payment made into an event from a statement entry, or a transfer between two
+of your own accounts, one entry on each statement. And an event noted to post
+later may already be in the books, for example when a later SIE import
+brought its voucher. Press `m` at the waiting list to find such matches. The
+prompt is `match?>`:
+
+```
+waiting?> m
+Possible matches in fiscal year 2026-05-01 - 2027-04-30 (the same amount, at most 4 days apart):
+  1  same   2026-07-21       2292.00  Utbetalning Moms
+            2026-07-23       2292.00  Momsutbetalning
+            2 days apart, the postings balance together on different accounts
+  2  books  2026-09-01        311.25  Loopia överföring domäner
+       D 6  2026-08-31        311.25  Loopia Faktura
+            1 day apart, shared words: loopia
+
+Press a number to look at one, - to go back to the waiting list, h for help, q to quit.
+match?> 
+```
+
+A match is two events with the same amount, at most 4 calendar days apart
+(a weekend and a bank day on each side; holidays are not counted), in the
+same fiscal year:
+
+| Kind  | What it pairs |
+|-------|---------------|
+| same  | Two waiting events. The older is listed first. |
+| books | A waiting event and a voucher of the year, imported or entered (its series and number on the second line). |
+
+The amount and the dates only make a pair a candidate: with the invoice
+method (fakturametoden) an invoice and its payment have the same amount
+within days, yet they are two events. You decide. The likely matches come
+first: those whose postings fit (for `same`: both have postings, on
+different accounts, and together they balance; for `books`: the waiting
+event has postings and the voucher has them all), then those whose headings
+share more words (ignoring case, numbers and one-letter words), then those
+fewer days apart. A waiting event can be in several matches. With more than
+nine, keys 1-8 show eight at a time, `0` the ones before and `9` the ones
+after. With none, `m` says `No possible matches among the waiting events
+(the same amount, at most 4 days apart).` A pair you leave is not
+remembered: it is listed again the next time.
+
+A number shows both events in full, with their postings (for `books`, the
+voucher's rows). For `same` the prompt is `same?>`, with a line on where
+the postings stand together. When both events post to the same account it
+says so (`the postings balance, but both events post to 1630.`): such
+postings cancel out, so the two are more likely two events in a row, such as
+a tax decision and the payout from the tax account.
+
+
+
+| Key    | What it does |
+|--------|--------------|
+| s      | Makes them one event. The `event>` line starts with the older event's heading, amount and date for you to change (the same rules as at `voucher>`, see Entering a voucher), then `OK? (y/n)`. The one event has the postings of both (a posting from the same statement entry only once) and the earlier noted day. It takes the place of the two in the waiting list. Enter on an empty line goes back to `same?>`. |
+| -      | Goes back to the matches. |
+| h      | Opens this manual. |
+| q      | Quits cratchit. |
+
+```
+Made one event: 2026-07-21 Utbetalning Moms 2292.00 (13 waiting). Its postings balance: post it from the waiting list.
+```
+
+For `books` the prompt is `booked?>`. The postings of the waiting event that
+are not in the voucher (none of its postings has the same account, date and
+amount) are named, as deleting the event drops them; a statement entry of
+theirs is then listed by `a` again:
+
+| Key    | What it does |
+|--------|--------------|
+| d      | Deletes the waiting event as already in the books: `y` at `Delete it? (y/n)` deletes it, `n` or `-` does not. The voucher is not changed. |
+| -      | Goes back to the matches. |
+| h      | Opens this manual. |
+| q      | Quits cratchit. |
+
+After making one event or deleting one, cratchit saves the year's
+`events.csv` and `event_postings.csv` (see The files), logs it and finds the
+matches again. When none are left it says `No more possible matches.` and
+shows the waiting list.
 
 #### Statement entries
 
@@ -1349,7 +1432,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), noting or deleting a waiting event, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, or an account statement it cannot read. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

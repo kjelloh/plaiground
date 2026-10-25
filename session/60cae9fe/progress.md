@@ -355,6 +355,22 @@ Saving (postings> key table), correcting, waiting list, Using the prompt, log ki
 (Debug, trace DEBUG). Not covered by a REPL test: flipping with a waiting event's postings (covered by the Draft test).
 In review.
 
+Task 42: Find matches among waiting events (`core/books/match`). `m` at `waiting?>` lists possible matches
+(`match?>`): two waiting events (`same`) or a waiting event and a voucher of the year (`books`), with the same
+amount and at most `books::match_window_days` = 4 calendar days apart (no holidays), same fiscal year only.
+`find_matches` ranks: fits first (same: both have postings, on different accounts, balancing together; books: the
+event's postings all in the voucher), then more shared heading words (`books::shared_words`, new in entry.hpp, as
+guess_series), then fewer days, then the older event. A number shows both in full: `same?>` `s` opens `event>`
+prefilled with the older event's heading, amount and date (same parsing, `OK? (y/n)`), then replaces the two with
+`books::merged` (postings of both, a posting from the same source once, earlier noted day) via `place_waiting`;
+`booked?>` `d` + `Delete it? (y/n)` deletes the waiting event, naming its postings not in the voucher
+(`books::unbooked`). After either, matches are found again; none left: `No more possible matches.` and the waiting
+list. Rejected pairs are not remembered. No closed-year restriction. Logged (business): made one waiting event of
+two, deleted as already in the books as X n. No file format change. Manual: new "Finding matches", waiting key
+table, log kinds. 399 tests pass, no warnings (Debug, trace DEBUG). Checked on The ITfied AB (backup restored
+after): 3 matches (VAT payout 1630 + arrival 1920 fits; Loopia payment vs invoice D 6; VAT decision vs payout,
+both on 1630), merged the VAT pair into one balanced event. In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -495,6 +511,11 @@ into a waiting event without making a voucher, several entries chosen at once.
 - 2026-10-25: With a template (also `t` and the reversed rows of a correction), the whole suggested voucher is shown
   after the series to save with `y`; `n` puts the rows in place at `post>` to change them from the end (`-` steps back
   to a suggestion). Only when the rows balance; else row by row as before.
+
+- 2026-10-25: Matches of waiting events: same amount, at most 4 calendar days apart (a constant in code), same
+  fiscal year. Kinds: two waiting events (made one, heading from the oldest event, editable) or a waiting event and
+  a voucher (deleted as already in the books). Voucher matches are shown even without shared words. Rejected pairs
+  are not remembered. No closed-year rule for now.
 
 - 2026-10-25: Flip works on the template only (flip it, then apply it again), offered as `f` at the `postings>`
   prompt (which replaced `Save as ...? (y/n)`), not at `post>` and not on single postings. No special detection for
