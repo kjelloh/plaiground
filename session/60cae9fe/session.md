@@ -98,7 +98,17 @@ I am now starting to feel what I heard others working with agentic coding has de
     * When I don't tell the computer with code myself, I feel weary that the code does not in fact do what I want?
     * Also, I lack the insight to catch things I have not thought about (Claude implements and I get to test a back box)
 
+I challanged Claude to implement a 'merge event' mechanism to identify 'same event' from events on the waiting list.
 
+* At first it sounded good.
+* But when I tried what Claude had implements I discovered the UI was basically no help at all.
+    * It had provided an 'm' option
+    * Pressing 'm' asked for an event to keep.
+    * Then an event to merge with it.
+    * No hint or guide to candidate events?
+    * Kind of brain-dead UI?
+
+So I reverted the changes and went fresh with a new prompt.
 
 ## 20261024
 
