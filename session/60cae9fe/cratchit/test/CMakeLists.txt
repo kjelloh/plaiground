@@ -3,6 +3,7 @@ find_package(GTest REQUIRED)
 add_executable(cratchit_tests
   test_amount.cpp
   test_books.cpp
+  test_columns.cpp
   test_cp437.cpp
   test_csv.cpp
   test_data_folder.cpp

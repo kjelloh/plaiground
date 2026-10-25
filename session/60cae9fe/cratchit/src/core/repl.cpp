@@ -1,5 +1,6 @@
 #include "core/repl.hpp"
 
+#include "core/books/columns.hpp"
 #include "core/books/report.hpp"
 #include "core/charset/utf8.hpp"
 #include "core/log.hpp"
@@ -1481,7 +1482,7 @@ void Repl::show_templates(std::ostream& out) const {
     std::string rows;
     for (auto const& posting : like.postings) {
       if (posting.kind != books::Posting::Kind::removed) {
-        rows += std::format("  {} {}", posting.account, format_amount(posting.amount));
+        rows += "  " + books::posting_brief(posting);
       }
     }
     std::println(out, "    {}", rows);
@@ -1612,8 +1613,8 @@ void Repl::on_series_key(charset::unicode::CodePoint key, std::ostream& out) {
 void Repl::start_rows(std::ostream& out) {
   if (auto const suggested = draft_->suggestion()) {
     auto const* account = books_.account(suggested->account);
-    std::println(out, "  Suggested {:<6} {:>12}  {}", suggested->account, format_amount(suggested->amount),
-                 account ? account->name : "");
+    std::println(out, "  Suggested {}",
+                 books::posting_row(suggested->account, suggested->amount, account ? account->name : ""));
   }
   purpose_ = Purpose::Row;
   editor_.start("", PathEditor::Kind::Row);
@@ -1628,9 +1629,11 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
     if (draft_->is_balanced()) {
       std::println(out, "Voucher {} {} {} \"{}\"", draft_->series, number_, format_iso_date(draft_->event.date),
                    draft_->event.heading);
+      std::println(out, "  {}", books::posting_heading());
       for (auto const& row : rows) {
         show_row(row, out);
       }
+      std::println(out, "  {}", books::posting_total(rows));
       mode_ = Mode::ConfirmSave;
       return;
     }
@@ -1694,7 +1697,7 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
 
 void Repl::show_row(books::Posting const& row, std::ostream& out) const {
   auto const* account = books_.account(row.account);
-  std::println(out, "  {:<6} {:>12}  {}", row.account, format_amount(row.amount), account ? account->name : "");
+  std::println(out, "  {}", books::posting_row(row.account, row.amount, account ? account->name : ""));
 }
 
 void Repl::show_remaining(std::ostream& out) const {
@@ -2078,14 +2081,17 @@ void Repl::show_voucher(std::ostream& out) const {
   auto const& voucher = books_.year_starting(open_year_)->vouchers[viewed_];
   std::println(out, "Voucher {} {} {} \"{}\" {}", voucher.series, voucher.number, format_iso_date(voucher.event.date),
                voucher.event.heading, format_amount(voucher.event.amount));
+  std::println(out, "  {}", books::posting_heading());
   for (auto const& posting : voucher.postings) {
     auto const* account = books_.account(posting.account);
     auto const mark = posting.kind == books::Posting::Kind::added     ? "  (added)"
                       : posting.kind == books::Posting::Kind::removed ? "  (removed)"
                                                                       : "";
-    std::println(out, "  {:<6} {:>12}  {}{}", posting.account, format_amount(posting.amount),
-                 account ? account->name : "", mark);
+    std::println(out, "  {}",
+                 books::posting_row(posting.account, posting.amount,
+                                    std::format("{}{}", account ? account->name : "", mark)));
   }
+  std::println(out, "  {}", books::posting_total(voucher.postings));
   auto const imported = imported_.contains(key_of(voucher));
   if (voucher.registered) {
     std::println(out, "  Registered {}, {}", format_iso_date(*voucher.registered),
@@ -2416,11 +2422,15 @@ void Repl::show_event_postings(books::WaitingEvent const& waiting, std::ostream&
   if (waiting.postings.empty()) {
     return;
   }
+  std::println(out, "       {}", books::posting_heading());
   for (auto const& posting : waiting.postings) {
     auto const* account = books_.account(posting.account);
-    std::println(out, "       {:<6} {:>12}  {}  {}", posting.account, format_amount(posting.amount),
-                 posting.date ? format_iso_date(*posting.date) : "", account ? account->name : "");
+    std::println(out, "       {}",
+                 books::posting_row(posting.account, posting.amount,
+                                    std::format("{}  {}", posting.date ? format_iso_date(*posting.date) : "",
+                                                account ? account->name : "")));
   }
+  std::println(out, "       {}", books::posting_total(waiting.postings));
   std::println(out, "       {}", books::Draft{waiting.event, 0, {}, waiting.postings}.status());
 }
 

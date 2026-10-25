@@ -582,14 +582,14 @@ and it has an amount and at least two rows. The most shared words come first,
 then a voucher whose amount has the same sign as yours, then the latest.
 Vouchers with rows on the same accounts, on the same sides (debit or credit),
 show only once, as the best of them. At most five are listed, each with its
-rows:
+rows on one line: the account, `D` (debit) or `C` (credit) and the amount:
 
 ```
 Earlier vouchers like this one:
   1  D 9  2026-10-22       1118.00  Telia faktura oktober
-      2440 -1118.00  6212 894.40  2641 223.60
+      2440 C 1118.00  6212 D 894.40  2641 D 223.60
   2  E 4  2026-07-01        987.00  Betalning Telia
-      2440 987.00  1930 -987.00
+      2440 D 987.00  1930 C 987.00
 
 Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.
 template?> 
@@ -652,17 +652,18 @@ highest number used plus one, or 1.
 Type one row per line at `post>`: an account and an amount, debit positive,
 credit negative, then Enter. The voucher balances when the debit rows add up
 to the amount on the voucher line, and so do the credit rows. After each row
-cratchit shows it and where the rows stand:
+cratchit shows it and where the rows stand. Rows are shown with the amount
+without sign, in a Debit or a Credit column (zero is shown as debit):
 
 ```
 post> 1930 -1118
-  1930       -1118.00  Företagskonto
+  1930                      1118.00  Företagskonto
   Remaining 1118.00 (debit 0.00, credit 1118.00, amount 1118.00).
 post> 6212 894,40
-  6212         894.40  Mobiltelefon
+  6212          894.40               Mobiltelefon
   Remaining 223.60 (debit 894.40, credit 1118.00, amount 1118.00).
 post> 2641
-  2641         223.60  Debiterad ingående moms
+  2641          223.60               Debiterad ingående moms
   Balanced. Enter saves.
 ```
 
@@ -678,17 +679,17 @@ suggestion before:
 ```
 Rows from D 9 are suggested one at a time, scaled to the amount: Enter takes the suggestion,
 or type your own row instead.
-  Suggested 2440       -1245.00  Leverantörsskulder
+  Suggested 2440                      1245.00  Leverantörsskulder
 post> 
-  2440       -1245.00  Leverantörsskulder
+  2440                      1245.00  Leverantörsskulder
   Remaining 1245.00 (debit 0.00, credit 1245.00, amount 1245.00).
-  Suggested 6212         996.00  Mobiltelefon
+  Suggested 6212          996.00               Mobiltelefon
 post> 6212 1000
-  6212        1000.00  Mobiltelefon
+  6212         1000.00               Mobiltelefon
   Remaining 245.00 (debit 1000.00, credit 1245.00, amount 1245.00).
-  Suggested 2641         245.00  Debiterad ingående moms
+  Suggested 2641          245.00               Debiterad ingående moms
 post> 
-  2641         245.00  Debiterad ingående moms
+  2641          245.00               Debiterad ingående moms
   Balanced. Enter saves.
 ```
 
@@ -710,9 +711,11 @@ Only accounts in the books can be used. Backspace erases while you type.
 
 ```
 Voucher D 4 2026-10-22 "Telia faktura oktober"
-  1930       -1118.00  Företagskonto
-  6212         894.40  Mobiltelefon
-  2641         223.60  Debiterad ingående moms
+  Account        Debit       Credit
+  1930                      1118.00  Företagskonto
+  6212          894.40               Mobiltelefon
+  2641          223.60               Debiterad ingående moms
+  Total        1118.00      1118.00
 Save as D 4? (y/n)
 ```
 
@@ -763,10 +766,12 @@ the voucher itself, such as `D 4>`:
 
 ```
 Voucher D 4 2026-10-24 "Faktura Telia november" 1245.00
-  2440       -1245.00  Leverantörsskulder
-  6212         995.89  Mobiltelefon
-  2641         248.97  Debiterad ingående moms
-  3740           0.14  Öres- och kronutjämning
+  Account        Debit       Credit
+  2440                      1245.00  Leverantörsskulder
+  6212          995.89               Mobiltelefon
+  2641          248.97               Debiterad ingående moms
+  3740            0.14               Öres- och kronutjämning
+  Total        1245.00      1245.00
   Registered 2026-10-24, entered in cratchit
 
 Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.
@@ -872,7 +877,9 @@ postings under it, and where they stand:
 
 ```
   1  2026-09-28       1308.75  Websupport webhotell
-       1920       -1308.75  2026-09-28  PlusGiro
+       Account        Debit       Credit
+       1920                      1308.75  2026-09-28  PlusGiro
+       Total           0.00      1308.75
        Remaining 1308.75 (debit 0.00, credit 1308.75, amount 1308.75).
 ```
 
@@ -1176,13 +1183,14 @@ The prompt is `report?>`.
 | Key    | What it does                                                    |
 |--------|-----------------------------------------------------------------|
 | 1      | Trial balance: each balance sheet account with opening balance, change and closing balance, each result account with its result, and totals. It says where the opening balances come from, and lists those that differ from what the source reported. |
-| 2      | Every voucher of the year with its rows. Rows added or struck after registration are marked `added` or `removed`. |
-| 3      | Account ledger: type an account number at `account>`, then Enter. Shows the opening balance, every row on the account by date with the balance after it, and the closing balance. Enter on an empty number goes back. |
+| 2      | Every voucher of the year with its rows in Debit and Credit columns, and the totals. Rows added or struck after registration are marked `(added)` or `(removed)`, with the signature when there is one; a removed row does not count in the totals. |
+| 3      | Account ledger: type an account number at `account>`, then Enter. Shows the opening balance, every row on the account by date in Debit and Credit columns with the balance after it, and the closing balance. Enter on an empty number goes back. |
 | -      | Goes back: from the reports to the years (or to the fiscal year prompt they were opened from), from the years to `project>`. |
 | h      | Opens this manual.                                              |
 | q      | Quits cratchit.                                                 |
 
-Amounts have two decimals, debit positive and credit negative. A report longer
+Amounts have two decimals. Rows show debit and credit in columns of their own,
+without sign; balances are debit positive and credit negative. A report longer
 than the terminal window is shown a page at a time with `--More--`: space or
 Enter shows the next page, `-` or `q` stops. After a report the report menu is
 shown again.

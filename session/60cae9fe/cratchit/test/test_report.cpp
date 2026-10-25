@@ -78,13 +78,17 @@ TEST(Report, VoucherListMarksAddedAndRemovedRows) {
             "2 vouchers\n"
             "\n"
             "A 1  2026-01-10  Sale\n"
-            "          1930             100.00  Bank\n"
-            "          3010            -100.00  Sales\n"
+            "  Account        Debit       Credit\n"
+            "  1930          100.00               Bank\n"
+            "  3010                       100.00  Sales\n"
+            "  Total         100.00       100.00\n"
             "\n"
             "B 1  2026-01-11  Fix\n"
-            "          1930               0.00  Bank\n"
-            "  removed 6570               5.00  Wrong (by Kim)\n"
-            "  added   1930               0.00  Added (by Kim)\n");
+            "  Account        Debit       Credit\n"
+            "  1930            0.00               Bank\n"
+            "  6570            5.00               Wrong  (removed by Kim)\n"
+            "  1930            0.00               Added  (added by Kim)\n"
+            "  Total           0.00         0.00\n");
 }
 
 TEST(Report, AccountLedgerWithRunningBalance) {
@@ -94,11 +98,11 @@ TEST(Report, AccountLedgerWithRunningBalance) {
   EXPECT_EQ(text(*ledger), "Account 1930 Bank ledger 2025-01-01 - 2025-12-31\n"
                            "Test AB\n"
                            "\n"
-                           "Date        Voucher            Amount        Balance  Text\n"
-                           "Opening balance                              1000.00\n"
-                           "2025-02-01  A 1                500.00        1500.00  Sale\n"
-                           "2025-03-01  A 2                -10.00        1490.00  Bank cost\n"
-                           "Closing balance                              1490.00\n");
+                           "Date        Voucher             Debit         Credit        Balance  Text\n"
+                           "Opening balance                                             1000.00\n"
+                           "2025-02-01  A 1                500.00                       1500.00  Sale\n"
+                           "2025-03-01  A 2                                10.00        1490.00  Bank cost\n"
+                           "Closing balance                                             1490.00\n");
 }
 
 TEST(Report, LedgerOfAnUnknownAccountIsNothing) {

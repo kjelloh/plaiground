@@ -1,5 +1,7 @@
 #include "core/books/report.hpp"
 
+#include "core/books/columns.hpp"
+
 #include <algorithm>
 #include <format>
 #include <set>
@@ -117,16 +119,16 @@ std::vector<std::string> voucher_list(Books const& books, std::size_t year_index
                                 voucher.event.heading,
                                 voucher.registered ? std::format("  (registered {})", format_iso_date(*voucher.registered))
                                                    : std::string{}));
+    lines.push_back("  " + posting_heading());
     for (auto const& t : voucher.postings) {
-      auto const mark = t.kind == Posting::Kind::added     ? "added"
-                        : t.kind == Posting::Kind::removed ? "removed"
-                                                           : "";
       auto text = t.text.empty() ? account_name(books, t.account) : t.text;
-      if (!t.signature.empty() && t.kind != Posting::Kind::normal) {
-        text += std::format(" (by {})", t.signature);
+      if (t.kind != Posting::Kind::normal) {
+        text += t.kind == Posting::Kind::added ? "  (added" : "  (removed";
+        text += t.signature.empty() ? ")" : std::format(" by {})", t.signature);
       }
-      lines.push_back(std::format("  {:<8}{:<8}{:>15}  {}", mark, t.account, format_amount(t.amount), text));
+      lines.push_back("  " + posting_row(t.account, t.amount, text));
     }
+    lines.push_back("  " + posting_total(voucher.postings));
   }
   return lines;
 }
@@ -155,17 +157,19 @@ std::optional<std::vector<std::string>> account_ledger(Books const& books, std::
   auto const number = std::string(account);
   auto const name = account_name(books, account);
   auto lines = heading(std::format("Account {}{} ledger", number, name.empty() ? "" : " " + name), year, company);
-  lines.push_back(std::format("{:<12}{:<10}{:>15}{:>15}  {}", "Date", "Voucher", "Amount", "Balance", "Text"));
+  lines.push_back(
+      std::format("{:<12}{:<10}{:>15}{:>15}{:>15}  {}", "Date", "Voucher", "Debit", "Credit", "Balance", "Text"));
   Amount balance = value_or_zero(all[year_index].opening, number);
-  lines.push_back(std::format("{:<22}{:>15}{:>15}", "Opening balance", "", format_amount(balance)));
+  lines.push_back(std::format("{:<22}{:>15}{:>15}{:>15}", "Opening balance", "", "", format_amount(balance)));
   for (auto const& entry : entries) {
     balance += entry.posting->amount;
     auto const text = entry.posting->text.empty() ? entry.voucher->event.heading : entry.posting->text;
-    lines.push_back(std::format("{:<12}{:<10}{:>15}{:>15}  {}", format_iso_date(entry.date),
-                                std::format("{} {}", entry.voucher->series, entry.voucher->number),
-                                format_amount(entry.posting->amount), format_amount(balance), text));
+    auto const sides = sides_of(entry.posting->amount);
+    lines.push_back(std::format("{:<12}{:<10}{:>15}{:>15}{:>15}  {}", format_iso_date(entry.date),
+                                std::format("{} {}", entry.voucher->series, entry.voucher->number), sides.debit,
+                                sides.credit, format_amount(balance), text));
   }
-  lines.push_back(std::format("{:<22}{:>15}{:>15}", "Closing balance", "", format_amount(balance)));
+  lines.push_back(std::format("{:<22}{:>15}{:>15}{:>15}", "Closing balance", "", "", format_amount(balance)));
   return lines;
 }
 

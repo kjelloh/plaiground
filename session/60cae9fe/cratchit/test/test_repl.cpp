@@ -832,7 +832,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
                         "OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
-                        "      6570 10.00  1930 -10.00\n"
+                        "      6570 D 10.00  1930 C 10.00\n"
                         "\n"
                         "Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, "
                         "q to quit.\n"
@@ -850,18 +850,20 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
       << output;
   EXPECT_NE(output.find("Rows from A 2 are suggested one at a time, scaled to the amount: Enter takes the suggestion,\n"
                         "or type your own row instead.\n"
-                        "  Suggested 6570          35.00  Bank costs\n"
+                        "  Suggested 6570           35.00               Bank costs\n"
                         "post> \n"
-                        "  6570          35.00  Bank costs\n"
+                        "  6570           35.00               Bank costs\n"
                         "  Remaining -35.00 (debit 35.00, credit 0.00, amount 35.00).\n"
-                        "  Suggested 1930         -35.00  Bank\n"
+                        "  Suggested 1930                        35.00  Bank\n"
                         "post> \n"
-                        "  1930         -35.00  Bank\n"
+                        "  1930                        35.00  Bank\n"
                         "  Balanced. Enter saves.\n"
                         "post> \n"
                         "Voucher A 3 2025-03-31 \"Bank cost march\"\n"
-                        "  6570          35.00  Bank costs\n"
-                        "  1930         -35.00  Bank\n"
+                        "  Account        Debit       Credit\n"
+                        "  6570           35.00               Bank costs\n"
+                        "  1930                        35.00  Bank\n"
+                        "  Total          35.00        35.00\n"
                         "Save as A 3? (y/n) y\n"
                         "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
                         "Updated .cratchit/books/2025-01-01/postings.csv in " + folder.string() + "\n"
@@ -1037,7 +1039,7 @@ TEST_F(WorkspaceRepl, RowsListAccountsRemoveAndDrop) {
       << output;
   EXPECT_NE(output.find("post> \n  Remaining 100.00 (debit 0.00, credit 100.00, amount 100.00).\n"), std::string::npos)
       << output;
-  EXPECT_NE(output.find("post> -\nRemoved  1930        -100.00  Bank\n  No rows.\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("post> -\nRemoved  1930                       100.00  Bank\n  No rows.\n"), std::string::npos) << output;
   EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\n2025> \n")) << output;
 }
 
@@ -1076,7 +1078,7 @@ TEST_F(WorkspaceRepl, RowsMustAddUpToTheAmountToSave) {
   run("itest.se\nyy0");
   auto const output = run("eBank cost 35 2025-03-31\nyn\n6570 10\n1930\n\n6570\n6570 25\n1930 -25\n\n");
   EXPECT_NE(output.find("post> 1930\n"
-                        "  1930         -10.00  Bank\n"
+                        "  1930                        10.00  Bank\n"
                         "  Debit 10.00, credit 10.00, amount 35.00: debit and credit must each reach the amount.\n"
                         "post> \n"
                         "  Debit 10.00, credit 10.00, amount 35.00: debit and credit must each reach the amount.\n"
@@ -1086,8 +1088,13 @@ TEST_F(WorkspaceRepl, RowsMustAddUpToTheAmountToSave) {
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with("  Balanced. Enter saves.\npost> \nVoucher A 3 2025-03-31 \"Bank cost\"\n"
-                               "  6570          10.00  Bank costs\n  1930         -10.00  Bank\n"
-                               "  6570          25.00  Bank costs\n  1930         -25.00  Bank\nSave as A 3? (y/n) \n"))
+                               "  Account        Debit       Credit\n"
+                               "  6570           10.00               Bank costs\n"
+                               "  1930                        10.00  Bank\n"
+                               "  6570           25.00               Bank costs\n"
+                               "  1930                        25.00  Bank\n"
+                               "  Total          35.00        35.00\n"
+                               "Save as A 3? (y/n) \n"))
       << output;
 }
 
@@ -1100,9 +1107,9 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   EXPECT_NE(output.find("OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
-                        "      6570 10.00  1930 -10.00\n"
+                        "      6570 D 10.00  1930 C 10.00\n"
                         "  2  A 1  2025-02-01        500.00  Sale\n"
-                        "      1930 500.00  3010 -500.00\n"),
+                        "      1930 D 500.00  3010 C 500.00\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("template?> 2\nSeries (Enter = A, as A 1 2025-02-01 \"Sale\"):\n"), std::string::npos) << output;
@@ -1110,18 +1117,18 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   EXPECT_NE(output.find("template?> -\nvoucher> Bank cost sale 25 2025-04-01"), std::string::npos) << output;
   // The suggestion is scaled to 25.00; a typed row replaces it, and the last row takes what remains
   EXPECT_NE(output.find("Rows from A 2 are suggested"), std::string::npos) << output;
-  EXPECT_NE(output.find("  Suggested 6570          25.00  Bank costs\n"
+  EXPECT_NE(output.find("  Suggested 6570           25.00               Bank costs\n"
                         "post> 3010 -20\n"
-                        "  3010         -20.00  Sales\n"
+                        "  3010                        20.00  Sales\n"
                         "  Remaining 20.00 (debit 0.00, credit 20.00, amount 25.00).\n"
-                        "  Suggested 1930          20.00  Bank\n"
+                        "  Suggested 1930           20.00               Bank\n"
                         "post> \n"
-                        "  1930          20.00  Bank\n"
+                        "  1930           20.00               Bank\n"
                         "  Debit 20.00, credit 20.00, amount 25.00: debit and credit must each reach the amount.\n"
                         "post> -\n"
-                        "Removed  1930          20.00  Bank\n"
+                        "Removed  1930           20.00               Bank\n"
                         "  Remaining 20.00 (debit 0.00, credit 20.00, amount 25.00).\n"
-                        "  Suggested 1930          20.00  Bank\n"),
+                        "  Suggested 1930           20.00               Bank\n"),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\n2025> \n")) << output;
@@ -1149,8 +1156,10 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
                         "Press a number to view it, - to go back, h for help, q to quit.\n"
                         "voucher?> 1\n"
                         "Voucher A 3 2025-03-31 \"Bank cost march\" 35.00\n"
-                        "  6570          35.00  Bank costs\n"
-                        "  1930         -35.00  Bank\n"
+                        "  Account        Debit       Credit\n"
+                        "  6570           35.00               Bank costs\n"
+                        "  1930                        35.00  Bank\n"
+                        "  Total          35.00        35.00\n"
                         "  Registered 2026-10-20, entered in cratchit\n"
                         "\n"
                         "Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.\n"
@@ -1176,9 +1185,9 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
       << output;
   EXPECT_NE(output.find("The rows of A 3, reversed, are suggested one at a time: Enter takes the suggestion,\n"
                         "or type your own row instead.\n"
-                        "  Suggested 6570         -35.00  Bank costs\n"
+                        "  Suggested 6570                        35.00  Bank costs\n"
                         "post> \n"
-                        "  6570         -35.00  Bank costs\n"),
+                        "  6570                        35.00  Bank costs\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("Saved voucher A 4 into fiscal year 2025-01-01 - 2025-12-31.\n"
@@ -1192,7 +1201,7 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
       << output;
   EXPECT_NE(output.find("Rows from A 3 are suggested one at a time, scaled to the amount: Enter takes the suggestion,\n"
                         "or type your own row instead.\n"
-                        "  Suggested 6570          40.00  Bank costs\n"),
+                        "  Suggested 6570           40.00               Bank costs\n"),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with("Saved voucher A 5 into fiscal year 2025-01-01 - 2025-12-31.\n2025> \n")) << output;
@@ -1217,9 +1226,9 @@ TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
       << output;
   EXPECT_NE(output.find("Rows from A 2 are suggested one at a time, scaled to the amount: Enter takes the suggestion,\n"
                         "or type your own row instead.\n"
-                        "  Suggested 6570          20.00  Bank costs\n"
+                        "  Suggested 6570           20.00               Bank costs\n"
                         "post> \n"
-                        "  6570          20.00  Bank costs\n"),
+                        "  6570           20.00               Bank costs\n"),
             std::string::npos)
       << output;
   // A closed year refuses it
@@ -1346,7 +1355,9 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
   EXPECT_NE(output.find("entry?> w\n"
                         "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  1  2025-04-02        100.00  Överföring\n"
-                        "       1930        -100.00  2025-04-02  Bank\n"
+                        "       Account        Debit       Credit\n"
+                        "       1930                       100.00  2025-04-02  Bank\n"
+                        "       Total           0.00       100.00\n"
                         "       Remaining 100.00 (debit 0.00, credit 100.00, amount 100.00).\n"
                         "\n"
                         "Press the number of the event to add the entry to, - to go back, h for help, q to quit.\n"
@@ -1360,14 +1371,16 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
 
   // Posted from the waiting list: the event's postings are the rows, and it balances
   output = run("y0w1\n\ny");
-  EXPECT_NE(output.find("       1930        -100.00  2025-04-02  Bank\n"
-                        "       2099         100.00  2025-04-02  Result\n"
+  EXPECT_NE(output.find("       Account        Debit       Credit\n"
+                        "       1930                       100.00  2025-04-02  Bank\n"
+                        "       2099          100.00               2025-04-02  Result\n"
+                        "       Total         100.00       100.00\n"
                         "       Balanced. Enter saves.\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("The event's postings are the first rows:\n"
-                        "  1930        -100.00  Bank\n"
-                        "  2099         100.00  Result\n"
+                        "  1930                       100.00  Bank\n"
+                        "  2099          100.00               Result\n"
                         "  Balanced. Enter saves.\n"
                         "post> \n"
                         "Voucher A 3 2025-04-02 \"Överföring\"\n"),

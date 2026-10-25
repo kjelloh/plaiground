@@ -25,6 +25,7 @@ add_library(cratchit_core
   src/core/amount.cpp
   src/core/bas.cpp
   src/core/books/books.cpp
+  src/core/books/columns.cpp
   src/core/books/entry.cpp
   src/core/books/import.cpp
   src/core/books/report.cpp

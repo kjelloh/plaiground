@@ -323,6 +323,15 @@ stably after linking `event_postings.csv` rows, so files written in noted order 
 postings and are rewritten sorted on the next write (no format change). Both lists (`waiting?>`, `event?>`) follow.
 Manual: waiting list, `event?>`, files table. 384 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 39: Debit and credit columns (display only; typing at `post>` and the files stay signed). New `core/books/columns`:
+`sides_of(amount)` (zero and up debit, below zero credit, without sign), `posting_heading()` (`Account Debit Credit`),
+`posting_row(account, amount, rest)`, `posting_total(postings)` (removed not counted), `posting_brief(posting)`
+(`1930 C 1118.00`). Used by: voucher view and save preview (heading + rows + Total), rows and `Suggested` at `post>`,
+a waiting event's postings (heading + rows + Total, then the status), template list (brief, one line), voucher report
+(heading + rows + Total; marks now `(added by X)` / `(removed by X)` after the text), account ledger (Debit and Credit
+columns, balance still signed). Trial balance, statement entries and import messages unchanged. Manual: rows, template
+list, saving, voucher view, waiting list, reports. 388 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -454,6 +463,11 @@ into a waiting event without making a voucher, several entries chosen at once.
 
 - 2026-10-25: Waiting events are listed by date, oldest first, ties in the order noted. The order is kept in the books
   (`place_waiting` is the only way in), so a future date edit re-places the event through the same function.
+
+- 2026-10-25: Posting lists show the amount without sign in a Debit or a Credit column (zero as debit), with a heading
+  and a Total line where a whole voucher or a waiting event's postings are shown; a removed posting stays in its column,
+  marked, and does not count in the totals. Template lists use the one-line form `1930 C 1118.00`. Labels Debit/Credit.
+  Input stays signed; balances (trial balance, ledger balance) stay signed.
 
 ## Open questions
 
