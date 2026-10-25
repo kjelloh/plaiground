@@ -2,6 +2,50 @@
 
 ```#60cae9fe```
 
+## 20261025
+
+I have now decided to try and complete booking the events for my companies next VAT returns report and make notes on what works and what may need fixing?
+
+* It would look nice I think if Debit/Credit for postings where listed in separate columns?
+    * Like Debit to the right and Credit to the left?
+    * Maybe also with a saldo line for Debit and Credit as a 'current balance' row?
+    * In edit mode the saldo row can serve also as 'what is left' for next posting?
+* The 'waiting list' mode should be retained while editing I think.
+    * So when an entry is made into a voucher, the remaining waiting list is shown.
+    * So the user can just continue to pick from the list until it is empty.
+* I still think it would be nice to be able to enter a financial event with an Euro amount?
+    * We know for now that it will be transacted in SEK still
+    * So the event / voucher amount needs to be carried along until it is no longer required.
+    * Maybe have the heading of the event be amended with the Eruo amount in the final books?
+    * That could at least give a nice feed back for reading the events (although no actual official amounts are booked in Euro for now)?
+* We may need to be able to adjust date and amount when turning a waiting event into a voucher?
+    * In this way the user can adjust any errors in entering the event?
+
+OK, I hit a show-stopper when trying to enter a return (credit) invoice
+
+* The pick template works (It shall be registered as an invoice in series D ok)
+* And the BAS account 'leverantörsskuklder' cratchit suggests is also correct.
+* But the sign is wrong! This credit invoice means to Debit 'leverantörsskulder'
+* I also was not able to 'undo' when I managed to post to the first suggested account.
+* I also do not know how to exit out of the 'add posting' mode (go back to the waiting list)
+
+So it seems we need an enhanced user interface while editing the postings of the event?
+
+* We should be able to pick previous (or any) posting?
+* We should be able to change a selected posting
+* Maybe a full fledge 'edit postings' UI where we can both edit and remove a posting?
+* We need a way to exit back to the waiting list
+
+What could be a first design for such an enhanced 'edit post list' UI?
+
+So I asked Claude and after some back and forth ti implemented a solution.
+
+* But I did NOT like the solution.
+* So I reverted and tried again.
+* The solution was partly my fault and partly Claude just not piecing the UI together in a logical way.
+
+
+
 ## 20261024
 
 I have now decided to 'brute force' functionality by Vibe coding and don't care too much about code structure or design.
@@ -28,7 +72,7 @@ I made a quick view run-through and it seems to work just fine.
 * I now tried the following prompt:
 
 ```
-Time for next task to parse account statements into something to use as base for creating appropriate events and vouchers. I have added a larger set of account statements in _resources/_from_bank_or_skv. I think I want a parser that creats some form of 'account statement document' in memory. I think I want it to hold only valid debit and credit posting to the account. A valid account posting shall have at least the Date, posted amount and a caption text. The account statement file may list the postings in forward or reverse order. It may provide an optional saldo amount. It would be nice if the parser is able to identify the Date and the posted amount on column content only. That is, we expect a valid row to contain only one pure date column and at least one pure amount column. Maybe we can assemble a text by somehow assemble identified text columns into one text? If possible, I want the parser to verify Saldo amounts by running a row-by-row accumulation to verify that posted amounts add up to the running saldo amount where ther is one. I want to leave using the account statement document for now to first see what we can design? What can you propose?
+Time for next task to parse account statements into something to use as base for creating appropriate events and vouchers. I have added a larger set of account statements in _resources/_from_bank_or_skv. I think I want a parser that creates some form of 'account statement document' in memory. I think I want it to hold only valid debit and credit posting to the account. A valid account posting shall have at least the Date, posted amount and a caption text. The account statement file may list the postings in forward or reverse order. It may provide an optional saldo amount. It would be nice if the parser is able to identify the Date and the posted amount on column content only. That is, we expect a valid row to contain only one pure date column and at least one pure amount column. Maybe we can assemble a text by somehow assemble identified text columns into one text? If possible, I want the parser to verify Saldo amounts by running a row-by-row accumulation to verify that posted amounts add up to the running saldo amount where there is one. I want to leave using the account statement document for now to first see what we can design? What can you propose?
 ```
 
 * Now Claude also picked up my spec in this session document (which turned out to be a good thing)!
@@ -38,7 +82,7 @@ Time for next task to parse account statements into something to use as base for
     * Also, fall back to any Latin-based encoding may not work world-wide?
     * I mean, For slavic languages, different scandinavian langues etc., we can assume we know what sub-set of Latin we are dealing with?
     * I asked for text joining with ','
-    * I asked for identifying open and close balance by matching running posted amounts against them (open slado + running posts = close saldo)
+    * I asked for identifying open and close balance by matching running posted amounts against them (open saldo + running posts = close saldo)
 
 I have now vibe coded 'import account statement' file(s)
 
@@ -282,7 +326,7 @@ So I asked Claude to investigate and the answer is annoying.
 
 * It seems BAS charges 4000 SEK ex VAT for a json-file.
     * And this json-file is then only licensed for won use (not copy, share or sub-license)
-* And the free pdf-s are fragile to read (sais Claude)
+* And the free pdf-s are fragile to read (says Claude)
 
 OK, So where are we?
 
