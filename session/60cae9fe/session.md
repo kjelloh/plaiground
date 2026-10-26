@@ -2,6 +2,114 @@
 
 ```#60cae9fe```
 
+## 20261026
+
+So maybe we should now go straight for the VAT Returns report?
+
+* We need some form of representation (specification) of the VAT Returns report as defined by SKV?
+    * Can I ask Claude or should I dig up my previous research implemented in cratchit::zeroth?
+    * It seems cratchit::zeroth uses a CSV snippet from somewhere (unclear form where)?
+
+```cpp
+char const* ACCOUNT_VAT_CSV = R"(KONTO;BENÄMNING;MOMSKOD (MOMSRUTA);SRU
+3305;Försäljning tjänster till land utanför EU;ÖTEU (40);7410
+3521;Fakturerade frakter, EU-land;VTEU (35);7410
+// ...
+``` 
+
+I tried to browse SKV web site for actual machine readable specifications?
+
+* It is a MESS!
+* I fail to find any indications about where to find technical specifications?
+* AHA! There is something called [Utvecklarportalen](https://www7.skatteverket.se/portal/apier-och-oppna-data/utvecklarportalen)?
+* There seems to be an API for VAT Returns report [Momsdeklaration 1.0](https://www7.skatteverket.se/portal/apier-och-oppna-data/utvecklarportalen/api/momsdeklaration/1.0.25/Översikt)?
+* I seem to have found a pdf that defines the REST API for the VAT Returs report [](https://www7.skatteverket.se/portal-wapi/open/apier-och-oppna-data/utvecklarportalen/v1/getFile/tjanstebeskrivning-momsdeklaration-v1-0/pdf/1.0.9/Tjanstebeskrivning-Momsdeklaration-v1.pdf)
+
+    * I think the section '4.1.1.3 Momsuppgift Det underlag som ska läsas in och kontrolleras' defines cross references between API, Paper report boxes and XML file for the VAT Returns report?
+    * The table in '4.1.1.4 Beskrivning av API:ets momsuppgifter' seems legit?
+    * But the pdf does to enable copy-and-paste that preserves the table structure *SIGH*
+* I seem to remember there is a zip-file to download with SKV forms that I used for cratchit::zeroth?
+    * Yes, it is [Teknisk information om filöverföring](https://www.skatteverket.se/foretag/inkomstdeklaration/forredovisningsbyraer/tekniskinformationomfiloverforing.4.13948c0e18e810bfa0cca8.html)
+    * But this is for files based on INFO.SRU and BLANKETTER.SRU
+    * The VAT Returns report is an XML file that can't be provided with these SRU-based files?
+* 
+    * Google AI states.
+
+    ```
+    • Period 1 (P1): Företag med bokslut som slutar under perioden januari till april.
+    • Period 2 (P2): Företag med bokslut som slutar under perioden maj till juni.
+    • Period 3 (P3): Företag med bokslut som slutar under perioden juli till augusti.
+    • Period 4 (P4): Företag med bokslut som slutar under perioden september till december (här ingår det vanligaste kalenderåret).
+    ```
+
+    * So my ITfied that ends its year April 30:th is period P1 then?
+
+* AHA! I now seem to have found information about XML files at [Testtjänst och teknisk beskrivning](https://www.skatteverket.se/foretag/skatterochavdrag/kontrolluppgifter/testtjanstochtekniskbeskrivning.4.233f91f71260075abe8800073614.html)
+
+I browsed around for a while but got nowhere! SO I tried asking Claude.
+
+```
+I now want to start designing the arhcitecture to create VAT Returns reports to SKV. But it is quite vauge where I can find some reliable specs to use? I have a previous implementation based on a csv-snippet in a constant 'ACCOUNT_VAT_CSV' @/Users/kjell-olovhogdahl/Documents/GitHub/cratchit/src/fiscal/SKVFramework.*. But I seem to have forgotten where I got this csv from. What can you do to help me find the source?
+```
+
+I GIVE UP!
+
+* Claude is willing to help and sounds ensuring.
+* Still, I can't trust what it proposes and it goes down elaborate rabbit holes that I find over complicated.
+
+I seems I have found the SKV 'specification' on how to fill in the VAT Returns report?
+
+* It seems to be described at [Fylla i momsdeklarationen](https://www.skatteverket.se/foretag/moms/deklareramoms/fyllaimomsdeklarationen.4.3a2a542410ab40a421c80004214.html)
+
+It seems I have found the specification for the XML-file format for the VAT Returns form to SKV.
+
+* It is described at [Lämna momsdeklaration via fil i e-tjänsten](https://www.skatteverket.se/foretag/moms/deklareramoms/lamnamomsdeklarationviafilietjansten.4.2fb39afe18dabf1e4d223cc.html)
+
+    * The file seems to have three sections
+
+    ```
+    Inledning (Header)
+    Momsinformation
+    Avslut
+    ```
+
+    * The mandatory rows for the headers seems to be defined as:
+
+    ```
+
+    Rad 1       
+        <?xml version="1.0" encoding="ISO-8859-1"?> 
+        Måste finnas med.
+    Rad 2       
+        <eSKDUpload Version="6.0">                  
+        Måste finnas med.
+    Rad 3       
+        <OrgNr>556000-0175</OrgNr>                  
+        Den momsregistrerades person-, samordnings- organisations- eller representantnummer. Ange numret med 10 siffror enligt formatet xxxxxx-xxxx, med bindestreck. Organisationsnumret i exemplet är påhittat.
+    Rad 4   
+        <Moms>
+        Måste finnas med.
+    Rad 5 
+        <Period>202501</Period>
+        Redovisningsperiod. Använd följande format.
+        Månadsredovisning: År och månad, 202501 (januari 2025)
+        Kvartalsredovisning: År och den sista månaden i aktuellt kvartal, 202503 (första kvartalet 2025)
+        Helt beskattningsår: År och den sista månaden i beskattningsåret, 202512 (om beskattningsår motsvaras av ett kalenderår motsvarar exemplet januari–december 2025).
+    ```
+
+After all this chatting with Claude and browsing myself - I GIVE UP!
+
+* I think I have to manually write the seed a mapping from BAS accounts to VAT Returns form box nos?
+
+    * I use the web form I get presented when using SKV VAT Returns report web interface.
+
+I now manually created mapping csv-documents.
+
+* [momsrapport](./resources/momsrapport/momsrapport.csv)
+* [bas_to_momsrapport](./resources/momsrapport/bas_to_momsrapport.csv)
+
+
+
 ## 20261025
 
 I have now decided to try and complete booking the events for my companies next VAT returns report and make notes on what works and what may need fixing?
