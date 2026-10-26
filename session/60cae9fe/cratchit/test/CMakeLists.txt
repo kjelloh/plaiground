@@ -31,6 +31,7 @@ add_executable(cratchit_tests
   test_statement.cpp
   test_terminal_encoding.cpp
   test_utf8.cpp
+  test_vat_return.cpp
   test_version.cpp
   test_workspace.cpp
 )

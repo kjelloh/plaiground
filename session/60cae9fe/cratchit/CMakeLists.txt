@@ -20,6 +20,12 @@ file(READ MANUAL.md manual_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
 configure_file(src/core/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
+# Likewise the boxes of SKV's VAT return that accounts report in
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS resources/momsrapport/bas_to_momsrapport.csv)
+file(READ resources/momsrapport/bas_to_momsrapport.csv account_boxes_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," account_boxes_bytes "${account_boxes_hex}")
+configure_file(src/core/skv/vat_return/account_boxes.cpp.in generated/account_boxes.cpp @ONLY)
+
 # All application logic lives in the core library
 add_library(cratchit_core
   src/core/amount.cpp
@@ -53,6 +59,9 @@ add_library(cratchit_core
   src/core/sie/document.cpp
   src/core/sie/file.cpp
   src/core/sie/lexer.cpp
+  src/core/skv/vat_return/box.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/account_boxes.cpp
+  src/core/skv/vat_return/document.cpp
   src/core/statement/statement.cpp
   src/core/terminal.cpp
   src/core/terminal_encoding.cpp

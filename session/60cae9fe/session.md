@@ -105,10 +105,10 @@ After all this chatting with Claude and browsing myself - I GIVE UP!
 
 I now manually created mapping csv-documents.
 
-* [momsrapport](./resources/momsrapport/momsrapport.csv)
-* [bas_to_momsrapport](./resources/momsrapport/bas_to_momsrapport.csv)
+* [momsrapport](./cratchit/resources/momsrapport/momsrapport.csv)
+* [bas_to_momsrapport](./cratchit/resources/momsrapport/bas_to_momsrapport.csv)
 
-
+I now asked Claude to implement code that applies bas_to_momsrapport over vouchers for a period and creates a document type holding the accumulated vat returns form amounts.
 
 ## 20261025
 

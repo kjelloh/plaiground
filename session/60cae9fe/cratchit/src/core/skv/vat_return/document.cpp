@@ -1,0 +1,53 @@
+#include "core/skv/vat_return/document.hpp"
+
+#include <map>
+#include <utility>
+
+namespace cratchit::skv::vat_return {
+
+std::optional<Period> quarter_of(std::chrono::year year, unsigned quarter) {
+  if (quarter < 1 || quarter > 4) {
+    return std::nullopt;
+  }
+  auto const first = std::chrono::month{3 * quarter - 2};
+  auto const last = std::chrono::month{3 * quarter};
+  return Period{year / first / 1, year / last / std::chrono::last};
+}
+
+Document document_of(books::Books const& books, Period period) {
+  // box -> account -> its postings
+  std::map<Box, std::map<std::string, std::vector<VoucherPosting>>> found;
+  for (auto const& year : books.years) {
+    for (auto const& voucher : year.vouchers) {
+      auto const date = voucher.event.date;
+      if (date < period.first || period.last < date) {
+        continue;
+      }
+      for (auto const& posting : voucher.postings) {
+        if (posting.kind == books::Posting::Kind::removed) {
+          continue;
+        }
+        if (auto const box = box_of(posting.account)) {
+          found[*box][posting.account].push_back({year.start, voucher.series, voucher.number, date, posting.amount});
+        }
+      }
+    }
+  }
+
+  Document document{period, {}};
+  for (auto& [box, accounts] : found) {
+    BoxAmount box_amount{box, 0, {}};
+    for (auto& [account, postings] : accounts) {
+      AccountAmount account_amount{account, 0, std::move(postings)};
+      for (auto const& posting : account_amount.postings) {
+        account_amount.amount += posting.amount;
+      }
+      box_amount.amount += account_amount.amount;
+      box_amount.accounts.push_back(std::move(account_amount));
+    }
+    document.boxes.push_back(std::move(box_amount));
+  }
+  return document;
+}
+
+} // namespace cratchit::skv::vat_return

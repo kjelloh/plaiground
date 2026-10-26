@@ -387,6 +387,17 @@ Credit columns (`Repl::show_counted_rows`: `posting_heading` + `posting_row` wit
 out, no Total), with the voucher's own amounts. `posting_brief` is kept for the match view's "Not in the voucher"
 sentence only. Manual: The template, The hint. 407 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 45: VAT return boxes (`core/skv/vat_return`, namespace `cratchit::skv::vat_return`), in memory only, no UI yet.
+`resources/momsrapport/bas_to_momsrapport.csv` (`account;box;code`) is built into the binary like MANUAL.md
+(`account_boxes_text()`, internal header `account_boxes.hpp`; `account_boxes(text)`: BOM/CR/blank lines skipped, code
+not read, error names the line: account not four digits, box not two digits, account listed before).
+`box_of(account)` -> optional `Box` (two-digit string). `Period` (first, last day), `quarter_of(year, 1-4)` calendar
+quarters. `document_of(books, period)` -> `Document`: period, boxes by number (only those with postings), each with
+its signed sum (debit +), its accounts (sum + `VoucherPosting`s: fiscal year start, series, number, date, amount).
+Vouchers by date from every fiscal year (a quarter may span two); removed postings do not count; no rounding, no
+box 49 calculation, every series counted (incl. M). Not logged (a broken built-in table logs a design insufficiency).
+No manual change. 414 tests pass, no warnings (Debug, trace DEBUG). Not run on real books yet. In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -541,6 +552,11 @@ into a waiting event without making a voucher, several entries chosen at once.
 
 - 2026-10-25: Hint of counter accounts on request only (`?` at `post>` and `postings>`), from vouchers and waiting
   events with the account on the same side as in the rows; counts and list length are constants to tweak later.
+
+- 2026-10-26: VAT return: first step only adds up postings on accounts into boxes by `bas_to_momsrapport.csv`;
+  `momsrapport.csv` (box texts, sections) comes later. Named for the SKV domain (`skv::vat_return`, `box_of`,
+  `Document`), not as a mapping. Calendar quarters. Document only, no UI. The Momsrapport voucher (series M) is
+  counted like any other: it is meant to zero out what has been reported to SKV.
 
 ## Open questions
 
