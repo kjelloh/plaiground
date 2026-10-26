@@ -606,7 +606,7 @@ void Repl::on_operation(Op op, std::ostream& out) {
                   PathEditor::Kind::Event);
     mode_ = Mode::Typing;
     std::println(out, "Type the heading, amount and date of the one event; the older event's are typed in for you.");
-    std::println(out, "Backspace erases, Enter accepts. Enter on an empty line goes back.");
+    std::println(out, "Backspace erases, Enter accepts. - or Enter on an empty line goes back.");
     out << editor_.prompt();
     break;
   }
@@ -642,7 +642,7 @@ void Repl::on_operation(Op op, std::ostream& out) {
                    format_iso_date(year.start), format_iso_date(year.end));
     } else if (op == Op::NewEventFromEntry) {
       std::println(out,
-                   "Type the heading of the event. Backspace erases, Enter accepts. Enter on an empty line goes back.");
+                   "Type the heading of the event. Backspace erases, Enter accepts. - or Enter on an empty line goes back.");
       purpose_ = Purpose::EventHeading;
       editor_.start(open_entries_[chosen_entry_].entry.text, PathEditor::Kind::Heading);
       mode_ = Mode::Typing;
@@ -814,7 +814,7 @@ void Repl::show_choices(std::ostream& out) {
 void Repl::start_typing(std::ostream& out) {
   mode_ = Mode::Typing;
   std::println(out, "Type the folder path. Tab completes a folder name, Backspace erases, Enter accepts.");
-  std::println(out, "Enter on an empty path goes back.");
+  std::println(out, "- or Enter on an empty path goes back.");
   out << editor_.prompt();
 }
 
@@ -838,9 +838,13 @@ void Repl::on_choose_key(charset::unicode::CodePoint key, std::ostream& out) {
 }
 
 void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const result = editor_.on_key(key, out);
+  auto result = editor_.on_key(key, out);
   if (result == PathEditor::Result::Typing) {
     return;
+  }
+  // - on an empty buffer goes back as Enter on an empty line does, except in a row (see on_row)
+  if (result == PathEditor::Result::Back && purpose_ != Purpose::Row) {
+    result = PathEditor::Result::Cancelled;
   }
   if (purpose_ == Purpose::Voucher) {
     if (result == PathEditor::Result::Cancelled && merging_) {
@@ -1134,7 +1138,7 @@ void Repl::start_project_typing(Purpose purpose, std::ostream& out) {
     editor_.start("", PathEditor::Kind::Name);
     mode_ = Mode::Typing;
     std::println(out, "Type the official name of the person, company or organisation. Backspace erases, Enter accepts.");
-    std::println(out, "Enter on an empty name goes back.");
+    std::println(out, "- or Enter on an empty name goes back.");
     out << editor_.prompt();
     return;
   }
@@ -1264,7 +1268,7 @@ void Repl::start_import(std::ostream& out) {
   editor_.start((places_.start_folder / "").string(), PathEditor::Kind::File);
   mode_ = Mode::Typing;
   std::println(out, "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace erases,");
-  std::println(out, "Enter accepts. Enter on an empty path goes back.");
+  std::println(out, "Enter accepts. - or Enter on an empty path goes back.");
   out << editor_.prompt();
 }
 
@@ -1446,7 +1450,7 @@ void Repl::on_reports_key(charset::unicode::CodePoint key, std::ostream& out) {
     purpose_ = Purpose::Account;
     editor_.start("", PathEditor::Kind::Account);
     mode_ = Mode::Typing;
-    std::println(out, "Type the account number. Backspace erases, Enter accepts. Enter on an empty number goes back.");
+    std::println(out, "Type the account number. Backspace erases, Enter accepts. - or Enter on an empty number goes back.");
     out << editor_.prompt();
   } else if (key == U'-' && before_reports_ == Mode::Year) {
     mode_ = Mode::Year;
@@ -1611,7 +1615,7 @@ bool Repl::start_entry(bool noting, std::ostream& out, std::string const& line) 
   mode_ = Mode::Typing;
   std::println(out, "Type the heading, amount and date of the {}, e.g. Telia faktura oktober 1118,00 2026-10-22.",
                noting ? "event to post later" : "voucher");
-  std::println(out, "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.");
+  std::println(out, "No date means today. Backspace erases, Enter accepts. - or Enter on an empty line goes back.");
   out << editor_.prompt();
   return true;
 }
@@ -1873,14 +1877,14 @@ void Repl::show_draft(std::ostream& out) const {
   std::println(out, "  {}", books::posting_total(draft_->postings));
 }
 
-void Repl::start_rows(std::ostream& out) {
+void Repl::start_rows(std::ostream& out, std::string text) {
   if (auto const suggested = draft_->suggestion()) {
     auto const* account = books_.account(suggested->account);
     std::println(out, "  Suggested {}",
                  books::posting_row(suggested->account, suggested->amount, account ? account->name : ""));
   }
   purpose_ = Purpose::Row;
-  editor_.start("", PathEditor::Kind::Row);
+  editor_.start(std::move(text), PathEditor::Kind::Row);
   mode_ = Mode::Typing;
   out << editor_.prompt();
 }
@@ -1888,7 +1892,18 @@ void Repl::start_rows(std::ostream& out) {
 void Repl::on_row(PathEditor::Result result, std::ostream& out) {
   auto& rows = draft_->postings;
   auto const text = trimmed(editor_.text());
-  if (result == PathEditor::Result::Cancelled || text.empty()) {
+  if (result == PathEditor::Result::Hint) {
+    // ? alone at once; what is typed after it gives its own hint on Enter
+    on_hint_line("", out);
+    start_rows(out, "?");
+    return;
+  }
+  if (text == "?") {
+    // The hint is already shown
+    start_rows(out);
+    return;
+  }
+  if (result != PathEditor::Result::Back && (result == PathEditor::Result::Cancelled || text.empty())) {
     if (draft_->is_balanced()) {
       open_postings(out);
       return;
@@ -1908,7 +1923,7 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
     start_rows(out);
     return;
   }
-  if (text == "-") {
+  if (result == PathEditor::Result::Back) {
     if (rows.empty()) {
       std::println(out, "Dropped the voucher. Nothing is saved.{}", from_waiting_ ? " The event is still waiting." : "");
       draft_.reset();
@@ -1987,7 +2002,7 @@ void Repl::on_hint_line(std::string_view query, std::ostream& out) const {
   auto sides = books::sides_in(draft_->postings);
   if (query.empty()) {
     if (sides.empty()) {
-      std::println(out, "No rows yet. Type ? and an account for its hint, e.g. ? 1930.");
+      std::println(out, "No rows yet. Type an account after the ? for its hint, e.g. ? 1930.");
       return;
     }
     show_hints(sides, out);
@@ -2729,7 +2744,7 @@ void Repl::start_statement(std::ostream& out) {
   editor_.start((places_.start_folder / "").string(), PathEditor::Kind::File);
   mode_ = Mode::Typing;
   std::println(out, "Type the path of the account statement file, or of a folder to list its files. Tab completes a");
-  std::println(out, "folder or file name, Backspace erases, Enter accepts. Enter on an empty path goes back.");
+  std::println(out, "folder or file name, Backspace erases, Enter accepts. - or Enter on an empty path goes back.");
   out << editor_.prompt();
 }
 
@@ -2848,7 +2863,7 @@ void Repl::check_statement(fs::path const& file, std::ostream& out) {
 
 void Repl::start_statement_account(std::string const& account, std::ostream& out) {
   std::println(out, "Type the BAS account the statement is for, e.g. 1930. A number prefix or a word of the name lists");
-  std::println(out, "accounts. Enter accepts; Enter on an empty line imports nothing.");
+  std::println(out, "accounts. Enter accepts; - or Enter on an empty line imports nothing.");
   purpose_ = Purpose::StatementAccount;
   editor_.start(account, PathEditor::Kind::Account);
   mode_ = Mode::Typing;

@@ -298,9 +298,10 @@ one key at a time:
 | Tab       | Completes the folder name you have started (see below). For an SIE file, file names too. |
 | Backspace | Erases the last character.                                    |
 | Enter     | Accepts the path. On an empty path, goes back to the choices or the project menu. |
+| -         | On an empty path, goes back at once, as Enter does. Else it is part of the path. |
 | Ctrl-D    | Quits cratchit.                                               |
 
-Every other key, including `q`, `h` and `-`, is part of the path. Arrow keys
+Every other key, including `q` and `h`, is part of the path. Arrow keys
 do nothing.
 
 Tab works like in a shell. When one folder matches what you have typed, its
@@ -389,8 +390,8 @@ and moves to the next 8. Key `0` shows `...up` and moves back.
 
 Press `2` in the project menu and type the official name of the person,
 company or organisation, then Enter. The prompt is `name>`. Backspace erases,
-and Enter on an empty name goes back to the project menu. Every other key,
-including `q`, `h` and `-`, is part of the name.
+and `-` or Enter on an empty name goes back to the project menu. Every other
+key, including `q` and `h` (and `-` once the name has begun), is part of the name.
 
 Then choose the project folder:
 
@@ -579,7 +580,7 @@ outside the open fiscal year is refused:
 Refused: 2027-05-03 is outside fiscal year 2026-05-01 - 2027-04-30.
 ```
 
-Enter on an empty line goes back to the year prompt.
+`-` or Enter on an empty line goes back to the year prompt.
 
 #### The template
 
@@ -774,9 +775,9 @@ More than the amount on either side shows `...: more than the amount.`
 | account amount    | Adds a row. The amount is written as on the voucher line; spaces in it are dropped. |
 | account           | Adds a row with what remains. On the first row, the voucher's amount. When the rows add up to zero but not to the amount, cratchit asks you to type the amount. |
 | a number prefix or a word | When it is not an account in the books, lists the accounts whose number starts with it or whose name contains it (case does not matter), at most 20. |
-| -                 | Removes the last row. With no rows, drops the voucher: `Dropped the voucher. Nothing is saved.` |
-| ?                 | Shows the hint for every account in the rows (see The hint). |
-| ? account         | Shows the hint for that account: on its side in the rows, or on both sides when it is not in the rows. Not an account: lists the matches, as above. |
+| -                 | On an empty row, at once: removes the last row. With no rows, drops the voucher: `Dropped the voucher. Nothing is saved.` |
+| ?                 | On an empty row, at once: shows the hint for every account in the rows (see The hint). The `?` stays on the line; Enter alone clears it. |
+| ? account         | Type an account after the `?`, then Enter: shows the hint for that account: on its side in the rows, or on both sides when it is not in the rows. Not an account: lists the matches, as above. |
 | Enter (empty)     | When the voucher balances (at least two rows, debit and credit each adding up to the amount), shows it and asks to save it. Else adds the suggested row, when there is one. Else shows where the rows stand; the voucher cannot be saved. |
 
 Only accounts in the books can be used. Backspace erases while you type.
@@ -810,10 +811,12 @@ Hint for 1920 C PlusGiro, from vouchers and waiting events with 1920 on credit:
 The number after the side is in how many of the counted vouchers and waiting
 events the counter account is. A waiting event is marked `waiting`; one with
 only the hinted account's posting counts but adds no counter account. The
-waiting event being posted is left out. `? 2440` shows the hint for one
-account; when it is not in the rows, for both its sides. With no rows, `?`
-asks for an account. The hint changes nothing: `post>` comes back with the
-same rows and suggestion.
+waiting event being posted is left out. `?` acts as soon as you press it on
+an empty row, and `post>` comes back with the `?` still on the line: type an
+account after it and Enter (`? 2440`) for the hint of that account, when it is
+not in the rows for both its sides, or press Enter alone to clear the `?`.
+With no rows, `?` asks for an account. The hint changes nothing: `post>`
+comes back with the same rows and suggestion.
 
 #### Saving
 
@@ -957,7 +960,7 @@ year is refused. Press `y` to note it:
 ```
 2026/27> n
 Type the heading, amount and date of the event to post later, e.g. Telia faktura oktober 1118,00 2026-10-22.
-No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.
+No date means today. Backspace erases, Enter accepts. - or Enter on an empty line goes back.
 event> Telia faktura oktober 1118 2026-10-20
   Heading  Telia faktura oktober
   Amount   1118.00
@@ -1091,7 +1094,7 @@ a tax decision and the payout from the tax account.
 
 | Key    | What it does |
 |--------|--------------|
-| 1      | Makes them one event. The `event>` line starts with the older event's heading, amount and date for you to change (the same rules as at `voucher>`, see Entering a voucher), then `OK? (y/n)`. The one event has the postings of both (a posting from the same statement entry only once) and the earlier noted day. It takes the place of the two in the waiting list. Enter on an empty line goes back to `same?>`. |
+| 1      | Makes them one event. The `event>` line starts with the older event's heading, amount and date for you to change (the same rules as at `voucher>`, see Entering a voucher), then `OK? (y/n)`. The one event has the postings of both (a posting from the same statement entry only once) and the earlier noted day. It takes the place of the two in the waiting list. `-` or Enter on an empty line goes back to `same?>`. |
 | -      | Goes back to the matches. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
@@ -1294,7 +1297,7 @@ statement?>
 A file shows `new`, `3 already imported` or `already imported` (by the
 statements imported so far). With more than nine files, keys 1-8 show eight
 at a time, `0` the ones before and `9` the ones after. `-` goes back to the
-path. Enter on an empty path goes back to the prompt you came from.
+path. `-` or Enter on an empty path goes back to the prompt you came from.
 
 #### How cratchit reads a statement
 
@@ -1337,7 +1340,7 @@ Notes:
   - Line 1 is not an entry.
 Suggested account 1920 PlusGiro: 15 of 15 entries match postings on 1920 in the books.
 Type the BAS account the statement is for, e.g. 1930. A number prefix or a word of the name lists
-accounts. Enter accepts; Enter on an empty line imports nothing.
+accounts. Enter accepts; - or Enter on an empty line imports nothing.
 account> 1920
 ```
 
@@ -1397,7 +1400,7 @@ The prompt is `report?>`.
 |--------|-----------------------------------------------------------------|
 | 1      | Trial balance: each balance sheet account with opening balance, change and closing balance, each result account with its result, and totals. It says where the opening balances come from, and lists those that differ from what the source reported. |
 | 2      | Every voucher of the year with its rows in Debit and Credit columns, and the totals. Rows added or struck after registration are marked `(added)` or `(removed)`, with the signature when there is one; a removed row does not count in the totals. |
-| 3      | Account ledger: type an account number at `account>`, then Enter. Shows the opening balance, every row on the account by date in Debit and Credit columns with the balance after it, and the closing balance. Enter on an empty number goes back. |
+| 3      | Account ledger: type an account number at `account>`, then Enter. Shows the opening balance, every row on the account by date in Debit and Credit columns with the balance after it, and the closing balance. `-` or Enter on an empty number goes back. |
 | -      | Goes back: from the reports to the years (or to the fiscal year prompt they were opened from), from the years to `project>`. |
 | h      | Opens this manual.                                              |
 | q      | Quits cratchit.                                                 |
@@ -1453,6 +1456,15 @@ everywhere: `-` back, `q` quit, `h` help, `l` the log, Enter the key list,
 A list (of projects, waiting events, vouchers, statement entries ...) only
 picks: a number shows that item, and what you can do with it is then listed
 by number.
+
+Where you type a line (a path, a name, an account, a voucher or event line,
+a heading or a row), cratchit keeps what you type in its own buffer. While the
+line is empty, `-` goes back at once, as Enter on an empty line does (at
+`post>` it removes the last row). Once you have typed something, `-` is part
+of the line; to begin a line with a minus, type a space first. A line that
+starts with text typed in for you (a path, a guessed account, a heading) is
+not empty: erase it first to go back. At `post>`, `?` on an empty row shows
+the hint at once (see The hint).
 
 At the `cratchit>` prompt:
 

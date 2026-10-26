@@ -457,6 +457,18 @@ examples, year list, Using the prompt (new paragraph + example), Using help, Ent
 (Debug, trace DEBUG and OFF); checked with piped input. Not REPL-tested: the year list with more than ten years
 (ItemList tests cover the paging). In review.
 
+Task 50: `-` and `?` act at once on an empty typed line. Typing was already key by key in cratchit's own buffer
+(`PathEditor`, terminal in single-key mode). `PathEditor::Result` gains `Back` (`-` on an empty buffer, any kind; echoed
+`-`) and `Hint` (`?` on an empty row; stays in the buffer as `?`). `Repl::on_typing_key` maps `Back` to the existing
+`Cancelled` path (same place as Enter on an empty line), except at `post>`, where `Back` removes the last row / drops
+the voucher (was `-` + Enter; a typed `-` line is now an ordinary row error). `Hint` shows the rows' hint and
+`start_rows(out, "?")` brings `post>` back with `?` on the line; `? 1930` + Enter hints that account, `?` alone + Enter
+just clears it (no repeat). A prefilled line (path, guessed account, heading, correction/merge line) is not empty:
+`-` is typed there (agreed a). On-screen "Enter on an empty ... goes back" texts now say "- or Enter ...". Manual:
+typing a folder path (table + `-` row), creating a project, voucher line, rows table (`-`, `?`), The hint, waiting
+event line, matches, statement path/account, account ledger, Using the prompt (new paragraph). 428 tests pass, no
+warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -627,6 +639,9 @@ into a waiting event without making a voucher, several entries chosen at once.
   unknown key; Enter shows the numbered choices again. `?` is the hint where a hint is needed (what it hints
   depends on the screen). The year list pages with 0/9 like the others (key = SIE year number on the first page).
   Help follows the same rule; typing prompts, y/n questions, series letters and `--More--` are kept as they are.
+- 2026-10-26: At a typing prompt a key on an empty line may act at once: `-` goes back (at `post>`: removes the last
+  row), `?` at `post>` shows the hint and stays on the line (an account typed after it hints on Enter). Only on an
+  empty line; a line with text typed in for you is not empty. Digits, `h` and `q` stay text (lines can begin with them).
 
 ## Open questions
 

@@ -122,6 +122,7 @@ And it seems Claude was able to do it?
 * It is still inconsistent at some places where Enter on an empty input goes back (where '-' is the one I would like everywhere).
 * And it enters 'line input mode' instead of using self administrated buffering (so it can't pick up '-' on empty buffer)
 
+So now I made Claude make line-input act on '-' if the buffer is empty (one key exit from buffered input modes ok)
 
 ## 20261025
 

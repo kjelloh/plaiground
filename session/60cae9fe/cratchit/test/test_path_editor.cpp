@@ -45,6 +45,32 @@ TEST(PathEditor, EnterOnEmptyTextCancels) {
   EXPECT_EQ(type(editor, U"\x7f\n", out), PathEditor::Result::Cancelled);
 }
 
+TEST(PathEditor, MinusOnEmptyTextGoesBackAndIsTypedOtherwise) {
+  PathEditor editor;
+  editor.start("", PathEditor::Kind::Name);
+  std::ostringstream out;
+  EXPECT_EQ(type(editor, U"-", out), PathEditor::Result::Back);
+  EXPECT_EQ(editor.text(), "");
+  EXPECT_EQ(type(editor, U"a-", out), PathEditor::Result::Typing);
+  EXPECT_EQ(editor.text(), "a-");
+  editor.start("/", PathEditor::Kind::Path);
+  EXPECT_EQ(type(editor, U"-", out), PathEditor::Result::Typing);
+  EXPECT_EQ(editor.text(), "/-");
+}
+
+TEST(PathEditor, QuestionMarkOnAnEmptyRowGivesAHintAndStaysTyped) {
+  PathEditor editor;
+  editor.start("", PathEditor::Kind::Row);
+  std::ostringstream out;
+  EXPECT_EQ(type(editor, U"?", out), PathEditor::Result::Hint);
+  EXPECT_EQ(editor.text(), "?");
+  EXPECT_EQ(type(editor, U" 1930", out), PathEditor::Result::Typing);
+  EXPECT_EQ(editor.text(), "? 1930");
+  editor.start("", PathEditor::Kind::Account);
+  EXPECT_EQ(type(editor, U"?", out), PathEditor::Result::Typing);
+  EXPECT_EQ(editor.text(), "?");
+}
+
 TEST(PathEditor, BackspaceErasesOneCharacter) {
   PathEditor editor;
   editor.start("/");

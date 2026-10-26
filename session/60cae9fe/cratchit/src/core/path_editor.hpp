@@ -13,13 +13,14 @@ namespace cratchit {
 // file) like a shell. Writes its own echo.
 class PathEditor {
 public:
-  enum class Result { Typing, Accepted, Cancelled };
+  enum class Result { Typing, Accepted, Cancelled, Back, Hint };
   enum class Kind { Path, File, Name, Account, Voucher, Event, Row, Heading };
 
   // Start over with text in the buffer, e.g. the root folder
   void start(std::string text, Kind kind = Kind::Path);
 
-  // Enter accepts the text, or cancels when it is empty
+  // Enter accepts the text, or cancels when it is empty. On an empty buffer - is not typed but
+  // goes back, and in a row ? gives a hint at once and stays typed, so an account can follow it.
   Result on_key(charset::unicode::CodePoint key, std::ostream& out);
 
   std::string const& text() const;

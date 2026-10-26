@@ -47,6 +47,15 @@ PathEditor::Result PathEditor::on_key(charset::unicode::CodePoint key, std::ostr
     escape_ = Escape::Started;
     return Result::Typing;
   }
+  if (text_.empty() && key == U'-') {
+    std::println(out, "-");
+    return Result::Back;
+  }
+  if (text_.empty() && key == U'?' && kind_ == Kind::Row) {
+    text_ = "?";
+    std::println(out, "?");
+    return Result::Hint;
+  }
   if (key == U'\r' || key == U'\n') {
     std::println(out, "");
     return text_.empty() ? Result::Cancelled : Result::Accepted;

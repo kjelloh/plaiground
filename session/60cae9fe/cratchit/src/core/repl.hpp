@@ -316,7 +316,7 @@ private:
   void apply_guide(std::ostream& out);
   void show_row_help(std::ostream& out) const;
   void show_draft(std::ostream& out) const;
-  void start_rows(std::ostream& out);
+  void start_rows(std::ostream& out, std::string text = "");
   void on_row(PathEditor::Result result, std::ostream& out);
   void show_row(books::Posting const& row, std::ostream& out) const;
   void show_remaining(std::ostream& out) const;

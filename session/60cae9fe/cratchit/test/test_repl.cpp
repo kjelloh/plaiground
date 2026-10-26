@@ -478,7 +478,7 @@ TEST_F(WorkspaceRepl, NewProjectIsCreatedListedAndOpened) {
   auto const output = run("112ITfied AB\n1");
   EXPECT_NE(output.find("project?> 2\n"
                         "Type the official name of the person, company or organisation. Backspace erases, Enter "
-                        "accepts.\nEnter on an empty name goes back.\n"
+                        "accepts.\n- or Enter on an empty name goes back.\n"
                         "name> ITfied AB\n"
                         "Choose a folder for ITfied AB:\n"
                         "  1  " + folder.string() + "\n"
@@ -660,7 +660,7 @@ TEST_F(WorkspaceRepl, IKeyChecksTheFileAndImportsOnYes) {
   auto const output = run("2test.se\ny");
   EXPECT_NE(output.find("project> 2\n"
                         "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace "
-                        "erases,\nEnter accepts. Enter on an empty path goes back.\n"
+                        "erases,\nEnter accepts. - or Enter on an empty path goes back.\n"
                         "path> " + (root / "start").string() + "/test.se\n"
                         "SIE file " + file.string() + "\n"
                         "  Read as      CP437\n"
@@ -749,7 +749,7 @@ TEST_F(WorkspaceRepl, RKeyShowsYearsAndReports) {
       << output;
   EXPECT_NE(output.find("report?> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
                         "report?> 3\n"
-                        "Type the account number. Backspace erases, Enter accepts. Enter on an empty number goes "
+                        "Type the account number. Backspace erases, Enter accepts. - or Enter on an empty number goes "
                         "back.\n"
                         "account>  1930\n"
                         "Account 1930 Bank ledger 2025-01-01 - 2025-12-31\n"),
@@ -810,6 +810,17 @@ TEST_F(WorkspaceRepl, YKeyWithoutBooks) {
   EXPECT_TRUE(output.ends_with("project> 1\nNo books yet. Press 2 at project> to import an SIE file.\nproject> \n")) << output;
 }
 
+TEST_F(WorkspaceRepl, MinusOnAnEmptyLineGoesBackAndIsTypedOtherwise) {
+  auto const name = run("112-");
+  EXPECT_TRUE(name.ends_with("name> -\n" + projects_menu(root / "start", 0) + "project?> \n")) << name;
+  run("12Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny10");
+  auto const output = run("1Lunch-\x7f\x7f\x7f\x7f\x7f\x7f-");
+  EXPECT_NE(output.find("voucher> Lunch-\b \b"), std::string::npos) << output;
+  EXPECT_TRUE(output.ends_with("\b \b-\n2025> \n")) << output;
+}
+
 TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -819,7 +830,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
   EXPECT_NE(output.find("2025> 1\n"
                         "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 "
                         "2026-10-22.\n"
-                        "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
+                        "No date means today. Backspace erases, Enter accepts. - or Enter on an empty line goes back.\n"
                         "voucher> Bank cost march 35 2025-03-31\n"
                         "  Heading  Bank cost march\n"
                         "  Amount   35.00\n"
@@ -876,7 +887,7 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
   EXPECT_NE(output.find("2025> 2\n"
                         "Type the heading, amount and date of the event to post later, e.g. Telia faktura oktober "
                         "1118,00 2026-10-22.\n"
-                        "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
+                        "No date means today. Backspace erases, Enter accepts. - or Enter on an empty line goes back.\n"
                         "event> Bank cost march -35 2025-03-31\n"
                         "  Heading  Bank cost march\n"
                         "  Amount   -35.00\n"
@@ -1018,7 +1029,8 @@ TEST_F(WorkspaceRepl, QuestionMarkHintsTheCounterAccounts) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  auto const output = run("1Lunch 10 2025-05-05\nyb?\n1930 -10\n?\n? 6570\n? bank\n6570\n\n?-\n-\n-\n");
+  // ? on an empty row hints at once and stays typed; Enter then only clears it, an account typed after it hints on Enter
+  auto const output = run("1Lunch 10 2025-05-05\nyb?\n1930 -10\n?\n? 6570\n? bank\n6570\n\n?----");
   auto const hint_1930 = "Hint for 1930 C Bank, from vouchers and waiting events with 1930 on credit:\n"
                          "  Counter accounts in the latest 1:\n"
                          "    6570   D   1  Bank costs\n"
@@ -1037,12 +1049,15 @@ TEST_F(WorkspaceRepl, QuestionMarkHintsTheCounterAccounts) {
                          "      1930                        10.00  Bank\n";
   EXPECT_NE(output.find("to the amount. ? shows the counter accounts used before with the rows' accounts, ? 1930 with 1930.\n"
                         "post> ?\n"
-                        "No rows yet. Type ? and an account for its hint, e.g. ? 1930.\n"),
+                        "No rows yet. Type an account after the ? for its hint, e.g. ? 1930.\n"
+                        "post> ?\n"
+                        "post> 1930 -10\n"),
             std::string::npos)
       << output;
   // An account in the rows: its side; not in the rows: both sides; not an account: the matches
-  EXPECT_NE(output.find(std::string{"post> ?\n"} + hint_1930 + "post> ? 6570\n" + hint_6570 +
-                        "Hint for 6570 C Bank costs: no voucher or waiting event has 6570 on credit.\n"
+  EXPECT_NE(output.find(std::string{"post> ?\n"} + hint_1930 + "post> ?\npost> ?\n" + hint_1930 + "post> ? 6570\n" +
+                        hint_6570 + "Hint for 6570 C Bank costs: no voucher or waiting event has 6570 on credit.\n" +
+                        "post> ?\n" + hint_1930 +
                         "post> ? bank\nAccounts matching bank:\n  1930  Bank\n  6570  Bank costs\npost> 6570\n"),
             std::string::npos)
       << output;
@@ -1055,7 +1070,7 @@ TEST_F(WorkspaceRepl, RowsListAccountsRemoveAndDrop) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  auto const output = run("1Lunch 100 2025-05-05\nyb" "bank\n1930 -100\n\n-\n-\n");
+  auto const output = run("1Lunch 100 2025-05-05\nyb" "bank\n1930 -100\n\n--");
   EXPECT_NE(output.find("Voucher B 1 (Kundfakturor) 2025-05-05 \"Lunch\" 100.00\n"), std::string::npos) << output;
   EXPECT_NE(output.find("post> bank\nAccounts matching bank:\n  1930  Bank\n  6570  Bank costs\n"), std::string::npos)
       << output;
@@ -1123,7 +1138,7 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   // 2 picks A 1; - at series> goes back to the list, - there back to the line
-  auto const output = run("1Bank cost sale 25 2025-04-01\ny2--\ny1\n--\n-\n3010 -20\n\n-\n-\n-\n");
+  auto const output = run("1Bank cost sale 25 2025-04-01\ny2--\ny1\n---3010 -20\n\n---");
   EXPECT_NE(output.find("OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
@@ -1222,7 +1237,7 @@ TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
   EXPECT_EQ(saved.postings[0].amount, -3500);
   EXPECT_EQ(saved.postings[1].amount, 3500);
   // Without a template, 2 (flip) is not offered
-  auto const plain = run("1Lunch 20 2025-04-04\ny\n6570 20\n1930\n\n2-\n-\n-\n");
+  auto const plain = run("1Lunch 20 2025-04-04\ny\n6570 20\n1930\n\n2----");
   EXPECT_NE(plain.find(postings_keys("A 4", false) + "2\nUnknown key. Other keys:"), std::string::npos) << plain;
 }
 
@@ -1352,7 +1367,7 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
   auto output = run("3bank\n2");
   EXPECT_NE(output.find("project> 3\n"
                         "Type the path of the account statement file, or of a folder to list its files. Tab completes a\n"
-                        "folder or file name, Backspace erases, Enter accepts. Enter on an empty path goes back.\n"
+                        "folder or file name, Backspace erases, Enter accepts. - or Enter on an empty path goes back.\n"
                         "path> " + (root / "start").string() + "/bank\n"
                         "Files in " + (root / "start" / "bank").string() + ":\n"
                         "  1  nordea.csv\n"
@@ -1374,7 +1389,7 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
                         "  - Line 1 is not an entry.\n"
                         "Suggested account 1930 Bank: 2 of 3 entries match postings on 1930 in the books.\n"
                         "Type the BAS account the statement is for, e.g. 1930. A number prefix or a word of the name "
-                        "lists\naccounts. Enter accepts; Enter on an empty line imports nothing.\n"
+                        "lists\naccounts. Enter accepts; - or Enter on an empty line imports nothing.\n"
                         "account> 1930\n"
                         "  Account   1930 Bank\n"
                         "  New       2\n"
@@ -1433,7 +1448,7 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
                         "\n"
                         "  1  New waiting event with it\n"
                         "entry?> 1\n"
-                        "Type the heading of the event. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
+                        "Type the heading of the event. Backspace erases, Enter accepts. - or Enter on an empty line goes back.\n"
                         "heading> TILL 2099"),
             std::string::npos)
       << output;
@@ -1592,7 +1607,7 @@ TEST_F(WorkspaceRepl, MAtTheWaitingListFindsMatchesToMakeOneOrDelete) {
   output = run("921\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\bKvitto Clas Ohlson 249 2025-04-02\ny");
   EXPECT_NE(output.find("same?> 1\n"
                         "Type the heading, amount and date of the one event; the older event's are typed in for you.\n"
-                        "Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
+                        "Backspace erases, Enter accepts. - or Enter on an empty line goes back.\n"
                         "event> Kvitto 249.00 2025-04-02"),
             std::string::npos)
       << output;
