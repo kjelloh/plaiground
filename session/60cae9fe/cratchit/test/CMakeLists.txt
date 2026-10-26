@@ -12,11 +12,13 @@ add_executable(cratchit_tests
   test_hint.cpp
   test_help.cpp
   test_import.cpp
+  test_item_list.cpp
   test_key_input.cpp
   test_log.cpp
   test_log_view.cpp
   test_manual.cpp
   test_match.cpp
+  test_operations.cpp
   test_pager.cpp
   test_path_editor.cpp
   test_path_value.cpp

@@ -224,39 +224,40 @@ cratchit opens the workspace when it starts:
   choose one (see Choosing a workspace).
 - If the folder has a `.cratchit` without `workspace.txt`, or a malformed
   `workspace.txt`, cratchit shows an error and stays at the `cratchit>` prompt.
-  Press `w` and browse to choose another workspace (see The workspace menu).
+  Press `1` and then `2` to choose another workspace (see The workspace menu).
 
 ### The workspace menu
 
-Press `w` at the `cratchit>` prompt to open the workspace again or switch to
+Press `1` at the `cratchit>` prompt to open the workspace again or switch to
 another one:
 
 ```
 Workspace:
-  w  Open /Users/me/Documents/cratchit
-  b  Browse for a new workspace
+  1  Open /Users/me/Documents/cratchit
+  2  Browse for a new workspace
 ```
 
 | Key    | What it does                                              |
 |--------|-----------------------------------------------------------|
-| w      | Opens the workspace saved in `runtime.txt`.               |
-| b      | Lets you choose another folder (see Choosing a workspace). |
+| 1      | Opens the workspace saved in `runtime.txt`.               |
+| 2      | Lets you choose another folder (see Choosing a workspace). |
 | -      | Goes back to the `cratchit>` prompt.                      |
 | h      | Opens this manual.                                        |
 | q      | Quits cratchit.                                           |
 | Ctrl-D | Quits cratchit.                                           |
 
-So `w` `w` at `cratchit>` takes you back into the workspace. When no workspace
-is saved, or its folder does not exist, only `b` is offered.
+So `1` `1` at `cratchit>` takes you back into the workspace. When no workspace
+is saved, or its folder does not exist, only `2` is offered (it keeps its
+number).
 
-Choosing a folder with `b` switches the workspace: cratchit saves it in
+Choosing a folder with `2` switches the workspace: cratchit saves it in
 `runtime.txt` and opens it from then on. The old workspace folder is left as it
 is.
 
 ### Choosing a workspace
 
 cratchit offers these folders, both on start when no workspace is set and
-after `b` in the workspace menu:
+after `2` in the workspace menu:
 
 ```
 Choose a workspace folder:
@@ -270,7 +271,7 @@ Choose a workspace folder:
 | 1      | Uses the folder you started cratchit in.                         |
 | 2      | Uses `cratchit` in your Documents folder, creating it if needed. |
 | 3      | Lets you type a folder path (see Typing a folder path).          |
-| -      | Goes back: to the workspace menu after `b`, else to the `cratchit>` prompt without a workspace. |
+| -      | Goes back: to the workspace menu after `2` there, else to the `cratchit>` prompt without a workspace. |
 | h      | Opens this manual.                                               |
 | q      | Quits cratchit.                                                  |
 | Ctrl-D | Quits cratchit.                                                  |
@@ -324,8 +325,8 @@ The prompt is `workspace>`.
 
 | Key    | What it does                                 |
 |--------|----------------------------------------------|
-| p      | Shows the project menu (see Projects).       |
-| Enter  | Lists these keys.                            |
+| 1      | Shows the project menu (see Projects).       |
+| Enter  | Lists the numbered keys.                     |
 | h      | Opens this manual.                           |
 | l      | Shows the log (see The log).                 |
 | -      | Goes back to the `cratchit>` prompt.         |
@@ -347,37 +348,46 @@ listed in more than one workspace.
 
 ### The project menu
 
-Press `p` at the `workspace>` prompt:
+Press `1` at the `workspace>` prompt:
 
 ```
 Projects in /Users/me/Documents/cratchit:
-  1  ITfied AB  /Users/me/Documents/cratchit/ITfied AB
-  2  (not found)  /Volumes/share/Föreningen
-  n  New project
-  a  Add an existing project folder
+  1  Open a project (2 listed)
+  2  New project
+  3  Add an existing project folder
 ```
 
-The prompt is `project?>`. Each project shows its name and folder. A folder
-that does not exist shows `(not found)`, and a folder that cratchit cannot read
-as the listed project shows `(error)`. Choosing either shows the error and
-leaves the list as it is.
+The prompt is `project?>`.
 
 | Key    | What it does                                                 |
 |--------|--------------------------------------------------------------|
-| 1-9    | Opens the project with that number.                          |
-| n      | Creates a new project (see Creating a project).              |
-| a      | Adds a project folder that already exists (see Adding an existing project). |
+| 1      | Lists the projects to open one (below). Not shown when no project is listed. |
+| 2      | Creates a new project (see Creating a project).              |
+| 3      | Adds a project folder that already exists (see Adding an existing project). |
 | -      | Goes back to the `workspace>` prompt.                        |
 | h      | Opens this manual.                                           |
 | q      | Quits cratchit.                                              |
 | Ctrl-D | Quits cratchit.                                              |
 
+`1` lists the projects. The prompt is `open?>`:
+
+```
+Projects in /Users/me/Documents/cratchit:
+  1  ITfied AB  /Users/me/Documents/cratchit/ITfied AB
+  2  (not found)  /Volumes/share/Föreningen
+open?> 
+```
+
+Each project shows its name and folder. A folder that does not exist shows
+`(not found)`, and a folder that cratchit cannot read as the listed project
+shows `(error)`. Choosing either shows the error and leaves the list as it is.
+Press the number of a project to open it; `-` goes back to the project menu.
 With more than 9 projects the list shows 8 at a time. Key `9` shows `...down`
 and moves to the next 8. Key `0` shows `...up` and moves back.
 
 ### Creating a project
 
-Press `n` in the project menu and type the official name of the person,
+Press `2` in the project menu and type the official name of the person,
 company or organisation, then Enter. The prompt is `name>`. Backspace erases,
 and Enter on an empty name goes back to the project menu. Every other key,
 including `q`, `h` and `-`, is part of the name.
@@ -412,13 +422,13 @@ Opened project ITfied AB in /Users/me/Documents/cratchit/ITfied AB
 project> 
 ```
 
-A folder that already holds a `project.txt` is an error; add it with `a`
+A folder that already holds a `project.txt` is an error; add it with `3`
 instead. The folder may hold other cratchit files, for example the workspace's
 own `.cratchit`.
 
 ### Adding an existing project
 
-Press `a` in the project menu and type the folder of a project, for example one
+Press `3` in the project menu and type the folder of a project, for example one
 listed in another workspace (see Typing a folder path). The folder must hold
 `.cratchit/project.txt`. cratchit lists the project in `workspace.txt` and
 opens it.
@@ -433,12 +443,12 @@ The prompt is `project>`.
 
 | Key    | What it does                                        |
 |--------|-----------------------------------------------------|
-| y      | Lists the fiscal years to open one (see Fiscal years). |
-| i      | Imports an SIE file (see Importing an SIE file).    |
-| s      | Imports an account statement (see Importing an account statement). |
-| a      | Lists the statement entries not yet booked, to make waiting events of them (see Statement entries). |
-| r      | Shows reports of the books (see Reports).           |
-| Enter  | Lists these keys.                                   |
+| 1      | Lists the fiscal years to open one (see Fiscal years). |
+| 2      | Imports an SIE file (see Importing an SIE file).    |
+| 3      | Imports an account statement (see Importing an account statement). |
+| 4      | Lists the statement entries not yet booked, to make waiting events of them (see Statement entries). |
+| 5      | Shows reports of the books (see Reports).           |
+| Enter  | Lists the numbered keys.                            |
 | h      | Opens this manual.                                  |
 | l      | Shows the log (see The log).                        |
 | -      | Goes back to the `workspace>` prompt.               |
@@ -453,7 +463,7 @@ opens too (see Fiscal years).
 
 ### Fiscal years
 
-Vouchers are entered in an open fiscal year. Press `y` at the `project>`
+Vouchers are entered in an open fiscal year. Press `1` at the `project>`
 prompt. cratchit lists the fiscal years in the books, numbered as SIE numbers
 them: 0 is the newest, 1 the year before, and so on. Each says whether it is
 open or closed for new vouchers:
@@ -463,20 +473,20 @@ Fiscal years of The ITfied AB, 556782-8172 (0 is the newest):
   0  2026-05-01 - 2027-04-30  open
   1  2025-05-01 - 2026-04-30  open
   ...
-  9  2017-05-01 - 2018-04-30  open
-  >  ...older
-
-Press a number to open a year, - to go back, h for help, q to quit.
+  8  2018-05-01 - 2019-04-30  open
+  9  ...down
 year?> 
 ```
 
-The prompt is `year?>`. Press the number of a year to open it. Ten years are
-shown at a time: `>` shows older years and `<` newer ones. On the older pages
-the keys start at 0 again, and the heading says which year key 0 is, for
-example `Fiscal years 10 to 10 ... (key 0 is year 10)`.
+The prompt is `year?>`. Press the number of a year to open it. Up to ten years
+are keys 0-9, the year numbers. With more, keys 0-8 show the nine newest and
+`9` shows `...down`: the older years, eight at a time as keys 1-8, with `0`
+for `...up` (newer) and `9` for `...down` (older). There the heading says
+which year key 1 is, for example
+`Fiscal years of The ITfied AB, 556782-8172 (key 1 is year 9):`.
 
 Fiscal years come from SIE files (see Importing an SIE file). Without books,
-cratchit says `No books yet. Press i to import an SIE file.`
+cratchit says `No books yet. Press 2 at project> to import an SIE file.`
 
 The year you open is saved as `year` in `project.txt`, so it opens again when
 the project opens. If that year is not in the books, cratchit shows an error
@@ -489,16 +499,16 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 
 | Key    | What it does                                        |
 |--------|-----------------------------------------------------|
-| e      | Enters a voucher (see Entering a voucher). Only in an open year. |
-| n      | Notes an event to post later (see Waiting events). Only in an open year. |
-| w      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
-| v      | Views the vouchers, to correct one or use it as a template (see Viewing and correcting vouchers). |
-| s      | Imports an account statement, only its entries in this year (see Importing an account statement). |
-| a      | Lists the statement entries not yet booked in this year (see Statement entries). |
-| r      | Shows the reports of this year (see Reports). `-` there comes back here. |
-| c      | Closes the year for new vouchers (shown when the year is open). |
-| o      | Opens the year for new vouchers (shown when it is closed). |
-| Enter  | Lists these keys.                                   |
+| 1      | Enters a voucher (see Entering a voucher). Only in an open year. |
+| 2      | Notes an event to post later (see Waiting events). Only in an open year. |
+| 3      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
+| 4      | Views the vouchers, to correct one or use it as a template (see Viewing and correcting vouchers). |
+| 5      | Imports an account statement, only its entries in this year (see Importing an account statement). |
+| 6      | Lists the statement entries not yet booked in this year (see Statement entries). |
+| 7      | Shows the reports of this year (see Reports). `-` there comes back here. |
+| 8      | Closes the year for new vouchers when it is open, opens it when it is closed. The key list names the one offered. |
+| 9      | Finds waiting events that may be the same event, or already in the books (see Finding matches). |
+| Enter  | Lists the numbered keys.                            |
 | h      | Opens this manual.                                  |
 | l      | Shows the log (see The log).                        |
 | -      | Goes back to the `project>` prompt.                 |
@@ -506,15 +516,15 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | Ctrl-D | Quits cratchit.                                     |
 
 A new year from an SIE import is open. Closing it stops new vouchers from being
-entered in it until you open it again; `e` then says
-`Fiscal year 2025-05-01 - 2026-04-30 is closed for new vouchers. Press o to open it.`
+entered in it until you open it again; `1` then says
+`Fiscal year 2025-05-01 - 2026-04-30 is closed for new vouchers. Press 8 to open it.`
 cratchit saves the setting in `books.txt` (see The files) and logs it. Closing
 a year changes nothing else: its vouchers, balances and reports stay as they are,
 and an SIE import into it still works.
 
 ### Entering a voucher
 
-Press `e` at the prompt of an open fiscal year (see Fiscal years). A voucher
+Press `1` at the prompt of an open fiscal year (see Fiscal years). A voucher
 (verifikation) records one financial event. You type it in steps: what
 happened, an earlier voucher to use as a template (when there is one), the
 series, and the rows on the accounts. Nothing is saved until the rows balance
@@ -552,8 +562,6 @@ voucher> Faktura 87 500
 The amount is unclear: spaces may separate thousands. Which is it?
   1           500.00  Faktura 87
   2         87500.00  Faktura
-
-Press a number to choose, - to change the line, h for help, q to quit.
 amount?> 
 ```
 
@@ -596,8 +604,7 @@ Earlier vouchers like this one:
        Account        Debit       Credit
        2440          987.00               Leverantörsskulder
        1930                       987.00  Företagskonto
-
-Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.
+  0  None: type the rows yourself
 template?> 
 ```
 
@@ -605,7 +612,7 @@ template?>
 |--------|--------------|
 | 1-5    | Uses that voucher as the template. |
 | Enter  | Uses the first one. |
-| n      | Uses no template: the series is guessed and the rows are typed as without one. |
+| 0      | Uses no template: the series is guessed and the rows are typed as without one. |
 | -      | Goes back to the line (for a waiting event, to the waiting list). |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
@@ -689,16 +696,12 @@ Voucher D 10 2026-11-20 "Telia faktura november"
   2641          249.00               Debiterad ingående moms
   Total        1245.00      1245.00
 
-  s  Save as D 10
-  f  Flip the template's rows (debit becomes credit)
-  ?  Hint: the counter accounts used before with the rows' accounts
-  -  Change the rows
-  h  Help (the manual)
-  q  Quit
+  1  Save as D 10
+  2  Flip the template's rows (debit becomes credit)
 postings> 
 ```
 
-`s` saves it (see Saving). `f` flips the template (see Flipping the
+`1` saves it (see Saving). `2` flips the template (see Flipping the
 template). `-` goes to `post>` with the suggested rows
 in place, to change them from the end: `-` removes the last row, and that row
 is then suggested again before `post>`. Enter on an empty line takes the
@@ -737,13 +740,13 @@ starting with `Rows from D 9 are suggested one at a time`.
 
 Sometimes the template's rows are on the wrong sides for this voucher, for
 example when a credit note (kreditfaktura) is entered with an invoice as its
-template. Press `f` at `postings>` to flip the template: each of its rows
+template. Press `2` at `postings>` to flip the template: each of its rows
 changes side (debit becomes credit, credit becomes debit), and the rows are
 suggested again from the flipped template. Rows you typed or changed after the
 template's rows are replaced. The amount on the voucher line stays as it is.
 
 ```
-postings> f
+postings> 2
 Suggested from D 9, scaled to the amount and flipped:
 Voucher D 10 2026-11-20 "Telia kreditfaktura"
   Account        Debit       Credit
@@ -753,13 +756,14 @@ Voucher D 10 2026-11-20 "Telia kreditfaktura"
   Total        1245.00      1245.00
 ```
 
-`f` again flips it back. When the flipped rows balance, the whole voucher is
+`2` again flips it back. When the flipped rows balance, the whole voucher is
 shown at `postings>` again; else they are suggested one at a time at `post>`
 (`Rows from D 9 are suggested one at a time, scaled to the amount and
 flipped`). Only the template is flipped: the postings a waiting event already
 has stay as they are (see The waiting list), and a single row cannot be
-flipped. `f` is offered only when the voucher has a template (also with `t`
-and when correcting, see Viewing and correcting vouchers).
+flipped. `2` is offered only when the voucher has a template (also when a
+viewed voucher is used as the template and when correcting, see Viewing and
+correcting vouchers); without one its number is left out.
 
 Rows that add up to zero but not to the amount show
 `Debit 223.60, credit 223.60, amount 1118.00: debit and credit must each reach the amount.`
@@ -821,11 +825,7 @@ Voucher D 4 2026-10-22 "Telia faktura oktober"
   2641          223.60               Debiterad ingående moms
   Total        1118.00      1118.00
 
-  s  Save as D 4
-  ?  Hint: the counter accounts used before with the rows' accounts
-  -  Change the rows
-  h  Help (the manual)
-  q  Quit
+  1  Save as D 4
 postings> 
 ```
 
@@ -833,15 +833,15 @@ The prompt is `postings>`:
 
 | Key    | What it does |
 |--------|--------------|
-| s      | Saves the voucher. |
-| f      | Flips the template's rows (see Flipping the template). Only listed when the voucher has a template. |
+| 1      | Saves the voucher. |
+| 2      | Flips the template's rows (see Flipping the template). Only listed when the voucher has a template. |
 | ?      | Shows the hint for every account in the rows (see The hint). |
 | -      | Goes back to the rows at `post>`. |
-| Enter  | Lists these keys. Any other key prints `Unknown key.` and the list. |
+| Enter  | Shows the voucher and the numbered keys again. Any other key prints `Unknown key.` and names the other keys. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
 
-Press `s` to save. cratchit adds the
+Press `1` to save. cratchit adds the
 voucher to the fiscal year's files in the books (see The files), shows which
 files it updated, says `Saved voucher D 4 into fiscal year 2026-05-01 -
 2027-04-30.` and logs it (naming the template, if one was used, and whether it
@@ -857,7 +857,7 @@ or the other, until cratchit can sync them.
 
 ### Viewing and correcting vouchers
 
-Press `v` at the prompt of a fiscal year. cratchit lists the series used in
+Press `4` at the prompt of a fiscal year. cratchit lists the series used in
 the year; press a letter to list that series (the prompt is `series?>`; here
 `h` is series H, so help is not offered; `-` goes back to the year):
 
@@ -872,8 +872,6 @@ Vouchers D in fiscal year 2026-05-01 - 2027-04-30, newest first:
   1  D 4     2026-10-24       1245.00  Faktura Telia november  (entered)
   2  D 3     2026-05-18       2359.00  Faktura: Telia  (imported)
   ...
-
-Press a number to view it, - to go back, h for help, q to quit.
 voucher?> 
 ```
 
@@ -897,14 +895,15 @@ Voucher D 4 2026-10-24 "Faktura Telia november" 1245.00
   Total        1245.00      1245.00
   Registered 2026-10-24, entered in cratchit
 
-Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.
+  1  Correct it
+  2  Use it as a template
 D 4> 
 ```
 
 | Key    | What it does |
 |--------|--------------|
-| c      | Corrects the voucher with a new one (below). Only for an entered voucher, in an open year. |
-| t      | Enters a new voucher with this one as the template: the voucher line, then the series and the rows, as in Entering a voucher, without the list of templates. Only in an open year. |
+| 1      | Corrects the voucher with a new one (below). Only for an entered voucher, in an open year. |
+| 2      | Enters a new voucher with this one as the template: the voucher line, then the series and the rows, as in Entering a voucher, without the list of templates. Only in an open year. |
 | -      | Goes back to the list. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
@@ -913,7 +912,7 @@ D 4>
 
 A correction is a new voucher that reverses the wrong one: the same rows with
 the opposite signs, so together they add up to nothing. The wrong voucher
-stays in the books as it is. `c` starts the voucher line with the correction's
+stays in the books as it is. `1` starts the voucher line with the correction's
 heading and amount, for you to change or accept; without a date it is dated
 today (asked for when today is outside the year):
 
@@ -924,7 +923,7 @@ voucher> Rättelse av D 4: Faktura Telia november 1245.00
 Then, as in Entering a voucher: `OK? (y/n)`, the series (by default the
 corrected voucher's series), and the corrected voucher's rows reversed, shown
 as the whole voucher to save (`The rows of D 4, reversed:`, then `postings>`:
-`s` saves, `f` flips the rows, `-` puts the rows in place at `post>` to change
+`1` saves, `2` flips the rows, `-` puts the rows in place at `post>` to change
 them, as in The rows).
 When it is saved, cratchit offers to enter the right voucher:
 
@@ -950,7 +949,7 @@ reports.
 
 #### Noting an event
 
-Press `n` at the prompt of an open fiscal year. Type the heading, amount and
+Press `2` at the prompt of an open fiscal year. Type the heading, amount and
 date at `event>` as at `voucher>` (see Entering a voucher): the same rules,
 the same `amount?>` question for an unclear amount, and a date outside the
 year is refused. Press `y` to note it:
@@ -965,7 +964,7 @@ event> Telia faktura oktober 1118 2026-10-20
   Date     2026-10-20   (fiscal year 2026-05-01 - 2027-04-30)
 OK? (y/n) y
 Initiated .cratchit/books/2026-05-01/events.csv in ...
-Noted: 2026-10-20 Telia faktura oktober 1118.00 (1 waiting). Press w to post it.
+Noted: 2026-10-20 Telia faktura oktober 1118.00 (1 waiting). Press 3 to post it.
 ```
 
 The amount is kept without sign, as on a voucher. cratchit saves the event in
@@ -973,28 +972,35 @@ the year's `events.csv` (see The files) and logs it.
 
 #### The waiting list
 
-Press `w` at the year prompt. The prompt is `waiting?>`:
+Press `3` at the year prompt. The prompt is `waiting?>`:
 
 ```
 Waiting events in fiscal year 2026-05-01 - 2027-04-30:
   1  2026-10-20       1118.00  Telia faktura oktober
   2  2026-10-21        249.00  Kvitto Clas Ohlson
-
-Press a number to post it, d to delete one, m to find matches, - to go back, h for help, q to quit.
 waiting?> 
 ```
 
 They are listed by date, oldest first; events with the same date in the order
 noted. With more than nine, keys 1-8 show eight
 at a time, `0` shows the ones before and `9` the ones after. With none,
-`w` says `No events are waiting in fiscal year ... Press n to note one.`
+`3` says `No events are waiting in fiscal year ... Press 2 to note one.`
+`-` goes back to the year prompt.
+
+A number shows that event with its postings. The prompt is `waiting>`:
+
+```
+  2026-10-21        249.00  Kvitto Clas Ohlson
+
+  1  Post it: enter its voucher
+waiting> 
+```
 
 | Key    | What it does |
 |--------|--------------|
-| 1-9    | Posts that event: the series, then the rows, as in Entering a voucher. Only in an open year. |
-| d      | Deletes one: the prompt becomes `delete?>`; press the number of the event, then `y` at `Delete it? (y/n)`. `-` at `delete?>` or `n` deletes nothing. |
-| m      | Finds waiting events that may be the same event, or already in the books (see Finding matches). |
-| -      | Goes back to the year prompt. |
+| 1      | Posts the event: the template, the series, then the rows, as in Entering a voucher. Only in an open year. |
+| d      | Deletes the event: `y` at `Delete it? (y/n)` deletes it, `n` or `-` goes back to the event. |
+| -      | Goes back to the list. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
 
@@ -1012,10 +1018,10 @@ postings under it, and where they stand:
 When you post an event, its heading, amount and date are the voucher line,
 so cratchit goes straight to the template (or the series). `-` at
 `template?>`, or at `series>` when no templates were listed, goes back to the
-list. The event's postings are the first rows; a template's suggestions
+waiting list. The event's postings are the first rows; a template's suggestions
 follow them, leaving out a row on an account the event already has. When the
 event's postings and the suggestions balance together, the whole voucher is
-shown to save as it is (see The rows); else they are at `post>`. `f` at
+shown to save as it is (see The rows); else they are at `post>`. `2` at
 `postings>` flips only the template's rows, never the event's postings. An event
 whose postings balance on their own is saved with Enter at `post>`. `-` at `post>` removes the last
 row, the event's postings too; with no rows it drops the voucher, and the
@@ -1029,19 +1035,20 @@ The event is no longer waiting (1 still waiting).
 
 Deleting an event removes it from the list for good (it is logged). Neither
 posting nor deleting changes any other waiting event. The statement entries
-of a deleted event are not booked any more, so they are listed by `a` again.
+of a deleted event are not booked any more, so they are listed again (see
+Statement entries).
 
 #### Finding matches
 
-One event can end up waiting twice: a receipt noted with `n` and the card
+One event can end up waiting twice: a receipt noted with `2` and the card
 payment made into an event from a statement entry, or a transfer between two
 of your own accounts, one entry on each statement. And an event noted to post
 later may already be in the books, for example when a later SIE import
-brought its voucher. Press `m` at the waiting list to find such matches. The
+brought its voucher. Press `9` at the year prompt to find such matches. The
 prompt is `match?>`:
 
 ```
-waiting?> m
+2026/27> 9
 Possible matches in fiscal year 2026-05-01 - 2027-04-30 (the same amount, at most 4 days apart):
   1  same   2026-07-21       2292.00  Utbetalning Moms
             2026-07-23       2292.00  Momsutbetalning
@@ -1049,8 +1056,6 @@ Possible matches in fiscal year 2026-05-01 - 2027-04-30 (the same amount, at mos
   2  books  2026-09-01        311.25  Loopia överföring domäner
        D 6  2026-08-31        311.25  Loopia Faktura
             1 day apart, shared words: loopia
-
-Press a number to look at one, - to go back to the waiting list, h for help, q to quit.
 match?> 
 ```
 
@@ -1072,9 +1077,10 @@ event has postings and the voucher has them all), then those whose headings
 share more words (ignoring case, numbers and one-letter words), then those
 fewer days apart. A waiting event can be in several matches. With more than
 nine, keys 1-8 show eight at a time, `0` the ones before and `9` the ones
-after. With none, `m` says `No possible matches among the waiting events
+after. With none, `9` says `No possible matches among the waiting events
 (the same amount, at most 4 days apart).` A pair you leave is not
-remembered: it is listed again the next time.
+remembered: it is listed again the next time. `-` goes back to the year
+prompt.
 
 A number shows both events in full, with their postings (for `books`, the
 voucher's rows). For `same` the prompt is `same?>`, with a line on where
@@ -1083,11 +1089,9 @@ says so (`the postings balance, but both events post to 1630.`): such
 postings cancel out, so the two are more likely two events in a row, such as
 a tax decision and the payout from the tax account.
 
-
-
 | Key    | What it does |
 |--------|--------------|
-| s      | Makes them one event. The `event>` line starts with the older event's heading, amount and date for you to change (the same rules as at `voucher>`, see Entering a voucher), then `OK? (y/n)`. The one event has the postings of both (a posting from the same statement entry only once) and the earlier noted day. It takes the place of the two in the waiting list. Enter on an empty line goes back to `same?>`. |
+| 1      | Makes them one event. The `event>` line starts with the older event's heading, amount and date for you to change (the same rules as at `voucher>`, see Entering a voucher), then `OK? (y/n)`. The one event has the postings of both (a posting from the same statement entry only once) and the earlier noted day. It takes the place of the two in the waiting list. Enter on an empty line goes back to `same?>`. |
 | -      | Goes back to the matches. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
@@ -1099,7 +1103,7 @@ Made one event: 2026-07-21 Utbetalning Moms 2292.00 (13 waiting). Its postings b
 For `books` the prompt is `booked?>`. The postings of the waiting event that
 are not in the voucher (none of its postings has the same account, date and
 amount) are named, as deleting the event drops them; a statement entry of
-theirs is then listed by `a` again:
+theirs is then listed again among the statement entries:
 
 | Key    | What it does |
 |--------|--------------|
@@ -1116,8 +1120,8 @@ shows the waiting list.
 #### Statement entries
 
 The entries of the imported account statements (see Importing an account
-statement) wait to be booked. Press `a` at `project>`, or at a fiscal year's
-prompt for only that year's entries. The prompt is `entries?>`:
+statement) wait to be booked. Press `4` at `project>`, or `6` at a fiscal
+year's prompt for only that year's entries. The prompt is `entries?>`:
 
 ```
 Statement entries not yet booked in fiscal year 2026-05-01 - 2027-04-30:
@@ -1125,8 +1129,6 @@ Statement entries not yet booked in fiscal year 2026-05-01 - 2027-04-30:
   2  1920   2026-07-23       2292.00  Skatt | 5050-1030 SK5567828172
   ...
   7  1920   2026-09-28      -1308.75  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1
-
-Press a number to choose an entry, - to go back, h for help, q to quit.
 entries?> 
 ```
 
@@ -1140,8 +1142,8 @@ A number shows the entry and where it is. The prompt is `entry?>`:
 
 | Key    | What it does |
 |--------|--------------|
-| n      | Makes a new waiting event with it. Type the heading at `heading>` (the entry's text is typed in for you to change). The event gets the entry's date and its amount without sign, and the entry as its posting on the statement's account. |
-| w      | Adds it to a waiting event of its fiscal year, chosen by number at `event?>` (listed as in the waiting list). The event's amount stays as it is. |
+| 1      | Makes a new waiting event with it. Type the heading at `heading>` (the entry's text is typed in for you to change). The event gets the entry's date and its amount without sign, and the entry as its posting on the statement's account. |
+| 2      | Adds it to a waiting event of its fiscal year, chosen by number at `event?>` (listed as in the waiting list). The event's amount stays as it is. Not shown when the year has no waiting event. |
 | -      | Goes back to the list. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
@@ -1167,7 +1169,7 @@ Fortnox. cratchit imports SIE type 4 files (4E, with vouchers), one fiscal year
 per file: the year the file calls year 0. Export one file per fiscal year and
 import them in any order.
 
-Press `i` at the `project>` prompt and type the path of the file (see Typing a
+Press `2` at the `project>` prompt and type the path of the file (see Typing a
 folder path). cratchit reads and checks the file and shows what importing it
 would do, without changing anything:
 
@@ -1266,8 +1268,8 @@ Unknown records in the file are ignored and noted, as SIE requires.
 
 An account statement is a file from the bank or from Skatteverket listing the
 entries of one account: Nordea's CSV files and Skatteverket's "Bokförda
-transaktioner" (CSV or .skv). Press `s` at `project>`, or at a fiscal year's
-prompt to import only the entries in that year. The entries wait to be
+transaktioner" (CSV or .skv). Press `3` at `project>`, or `5` at a fiscal
+year's prompt to import only the entries in that year. The entries wait to be
 booked (see Statement entries); nothing is put on the accounts yet.
 
 Each line of a statement is an *entry*. A *posting* is an amount on a BAS
@@ -1286,8 +1288,6 @@ Files in /Users/me/Downloads:
        7 entries, 2026-07-03 - 2026-09-28, new
   2  bokf_trans_165567828172.skv
        The file does not start with a UTF-8 byte order mark (BOM), so its encoding is unknown. Save it as UTF-8 with a program that writes a BOM.
-
-Press a number to import that file, - to go back, h for help, q to quit.
 statement?> 
 ```
 
@@ -1356,8 +1356,10 @@ prefix or a word that is not an account lists the matching accounts.
   Known     0 (in statements already imported)
 Import it? (y/n) y
 Stashed the file as .cratchit/statements/2026-10-24_1_PLUSGIROKONTO FTG 51 86 87-9 - 2026-04-12 17.38.43.csv in ...
-Imported 15 entries for account 1920 (0 already known, 0 outside). Press a to book them.
+Imported 15 entries for account 1920 (0 already known, 0 outside). Press 4 to book them.
 ```
+
+At a fiscal year's prompt the last line says `Press 6 to book them.`
 
 An entry already in a statement imported for the account (same date,
 amount, saldo and text) is known, and not imported again; files that overlap
@@ -1377,10 +1379,10 @@ logged.
 
 ### Reports
 
-Press `r` at the `project>` prompt. cratchit lists the fiscal years in the
+Press `5` at the `project>` prompt. cratchit lists the fiscal years in the
 books, newest first; press a number to choose one (with more than 9, keys 0
 and 9 scroll as in the project menu). Then choose a report. In a fiscal year,
-`r` shows the reports of that year at once, and `-` goes back to its prompt:
+`7` shows the reports of that year at once, and `-` goes back to its prompt:
 
 ```
 Reports for 2025-05-01 - 2026-04-30:
@@ -1414,33 +1416,52 @@ account number, a voucher or event line, or a row (see Typing a folder path,
 Creating a project, Entering a voucher and Waiting events).
 
 At the `cratchit>`, `workspace>`, `project>`, fiscal year (such as
-`2026/27>`) and `postings>` prompts, Enter lists the keys you can press there,
-for example:
+`2026/27>`) prompts, Enter lists the numbered keys you can press there, for
+example:
 
 ```
 project> 
 Keys at project>:
-  y  Fiscal years
-  i  Import an SIE file
-  r  Reports
-  l  Show the log
-  -  Back to workspace>
-  h  Help (the manual)
-  q  Quit
+  1  Fiscal years
+  2  Import an SIE file
+  3  Import an account statement
+  4  Statement entries not yet booked
+  5  Reports
 ```
 
-Any other key prints `Unknown key.` and the same list. In the menus (such as
-the workspace menu, the project menu and the reports), the menu itself shows
-the keys.
+Only the numbered keys are listed. The other keys (`-` back, `l` the log, `h`
+help, `q` quit, and at some screens `d` delete or `?` a hint) are not shown;
+any other key prints `Unknown key.` and names them in one line:
+
+```
+project> x
+Unknown key. Other keys: Enter list, - back, l log, h help, q quit.
+```
+
+The menus, lists and views (such as the workspace menu, the project menu,
+the waiting list and a voucher) work the same way: they show only their
+numbered choices, Enter shows them again, and an unknown key names the other
+keys of that screen.
+
+What you can do at these prompts is picked by number. Each number stays with
+its choice: when a choice is not offered (such as opening the saved workspace
+when there is none), its number is left out of the list and the other
+choices keep theirs. Letters and signs are kept for what works the same
+everywhere: `-` back, `q` quit, `h` help, `l` the log, Enter the key list,
+`d` delete, `?` the hint, and `y`/`n` to answer a question.
+
+A list (of projects, waiting events, vouchers, statement entries ...) only
+picks: a number shows that item, and what you can do with it is then listed
+by number.
 
 At the `cratchit>` prompt:
 
 | Key    | What it does                        |
 |--------|-------------------------------------|
 | h      | Opens this manual (see Using help). |
+| 1      | Shows the workspace menu.           |
 | l      | Shows the log (see The log).        |
-| w      | Shows the workspace menu.           |
-| Enter  | Lists these keys.                   |
+| Enter  | Lists the numbered keys.            |
 | q      | Quits cratchit.                     |
 | Ctrl-D | Quits cratchit (same as q).         |
 
@@ -1513,9 +1534,13 @@ subsection of section 2.
 |--------|----------------------------------------------------------|
 | 1-9    | Opens the section with that number.                      |
 | -      | Goes back to the section above. At the top, leaves help. |
+| Enter  | Shows the current section again.                         |
 | h      | Shows the current section again.                         |
 | q      | Leaves help and returns to the prompt you came from.     |
 | Ctrl-D | Quits cratchit.                                          |
+
+A section shows only its numbered subsections. Any other key prints
+`Unknown key. Other keys: Enter this section again, - back, q leave help.`
 
 The Escape key does nothing, because arrow keys send the same code first.
 

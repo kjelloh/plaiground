@@ -45,6 +45,7 @@ add_library(cratchit_core
   src/core/data_folder.cpp
   src/core/date.cpp
   src/core/help.cpp
+  src/core/item_list.cpp
   src/core/key_input.cpp
   src/core/log.cpp
   src/core/log_view.cpp

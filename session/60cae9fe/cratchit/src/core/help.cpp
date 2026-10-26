@@ -28,10 +28,8 @@ std::vector<std::string> lines_of(std::string const& text) {
   return lines;
 }
 
-std::string hint(Section const& section) {
-  return section.children.empty() ? "Press - to go back, q to leave help."
-                                  : "Press a number to open a section, - to go back, q to leave help.";
-}
+// The keys that are not numbers, named only by an unknown key
+constexpr char const* other_keys = "Other keys: Enter this section again, - back, q leave help.";
 
 } // namespace
 
@@ -62,12 +60,12 @@ HelpBrowser::Result HelpBrowser::on_key(charset::unicode::CodePoint key, std::os
     }
     return Result::Stay;
   }
-  if (key == U'h') {
+  if (key == U'h' || key == U'\n' || key == U'\r') {
     show_section(out);
   } else if (key >= U'0' && key <= U'9') {
     select(static_cast<char>(key), out);
   } else {
-    std::println(out, "Unknown key. {}", hint(*path_.back().section));
+    std::println(out, "Unknown key. {}", other_keys);
   }
   return Result::Stay;
 }
@@ -98,11 +96,10 @@ void HelpBrowser::show_section(std::ostream& out) {
     std::ranges::move(lines_of(section.text), std::back_inserter(lines));
     lines.push_back("");
   }
-  if (!section.children.empty()) {
-    std::ranges::move(menu_lines(), std::back_inserter(lines));
-    lines.push_back("");
+  std::ranges::move(menu_lines(), std::back_inserter(lines));
+  while (!lines.empty() && lines.back().empty()) {
+    lines.pop_back();
   }
-  lines.push_back(hint(section));
   show(std::move(lines), out);
 }
 
@@ -114,8 +111,6 @@ void HelpBrowser::show_menu(std::ostream& out) {
     lines.push_back("");
   }
   std::ranges::move(menu_lines(), std::back_inserter(lines));
-  lines.push_back("");
-  lines.push_back(hint(section));
   show(std::move(lines), out);
 }
 
@@ -149,7 +144,7 @@ void HelpBrowser::select(char digit, std::ostream& out) {
     index = level.first_shown + k - 1;
   }
   if (index >= n) {
-    std::println(out, "No section {} here. {}", digit, hint(*level.section));
+    std::println(out, "No section {} here.", digit);
     return;
   }
   path_.push_back({&children[index], index + 1, 0});

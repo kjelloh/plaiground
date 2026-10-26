@@ -40,10 +40,6 @@ bool is_whitespace(charset::unicode::CodePoint key) {
   return key == U'\n' || key == U'\r' || key == U' ' || key == U'\t';
 }
 
-// With more projects than keys 1-9, keys 1-8 show a range, 0 scrolls up and 9 down, as in help
-constexpr std::size_t max_keys = 9;
-constexpr std::size_t range_size = 8;
-
 std::string trimmed(std::string const& text) {
   auto const first = text.find_first_not_of(' ');
   if (first == std::string::npos) {
@@ -108,42 +104,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::Help:
     if (help_.on_key(key, out) == HelpBrowser::Result::Leave) {
       mode_ = before_help_;
-      if (mode_ == Mode::Menu) {
-        show_menu(out);
-      } else if (mode_ == Mode::Choose) {
-        show_choices(out);
-      } else if (mode_ == Mode::Projects) {
-        show_projects(out);
-      } else if (mode_ == Mode::ProjectFolder) {
-        show_project_folders(out);
-      } else if (mode_ == Mode::Years) {
-        show_years(out);
-      } else if (mode_ == Mode::Reports) {
-        show_reports(out);
-      } else if (mode_ == Mode::ChooseAmount) {
-        show_readings(out);
-      } else if (mode_ == Mode::YearMenu) {
-        show_year_menu(out);
-      } else if (mode_ == Mode::Waiting) {
-        show_waiting(out);
-      } else if (mode_ == Mode::Template) {
-        show_templates(out);
-      } else if (mode_ == Mode::VoucherList) {
-        show_vouchers(out);
-      } else if (mode_ == Mode::VoucherView) {
-        show_voucher(out);
-      } else if (mode_ == Mode::StatementFiles) {
-        show_statement_files(out);
-      } else if (mode_ == Mode::EntryList) {
-        show_entries(out);
-      } else if (mode_ == Mode::EntryChoice) {
-        show_entry_choice(out);
-      } else if (mode_ == Mode::AddToEvent) {
-        show_targets(out);
-      } else if (mode_ == Mode::Matches) {
-        show_matches(out);
-      } else if (mode_ == Mode::MatchChoice) {
-        show_match(out);
+      if (!is_prompt()) {
+        show_screen(out);
       }
     }
     return Step::Continue;
@@ -206,65 +168,29 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     open_help(out);
     return Step::Continue;
   }
-  if (is_prompt() && (key == U'\n' || key == U'\r')) {
-    show_keys(out);
+  if (shows_on_enter() && (key == U'\n' || key == U'\r')) {
+    show_screen(out);
+    return Step::Continue;
+  }
+  if (is_prompt()) {
+    on_prompt_key(key, out);
     return Step::Continue;
   }
   switch (mode_) {
-  case Mode::Main:
-    if (key == U'w') {
-      open_menu(out);
-    } else if (key == U'l') {
-      open_log(out);
-    } else {
-      std::println(out, "Unknown key.");
-      show_keys(out);
-    }
-    break;
   case Mode::Menu:
     on_menu_key(key, out);
     break;
   case Mode::Choose:
     on_choose_key(key, out);
     break;
-  case Mode::Workspace:
-    if (key == U'-') {
-      mode_ = Mode::Main;
-    } else if (key == U'p') {
-      open_projects(out);
-    } else if (key == U'l') {
-      open_log(out);
-    } else {
-      std::println(out, "Unknown key.");
-      show_keys(out);
-    }
-    break;
   case Mode::Projects:
     on_projects_key(key, out);
     break;
+  case Mode::ProjectList:
+    on_project_list_key(key, out);
+    break;
   case Mode::ProjectFolder:
     on_project_folder_key(key, out);
-    break;
-  case Mode::Project:
-    if (key == U'-') {
-      mode_ = Mode::Workspace;
-    } else if (key == U'l') {
-      open_log(out);
-    } else if (key == U'y') {
-      open_year_menu(out);
-    } else if (key == U'i') {
-      start_import(out);
-    } else if (key == U's') {
-      start_statement(out);
-    } else if (key == U'a') {
-      open_entries(out);
-    } else if (key == U'r') {
-      before_reports_ = Mode::Years;
-      open_years(out);
-    } else {
-      std::println(out, "Unknown key.");
-      show_keys(out);
-    }
     break;
   case Mode::Years:
     on_years_key(key, out);
@@ -278,11 +204,11 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::YearMenu:
     on_year_menu_key(key, out);
     break;
-  case Mode::Year:
-    on_year_key(key, out);
-    break;
   case Mode::Waiting:
     on_waiting_key(key, out);
+    break;
+  case Mode::WaitingEvent:
+    on_waiting_event_key(key, out);
     break;
   case Mode::Template:
     on_template_key(key, out);
@@ -328,9 +254,12 @@ bool Repl::ignores(charset::unicode::CodePoint key) const {
   if (key == escape) {
     return true;
   }
-  // Enter lists the keys at a prompt and at postings>, and takes the first template or the default series
-  if ((is_prompt() || mode_ == Mode::Postings || mode_ == Mode::Template || mode_ == Mode::Series) &&
-      (key == U'\n' || key == U'\r')) {
+  // Enter shows the numbered choices again, takes the first template or the default series
+  if ((shows_on_enter() || mode_ == Mode::Template || mode_ == Mode::Series) && (key == U'\n' || key == U'\r')) {
+    return false;
+  }
+  // Enter shows the help section again
+  if (mode_ == Mode::Help && !help_.is_paging() && (key == U'\n' || key == U'\r')) {
     return false;
   }
   // Space and Enter show the next page of help or the log
@@ -346,41 +275,394 @@ bool Repl::is_prompt() const {
 
 void Repl::show_keys(std::ostream& out) const {
   std::println(out, "Keys at {}:", prompt().substr(0, prompt().size() - 1));
-  if (mode_ == Mode::Main) {
-    std::println(out, "  w  Workspace menu");
-  } else if (mode_ == Mode::Workspace) {
-    std::println(out, "  p  Projects");
-  } else if (mode_ == Mode::Project) {
-    std::println(out, "  y  Fiscal years");
-    std::println(out, "  i  Import an SIE file");
-    std::println(out, "  s  Import an account statement");
-    std::println(out, "  a  Statement entries not yet booked");
-    std::println(out, "  r  Reports");
-  } else {
+  operations().show(out);
+}
+
+// The modes where every key acts at once and the choices are numbered: Enter shows them again
+bool Repl::shows_on_enter() const {
+  switch (mode_) {
+  case Mode::Main:
+  case Mode::Workspace:
+  case Mode::Project:
+  case Mode::Year:
+  case Mode::Menu:
+  case Mode::Choose:
+  case Mode::Projects:
+  case Mode::ProjectList:
+  case Mode::ProjectFolder:
+  case Mode::Years:
+  case Mode::Reports:
+  case Mode::YearMenu:
+  case Mode::ChooseAmount:
+  case Mode::Postings:
+  case Mode::Waiting:
+  case Mode::WaitingEvent:
+  case Mode::VoucherList:
+  case Mode::VoucherView:
+  case Mode::StatementFiles:
+  case Mode::EntryList:
+  case Mode::EntryChoice:
+  case Mode::AddToEvent:
+  case Mode::Matches:
+  case Mode::MatchChoice:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// The current mode's choices again: the key list at a prompt, else the menu, list or view
+void Repl::show_screen(std::ostream& out) {
+  switch (mode_) {
+  case Mode::Main:
+  case Mode::Workspace:
+  case Mode::Project:
+  case Mode::Year:
+    show_keys(out);
+    break;
+  case Mode::Menu:
+    show_menu(out);
+    break;
+  case Mode::Choose:
+    show_choices(out);
+    break;
+  case Mode::Projects:
+    show_projects(out);
+    break;
+  case Mode::ProjectList:
+    show_project_list(out);
+    break;
+  case Mode::ProjectFolder:
+    show_project_folders(out);
+    break;
+  case Mode::Years:
+    show_years(out);
+    break;
+  case Mode::Reports:
+    show_reports(out);
+    break;
+  case Mode::ChooseAmount:
+    show_readings(out);
+    break;
+  case Mode::YearMenu:
+    show_year_menu(out);
+    break;
+  case Mode::Template:
+    show_templates(out);
+    break;
+  case Mode::Postings:
+    show_draft(out);
+    std::println(out, "");
+    show_operations(out);
+    break;
+  case Mode::Waiting:
+    show_waiting(out);
+    break;
+  case Mode::WaitingEvent:
+    show_waiting_event(out);
+    break;
+  case Mode::VoucherList:
+    show_vouchers(out);
+    break;
+  case Mode::VoucherView:
+    show_voucher(out);
+    break;
+  case Mode::StatementFiles:
+    show_statement_files(out);
+    break;
+  case Mode::EntryList:
+    show_entries(out);
+    break;
+  case Mode::EntryChoice:
+    show_entry_choice(out);
+    break;
+  case Mode::AddToEvent:
+    show_targets(out);
+    break;
+  case Mode::Matches:
+    show_matches(out);
+    break;
+  case Mode::MatchChoice:
+    show_match(out);
+    break;
+  default:
+    break;
+  }
+}
+
+// An unknown key names the keys that are not numbers
+void Repl::unknown_key(std::ostream& out) const {
+  std::println(out, "Unknown key. {}", operations().one_liner());
+}
+
+// Each number keeps its operation; one not offered leaves a gap
+Operations<Repl::Op> Repl::operations() const {
+  Operations<Op> operations;
+  switch (mode_) {
+  case Mode::Main:
+    operations.add(1, "Workspace menu", Op::WorkspaceMenu);
+    break;
+  case Mode::Workspace:
+    operations.add(1, "Projects", Op::Projects);
+    break;
+  case Mode::Project:
+    operations.add(1, "Fiscal years", Op::FiscalYears)
+        .add(2, "Import an SIE file", Op::ImportSie)
+        .add(3, "Import an account statement", Op::ImportStatement)
+        .add(4, "Statement entries not yet booked", Op::StatementEntries)
+        .add(5, "Reports", Op::Reports);
+    break;
+  case Mode::Year: {
     auto const* year = books_.year_starting(open_year_);
-    std::println(out, "  e  Enter a voucher");
-    std::println(out, "  n  Note an event to post later");
-    std::println(out, "  w  Waiting events ({})", year ? year->waiting.size() : 0);
-    std::println(out, "  v  View vouchers (correct one, or use it as a template)");
-    std::println(out, "  s  Import an account statement (only the entries in this year)");
-    std::println(out, "  a  Statement entries not yet booked in this year");
-    std::println(out, "  r  Reports of this year");
-    if (year && year->closed) {
-      std::println(out, "  o  Open the year for new vouchers");
-    } else {
-      std::println(out, "  c  Close the year for new vouchers");
+    auto const closed = year && year->closed;
+    operations.add(1, "Enter a voucher", Op::EnterVoucher)
+        .add(2, "Note an event to post later", Op::NoteEvent)
+        .add(3, std::format("Waiting events ({})", year ? year->waiting.size() : 0), Op::WaitingEvents)
+        .add(4, "View vouchers (correct one, or use it as a template)", Op::ViewVouchers)
+        .add(5, "Import an account statement (only the entries in this year)", Op::ImportStatement)
+        .add(6, "Statement entries not yet booked in this year", Op::StatementEntries)
+        .add(7, "Reports of this year", Op::Reports)
+        .add(8, "Close the year for new vouchers", Op::CloseYear, year && !closed)
+        .add(8, "Open the year for new vouchers", Op::OpenYear, closed)
+        .add(9, "Find matches among the waiting events", Op::FindMatches);
+    break;
+  }
+  case Mode::Projects:
+    operations.add(1, std::format("Open a project ({} listed)", listed_.size()), Op::OpenProject, !listed_.empty())
+        .add(2, "New project", Op::NewProject)
+        .add(3, "Add an existing project folder", Op::AddProject);
+    break;
+  case Mode::WaitingEvent:
+    operations.add(1, "Post it: enter its voucher", Op::PostEvent);
+    break;
+  case Mode::MatchChoice:
+    operations.add(1, "Make them one event", Op::MakeOneEvent,
+                   chosen_match_ < matches_.size() && matches_[chosen_match_].kind == books::Match::Kind::same);
+    break;
+  case Mode::VoucherView:
+    operations.add(1, "Correct it", Op::CorrectVoucher).add(2, "Use it as a template", Op::VoucherAsTemplate);
+    break;
+  case Mode::EntryChoice:
+    operations.add(1, "New waiting event with it", Op::NewEventFromEntry)
+        .add(2, "Add it to a waiting event", Op::AddEntryToEvent,
+             entry_year_ < books_.years.size() && !books_.years[entry_year_].waiting.empty());
+    break;
+  case Mode::Postings:
+    if (draft_) {
+      operations.add(1, std::format("Save as {} {}", draft_->series, number_), Op::SaveVoucher)
+          .add(2, "Flip the template's rows (debit becomes credit)", Op::FlipTemplate, !draft_->guide.empty());
     }
+    break;
+  case Mode::Menu:
+    operations.add(1, std::format("Open {}", current_ ? current_->string() : ""), Op::OpenSaved, current_.has_value())
+        .add(2, "Browse for a new workspace", Op::Browse);
+    break;
+  default:
+    break;
   }
-  std::println(out, "  l  Show the log");
-  if (mode_ == Mode::Workspace) {
-    std::println(out, "  -  Back to cratchit>");
-  } else if (mode_ == Mode::Project) {
-    std::println(out, "  -  Back to workspace>");
-  } else if (mode_ == Mode::Year) {
-    std::println(out, "  -  Back to project>");
+  // The keys that are not numbers, named only by an unknown key
+  switch (mode_) {
+  case Mode::Main:
+    operations.other("Enter", "list").other("l", "log").other("h", "help").other("q", "quit");
+    break;
+  case Mode::Workspace:
+  case Mode::Project:
+  case Mode::Year:
+    operations.other("Enter", "list").other("-", "back").other("l", "log").other("h", "help").other("q", "quit");
+    break;
+  case Mode::ChooseAmount:
+    operations.other("Enter", "list").other("-", "change the line").other("h", "help").other("q", "quit");
+    break;
+  case Mode::Template:
+    operations.other("Enter", "use 1").other("-", "back").other("h", "help").other("q", "quit");
+    break;
+  case Mode::Postings:
+    operations.other("Enter", "list")
+        .other("?", "hint of counter accounts")
+        .other("-", "change the rows")
+        .other("h", "help")
+        .other("q", "quit");
+    break;
+  case Mode::WaitingEvent:
+    operations.other("Enter", "list").other("d", "delete").other("-", "back").other("h", "help").other("q", "quit");
+    break;
+  case Mode::MatchChoice:
+    operations.other("Enter", "list");
+    if (chosen_match_ < matches_.size() && matches_[chosen_match_].kind == books::Match::Kind::books) {
+      operations.other("d", "delete the waiting event as already in the books");
+    }
+    operations.other("-", "back").other("h", "help").other("q", "quit");
+    break;
+  default:
+    operations.other("Enter", "list").other("-", "back").other("h", "help").other("q", "quit");
+    break;
   }
-  std::println(out, "  h  Help (the manual)");
-  std::println(out, "  q  Quit");
+  return operations;
+}
+
+// Below a menu or the view of one item: its numbered operations
+void Repl::show_operations(std::ostream& out) const {
+  operations().show(out);
+}
+
+// A key at cratchit>, workspace>, project> or the year prompt
+void Repl::on_prompt_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-' && mode_ != Mode::Main) {
+    mode_ = mode_ == Mode::Workspace ? Mode::Main : mode_ == Mode::Project ? Mode::Workspace : Mode::Project;
+  } else if (key == U'l') {
+    open_log(out);
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
+  } else {
+    unknown_key(out);
+  }
+}
+
+void Repl::on_operation(Op op, std::ostream& out) {
+  switch (op) {
+  case Op::WorkspaceMenu:
+    open_menu(out);
+    break;
+  case Op::Projects:
+    open_projects(out);
+    break;
+  case Op::FiscalYears:
+    open_year_menu(out);
+    break;
+  case Op::ImportSie:
+    start_import(out);
+    break;
+  case Op::ImportStatement:
+    start_statement(out);
+    break;
+  case Op::StatementEntries:
+    open_entries(out);
+    break;
+  case Op::Reports:
+    if (mode_ == Mode::Project) {
+      before_reports_ = Mode::Years;
+      open_years(out);
+    } else if (auto const index = read_open_year(out)) {
+      year_ = *index;
+      before_reports_ = Mode::Year;
+      mode_ = Mode::Reports;
+      show_reports(out);
+    }
+    break;
+  case Op::EnterVoucher:
+    start_entry(false, out);
+    break;
+  case Op::NoteEvent:
+    start_entry(true, out);
+    break;
+  case Op::WaitingEvents:
+    open_waiting(out);
+    break;
+  case Op::ViewVouchers:
+    open_vouchers(out);
+    break;
+  case Op::CloseYear:
+    set_closed(true, out);
+    break;
+  case Op::OpenYear:
+    set_closed(false, out);
+    break;
+  case Op::OpenSaved:
+    enter_workspace(*current_, false, out);
+    break;
+  case Op::Browse:
+    before_choose_ = Mode::Menu;
+    mode_ = Mode::Choose;
+    show_choices(out);
+    break;
+  case Op::FindMatches:
+    open_matches(out);
+    break;
+  case Op::OpenProject:
+    project_page_.reset();
+    mode_ = Mode::ProjectList;
+    show_project_list(out);
+    break;
+  case Op::NewProject:
+    start_project_typing(Purpose::ProjectName, out);
+    break;
+  case Op::AddProject:
+    start_project_typing(Purpose::ExistingProject, out);
+    break;
+  case Op::PostEvent:
+    post_waiting(chosen_waiting_, out);
+    break;
+  case Op::MakeOneEvent: {
+    // The line starts as the older event's heading, amount and date (the list is by date, so the first)
+    auto const& event = books_.year_starting(open_year_)->waiting[matches_[chosen_match_].waiting].event;
+    draft_.reset();
+    noting_ = false;
+    merging_ = true;
+    from_waiting_.reset();
+    template_key_.reset();
+    correcting_.reset();
+    purpose_ = Purpose::Voucher;
+    editor_.start(std::format("{} {} {}", event.heading, format_amount(event.amount), format_iso_date(event.date)),
+                  PathEditor::Kind::Event);
+    mode_ = Mode::Typing;
+    std::println(out, "Type the heading, amount and date of the one event; the older event's are typed in for you.");
+    std::println(out, "Backspace erases, Enter accepts. Enter on an empty line goes back.");
+    out << editor_.prompt();
+    break;
+  }
+  case Op::CorrectVoucher: {
+    auto const voucher = books_.year_starting(open_year_)->vouchers[viewed_];
+    auto const viewed = key_of(voucher);
+    if (imported_.contains(viewed)) {
+      std::println(out, "{} {} came with an SIE import, so cratchit does not correct it. Correct it in the program it",
+                   voucher.series, voucher.number);
+      std::println(out, "came from and import the file again.");
+      break;
+    }
+    // The line is the correction's heading and amount; no date means today
+    auto const line = std::format("Rättelse av {} {}: {} {}", voucher.series, voucher.number, voucher.event.heading,
+                                  format_amount(voucher.event.amount));
+    if (start_entry(false, out, line)) {
+      correcting_ = viewed;
+    }
+    break;
+  }
+  case Op::VoucherAsTemplate: {
+    auto const viewed = key_of(books_.year_starting(open_year_)->vouchers[viewed_]);
+    if (start_entry(false, out)) {
+      template_key_ = viewed;
+    }
+    break;
+  }
+  case Op::NewEventFromEntry:
+  case Op::AddEntryToEvent: {
+    auto const& year = books_.years[entry_year_];
+    if (year.closed) {
+      std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press 8 at its prompt to open it.",
+                   format_iso_date(year.start), format_iso_date(year.end));
+    } else if (op == Op::NewEventFromEntry) {
+      std::println(out,
+                   "Type the heading of the event. Backspace erases, Enter accepts. Enter on an empty line goes back.");
+      purpose_ = Purpose::EventHeading;
+      editor_.start(open_entries_[chosen_entry_].entry.text, PathEditor::Kind::Heading);
+      mode_ = Mode::Typing;
+      out << editor_.prompt();
+    } else {
+      target_page_.reset();
+      mode_ = Mode::AddToEvent;
+      show_targets(out);
+    }
+    break;
+  }
+  case Op::SaveVoucher:
+    whole_suggested_ = false;
+    save_voucher(out);
+    break;
+  case Op::FlipTemplate:
+    draft_->flip_guide();
+    apply_guide(out);
+    break;
+  }
 }
 
 bool Repl::is_typing() const {
@@ -405,6 +687,8 @@ std::string Repl::prompt() const {
   case Mode::Projects:
   case Mode::ProjectFolder:
     return "project?> ";
+  case Mode::ProjectList:
+    return "open?> ";
   case Mode::Project:
     return "project> ";
   case Mode::ConfirmImport:
@@ -437,7 +721,9 @@ std::string Repl::prompt() const {
   case Mode::Postings:
     return "postings> ";
   case Mode::Waiting:
-    return deleting_ ? "delete?> " : "waiting?> ";
+    return "waiting?> ";
+  case Mode::WaitingEvent:
+    return "waiting> ";
   case Mode::ConfirmDelete:
   case Mode::ConfirmBooked:
     return "Delete it? (y/n) ";
@@ -503,25 +789,16 @@ void Repl::open_menu(std::ostream& out) {
 
 void Repl::show_menu(std::ostream& out) {
   std::println(out, "Workspace:");
-  if (current_) {
-    std::println(out, "  w  Open {}", current_->string());
-  }
-  std::println(out, "  b  Browse for a new workspace");
-  std::println(out, "");
-  std::println(out, "Press {}, - to go back, h for help, q to quit.", current_ ? "w or b" : "b");
+  operations().show(out);
 }
 
 void Repl::on_menu_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U'w' && current_) {
-    enter_workspace(*current_, false, out);
-  } else if (key == U'b') {
-    before_choose_ = Mode::Menu;
-    mode_ = Mode::Choose;
-    show_choices(out);
-  } else if (key == U'-') {
+  if (key == U'-') {
     mode_ = Mode::Main;
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
   } else {
-    std::println(out, "Press {}, - to go back, h for help, q to quit.", current_ ? "w or b" : "b");
+    unknown_key(out);
   }
 }
 
@@ -532,8 +809,6 @@ void Repl::show_choices(std::ostream& out) {
     std::println(out, "  2  {}", places_.default_folder->string());
   }
   std::println(out, "  3  Type a folder path");
-  std::println(out, "");
-  std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
 }
 
 void Repl::start_typing(std::ostream& out) {
@@ -558,7 +833,7 @@ void Repl::on_choose_key(charset::unicode::CodePoint key, std::ostream& out) {
       show_menu(out);
     }
   } else {
-    std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -797,21 +1072,30 @@ void Repl::open_projects(std::ostream& out) {
     return;
   }
   listed_ = std::move(*listed);
-  first_listed_ = 0;
   mode_ = Mode::Projects;
   show_projects(out);
 }
 
+// What to do with the workspace's projects: open one (when any is listed), create or add one
 void Repl::show_projects(std::ostream& out) {
   std::println(out, "Projects in {}:", workspace_->folder.string());
-  auto const n = listed_.size();
-  auto const first = n <= max_keys ? 0 : first_listed_;
-  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
-  if (first > 0) {
-    std::println(out, "  0  ...up");
+  show_operations(out);
+}
+
+void Repl::on_projects_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::Workspace;
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
+  } else {
+    unknown_key(out);
   }
-  for (auto i = first; i < last; ++i) {
-    auto const& listed = listed_[i];
+}
+
+void Repl::show_project_list(std::ostream& out) {
+  std::println(out, "Projects in {}:", workspace_->folder.string());
+  project_page_.show(listed_.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& listed = listed_[index];
     std::string name = "(error)";
     std::error_code ec;
     if (auto const project = open_listed_project(listed)) {
@@ -819,49 +1103,28 @@ void Repl::show_projects(std::ostream& out) {
     } else if (!fs::is_directory(listed.folder, ec)) {
       name = "(not found)";
     }
-    std::println(out, "  {}  {}  {}", i - first + 1, name, listed.folder.string());
-  }
-  if (last < n) {
-    std::println(out, "  9  ...down");
-  }
-  std::println(out, "  n  New project");
-  std::println(out, "  a  Add an existing project folder");
-  std::println(out, "");
-  projects_hint(out);
+    std::println(out, "  {}  {}  {}", key, name, listed.folder.string());
+  });
 }
 
-void Repl::projects_hint(std::ostream& out) {
-  std::println(out, "Press {}n or a, - to go back, h for help, q to quit.", listed_.empty() ? "" : "a number, ");
-}
-
-void Repl::on_projects_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const n = listed_.size();
-  if (key == U'n') {
-    start_project_typing(Purpose::ProjectName, out);
-  } else if (key == U'a') {
-    start_project_typing(Purpose::ExistingProject, out);
-  } else if (key == U'-') {
-    mode_ = Mode::Workspace;
-  } else if (n > max_keys && key == U'0' && first_listed_ > 0) {
-    first_listed_ -= range_size;
+void Repl::on_project_list_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::Projects;
     show_projects(out);
-  } else if (n > max_keys && key == U'9' && first_listed_ + range_size < n) {
-    first_listed_ += range_size;
-    show_projects(out);
-  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9')) {
-    auto const index = (n > max_keys ? first_listed_ : 0) + static_cast<std::size_t>(key - U'1');
-    if (index >= n) {
-      projects_hint(out);
-      return;
-    }
-    auto const project = open_listed_project(listed_[index]);
+    return;
+  }
+  auto const pick = project_page_.on_key(key, listed_.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
+    show_project_list(out);
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    auto const project = open_listed_project(listed_[pick.index]);
     if (!project) {
       std::println(out, "Error: {}", project.error());
       return;
     }
     enter_project(*project, out);
   } else {
-    projects_hint(out);
+    unknown_key(out);
   }
 }
 
@@ -888,8 +1151,6 @@ void Repl::show_project_folders(std::ostream& out) {
     std::println(out, "  1  {}", folder->string());
   }
   std::println(out, "  2  Type a folder path");
-  std::println(out, "");
-  std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
 }
 
 void Repl::on_project_folder_key(charset::unicode::CodePoint key, std::ostream& out) {
@@ -904,7 +1165,7 @@ void Repl::on_project_folder_key(charset::unicode::CodePoint key, std::ostream& 
     mode_ = Mode::Projects;
     show_projects(out);
   } else {
-    std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -1131,11 +1392,11 @@ void Repl::open_years(std::ostream& out) {
     return;
   }
   if (books->years.empty()) {
-    std::println(out, "No books yet. Press i to import an SIE file.");
+    std::println(out, "No books yet. Press 2 at project> to import an SIE file.");
     return;
   }
   books_ = std::move(*books);
-  first_year_ = 0;
+  year_page_.reset();
   mode_ = Mode::Years;
   show_years(out);
 }
@@ -1144,39 +1405,27 @@ void Repl::open_years(std::ostream& out) {
 void Repl::show_years(std::ostream& out) {
   std::println(out, "Fiscal years of {}:", company());
   auto const n = books_.years.size();
-  auto const first = n <= max_keys ? 0 : first_year_;
-  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
-  if (first > 0) {
-    std::println(out, "  0  ...up");
-  }
-  for (auto i = first; i < last; ++i) {
-    auto const& year = books_.years[n - 1 - i];
-    std::println(out, "  {}  {} - {}", i - first + 1, format_iso_date(year.start), format_iso_date(year.end));
-  }
-  if (last < n) {
-    std::println(out, "  9  ...down");
-  }
-  std::println(out, "");
-  std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+  year_page_.show(n, out, [&](std::size_t index, std::size_t key) {
+    auto const& year = books_.years[n - 1 - index];
+    std::println(out, "  {}  {} - {}", key, format_iso_date(year.start), format_iso_date(year.end));
+  });
 }
 
 void Repl::on_years_key(charset::unicode::CodePoint key, std::ostream& out) {
   auto const n = books_.years.size();
   if (key == U'-') {
     mode_ = Mode::Project;
-  } else if (n > max_keys && key == U'0' && first_year_ > 0) {
-    first_year_ -= range_size;
+    return;
+  }
+  auto const pick = year_page_.on_key(key, n);
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_years(out);
-  } else if (n > max_keys && key == U'9' && first_year_ + range_size < n) {
-    first_year_ += range_size;
-    show_years(out);
-  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
-             (n > max_keys ? first_year_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
-    year_ = n - 1 - ((n > max_keys ? first_year_ : 0) + static_cast<std::size_t>(key - U'1'));
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    year_ = n - 1 - pick.index;
     mode_ = Mode::Reports;
     show_reports(out);
   } else {
-    std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -1186,8 +1435,6 @@ void Repl::show_reports(std::ostream& out) {
   std::println(out, "  1  Trial balance (saldobalans)");
   std::println(out, "  2  Vouchers");
   std::println(out, "  3  Account ledger");
-  std::println(out, "");
-  std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
 }
 
 void Repl::on_reports_key(charset::unicode::CodePoint key, std::ostream& out) {
@@ -1207,7 +1454,7 @@ void Repl::on_reports_key(charset::unicode::CodePoint key, std::ostream& out) {
     mode_ = Mode::Years;
     show_years(out);
   } else {
-    std::println(out, "Press a number to choose, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -1226,51 +1473,42 @@ void Repl::open_year_menu(std::ostream& out) {
     return;
   }
   if (books->years.empty()) {
-    std::println(out, "No books yet. Press i to import an SIE file.");
+    std::println(out, "No books yet. Press 2 at project> to import an SIE file.");
     return;
   }
   books_ = std::move(*books);
-  first_open_ = 0;
+  year_menu_page_.reset();
   mode_ = Mode::YearMenu;
   show_year_menu(out);
 }
 
-// Numbered from 0, the newest, as SIE numbers years; ten at a time
+// Numbered from 0, the newest, as SIE numbers years; over ten, 9 shows older years and 0 newer
 void Repl::show_year_menu(std::ostream& out) {
   auto const n = books_.years.size();
-  auto const last = std::min(first_open_ + 10, n);
-  if (first_open_ == 0) {
+  auto const first = year_menu_page_.first(n);
+  if (first == 0) {
     std::println(out, "Fiscal years of {} (0 is the newest):", company());
   } else {
-    std::println(out, "Fiscal years {} to {} of {} (key 0 is year {}):", first_open_, last - 1, company(), first_open_);
+    std::println(out, "Fiscal years of {} (key 1 is year {}):", company(), first);
   }
-  if (first_open_ > 0) {
-    std::println(out, "  <  ...newer");
-  }
-  for (auto i = first_open_; i < last; ++i) {
-    auto const& year = books_.years[n - 1 - i];
-    std::println(out, "  {}  {} - {}  {}", i - first_open_, format_iso_date(year.start), format_iso_date(year.end),
+  year_menu_page_.show(n, out, [&](std::size_t index, std::size_t key) {
+    auto const& year = books_.years[n - 1 - index];
+    std::println(out, "  {}  {} - {}  {}", key, format_iso_date(year.start), format_iso_date(year.end),
                  year.closed ? "closed" : "open");
-  }
-  if (last < n) {
-    std::println(out, "  >  ...older");
-  }
-  std::println(out, "");
-  std::println(out, "Press a number to open a year, - to go back, h for help, q to quit.");
+  });
 }
 
 void Repl::on_year_menu_key(charset::unicode::CodePoint key, std::ostream& out) {
   auto const n = books_.years.size();
   if (key == U'-') {
     mode_ = Mode::Project;
-  } else if (key == U'<' && first_open_ > 0) {
-    first_open_ -= 10;
+    return;
+  }
+  auto const pick = year_menu_page_.on_key(key, n);
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_year_menu(out);
-  } else if (key == U'>' && first_open_ + 10 < n) {
-    first_open_ += 10;
-    show_year_menu(out);
-  } else if (key >= U'0' && key <= U'9' && first_open_ + static_cast<std::size_t>(key - U'0') < n) {
-    auto const index = n - 1 - (first_open_ + static_cast<std::size_t>(key - U'0'));
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    auto const index = n - 1 - pick.index;
     auto const saved = save_project_year(project_->folder, format_iso_date(books_.years[index].start));
     if (!saved) {
       std::println(out, "Error: {}", saved.error());
@@ -1282,7 +1520,7 @@ void Repl::on_year_menu_key(charset::unicode::CodePoint key, std::ostream& out) 
     project_->year = format_iso_date(books_.years[index].start);
     enter_year(index, out);
   } else {
-    std::println(out, "Press a number to open a year, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -1333,41 +1571,6 @@ std::optional<std::size_t> Repl::read_open_year(std::ostream& out) {
   return static_cast<std::size_t>(year - books_.years.data());
 }
 
-void Repl::on_year_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const* year = books_.year_starting(open_year_);
-  if (key == U'-') {
-    mode_ = Mode::Project;
-  } else if (key == U'l') {
-    open_log(out);
-  } else if (key == U'e') {
-    start_entry(false, out);
-  } else if (key == U'n') {
-    start_entry(true, out);
-  } else if (key == U'w') {
-    open_waiting(out);
-  } else if (key == U'v') {
-    open_vouchers(out);
-  } else if (key == U's') {
-    start_statement(out);
-  } else if (key == U'a') {
-    open_entries(out);
-  } else if (key == U'r') {
-    if (auto const index = read_open_year(out)) {
-      year_ = *index;
-      before_reports_ = Mode::Year;
-      mode_ = Mode::Reports;
-      show_reports(out);
-    }
-  } else if (key == U'c' && year && !year->closed) {
-    set_closed(true, out);
-  } else if (key == U'o' && year && year->closed) {
-    set_closed(false, out);
-  } else {
-    std::println(out, "Unknown key.");
-    show_keys(out);
-  }
-}
-
 void Repl::set_closed(bool closed, std::ostream& out) {
   auto const index = read_open_year(out);
   if (!index) {
@@ -1393,7 +1596,7 @@ bool Repl::start_entry(bool noting, std::ostream& out, std::string const& line) 
   }
   auto const& year = books_.years[*index];
   if (year.closed) {
-    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press o to open it.", format_iso_date(year.start),
+    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press 8 to open it.", format_iso_date(year.start),
                  format_iso_date(year.end));
     return false;
   }
@@ -1448,8 +1651,6 @@ void Repl::show_readings(std::ostream& out) {
   for (std::size_t i = 0; i < readings_.size(); ++i) {
     std::println(out, "  {}  {:>15}  {}", i + 1, format_amount(readings_[i].amount), readings_[i].heading);
   }
-  std::println(out, "");
-  std::println(out, "Press a number to choose, - to change the line, h for help, q to quit.");
 }
 
 void Repl::on_choose_amount_key(charset::unicode::CodePoint key, std::ostream& out) {
@@ -1460,7 +1661,7 @@ void Repl::on_choose_amount_key(charset::unicode::CodePoint key, std::ostream& o
     mode_ = Mode::Typing;
     out << editor_.prompt();
   } else {
-    std::println(out, "Press a number to choose, - to change the line, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -1511,8 +1712,7 @@ void Repl::show_templates(std::ostream& out) const {
                  format_amount(like.event.amount), like.event.heading);
     show_counted_rows(like.postings, "       ", out);
   }
-  std::println(out, "");
-  std::println(out, "Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.");
+  std::println(out, "  0  None: type the rows yourself");
 }
 
 void Repl::on_template_key(charset::unicode::CodePoint key, std::ostream& out) {
@@ -1520,7 +1720,7 @@ void Repl::on_template_key(charset::unicode::CodePoint key, std::ostream& out) {
     use_template(templates_.front(), out);
   } else if (key >= U'1' && key <= U'9' && static_cast<std::size_t>(key - U'1') < templates_.size()) {
     use_template(templates_[static_cast<std::size_t>(key - U'1')], out);
-  } else if (key == U'n') {
+  } else if (key == U'0') {
     use_template(nullptr, out);
   } else if (key == U'-' && from_waiting_) {
     draft_.reset();
@@ -1532,7 +1732,7 @@ void Repl::on_template_key(charset::unicode::CodePoint key, std::ostream& out) {
     mode_ = Mode::Typing;
     out << editor_.prompt();
   } else {
-    std::println(out, "Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -1861,29 +2061,12 @@ void Repl::show_hints(std::vector<books::AccountSide> const& sides, std::ostream
 void Repl::open_postings(std::ostream& out) {
   show_draft(out);
   std::println(out, "");
-  show_postings_keys(out);
   mode_ = Mode::Postings;
-}
-
-void Repl::show_postings_keys(std::ostream& out) const {
-  std::println(out, "  s  Save as {} {}", draft_->series, number_);
-  if (!draft_->guide.empty()) {
-    std::println(out, "  f  Flip the template's rows (debit becomes credit)");
-  }
-  std::println(out, "  ?  Hint: the counter accounts used before with the rows' accounts");
-  std::println(out, "  -  Change the rows");
-  std::println(out, "  h  Help (the manual)");
-  std::println(out, "  q  Quit");
+  show_operations(out);
 }
 
 void Repl::on_postings_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U's') {
-    whole_suggested_ = false;
-    save_voucher(out);
-  } else if (key == U'f' && !draft_->guide.empty()) {
-    draft_->flip_guide();
-    apply_guide(out);
-  } else if (key == U'?') {
+  if (key == U'?') {
     show_hints(books::sides_in(draft_->postings), out);
   } else if (key == U'-') {
     if (whole_suggested_) {
@@ -1892,12 +2075,10 @@ void Repl::on_postings_key(charset::unicode::CodePoint key, std::ostream& out) {
       whole_suggested_ = false;
     }
     start_rows(out);
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
   } else {
-    if (key != U'\n' && key != U'\r') {
-      std::println(out, "Unknown key.");
-    }
-    std::println(out, "Keys at postings>:");
-    show_postings_keys(out);
+    unknown_key(out);
   }
 }
 
@@ -1965,7 +2146,7 @@ void Repl::note_event(std::ostream& out) {
     year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(placed));
     return;
   }
-  std::println(out, "Noted: {} {} {} ({} waiting). Press w to post it.", format_iso_date(event.date), event.heading,
+  std::println(out, "Noted: {} {} {} ({} waiting). Press 3 to post it.", format_iso_date(event.date), event.heading,
                format_amount(event.amount), year.waiting.size());
   LOG_BUSINESS("Noted waiting event {} \"{}\" {} in project {} ({}), fiscal year {} - {}", format_iso_date(event.date),
                event.heading, format_amount(event.amount), project_->name, project_->uuid,
@@ -1979,12 +2160,11 @@ void Repl::open_waiting(std::ostream& out) {
   }
   auto const& year = books_.years[*index];
   if (year.waiting.empty()) {
-    std::println(out, "No events are waiting in fiscal year {} - {}. Press n to note one.", format_iso_date(year.start),
+    std::println(out, "No events are waiting in fiscal year {} - {}. Press 2 to note one.", format_iso_date(year.start),
                  format_iso_date(year.end));
     return;
   }
-  first_waiting_ = 0;
-  deleting_ = false;
+  waiting_page_.reset();
   mode_ = Mode::Waiting;
   show_waiting(out);
 }
@@ -1992,67 +2172,52 @@ void Repl::open_waiting(std::ostream& out) {
 // Numbered from 1 in the order noted; over 9, keys 1-8 with 0 up and 9 down
 void Repl::show_waiting(std::ostream& out) {
   auto const& year = *books_.year_starting(open_year_);
-  auto const n = year.waiting.size();
-  auto const first = n <= max_keys ? 0 : first_waiting_;
-  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
   std::println(out, "Waiting events in fiscal year {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
-  if (first > 0) {
-    std::println(out, "  0  ...up");
-  }
-  for (auto i = first; i < last; ++i) {
-    auto const& waiting = year.waiting[i];
-    std::println(out, "  {}  {}  {:>12}  {}", i - first + 1, format_iso_date(waiting.event.date),
+  waiting_page_.show(year.waiting.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& waiting = year.waiting[index];
+    std::println(out, "  {}  {}  {:>12}  {}", key, format_iso_date(waiting.event.date),
                  format_amount(waiting.event.amount), waiting.event.heading);
     show_event_postings(waiting, out);
-  }
-  if (last < n) {
-    std::println(out, "  9  ...down");
-  }
-  std::println(out, "");
-  waiting_hint(out);
-}
-
-void Repl::waiting_hint(std::ostream& out) const {
-  if (deleting_) {
-    std::println(out, "Press the number of the event to delete, - not to delete.");
-  } else {
-    std::println(out, "Press a number to post it, d to delete one, m to find matches, - to go back, h for help, q to "
-                      "quit.");
-  }
+  });
 }
 
 void Repl::on_waiting_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const& year = *books_.year_starting(open_year_);
-  auto const n = year.waiting.size();
-  if (key == U'-' && deleting_) {
-    deleting_ = false;
-    waiting_hint(out);
-  } else if (key == U'-') {
+  if (key == U'-') {
     mode_ = Mode::Year;
-  } else if (key == U'd' && !deleting_) {
-    deleting_ = true;
-    waiting_hint(out);
-  } else if (key == U'm' && !deleting_) {
-    open_matches(out);
-  } else if (n > max_keys && key == U'0' && first_waiting_ > 0) {
-    first_waiting_ -= range_size;
+    return;
+  }
+  auto const pick = waiting_page_.on_key(key, books_.year_starting(open_year_)->waiting.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_waiting(out);
-  } else if (n > max_keys && key == U'9' && first_waiting_ + range_size < n) {
-    first_waiting_ += range_size;
-    show_waiting(out);
-  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
-             (n > max_keys ? first_waiting_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
-    auto const index = (n > max_keys ? first_waiting_ : 0) + static_cast<std::size_t>(key - U'1');
-    if (deleting_) {
-      auto const& event = year.waiting[index].event;
-      std::println(out, "  {}  {:>12}  {}", format_iso_date(event.date), format_amount(event.amount), event.heading);
-      to_delete_ = index;
-      mode_ = Mode::ConfirmDelete;
-    } else {
-      post_waiting(index, out);
-    }
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    chosen_waiting_ = pick.index;
+    mode_ = Mode::WaitingEvent;
+    show_waiting_event(out);
   } else {
-    waiting_hint(out);
+    unknown_key(out);
+  }
+}
+
+// The chosen waiting event with its postings, to post or delete
+void Repl::show_waiting_event(std::ostream& out) const {
+  auto const& waiting = books_.year_starting(open_year_)->waiting[chosen_waiting_];
+  std::println(out, "  {}  {:>12}  {}", format_iso_date(waiting.event.date), format_amount(waiting.event.amount),
+               waiting.event.heading);
+  show_event_postings(waiting, out);
+  std::println(out, "");
+  show_operations(out);
+}
+
+void Repl::on_waiting_event_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::Waiting;
+    show_waiting(out);
+  } else if (key == U'd') {
+    mode_ = Mode::ConfirmDelete;
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
+  } else {
+    unknown_key(out);
   }
 }
 
@@ -2061,7 +2226,7 @@ void Repl::post_waiting(std::size_t index, std::ostream& out) {
   auto const year_index = static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data());
   auto const& year = books_.years[year_index];
   if (year.closed) {
-    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press - and then o to open it.",
+    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press - and then 8 to open it.",
                  format_iso_date(year.start), format_iso_date(year.end));
     return;
   }
@@ -2077,11 +2242,11 @@ void Repl::post_waiting(std::size_t index, std::ostream& out) {
 void Repl::on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& out) {
   if (key == U'y') {
     auto& year = books_.years[static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data())];
-    auto const deleted = year.waiting[to_delete_];
-    year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(to_delete_));
+    auto const deleted = year.waiting[chosen_waiting_];
+    year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(chosen_waiting_));
     if (!write_books(out)) {
-      year.waiting.insert(year.waiting.begin() + static_cast<std::ptrdiff_t>(to_delete_), deleted);
-      mode_ = Mode::Waiting;
+      year.waiting.insert(year.waiting.begin() + static_cast<std::ptrdiff_t>(chosen_waiting_), deleted);
+      mode_ = Mode::WaitingEvent;
       return;
     }
     std::println(out, "Deleted the waiting event {} \"{}\" {}.", format_iso_date(deleted.event.date),
@@ -2089,19 +2254,17 @@ void Repl::on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& 
     LOG_BUSINESS("Deleted waiting event {} \"{}\" {} from project {} ({}), fiscal year {} - {}",
                  format_iso_date(deleted.event.date), deleted.event.heading, format_amount(deleted.event.amount),
                  project_->name, project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
-    deleting_ = false;
     if (year.waiting.empty()) {
       std::println(out, "No events are waiting now.");
       mode_ = Mode::Year;
       return;
     }
-    first_waiting_ = std::min(first_waiting_, (year.waiting.size() - 1) / range_size * range_size);
+    waiting_page_.keep_within(year.waiting.size());
     mode_ = Mode::Waiting;
     show_waiting(out);
   } else if (key == U'n' || key == U'-') {
-    deleting_ = false;
-    mode_ = Mode::Waiting;
-    show_waiting(out);
+    mode_ = Mode::WaitingEvent;
+    show_waiting_event(out);
   } else {
     std::println(out, "Press y to delete the event, n not to.");
   }
@@ -2109,14 +2272,17 @@ void Repl::on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& 
 
 // The possible matches among the open year's waiting events, or a note that there are none
 void Repl::open_matches(std::ostream& out) {
-  matches_ = books::find_matches(*books_.year_starting(open_year_));
+  auto const index = read_open_year(out);
+  if (!index) {
+    return;
+  }
+  matches_ = books::find_matches(books_.years[*index]);
   if (matches_.empty()) {
     std::println(out, "No possible matches among the waiting events (the same amount, at most {} days apart).",
                  books::match_window_days);
-    waiting_hint(out);
     return;
   }
-  first_match_ = 0;
+  match_page_.reset();
   mode_ = Mode::Matches;
   show_matches(out);
 }
@@ -2132,12 +2298,12 @@ void Repl::back_to_matches(std::ostream& out) {
   matches_ = books::find_matches(year);
   if (matches_.empty()) {
     std::println(out, "No more possible matches.");
-    first_waiting_ = std::min(first_waiting_, (year.waiting.size() - 1) / range_size * range_size);
+    waiting_page_.keep_within(year.waiting.size());
     mode_ = Mode::Waiting;
     show_waiting(out);
     return;
   }
-  first_match_ = std::min(first_match_, (matches_.size() - 1) / range_size * range_size);
+  match_page_.keep_within(matches_.size());
   mode_ = Mode::Matches;
   show_matches(out);
 }
@@ -2145,19 +2311,13 @@ void Repl::back_to_matches(std::ostream& out) {
 // Numbered from 1, the likely ones first; over 9, keys 1-8 with 0 up and 9 down
 void Repl::show_matches(std::ostream& out) const {
   auto const& year = *books_.year_starting(open_year_);
-  auto const n = matches_.size();
-  auto const first = n <= max_keys ? 0 : first_match_;
-  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
   std::println(out, "Possible matches in fiscal year {} - {} (the same amount, at most {} days apart):",
                format_iso_date(year.start), format_iso_date(year.end), books::match_window_days);
-  if (first > 0) {
-    std::println(out, "  0  ...up");
-  }
-  for (auto i = first; i < last; ++i) {
-    auto const& match = matches_[i];
+  match_page_.show(matches_.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& match = matches_[index];
     auto const same = match.kind == books::Match::Kind::same;
     auto const& event = year.waiting[match.waiting].event;
-    std::println(out, "  {}  {:<5}  {}  {:>12}  {}", i - first + 1, same ? "same" : "books", format_iso_date(event.date),
+    std::println(out, "  {}  {:<5}  {}  {:>12}  {}", key, same ? "same" : "books", format_iso_date(event.date),
                  format_amount(event.amount), event.heading);
     if (same) {
       auto const& other = year.waiting[match.other].event;
@@ -2179,32 +2339,23 @@ void Repl::show_matches(std::ostream& out) const {
       why += same ? ", the postings balance together on different accounts" : ", its postings are in the voucher";
     }
     std::println(out, "            {}", why);
-  }
-  if (last < n) {
-    std::println(out, "  9  ...down");
-  }
-  std::println(out, "");
-  std::println(out, "Press a number to look at one, - to go back to the waiting list, h for help, q to quit.");
+  });
 }
 
 void Repl::on_matches_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const n = matches_.size();
   if (key == U'-') {
-    mode_ = Mode::Waiting;
-    show_waiting(out);
-  } else if (n > max_keys && key == U'0' && first_match_ > 0) {
-    first_match_ -= range_size;
+    mode_ = Mode::Year;
+    return;
+  }
+  auto const pick = match_page_.on_key(key, matches_.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_matches(out);
-  } else if (n > max_keys && key == U'9' && first_match_ + range_size < n) {
-    first_match_ += range_size;
-    show_matches(out);
-  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
-             (n > max_keys ? first_match_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
-    chosen_match_ = (n > max_keys ? first_match_ : 0) + static_cast<std::size_t>(key - U'1');
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    chosen_match_ = pick.index;
     mode_ = Mode::MatchChoice;
     show_match(out);
   } else {
-    std::println(out, "Press a number to look at one, - to go back to the waiting list, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -2257,49 +2408,24 @@ void Repl::show_match(std::ostream& out) const {
         briefs += std::format("{}{} {}", briefs.empty() ? "" : ", ", books::posting_brief(posting),
                               posting.date ? format_iso_date(*posting.date) : "");
       }
-      std::println(out, "  Not in the voucher: {}. Deleting the event drops {}; a statement entry is listed by a again.",
+      std::println(out, "  Not in the voucher: {}. Deleting the event drops {}; a statement entry is listed again.",
                    briefs, left.size() == 1 ? "it" : "them");
     }
   }
   std::println(out, "");
-  match_hint(out);
-}
-
-void Repl::match_hint(std::ostream& out) const {
-  if (matches_[chosen_match_].kind == books::Match::Kind::same) {
-    std::println(out, "Press s to make them one event, - to go back, h for help, q to quit.");
-  } else {
-    std::println(out, "Press d to delete the waiting event as already in the books, - to go back, h for help, q to "
-                      "quit.");
-  }
+  show_operations(out);
 }
 
 void Repl::on_match_choice_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const& year = *books_.year_starting(open_year_);
-  auto const& match = matches_[chosen_match_];
   if (key == U'-') {
     mode_ = Mode::Matches;
     show_matches(out);
-  } else if (key == U's' && match.kind == books::Match::Kind::same) {
-    // The line starts as the older event's heading, amount and date (the list is by date, so the first)
-    auto const& event = year.waiting[match.waiting].event;
-    draft_.reset();
-    noting_ = false;
-    merging_ = true;
-    from_waiting_.reset();
-    template_key_.reset();
-    correcting_.reset();
-    purpose_ = Purpose::Voucher;
-    editor_.start(std::format("{} {} {}", event.heading, format_amount(event.amount), format_iso_date(event.date)),
-                  PathEditor::Kind::Event);
-    mode_ = Mode::Typing;
-    std::println(out, "Type the heading, amount and date of the one event; the older event's are typed in for you.");
-    std::println(out, "Backspace erases, Enter accepts. Enter on an empty line goes back.");
-    out << editor_.prompt();
-  } else if (key == U'd' && match.kind == books::Match::Kind::books) {
+  } else if (key == U'd' && matches_[chosen_match_].kind == books::Match::Kind::books) {
     mode_ = Mode::ConfirmBooked;
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
   } else {
-    match_hint(out);
+    unknown_key(out);
   }
 }
 
@@ -2461,7 +2587,7 @@ void Repl::list_vouchers(std::ostream& out) {
   std::ranges::sort(listed_vouchers_, [&](std::size_t a, std::size_t b) {
     return number_less(year.vouchers[b].number, year.vouchers[a].number);
   });
-  first_voucher_ = 0;
+  voucher_page_.reset();
   mode_ = Mode::VoucherList;
   show_vouchers(out);
 }
@@ -2469,45 +2595,31 @@ void Repl::list_vouchers(std::ostream& out) {
 // Numbered from 1, newest first; over 9, keys 1-8 with 0 up and 9 down
 void Repl::show_vouchers(std::ostream& out) const {
   auto const& year = *books_.year_starting(open_year_);
-  auto const n = listed_vouchers_.size();
-  auto const first = n <= max_keys ? 0 : first_voucher_;
-  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
   std::println(out, "Vouchers {} in fiscal year {} - {}, newest first:", view_series_, format_iso_date(year.start),
                format_iso_date(year.end));
-  if (first > 0) {
-    std::println(out, "  0  ...up");
-  }
-  for (auto i = first; i < last; ++i) {
-    auto const& voucher = year.vouchers[listed_vouchers_[i]];
-    std::println(out, "  {}  {} {:<4}  {}  {:>12}  {}  ({})", i - first + 1, voucher.series, voucher.number,
+  voucher_page_.show(listed_vouchers_.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& voucher = year.vouchers[listed_vouchers_[index]];
+    std::println(out, "  {}  {} {:<4}  {}  {:>12}  {}  ({})", key, voucher.series, voucher.number,
                  format_iso_date(voucher.event.date), format_amount(voucher.event.amount), voucher.event.heading,
                  imported_.contains(key_of(voucher)) ? "imported" : "entered");
-  }
-  if (last < n) {
-    std::println(out, "  9  ...down");
-  }
-  std::println(out, "");
-  std::println(out, "Press a number to view it, - to go back, h for help, q to quit.");
+  });
 }
 
 void Repl::on_voucher_list_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const n = listed_vouchers_.size();
   if (key == U'-') {
     mode_ = Mode::VoucherSeries;
     show_voucher_series(out);
-  } else if (n > max_keys && key == U'0' && first_voucher_ > 0) {
-    first_voucher_ -= range_size;
+    return;
+  }
+  auto const pick = voucher_page_.on_key(key, listed_vouchers_.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_vouchers(out);
-  } else if (n > max_keys && key == U'9' && first_voucher_ + range_size < n) {
-    first_voucher_ += range_size;
-    show_vouchers(out);
-  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
-             (n > max_keys ? first_voucher_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
-    viewed_ = listed_vouchers_[(n > max_keys ? first_voucher_ : 0) + static_cast<std::size_t>(key - U'1')];
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    viewed_ = listed_vouchers_[pick.index];
     mode_ = Mode::VoucherView;
     show_voucher(out);
   } else {
-    std::println(out, "Press a number to view it, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -2534,32 +2646,17 @@ void Repl::show_voucher(std::ostream& out) const {
     std::println(out, "  {}", imported ? "Imported from an SIE file" : "Entered in cratchit");
   }
   std::println(out, "");
-  std::println(out, "Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.");
+  show_operations(out);
 }
 
 void Repl::on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const voucher = books_.year_starting(open_year_)->vouchers[viewed_];
-  auto const viewed = key_of(voucher);
   if (key == U'-') {
     mode_ = Mode::VoucherList;
     show_vouchers(out);
-  } else if (key == U'c' && imported_.contains(viewed)) {
-    std::println(out, "{} {} came with an SIE import, so cratchit does not correct it. Correct it in the program it",
-                 voucher.series, voucher.number);
-    std::println(out, "came from and import the file again.");
-  } else if (key == U'c') {
-    // The line is the correction's heading and amount; no date means today
-    auto const line = std::format("Rättelse av {} {}: {} {}", voucher.series, voucher.number, voucher.event.heading,
-                                  format_amount(voucher.event.amount));
-    if (start_entry(false, out, line)) {
-      correcting_ = viewed;
-    }
-  } else if (key == U't') {
-    if (start_entry(false, out)) {
-      template_key_ = viewed;
-    }
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
   } else {
-    std::println(out, "Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -2618,7 +2715,7 @@ void Repl::start_statement(std::ostream& out) {
     books_ = std::move(*books);
   }
   if (books_.years.empty()) {
-    std::println(out, "No books yet. Press i to import an SIE file.");
+    std::println(out, "No books yet. Press 2 at project> to import an SIE file.");
     return;
   }
   auto imports = books::read_statement_imports(project_->folder);
@@ -2656,7 +2753,7 @@ void Repl::on_statement_path(PathEditor::Result result, std::ostream& out) {
       out << editor_.prompt();
       return;
     }
-    first_statement_ = 0;
+    statement_page_.reset();
     mode_ = Mode::StatementFiles;
     show_statement_files(out);
     return;
@@ -2671,20 +2768,14 @@ void Repl::on_statement_path(PathEditor::Result result, std::ostream& out) {
 
 // Numbered from 1; over 9, keys 1-8 with 0 up and 9 down. Each file is read to show what it holds.
 void Repl::show_statement_files(std::ostream& out) const {
-  auto const n = statement_files_.size();
-  auto const first = n <= max_keys ? 0 : first_statement_;
-  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
   std::println(out, "Files in {}:", statement_files_.front().parent_path().string());
-  if (first > 0) {
-    std::println(out, "  0  ...up");
-  }
-  for (auto i = first; i < last; ++i) {
-    auto const& file = statement_files_[i];
-    std::println(out, "  {}  {}", i - first + 1, file.filename().string());
+  statement_page_.show(statement_files_.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& file = statement_files_[index];
+    std::println(out, "  {}  {}", key, file.filename().string());
     auto const document = read_statement(file);
     if (!document) {
       std::println(out, "       {}", document.error());
-      continue;
+      return;
     }
     auto const known = books::most_known(statement_imports_, *document);
     auto const count = document->entries.size();
@@ -2692,30 +2783,22 @@ void Repl::show_statement_files(std::ostream& out) const {
                  known == 0       ? "new"
                  : known == count ? "already imported"
                                   : std::format("{} already imported", known));
-  }
-  if (last < n) {
-    std::println(out, "  9  ...down");
-  }
-  std::println(out, "");
-  std::println(out, "Press a number to import that file, - to go back, h for help, q to quit.");
+  });
 }
 
 void Repl::on_statement_files_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const n = statement_files_.size();
   if (key == U'-') {
     mode_ = Mode::Typing;
     out << editor_.prompt();
-  } else if (n > max_keys && key == U'0' && first_statement_ > 0) {
-    first_statement_ -= range_size;
+    return;
+  }
+  auto const pick = statement_page_.on_key(key, statement_files_.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_statement_files(out);
-  } else if (n > max_keys && key == U'9' && first_statement_ + range_size < n) {
-    first_statement_ += range_size;
-    show_statement_files(out);
-  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
-             (n > max_keys ? first_statement_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
-    check_statement(statement_files_[(n > max_keys ? first_statement_ : 0) + static_cast<std::size_t>(key - U'1')], out);
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    check_statement(statement_files_[pick.index], out);
   } else {
-    std::println(out, "Press a number to import that file, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -2841,8 +2924,9 @@ void Repl::import_statement(std::ostream& out) {
     return;
   }
   std::println(out, "Stashed the file as {} in {}", saved->stashed.generic_string(), project_->folder.string());
-  std::println(out, "Imported {} entr{} for account {} ({} already known, {} outside). Press a to book them.",
-               plan.added.size(), plan.added.size() == 1 ? "y" : "ies", plan.account, plan.known, plan.outside);
+  std::println(out, "Imported {} entr{} for account {} ({} already known, {} outside). Press {} to book them.",
+               plan.added.size(), plan.added.size() == 1 ? "y" : "ies", plan.account, plan.known, plan.outside,
+               before_statement_ == Mode::Year ? 6 : 4);
   LOG_BUSINESS("Imported statement file {} for account {} into project {} ({}): {} entries added, {} already known, "
                "{} outside{}, stashed as {}",
                statement_file_.string(), plan.account, project_->name, project_->uuid, plan.added.size(), plan.known,
@@ -2919,11 +3003,11 @@ void Repl::open_entries(std::ostream& out) {
     return;
   }
   if (open_entries_.empty()) {
-    std::println(out, "No statement entries are waiting{}. Press s to import a statement.",
-                 before_entries_ == Mode::Year ? " in this fiscal year" : "");
+    std::println(out, "No statement entries are waiting{}. Press {} to import a statement.",
+                 before_entries_ == Mode::Year ? " in this fiscal year" : "", before_entries_ == Mode::Year ? 5 : 3);
     return;
   }
-  first_entry_ = 0;
+  entry_page_.reset();
   mode_ = Mode::EntryList;
   show_entries(out);
 }
@@ -2939,48 +3023,34 @@ void Repl::back_to_entries(std::ostream& out) {
     mode_ = before_entries_;
     return;
   }
-  first_entry_ = std::min(first_entry_, (open_entries_.size() - 1) / range_size * range_size);
+  entry_page_.keep_within(open_entries_.size());
   mode_ = Mode::EntryList;
   show_entries(out);
 }
 
 // Numbered from 1, by account and date; over 9, keys 1-8 with 0 up and 9 down
 void Repl::show_entries(std::ostream& out) const {
-  auto const n = open_entries_.size();
-  auto const first = n <= max_keys ? 0 : first_entry_;
-  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
   auto const* year = before_entries_ == Mode::Year ? books_.year_starting(open_year_) : nullptr;
   std::println(out, "Statement entries not yet booked{}:",
                year ? std::format(" in fiscal year {} - {}", format_iso_date(year->start), format_iso_date(year->end))
                     : "");
-  if (first > 0) {
-    std::println(out, "  0  ...up");
-  }
-  for (auto i = first; i < last; ++i) {
-    auto const& open = open_entries_[i];
-    std::println(out, "  {}  {:<6} {}  {:>12}  {}", i - first + 1, open.account, format_iso_date(open.entry.date),
+  entry_page_.show(open_entries_.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& open = open_entries_[index];
+    std::println(out, "  {}  {:<6} {}  {:>12}  {}", key, open.account, format_iso_date(open.entry.date),
                  format_amount(open.entry.amount), open.entry.text);
-  }
-  if (last < n) {
-    std::println(out, "  9  ...down");
-  }
-  std::println(out, "");
-  std::println(out, "Press a number to choose an entry, - to go back, h for help, q to quit.");
+  });
 }
 
 void Repl::on_entry_list_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const n = open_entries_.size();
   if (key == U'-') {
     mode_ = before_entries_;
-  } else if (n > max_keys && key == U'0' && first_entry_ > 0) {
-    first_entry_ -= range_size;
+    return;
+  }
+  auto const pick = entry_page_.on_key(key, open_entries_.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_entries(out);
-  } else if (n > max_keys && key == U'9' && first_entry_ + range_size < n) {
-    first_entry_ += range_size;
-    show_entries(out);
-  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
-             (n > max_keys ? first_entry_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
-    chosen_entry_ = (n > max_keys ? first_entry_ : 0) + static_cast<std::size_t>(key - U'1');
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    chosen_entry_ = pick.index;
     auto const date = open_entries_[chosen_entry_].entry.date;
     entry_year_ = static_cast<std::size_t>(
         std::ranges::find_if(books_.years, [&](books::FiscalYear const& y) { return y.holds(date); }) -
@@ -2988,7 +3058,7 @@ void Repl::on_entry_list_key(charset::unicode::CodePoint key, std::ostream& out)
     mode_ = Mode::EntryChoice;
     show_entry_choice(out);
   } else {
-    std::println(out, "Press a number to choose an entry, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 
@@ -3001,30 +3071,17 @@ void Repl::show_entry_choice(std::ostream& out) const {
   std::println(out, "  {}", open.entry.text);
   std::println(out, "  From {}, fiscal year {} - {}", open.source, format_iso_date(year.start), format_iso_date(year.end));
   std::println(out, "");
-  std::println(out, "Press n for a new waiting event with it{}, - to go back, h for help, q to quit.",
-               year.waiting.empty() ? "" : ", w to add it to a waiting event");
+  show_operations(out);
 }
 
 void Repl::on_entry_choice_key(charset::unicode::CodePoint key, std::ostream& out) {
-  auto const& year = books_.years[entry_year_];
   if (key == U'-') {
     mode_ = Mode::EntryList;
     show_entries(out);
-  } else if ((key == U'n' || key == U'w') && year.closed) {
-    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press o at its prompt to open it.",
-                 format_iso_date(year.start), format_iso_date(year.end));
-  } else if (key == U'n') {
-    std::println(out, "Type the heading of the event. Backspace erases, Enter accepts. Enter on an empty line goes back.");
-    purpose_ = Purpose::EventHeading;
-    editor_.start(open_entries_[chosen_entry_].entry.text, PathEditor::Kind::Heading);
-    mode_ = Mode::Typing;
-    out << editor_.prompt();
-  } else if (key == U'w' && !year.waiting.empty()) {
-    first_target_ = 0;
-    mode_ = Mode::AddToEvent;
-    show_targets(out);
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
   } else {
-    show_entry_choice(out);
+    unknown_key(out);
   }
 }
 
@@ -3061,41 +3118,28 @@ void Repl::on_event_heading(PathEditor::Result result, std::ostream& out) {
 // The waiting events of the entry's year, to add it to; numbered from 1, over 9 keys 1-8 with 0 up and 9 down
 void Repl::show_targets(std::ostream& out) const {
   auto const& year = books_.years[entry_year_];
-  auto const n = year.waiting.size();
-  auto const first = n <= max_keys ? 0 : first_target_;
-  auto const last = n <= max_keys ? n : std::min(first + range_size, n);
-  std::println(out, "Waiting events in fiscal year {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
-  if (first > 0) {
-    std::println(out, "  0  ...up");
-  }
-  for (auto i = first; i < last; ++i) {
-    auto const& waiting = year.waiting[i];
-    std::println(out, "  {}  {}  {:>12}  {}", i - first + 1, format_iso_date(waiting.event.date),
+  std::println(out, "Add the entry to a waiting event in fiscal year {} - {}:", format_iso_date(year.start),
+               format_iso_date(year.end));
+  target_page_.show(year.waiting.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& waiting = year.waiting[index];
+    std::println(out, "  {}  {}  {:>12}  {}", key, format_iso_date(waiting.event.date),
                  format_amount(waiting.event.amount), waiting.event.heading);
     show_event_postings(waiting, out);
-  }
-  if (last < n) {
-    std::println(out, "  9  ...down");
-  }
-  std::println(out, "");
-  std::println(out, "Press the number of the event to add the entry to, - to go back, h for help, q to quit.");
+  });
 }
 
 void Repl::on_add_to_event_key(charset::unicode::CodePoint key, std::ostream& out) {
   auto& year = books_.years[entry_year_];
-  auto const n = year.waiting.size();
   if (key == U'-') {
     mode_ = Mode::EntryChoice;
     show_entry_choice(out);
-  } else if (n > max_keys && key == U'0' && first_target_ > 0) {
-    first_target_ -= range_size;
+    return;
+  }
+  auto const pick = target_page_.on_key(key, year.waiting.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_targets(out);
-  } else if (n > max_keys && key == U'9' && first_target_ + range_size < n) {
-    first_target_ += range_size;
-    show_targets(out);
-  } else if (key >= U'1' && key <= (n > max_keys ? U'8' : U'9') &&
-             (n > max_keys ? first_target_ : 0) + static_cast<std::size_t>(key - U'1') < n) {
-    auto& waiting = year.waiting[(n > max_keys ? first_target_ : 0) + static_cast<std::size_t>(key - U'1')];
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    auto& waiting = year.waiting[pick.index];
     auto const open = open_entries_[chosen_entry_];
     waiting.postings.push_back(posting_of(open));
     if (!write_books(out)) {
@@ -3112,7 +3156,7 @@ void Repl::on_add_to_event_key(charset::unicode::CodePoint key, std::ostream& ou
                  format_iso_date(year.start), format_iso_date(year.end), status);
     back_to_entries(out);
   } else {
-    std::println(out, "Press the number of the event to add the entry to, - to go back, h for help, q to quit.");
+    unknown_key(out);
   }
 }
 

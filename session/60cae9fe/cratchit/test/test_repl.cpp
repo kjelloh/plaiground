@@ -35,20 +35,15 @@ cratchit::KeySource keys_from(std::string keys, cratchit::Charset charset = crat
 Section const manual{"Manual", "", {{"A", "Text A\n", {}}}};
 
 std::string const main_keys = "Keys at cratchit>:\n"
-                              "  w  Workspace menu\n"
-                              "  l  Show the log\n"
-                              "  h  Help (the manual)\n"
-                              "  q  Quit\n";
+                              "  1  Workspace menu\n";
+
+std::string const main_unknown = "Unknown key. Other keys: Enter list, l log, h help, q quit.\n";
 
 // The keys listed at postings> after the voucher; f only with a template
 std::string postings_keys(std::string const& voucher, bool flip) {
   return "\n"
-         "  s  Save as " + voucher + "\n" +
-         (flip ? "  f  Flip the template's rows (debit becomes credit)\n" : "") +
-         "  ?  Hint: the counter accounts used before with the rows' accounts\n"
-         "  -  Change the rows\n"
-         "  h  Help (the manual)\n"
-         "  q  Quit\n"
+         "  1  Save as " + voucher + "\n" +
+         (flip ? "  2  Flip the template's rows (debit becomes credit)\n" : "") +
          "postings> ";
 }
 
@@ -93,7 +88,7 @@ TEST(Repl, UnknownKeyListsTheKeys) {
   Repl repl(manual, 0, {});
   std::ostringstream out;
   EXPECT_EQ(repl.on_key(U'x', out), Step::Continue);
-  EXPECT_EQ(out.str(), "Unknown key.\n" + main_keys);
+  EXPECT_EQ(out.str(), main_unknown);
 }
 
 TEST(Repl, EnterListsTheKeys) {
@@ -133,20 +128,14 @@ TEST(RunRepl, BrowsesHelpAndQuits) {
                        "Manual\n"
                        "\n"
                        "  1  A\n"
-                       "\n"
-                       "Press a number to open a section, - to go back, q to leave help.\n"
                        "help> 1\n"
                        "A\n"
                        "\n"
                        "Text A\n"
-                       "\n"
-                       "Press - to go back, q to leave help.\n"
                        "help 1> -\n"
                        "Manual\n"
                        "\n"
                        "  1  A\n"
-                       "\n"
-                       "Press a number to open a section, - to go back, q to leave help.\n"
                        "help> -\n"
                        "cratchit> q\n");
 }
@@ -206,8 +195,7 @@ protected:
            "  1  " + (root / "start").string() + "\n"
            "  2  " + (root / "Documents" / "cratchit").string() + "\n"
            "  3  Type a folder path\n"
-           "\n"
-           "Press a number to choose, - to go back, h for help, q to quit.\n";
+           "";
   }
 
   fs::path root;
@@ -301,7 +289,7 @@ TEST_F(WorkspaceRepl, NonAsciiKeyIsEchoed) {
   auto repl = make_repl();
   std::ostringstream out;
   cratchit::run_repl(repl, keys_from("\x84", cratchit::Charset::Cp437), out);
-  EXPECT_EQ(out.str(), "cratchit> \xc3\xa4\nUnknown key.\n" + main_keys + "cratchit> \n");
+  EXPECT_EQ(out.str(), "cratchit> \xc3\xa4\n" + main_unknown + "cratchit> \n");
 }
 
 TEST_F(WorkspaceRepl, NoKeepsTheTypedPath) {
@@ -341,15 +329,13 @@ TEST_F(WorkspaceRepl, WKeyOffersTheSavedWorkspaceAndBrowsing) {
   run("1");
   auto repl = make_repl();
   std::ostringstream out;
-  cratchit::run_repl(repl, keys_from("wx-q"), out);
-  EXPECT_EQ(out.str(), "cratchit> w\n"
+  cratchit::run_repl(repl, keys_from("1x-q"), out);
+  EXPECT_EQ(out.str(), "cratchit> 1\n"
                        "Workspace:\n"
-                       "  w  Open " + (root / "start").string() + "\n"
-                       "  b  Browse for a new workspace\n"
-                       "\n"
-                       "Press w or b, - to go back, h for help, q to quit.\n"
+                       "  1  Open " + (root / "start").string() + "\n"
+                       "  2  Browse for a new workspace\n"
                        "workspace?> x\n"
-                       "Press w or b, - to go back, h for help, q to quit.\n"
+                       "Unknown key. Other keys: Enter list, - back, h help, q quit.\n"
                        "workspace?> -\n"
                        "cratchit> q\n");
 }
@@ -359,8 +345,8 @@ TEST_F(WorkspaceRepl, WKeyTwiceOpensTheSavedWorkspace) {
   auto const before = read_file(runtime_file);
   auto repl = make_repl();
   std::ostringstream out;
-  cratchit::run_repl(repl, keys_from("ww"), out);
-  EXPECT_TRUE(out.str().ends_with("workspace?> w\nOpened workspace " + (root / "start").string() + "\nworkspace> \n"))
+  cratchit::run_repl(repl, keys_from("11"), out);
+  EXPECT_TRUE(out.str().ends_with("workspace?> 1\nOpened workspace " + (root / "start").string() + "\nworkspace> \n"))
       << out.str();
   EXPECT_EQ(read_file(runtime_file), before);
 }
@@ -368,22 +354,20 @@ TEST_F(WorkspaceRepl, WKeyTwiceOpensTheSavedWorkspace) {
 TEST_F(WorkspaceRepl, MenuWithoutSavedWorkspaceOffersOnlyBrowsing) {
   auto repl = make_repl();
   std::ostringstream out;
-  cratchit::run_repl(repl, keys_from("ww"), out);
-  EXPECT_EQ(out.str(), "cratchit> w\n"
+  cratchit::run_repl(repl, keys_from("11"), out);
+  EXPECT_EQ(out.str(), "cratchit> 1\n"
                        "Workspace:\n"
-                       "  b  Browse for a new workspace\n"
-                       "\n"
-                       "Press b, - to go back, h for help, q to quit.\n"
-                       "workspace?> w\n"
-                       "Press b, - to go back, h for help, q to quit.\n"
+                       "  2  Browse for a new workspace\n"
+                       "workspace?> 1\n"
+                       "Unknown key. Other keys: Enter list, - back, h help, q quit.\n"
                        "workspace?> \n");
 }
 
 TEST_F(WorkspaceRepl, BrowsingSwitchesTheSavedWorkspace) {
   run("1");
   auto const folder = root / "Documents" / "cratchit";
-  auto const output = run("-wb2");
-  EXPECT_NE(output.find("workspace?> b\n" + choices() + "workspace?> 2\nCreated folder " + folder.string()),
+  auto const output = run("-122");
+  EXPECT_NE(output.find("workspace?> 2\n" + choices() + "workspace?> 2\nCreated folder " + folder.string()),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("Opened workspace " + folder.string() + "\nworkspace> \n"), std::string::npos) << output;
@@ -392,19 +376,17 @@ TEST_F(WorkspaceRepl, BrowsingSwitchesTheSavedWorkspace) {
 
 TEST_F(WorkspaceRepl, BackFromBrowsingShowsTheMenu) {
   run("1");
-  auto const output = run("-wb-");
+  auto const output = run("-12-");
   EXPECT_TRUE(output.ends_with("workspace?> -\nWorkspace:\n"
-                               "  w  Open " + (root / "start").string() + "\n"
-                               "  b  Browse for a new workspace\n"
-                               "\n"
-                               "Press w or b, - to go back, h for help, q to quit.\n"
+                               "  1  Open " + (root / "start").string() + "\n"
+                               "  2  Browse for a new workspace\n"
                                "workspace?> \n"))
       << output;
 }
 
 TEST_F(WorkspaceRepl, ChoosingTheSavedWorkspaceAgainKeepsRuntimeFile) {
   run("1");
-  auto const output = run("-wb1");
+  auto const output = run("-121");
   EXPECT_EQ(output.find("Updated"), std::string::npos) << output;
   EXPECT_NE(output.find("workspace?> 1\nOpened workspace " + (root / "start").string()), std::string::npos) << output;
 }
@@ -412,8 +394,8 @@ TEST_F(WorkspaceRepl, ChoosingTheSavedWorkspaceAgainKeepsRuntimeFile) {
 TEST_F(WorkspaceRepl, BrokenSavedWorkspaceCanBeReplacedFromTheMenu) {
   fs::create_directories(root / "books" / ".cratchit");
   std::ofstream(runtime_file) << "workspace = " << (root / "books").string() << "\n";
-  auto const output = run("wwwb1");
-  EXPECT_NE(output.find("workspace?> w\nError: "), std::string::npos) << output;
+  auto const output = run("11121");
+  EXPECT_NE(output.find("workspace?> 1\nError: "), std::string::npos) << output;
   EXPECT_TRUE(output.ends_with("Opened workspace " + (root / "start").string() + "\nworkspace> \n")) << output;
   EXPECT_EQ(read_file(runtime_file), "workspace = " + (root / "start").string() + "\n");
 }
@@ -460,35 +442,47 @@ namespace {
 
 constexpr char const* listed_uuid = "3f2b8c1e-9a4d-4e7f-b6a2-1c5d8e0f7a93";
 
-std::string projects_menu(fs::path const& workspace, std::string const& lines, bool any) {
+std::string projects_menu(fs::path const& workspace, std::size_t listed) {
+  return "Projects in " + workspace.string() + ":\n" +
+         (listed > 0 ? std::format("  1  Open a project ({} listed)\n", listed) : std::string{}) +
+         "  2  New project\n"
+         "  3  Add an existing project folder\n"
+         "";
+}
+
+std::string project_list(fs::path const& workspace, std::string const& lines) {
   return "Projects in " + workspace.string() + ":\n" + lines +
-         "  n  New project\n"
-         "  a  Add an existing project folder\n"
-         "\n"
-         "Press " + (any ? "a number, " : "") + "n or a, - to go back, h for help, q to quit.\n";
+         "";
 }
 
 } // namespace
 
 TEST_F(WorkspaceRepl, PKeyShowsAnEmptyProjectMenu) {
   run("1");
-  auto const output = run("p-q");
-  EXPECT_EQ(output, "Opened workspace " + (root / "start").string() + "\nworkspace> p\n" +
-                        projects_menu(root / "start", "", false) + "project?> -\nworkspace> q\n");
+  auto const output = run("1-q");
+  EXPECT_EQ(output, "Opened workspace " + (root / "start").string() + "\nworkspace> 1\n" +
+                        projects_menu(root / "start", 0) + "project?> -\nworkspace> q\n");
+}
+
+TEST_F(WorkspaceRepl, EnterShowsTheMenuAgainAndAnUnknownKeyNamesTheOtherKeys) {
+  run("1");
+  auto const output = run("1\nx");
+  EXPECT_TRUE(output.ends_with("project?> \n" + projects_menu(root / "start", 0) +
+                               "project?> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
+                               "project?> \n"))
+      << output;
 }
 
 TEST_F(WorkspaceRepl, NewProjectIsCreatedListedAndOpened) {
   auto const folder = root / "start" / "ITfied AB";
-  auto const output = run("1pnITfied AB\n1");
-  EXPECT_NE(output.find("project?> n\n"
+  auto const output = run("112ITfied AB\n1");
+  EXPECT_NE(output.find("project?> 2\n"
                         "Type the official name of the person, company or organisation. Backspace erases, Enter "
                         "accepts.\nEnter on an empty name goes back.\n"
                         "name> ITfied AB\n"
                         "Choose a folder for ITfied AB:\n"
                         "  1  " + folder.string() + "\n"
                         "  2  Type a folder path\n"
-                        "\n"
-                        "Press a number to choose, - to go back, h for help, q to quit.\n"
                         "project?> 1\n"
                         "Created folder " + folder.string() + "\n"
                         "Initiated .cratchit/project.txt in " + folder.string() + "\n"
@@ -506,7 +500,7 @@ TEST_F(WorkspaceRepl, NewProjectIsCreatedListedAndOpened) {
 }
 
 TEST_F(WorkspaceRepl, LastProjectOpensOnStart) {
-  run("1pnX\n1");
+  run("112X\n1");
   auto const output = run("--q");
   EXPECT_EQ(output, "Opened workspace " + (root / "start").string() + "\n"
                     "Opened project X in " + (root / "start" / "X").string() + "\n"
@@ -514,21 +508,21 @@ TEST_F(WorkspaceRepl, LastProjectOpensOnStart) {
 }
 
 TEST_F(WorkspaceRepl, WKeyTwiceReopensTheLastProject) {
-  run("1pnX\n1");
-  auto const output = run("--ww");
+  run("112X\n1");
+  auto const output = run("--11");
   EXPECT_TRUE(output.ends_with("Opened project X in " + (root / "start" / "X").string() + "\nproject> \n")) << output;
 }
 
 TEST_F(WorkspaceRepl, ProjectMenuListsProjectsAndOpensTheChosen) {
-  run("1pnA\n1");
-  run("-pnB\n1");
+  run("112A\n1");
+  run("-12B\n1");
   auto const before = read_file(root / "start" / ".cratchit" / "workspace.txt");
-  auto const output = run("-p1");
-  EXPECT_NE(output.find(projects_menu(root / "start",
-                                      "  1  A  " + (root / "start" / "A").string() + "\n"
-                                      "  2  B  " + (root / "start" / "B").string() + "\n",
-                                      true) +
-                        "project?> 1\nUpdated .cratchit/workspace.txt in " + (root / "start").string() + "\n"
+  auto const output = run("-111");
+  EXPECT_NE(output.find(projects_menu(root / "start", 2) + "project?> 1\n" +
+                        project_list(root / "start",
+                                     "  1  A  " + (root / "start" / "A").string() + "\n"
+                                     "  2  B  " + (root / "start" / "B").string() + "\n") +
+                        "open?> 1\nUpdated .cratchit/workspace.txt in " + (root / "start").string() + "\n"
                         "Opened project A in " + (root / "start" / "A").string() + "\nproject> \n"),
             std::string::npos)
       << output;
@@ -537,20 +531,20 @@ TEST_F(WorkspaceRepl, ProjectMenuListsProjectsAndOpensTheChosen) {
 
 TEST_F(WorkspaceRepl, EmptyNameGoesBackToTheProjectMenu) {
   run("1");
-  auto const output = run("pn  \n-q");
-  EXPECT_TRUE(output.ends_with(projects_menu(root / "start", "", false) + "project?> -\nworkspace> q\n")) << output;
+  auto const output = run("12  \n-q");
+  EXPECT_TRUE(output.ends_with(projects_menu(root / "start", 0) + "project?> -\nworkspace> q\n")) << output;
 }
 
 TEST_F(WorkspaceRepl, NameThatCannotBeAFolderOffersOnlyTyping) {
   run("1");
-  auto const output = run("pnA/B\n");
+  auto const output = run("12A/B\n");
   EXPECT_NE(output.find("Choose a folder for A/B:\n  2  Type a folder path\n"), std::string::npos) << output;
 }
 
 TEST_F(WorkspaceRepl, NewProjectInATypedFolderIsCreatedOnYes) {
   run("1");
   auto const folder = root / "elsewhere" / "books";
-  auto const output = run("pnX\n2../elsewhere/books\ny");
+  auto const output = run("12X\n2../elsewhere/books\ny");
   EXPECT_NE(output.find("path> " + (root / "start" / "").string() + "../elsewhere/books\n"
                         "Folder " + folder.string() + " does not exist.\n"
                         "Create it? (y/n) y\n"
@@ -562,12 +556,11 @@ TEST_F(WorkspaceRepl, NewProjectInATypedFolderIsCreatedOnYes) {
 }
 
 TEST_F(WorkspaceRepl, NewProjectOverAProjectIsAnError) {
-  run("1pnX\n1");
-  auto const output = run("-pnY\n2X\n");
+  run("112X\n1");
+  auto const output = run("-12Y\n2X\n");
   EXPECT_NE(output.find("Error: "), std::string::npos) << output;
   EXPECT_TRUE(output.ends_with("Choose a folder for Y:\n  1  " + (root / "start" / "Y").string() +
-                               "\n  2  Type a folder path\n\n"
-                               "Press a number to choose, - to go back, h for help, q to quit.\nproject?> \n"))
+                               "\n  2  Type a folder path\nproject?> \n"))
       << output;
 }
 
@@ -575,8 +568,8 @@ TEST_F(WorkspaceRepl, ExistingProjectIsAddedAndOpened) {
   fs::create_directories(root / "shared");
   ASSERT_TRUE(cratchit::create_project(root / "shared", "Föreningen", listed_uuid, "2026-10-01").has_value());
   run("1");
-  auto const output = run("pa../shared\n");
-  EXPECT_NE(output.find("project?> a\nThe folder must hold .cratchit/project.txt.\n"), std::string::npos) << output;
+  auto const output = run("13../shared\n");
+  EXPECT_NE(output.find("project?> 3\nThe folder must hold .cratchit/project.txt.\n"), std::string::npos) << output;
   EXPECT_TRUE(output.ends_with("Updated .cratchit/workspace.txt in " + (root / "start").string() + "\n"
                                "Opened project Föreningen in " + (root / "shared").string() + "\nproject> \n"))
       << output;
@@ -588,7 +581,7 @@ TEST_F(WorkspaceRepl, ExistingProjectIsAddedAndOpened) {
 TEST_F(WorkspaceRepl, AddingAFolderWithoutProjectIsAnError) {
   fs::create_directories(root / "plain");
   run("1");
-  auto const output = run("pa../plain\n");
+  auto const output = run("13../plain\n");
   EXPECT_NE(output.find("Error: "), std::string::npos) << output;
   EXPECT_TRUE(output.ends_with("path> " + (root / "start" / "").string() + "../plain\n")) << output;
 }
@@ -597,9 +590,9 @@ TEST_F(WorkspaceRepl, AddingACopiedProjectIsAnError) {
   fs::create_directories(root / "shared");
   ASSERT_TRUE(cratchit::create_project(root / "shared", "X", listed_uuid, "2026-10-01").has_value());
   fs::copy(root / "shared", root / "copy", fs::copy_options::recursive);
-  run("1pa../shared\n");
+  run("113../shared\n");
   auto const before = read_file(root / "start" / ".cratchit" / "workspace.txt");
-  auto const output = run("-pa../copy\n");
+  auto const output = run("-13../copy\n");
   EXPECT_NE(output.find("Error: Project X (" + std::string(listed_uuid) + ") is already listed with folder " +
                         (root / "shared").string()),
             std::string::npos)
@@ -611,10 +604,10 @@ TEST_F(WorkspaceRepl, MissingProjectFolderIsShownAndCannotBeOpened) {
   run("1");
   std::ofstream(root / "start" / ".cratchit" / "workspace.txt")
       << "created = 2026-10-20\nproject." << listed_uuid << " = gone\n";
-  auto const output = run("p1");
+  auto const output = run("111");
   EXPECT_NE(output.find("  1  (not found)  " + (root / "start" / "gone").string() + "\n"), std::string::npos) << output;
-  EXPECT_TRUE(output.ends_with("project?> 1\nError: Project folder " + (root / "start" / "gone").string() +
-                               " does not exist\nproject?> \n"))
+  EXPECT_TRUE(output.ends_with("open?> 1\nError: Project folder " + (root / "start" / "gone").string() +
+                               " does not exist\nopen?> \n"))
       << output;
 }
 
@@ -634,13 +627,14 @@ TEST_F(WorkspaceRepl, ManyProjectsScrollWithZeroAndNine) {
     file << std::format("project.{:08x}-0000-4000-8000-000000000000 = p{}\n", i, i);
   }
   file.close();
-  auto const output = run("p9");
+  auto const output = run("119");
   EXPECT_NE(output.find("  8  (not found)  " + (root / "start" / "p7").string() + "\n  9  ...down\n"),
             std::string::npos)
       << output;
-  EXPECT_NE(output.find("project?> 9\nProjects in " + (root / "start").string() + ":\n  0  ...up\n"
-                        "  1  (not found)  " + (root / "start" / "p8").string() + "\n"
-                        "  2  (not found)  " + (root / "start" / "p9").string() + "\n  n  New project\n"),
+  EXPECT_NE(output.find("open?> 9\n" + project_list(root / "start",
+                                                     "  0  ...up\n"
+                                                     "  1  (not found)  " + (root / "start" / "p8").string() + "\n"
+                                                     "  2  (not found)  " + (root / "start" / "p9").string() + "\n")),
             std::string::npos)
       << output;
 }
@@ -659,12 +653,12 @@ std::string good_sie() {
 } // namespace
 
 TEST_F(WorkspaceRepl, IKeyChecksTheFileAndImportsOnYes) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   auto const folder = root / "start" / "Test";
   auto const file = root / "start" / "test.se";
   write_sie(file, good_sie());
-  auto const output = run("itest.se\ny");
-  EXPECT_NE(output.find("project> i\n"
+  auto const output = run("2test.se\ny");
+  EXPECT_NE(output.find("project> 2\n"
                         "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace "
                         "erases,\nEnter accepts. Enter on an empty path goes back.\n"
                         "path> " + (root / "start").string() + "/test.se\n"
@@ -695,7 +689,7 @@ TEST_F(WorkspaceRepl, IKeyChecksTheFileAndImportsOnYes) {
   EXPECT_TRUE(fs::exists(folder / ".cratchit" / "imports" / "2026-10-20_1_test.se.txt"));
   EXPECT_TRUE(fs::exists(folder / ".cratchit" / "books" / "2025-01-01" / "vouchers.csv"));
   // The same file again has nothing new
-  auto const again = run("itest.se\n");
+  auto const again = run("2test.se\n");
   EXPECT_NE(again.find("  Vouchers     2: 0 new, 2 already in the books\n"
                        "Everything in the file is already in the books. Nothing to import.\nproject> \n"),
             std::string::npos)
@@ -703,18 +697,18 @@ TEST_F(WorkspaceRepl, IKeyChecksTheFileAndImportsOnYes) {
 }
 
 TEST_F(WorkspaceRepl, NoImportsNothing) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  auto const output = run("itest.se\nn");
+  auto const output = run("2test.se\nn");
   EXPECT_TRUE(output.ends_with("Import it? (y/n) n\nNothing is imported.\nproject> \n")) << output;
   EXPECT_FALSE(fs::exists(root / "start" / "Test" / ".cratchit" / "books"));
 }
 
 TEST_F(WorkspaceRepl, FileWithErrorsIsNotImported) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "bad.se",
             sie_test::sie_file(2025, "", "#VER A 1 20250101 \"\"\n{\n#TRANS 1930 {} 1\n}\n"));
-  auto const output = run("ibad.se\n");
+  auto const output = run("2bad.se\n");
   EXPECT_TRUE(output.ends_with("Errors:\n  - line 16: voucher A 1 does not balance: its amounts add up to 1.00\n"
                                "Nothing is imported.\nproject> \n"))
       << output;
@@ -722,42 +716,38 @@ TEST_F(WorkspaceRepl, FileWithErrorsIsNotImported) {
 }
 
 TEST_F(WorkspaceRepl, MissingSieFileKeepsThePath) {
-  run("1pnTest\n1");
-  auto const output = run("inope.se\n");
+  run("112Test\n1");
+  auto const output = run("2nope.se\n");
   EXPECT_TRUE(output.ends_with("No file " + (root / "start" / "nope.se").string() + ".\npath> " +
                                (root / "start").string() + "/nope.se\n"))
       << output;
 }
 
 TEST_F(WorkspaceRepl, RKeyWithoutBooks) {
-  run("1pnTest\n1");
-  auto const output = run("r");
-  EXPECT_TRUE(output.ends_with("project> r\nNo books yet. Press i to import an SIE file.\nproject> \n")) << output;
+  run("112Test\n1");
+  auto const output = run("5");
+  EXPECT_TRUE(output.ends_with("project> 5\nNo books yet. Press 2 at project> to import an SIE file.\nproject> \n")) << output;
 }
 
 TEST_F(WorkspaceRepl, RKeyShowsYearsAndReports) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\ny");
-  auto const output = run("r11x3 1930\n3 9999\n2--");
-  EXPECT_NE(output.find("project> r\n"
+  run("2test.se\ny");
+  auto const output = run("511x3 1930\n3 9999\n2--");
+  EXPECT_NE(output.find("project> 5\n"
                         "Fiscal years of Test AB, 556000-0001:\n"
                         "  1  2025-01-01 - 2025-12-31\n"
-                        "\n"
-                        "Press a number to choose, - to go back, h for help, q to quit.\n"
                         "report?> 1\n"
                         "Reports for 2025-01-01 - 2025-12-31:\n"
                         "  1  Trial balance (saldobalans)\n"
                         "  2  Vouchers\n"
                         "  3  Account ledger\n"
-                        "\n"
-                        "Press a number to choose, - to go back, h for help, q to quit.\n"
                         "report?> 1\n"
                         "Trial balance (saldobalans) 2025-01-01 - 2025-12-31\n"
                         "Test AB, 556000-0001\n"),
             std::string::npos)
       << output;
-  EXPECT_NE(output.find("report?> x\nPress a number to choose, - to go back, h for help, q to quit.\n"
+  EXPECT_NE(output.find("report?> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
                         "report?> 3\n"
                         "Type the account number. Backspace erases, Enter accepts. Enter on an empty number goes "
                         "back.\n"
@@ -767,27 +757,25 @@ TEST_F(WorkspaceRepl, RKeyShowsYearsAndReports) {
       << output;
   EXPECT_NE(output.find("account>  9999\nNo account 9999 in the books.\nReports for"), std::string::npos) << output;
   EXPECT_NE(output.find("report?> 2\nVouchers 2025-01-01 - 2025-12-31\n"), std::string::npos) << output;
-  EXPECT_TRUE(output.ends_with("report?> -\nFiscal years of Test AB, 556000-0001:\n  1  2025-01-01 - 2025-12-31\n\n"
-                               "Press a number to choose, - to go back, h for help, q to quit.\n"
+  EXPECT_TRUE(output.ends_with("report?> -\nFiscal years of Test AB, 556000-0001:\n  1  2025-01-01 - 2025-12-31\n"
                                "report?> -\nproject> \n"))
       << output;
 }
 
 TEST_F(WorkspaceRepl, LongReportsArePaged) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\ny");
+  run("2test.se\ny");
   auto repl = Repl(manual, 3, {runtime_file, root / "start", root / "Documents" / "cratchit", "2026-10-20"});
   std::ostringstream out;
   repl.open_workspace(out);
-  cratchit::run_repl(repl, keys_from("r11 -"), out);
+  cratchit::run_repl(repl, keys_from("511 -"), out);
   EXPECT_NE(out.str().find("report?> 1\nTrial balance (saldobalans) 2025-01-01 - 2025-12-31\nTest AB, 556000-0001\n"
                            "\n--More-- \nAccount "),
             std::string::npos)
       << out.str();
   EXPECT_TRUE(out.str().ends_with("--More-- -\nReports for 2025-01-01 - 2025-12-31:\n  1  Trial balance (saldobalans)\n"
-                                  "  2  Vouchers\n  3  Account ledger\n\n"
-                                  "Press a number to choose, - to go back, h for help, q to quit.\nreport?> \n"))
+                                  "  2  Vouchers\n  3  Account ledger\nreport?> \n"))
       << out.str();
 }
 
@@ -796,44 +784,39 @@ TEST_F(WorkspaceRepl, EnterListsTheKeysOfTheWorkspace) {
   auto const at_workspace = run("\n");
   EXPECT_TRUE(at_workspace.ends_with("workspace> \n"
                                      "Keys at workspace>:\n"
-                                     "  p  Projects\n"
-                                     "  l  Show the log\n"
-                                     "  -  Back to cratchit>\n"
-                                     "  h  Help (the manual)\n"
-                                     "  q  Quit\n"
+                                     "  1  Projects\n"
                                      "workspace> \n"))
       << at_workspace;
 }
 
 TEST_F(WorkspaceRepl, EnterAndUnknownKeysListTheKeysOfAProject) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   std::string const keys = "Keys at project>:\n"
-                           "  y  Fiscal years\n"
-                           "  i  Import an SIE file\n"
-                           "  s  Import an account statement\n"
-                           "  a  Statement entries not yet booked\n"
-                           "  r  Reports\n"
-                           "  l  Show the log\n"
-                           "  -  Back to workspace>\n"
-                           "  h  Help (the manual)\n"
-                           "  q  Quit\n";
+                           "  1  Fiscal years\n"
+                           "  2  Import an SIE file\n"
+                           "  3  Import an account statement\n"
+                           "  4  Statement entries not yet booked\n"
+                           "  5  Reports\n";
   auto const output = run("\nx");
-  EXPECT_TRUE(output.ends_with("project> \n" + keys + "project> x\nUnknown key.\n" + keys + "project> \n")) << output;
+  EXPECT_TRUE(output.ends_with("project> \n" + keys +
+                               "project> x\nUnknown key. Other keys: Enter list, - back, l log, h help, q quit.\n"
+                               "project> \n"))
+      << output;
 }
 
 TEST_F(WorkspaceRepl, YKeyWithoutBooks) {
-  run("1pnTest\n1");
-  auto const output = run("y");
-  EXPECT_TRUE(output.ends_with("project> y\nNo books yet. Press i to import an SIE file.\nproject> \n")) << output;
+  run("112Test\n1");
+  auto const output = run("1");
+  EXPECT_TRUE(output.ends_with("project> 1\nNo books yet. Press 2 at project> to import an SIE file.\nproject> \n")) << output;
 }
 
 TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
+  run("2test.se\ny10");
   auto const folder = root / "start" / "Test";
-  auto const output = run("eBank cost march 35 2025-03-31\ny\n\ns");
-  EXPECT_NE(output.find("2025> e\n"
+  auto const output = run("1Bank cost march 35 2025-03-31\ny\n\n1");
+  EXPECT_NE(output.find("2025> 1\n"
                         "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 "
                         "2026-10-22.\n"
                         "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
@@ -847,9 +830,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
                         "       Account        Debit       Credit\n"
                         "       6570           10.00               Bank costs\n"
                         "       1930                        10.00  Bank\n"
-                        "\n"
-                        "Press a number or Enter (= 1) to use it as a template, n for none, - to go back, h for help, "
-                        "q to quit.\n"
+                        "  0  None: type the rows yourself\n"
                         "template?> \n"
                         "Series (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"
                         "  A  Redovisning\n"),
@@ -865,7 +846,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
                         "  6570           35.00               Bank costs\n"
                         "  1930                        35.00  Bank\n"
                         "  Total          35.00        35.00\n" +
-                            postings_keys("A 3", true) + "s\n"
+                            postings_keys("A 3", true) + "1\n"
                         "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
                         "Updated .cratchit/books/2025-01-01/postings.csv in " + folder.string() + "\n"
                         "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"
@@ -885,14 +866,14 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
 }
 
 TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
+  run("2test.se\ny10");
   auto const folder = root / "start" / "Test";
   auto const events = folder / ".cratchit" / "books" / "2025-01-01" / "events.csv";
   EXPECT_FALSE(fs::exists(events));
-  auto output = run("nBank cost march -35 2025-03-31\ny");
-  EXPECT_NE(output.find("2025> n\n"
+  auto output = run("2Bank cost march -35 2025-03-31\ny");
+  EXPECT_NE(output.find("2025> 2\n"
                         "Type the heading, amount and date of the event to post later, e.g. Telia faktura oktober "
                         "1118,00 2026-10-22.\n"
                         "No date means today. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
@@ -902,7 +883,7 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
                         "  Date     2025-03-31   (fiscal year 2025-01-01 - 2025-12-31)\n"
                         "OK? (y/n) y\n"
                         "Initiated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
-                        "Noted: 2025-03-31 Bank cost march 35.00 (1 waiting). Press w to post it.\n"
+                        "Noted: 2025-03-31 Bank cost march 35.00 (1 waiting). Press 3 to post it.\n"
                         "2025> \n"),
             std::string::npos)
       << output;
@@ -911,20 +892,22 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
   EXPECT_EQ(text, "date,text,amount,noted\n2025-03-31,Bank cost march,35.00,2026-10-20\n");
   in.close();
 
-  output = run("w1n\n6570\n1930\n\ns");
-  EXPECT_NE(output.find("2025> w\n"
+  output = run("3110\n6570\n1930\n\n1");
+  EXPECT_NE(output.find("2025> 3\n"
                         "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  1  2025-03-31         35.00  Bank cost march\n"
-                        "\n"
-                        "Press a number to post it, d to delete one, m to find matches, - to go back, h for help, q to quit.\n"
                         "waiting?> 1\n"
+                        "  2025-03-31         35.00  Bank cost march\n"
+                        "\n"
+                        "  1  Post it: enter its voucher\n"
+                        "waiting> 1\n"
                         "Earlier vouchers like this one:\n"),
             std::string::npos)
       << output;
-  EXPECT_NE(output.find("template?> n\nSeries (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"), std::string::npos)
+  EXPECT_NE(output.find("template?> 0\nSeries (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"), std::string::npos)
       << output;
   EXPECT_EQ(output.find("Suggested"), std::string::npos) << output;
-  EXPECT_NE(output.find(postings_keys("A 3", false) + "s\n"
+  EXPECT_NE(output.find(postings_keys("A 3", false) + "1\n"
                         "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
                         "Updated .cratchit/books/2025-01-01/postings.csv in " + folder.string() + "\n"
                         "Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
@@ -942,36 +925,37 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
 }
 
 TEST_F(WorkspaceRepl, WaitingEventsStayUntilPostedOrDeleted) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
+  run("2test.se\ny10");
   auto const folder = root / "start" / "Test";
-  EXPECT_TRUE(run("w").ends_with(
-      "2025> w\nNo events are waiting in fiscal year 2025-01-01 - 2025-12-31. Press n to note one.\n2025> \n"));
-  run("nTelia 1118 2025-04-01\ny");
-  run("nKvitto 249 2025-04-02\ny");
+  EXPECT_TRUE(run("3").ends_with(
+      "2025> 3\nNo events are waiting in fiscal year 2025-01-01 - 2025-12-31. Press 2 to note one.\n2025> \n"));
+  run("2Telia 1118 2025-04-01\ny");
+  run("2Kvitto 249 2025-04-02\ny");
   // - at series> goes back to the list; - at post> with no rows drops the voucher, not the event
-  auto output = run("w2-1A-\n");
-  EXPECT_NE(output.find("waiting?> 2\nSeries"), std::string::npos) << output;
+  auto output = run("321-11A-\n");
+  EXPECT_NE(output.find("waiting> 1\nSeries"), std::string::npos) << output;
   EXPECT_NE(output.find("series> -\nWaiting events in fiscal year 2025-01-01 - 2025-12-31:\n"), std::string::npos)
       << output;
   EXPECT_NE(output.find("post> -\nDropped the voucher. Nothing is saved. The event is still waiting.\n2025> \n"),
             std::string::npos)
       << output;
-  output = run("wd-d2n");
-  EXPECT_NE(output.find("waiting?> d\n"
-                        "Press the number of the event to delete, - not to delete.\n"
-                        "delete?> -\n"
-                        "Press a number to post it, d to delete one, m to find matches, - to go back, h for help, q to quit.\n"
-                        "waiting?> d\n"
-                        "Press the number of the event to delete, - not to delete.\n"
-                        "delete?> 2\n"
-                        "  2025-04-02        249.00  Kvitto\n"
-                        "Delete it? (y/n) n\n"
-                        "Waiting events in"),
+  // d asks first; n goes back to the event, - from there to the list
+  std::string const kvitto = "  2025-04-02        249.00  Kvitto\n"
+                             "\n"
+                             "  1  Post it: enter its voucher\n";
+  output = run("32dn-");
+  EXPECT_NE(output.find("waiting?> 2\n" + kvitto + "waiting> d\nDelete it? (y/n) n\n" + kvitto +
+                        "waiting> -\nWaiting events in"),
             std::string::npos)
       << output;
-  output = run("wd1y");
+  // d is not listed, but named by an unknown key
+  output = run("31x");
+  EXPECT_TRUE(output.ends_with("waiting> x\nUnknown key. Other keys: Enter list, d delete, - back, h help, q quit.\n"
+                               "waiting> \n"))
+      << output;
+  output = run("31dy");
   EXPECT_NE(output.find("Delete it? (y/n) y\n"
                         "Updated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
                         "Deleted the waiting event 2025-04-01 \"Telia\" 1118.00.\n"
@@ -979,7 +963,7 @@ TEST_F(WorkspaceRepl, WaitingEventsStayUntilPostedOrDeleted) {
                         "  1  2025-04-02        249.00  Kvitto\n"),
             std::string::npos)
       << output;
-  output = run("wd1y");
+  output = run("31dy");
   EXPECT_NE(output.find("Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
                         "Deleted the waiting event 2025-04-02 \"Kvitto\" 249.00.\n"
                         "No events are waiting now.\n"
@@ -989,14 +973,14 @@ TEST_F(WorkspaceRepl, WaitingEventsStayUntilPostedOrDeleted) {
 }
 
 TEST_F(WorkspaceRepl, WaitingEventsAreListedOldestFirst) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  run("nTelia 1118 2025-04-01\ny");
-  run("nHyra 5000 2025-05-01\ny");
-  run("nKvitto 249 2025-03-15\ny");
-  run("nTelia rest 10 2025-04-01\ny");
-  auto const output = run("w");
+  run("2test.se\ny10");
+  run("2Telia 1118 2025-04-01\ny");
+  run("2Hyra 5000 2025-05-01\ny");
+  run("2Kvitto 249 2025-03-15\ny");
+  run("2Telia rest 10 2025-04-01\ny");
+  auto const output = run("3");
   EXPECT_NE(output.find("Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  1  2025-03-15        249.00  Kvitto\n"
                         "  2  2025-04-01       1118.00  Telia\n"
@@ -1007,18 +991,18 @@ TEST_F(WorkspaceRepl, WaitingEventsAreListedOldestFirst) {
 }
 
 TEST_F(WorkspaceRepl, EmptyVoucherLineGoesBackToTheYear) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  EXPECT_TRUE(run("e\n").ends_with("voucher> \n2025> \n")) << run("e\n");
+  run("2test.se\ny10");
+  EXPECT_TRUE(run("1\n").ends_with("voucher> \n2025> \n")) << run("1\n");
 }
 
 TEST_F(WorkspaceRepl, VoucherLineIsRefusedAndKeptForEditing) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
+  run("2test.se\ny10");
   // Backspace (DEL) edits the kept line
-  auto const output = run("eBank 35 2027-01-01\n" + std::string(10, '\x7f') + "2025-01-01\nn");
+  auto const output = run("1Bank 35 2027-01-01\n" + std::string(10, '\x7f') + "2025-01-01\nn");
   EXPECT_NE(output.find("voucher> Bank 35 2027-01-01\n"
                         "Refused: 2027-01-01 is outside fiscal year 2025-01-01 - 2025-12-31.\n"
                         "voucher> Bank 35 2027-01-01"),
@@ -1031,10 +1015,10 @@ TEST_F(WorkspaceRepl, VoucherLineIsRefusedAndKeptForEditing) {
 }
 
 TEST_F(WorkspaceRepl, QuestionMarkHintsTheCounterAccounts) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  auto const output = run("eLunch 10 2025-05-05\nyb?\n1930 -10\n?\n? 6570\n? bank\n6570\n\n?-\n-\n-\n");
+  run("2test.se\ny10");
+  auto const output = run("1Lunch 10 2025-05-05\nyb?\n1930 -10\n?\n? 6570\n? bank\n6570\n\n?-\n-\n-\n");
   auto const hint_1930 = "Hint for 1930 C Bank, from vouchers and waiting events with 1930 on credit:\n"
                          "  Counter accounts in the latest 1:\n"
                          "    6570   D   1  Bank costs\n"
@@ -1068,10 +1052,10 @@ TEST_F(WorkspaceRepl, QuestionMarkHintsTheCounterAccounts) {
 }
 
 TEST_F(WorkspaceRepl, RowsListAccountsRemoveAndDrop) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  auto const output = run("eLunch 100 2025-05-05\nyb" "bank\n1930 -100\n\n-\n-\n");
+  run("2test.se\ny10");
+  auto const output = run("1Lunch 100 2025-05-05\nyb" "bank\n1930 -100\n\n-\n-\n");
   EXPECT_NE(output.find("Voucher B 1 (Kundfakturor) 2025-05-05 \"Lunch\" 100.00\n"), std::string::npos) << output;
   EXPECT_NE(output.find("post> bank\nAccounts matching bank:\n  1930  Bank\n  6570  Bank costs\n"), std::string::npos)
       << output;
@@ -1082,20 +1066,18 @@ TEST_F(WorkspaceRepl, RowsListAccountsRemoveAndDrop) {
 }
 
 TEST_F(WorkspaceRepl, SpacedAmountMustBeChosen) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  auto const output = run("eFaktura 87 500 2025-05-05\nx3-\n2n");
+  run("2test.se\ny10");
+  auto const output = run("1Faktura 87 500 2025-05-05\nx3-\n2n");
   EXPECT_NE(output.find("voucher> Faktura 87 500 2025-05-05\n"
                         "The amount is unclear: spaces may separate thousands. Which is it?\n"
                         "  1           500.00  Faktura 87\n"
                         "  2         87500.00  Faktura\n"
-                        "\n"
-                        "Press a number to choose, - to change the line, h for help, q to quit.\n"
                         "amount?> x\n"
-                        "Press a number to choose, - to change the line, h for help, q to quit.\n"
+                        "Unknown key. Other keys: Enter list, - change the line, h help, q quit.\n"
                         "amount?> 3\n"
-                        "Press a number to choose, - to change the line, h for help, q to quit.\n"
+                        "Unknown key. Other keys: Enter list, - change the line, h help, q quit.\n"
                         "amount?> -\n"
                         "voucher> Faktura 87 500 2025-05-05\n"),
             std::string::npos)
@@ -1111,10 +1093,10 @@ TEST_F(WorkspaceRepl, SpacedAmountMustBeChosen) {
 }
 
 TEST_F(WorkspaceRepl, RowsMustAddUpToTheAmountToSave) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  auto const output = run("eBank cost 35 2025-03-31\nyn\n6570 10\n1930\n\n6570\n6570 25\n1930 -25\n\n");
+  run("2test.se\ny10");
+  auto const output = run("1Bank cost 35 2025-03-31\ny0\n6570 10\n1930\n\n6570\n6570 25\n1930 -25\n\n");
   EXPECT_NE(output.find("post> 1930\n"
                         "  1930                        10.00  Bank\n"
                         "  Debit 10.00, credit 10.00, amount 35.00: debit and credit must each reach the amount.\n"
@@ -1137,11 +1119,11 @@ TEST_F(WorkspaceRepl, RowsMustAddUpToTheAmountToSave) {
 }
 
 TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
+  run("2test.se\ny10");
   // 2 picks A 1; - at series> goes back to the list, - there back to the line
-  auto const output = run("eBank cost sale 25 2025-04-01\ny2--\ny1\n--\n-\n3010 -20\n\n-\n-\n-\n");
+  auto const output = run("1Bank cost sale 25 2025-04-01\ny2--\ny1\n--\n-\n3010 -20\n\n-\n-\n-\n");
   EXPECT_NE(output.find("OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
@@ -1202,12 +1184,12 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
 }
 
 TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  // Enter takes template A 2 and series A; f flips, x and Enter list the keys, f flips back, f again and s saves
-  auto const output = run("eBank refund 35 2025-04-03\ny\n\nfx\nffs");
-  auto const flipped = std::string("f\n"
+  run("2test.se\ny10");
+  // Enter takes template A 2 and series A; 2 flips, x and Enter list the keys, 2 flips back, 2 again and 1 saves
+  auto const output = run("1Bank refund 35 2025-04-03\ny\n\n2x\n221");
+  auto const flipped = std::string("2\n"
                                    "Suggested from A 2, scaled to the amount and flipped:\n"
                                    "Voucher A 3 2025-04-03 \"Bank refund\"\n"
                                    "  Account        Debit       Credit\n"
@@ -1223,21 +1205,14 @@ TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
                         "  1930                        35.00  Bank\n"
                         "  Total          35.00        35.00\n" +
                         postings_keys("A 3", true) + flipped + "x\n"
-                        "Unknown key.\n"
-                        "Keys at postings>:\n"
-                        "  s  Save as A 3\n"
-                        "  f  Flip the template's rows (debit becomes credit)\n"
-                        "  ?  Hint: the counter accounts used before with the rows' accounts\n"
-                        "  -  Change the rows\n"
-                        "  h  Help (the manual)\n"
-                        "  q  Quit\n"
+                        "Unknown key. Other keys: Enter list, ? hint of counter accounts, - change the rows, h help, "
+                        "q quit.\n"
                         "postings> \n"
-                        "Keys at postings>:\n"
-                        "  s  Save as A 3\n"),
+                        "Voucher A 3 2025-04-03 \"Bank refund\"\n"),
             std::string::npos)
       << output;
-  EXPECT_NE(output.find("postings> f\nSuggested from A 2, scaled to the amount:\n"), std::string::npos) << output;
-  EXPECT_NE(output.find(flipped + "s\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("postings> 2\nSuggested from A 2, scaled to the amount:\n"), std::string::npos) << output;
+  EXPECT_NE(output.find(flipped + "1\n"), std::string::npos) << output;
   EXPECT_TRUE(output.ends_with("Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n2025> \n")) << output;
   auto const books = cratchit::books::read_books(root / "start" / "Test");
   ASSERT_TRUE(books.has_value()) << books.error();
@@ -1246,18 +1221,18 @@ TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
   ASSERT_EQ(saved.postings.size(), 2u);
   EXPECT_EQ(saved.postings[0].amount, -3500);
   EXPECT_EQ(saved.postings[1].amount, 3500);
-  // Without a template, f is not offered
-  auto const plain = run("eLunch 20 2025-04-04\ny\n6570 20\n1930\n\nf-\n-\n-\n");
-  EXPECT_NE(plain.find(postings_keys("A 4", false) + "f\nUnknown key.\n"), std::string::npos) << plain;
+  // Without a template, 2 (flip) is not offered
+  auto const plain = run("1Lunch 20 2025-04-04\ny\n6570 20\n1930\n\n2-\n-\n-\n");
+  EXPECT_NE(plain.find(postings_keys("A 4", false) + "2\nUnknown key. Other keys:"), std::string::npos) << plain;
 }
 
 TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  run("eBank cost march 35 2025-03-31\ny\n\ns");
-  auto output = run("vxa1");
-  EXPECT_NE(output.find("2025> v\n"
+  run("2test.se\ny10");
+  run("1Bank cost march 35 2025-03-31\ny\n\n1");
+  auto output = run("4xa1");
+  EXPECT_NE(output.find("2025> 4\n"
                         "Series in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  A  Redovisning                         3 vouchers, last A 3 2025-03-31\n"
                         "\n"
@@ -1269,8 +1244,6 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
                         "  1  A 3     2025-03-31         35.00  Bank cost march  (entered)\n"
                         "  2  A 2     2025-03-01         10.00  Bank cost  (imported)\n"
                         "  3  A 1     2025-02-01        500.00  Sale  (imported)\n"
-                        "\n"
-                        "Press a number to view it, - to go back, h for help, q to quit.\n"
                         "voucher?> 1\n"
                         "Voucher A 3 2025-03-31 \"Bank cost march\" 35.00\n"
                         "  Account        Debit       Credit\n"
@@ -1279,19 +1252,20 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
                         "  Total          35.00        35.00\n"
                         "  Registered 2026-10-20, entered in cratchit\n"
                         "\n"
-                        "Press c to correct it, t to use it as a template, - to go back, h for help, q to quit.\n"
+                        "  1  Correct it\n"
+                        "  2  Use it as a template\n"
                         "A 3> \n"),
             std::string::npos)
       << output;
   // An imported voucher is not corrected
-  output = run("va3c-");
-  EXPECT_NE(output.find("A 1> c\nA 1 came with an SIE import, so cratchit does not correct it. Correct it in the program "
+  output = run("4a31-");
+  EXPECT_NE(output.find("A 1> 1\nA 1 came with an SIE import, so cratchit does not correct it. Correct it in the program "
                         "it\ncame from and import the file again.\nA 1> -\nVouchers A"),
             std::string::npos)
       << output;
   // The correction reverses the rows, in the same series, and then the right voucher can follow
-  output = run("va1c 2025-04-01\ny\nsy" + std::string(5, '\x7f') + "40 2025-03-31\ny\ns");
-  EXPECT_NE(output.find("A 3> c\n"), std::string::npos) << output;
+  output = run("4a11 2025-04-01\ny\n1y" + std::string(5, '\x7f') + "40 2025-03-31\ny\n1");
+  EXPECT_NE(output.find("A 3> 1\n"), std::string::npos) << output;
   EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-04-01\n"
                         "  Heading  Rättelse av A 3: Bank cost march\n"
                         "  Amount   35.00\n"
@@ -1307,7 +1281,7 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
                         "  6570                        35.00  Bank costs\n"
                         "  1930           35.00               Bank\n"
                         "  Total          35.00        35.00\n" +
-                            postings_keys("A 4", true) + "s\n"),
+                            postings_keys("A 4", true) + "1\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("Saved voucher A 4 into fiscal year 2025-01-01 - 2025-12-31.\n"
@@ -1337,12 +1311,12 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
 }
 
 TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
+  run("2test.se\ny10");
   // No template list: the viewed voucher is the template, even with no shared word
-  auto const output = run("va1tLunch 20 2025-04-02\ny\n");
-  EXPECT_NE(output.find("A 2> t\nType the heading"), std::string::npos) << output;
+  auto const output = run("4a12Lunch 20 2025-04-02\ny\n");
+  EXPECT_NE(output.find("A 2> 2\nType the heading"), std::string::npos) << output;
   EXPECT_NE(output.find("OK? (y/n) y\nSeries (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"), std::string::npos)
       << output;
   EXPECT_NE(output.find("Suggested from A 2, scaled to the amount:\n"
@@ -1355,17 +1329,17 @@ TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
             std::string::npos)
       << output;
   // A closed year refuses it
-  auto const closed = run("cva1t");
-  EXPECT_NE(closed.find("A 2> t\nFiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press o to open it.\n"
+  auto const closed = run("84a12");
+  EXPECT_NE(closed.find("A 2> 2\nFiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press 8 to open it.\n"
                         "A 2> "),
             std::string::npos)
       << closed;
 }
 
 TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\ny");
+  run("2test.se\ny");
   auto const folder = root / "start" / "Test";
   fs::create_directories(root / "start" / "bank");
   // Two postings match the books' postings on 1930; one is after the fiscal year
@@ -1375,8 +1349,8 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
          "2025/03/01;-10,00;Bank cost;490,00;\n"
          "2025/02/01;500,00;Sale;500,00;\n";
   std::ofstream(root / "start" / "bank" / "old.skv", std::ios::binary) << "2025-04-05;Ränta;1;\n";
-  auto output = run("sbank\n2");
-  EXPECT_NE(output.find("project> s\n"
+  auto output = run("3bank\n2");
+  EXPECT_NE(output.find("project> 3\n"
                         "Type the path of the account statement file, or of a folder to list its files. Tab completes a\n"
                         "folder or file name, Backspace erases, Enter accepts. Enter on an empty path goes back.\n"
                         "path> " + (root / "start").string() + "/bank\n"
@@ -1386,15 +1360,13 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
                         "  2  old.skv\n"
                         "       The file does not start with a UTF-8 byte order mark (BOM), so its encoding is unknown. "
                         "Save it as UTF-8 with a program that writes a BOM.\n"
-                        "\n"
-                        "Press a number to import that file, - to go back, h for help, q to quit.\n"
                         "statement?> 2\n"
                         "Error: " + (root / "start" / "bank" / "old.skv").string() + ": The file does not start"),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with("Nothing is imported.\nproject> \n")) << output;
 
-  output = run("sbank/nordea.csv\n\ny");
+  output = run("3bank/nordea.csv\n\ny");
   EXPECT_NE(output.find("Statement file " + (root / "start" / "bank" / "nordea.csv").string() + "\n"
                         "  Entries   3, 2025-02-01 - 2026-01-02 (lines 2-4, newest first)\n"
                         "  Saldo     0.00 before, 488.15 after; it adds up on every line that has one\n"
@@ -1411,26 +1383,26 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
                         "    2026-01-02         -1.85  AVGIFTER\n"
                         "Import it? (y/n) y\n"
                         "Stashed the file as .cratchit/statements/2026-10-20_1_nordea.csv in " + folder.string() + "\n"
-                        "Imported 2 entries for account 1930 (0 already known, 1 outside). Press a to book them.\n"
+                        "Imported 2 entries for account 1930 (0 already known, 1 outside). Press 4 to book them.\n"
                         "project> \n"),
             std::string::npos)
       << output;
   EXPECT_TRUE(fs::exists(folder / ".cratchit" / "statements" / "2026-10-20_1_nordea.csv.txt"));
 
   // Again: the folder shows it, and nothing is new; at the year, the posting after it is left out too
-  output = run("sbank\n1\n");
+  output = run("3bank\n1\n");
   EXPECT_NE(output.find("       3 entries, 2025-02-01 - 2026-01-02, 2 already imported\n"), std::string::npos) << output;
   EXPECT_NE(output.find("Suggested account 1930 Bank: 2 of 3 entries match postings on 1930 in the books.\n"),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with("Nothing to import: no entry is new inside the books.\nproject> \n")) << output;
-  output = run("y0sbank/nordea.csv\n\n");
+  output = run("105bank/nordea.csv\n\n");
   EXPECT_NE(output.find("  Outside   1 (outside fiscal year 2025-01-01 - 2025-12-31), not imported:\n"),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with("Nothing to import: no entry is new inside the books.\n2025> \n")) << output;
   // An account that is not in the books lists the matches and asks again; an empty line imports nothing
-  output = run("sbank/nordea.csv\n" + std::string(4, '\x7f') + "ban\n" + std::string(3, '\x7f') + "\n");
+  output = run("5bank/nordea.csv\n" + std::string(4, '\x7f') + "ban\n" + std::string(3, '\x7f') + "\n");
   EXPECT_NE(output.find("ban\nAccounts matching ban:\n  1930  Bank\n  6570  Bank costs\naccount> "),
             std::string::npos)
       << output;
@@ -1438,31 +1410,29 @@ TEST_F(WorkspaceRepl, SKeyImportsAnAccountStatement) {
 }
 
 TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\ny");
+  run("2test.se\ny");
   auto const folder = root / "start" / "Test";
   // A transfer from 1930 to 2099, in two statements; the bank cost is booked already
   std::ofstream(root / "start" / "bank.csv", std::ios::binary)
       << "\xEF\xBB\xBF" "Datum;Belopp;Text\n2025-04-02;-100,00;TILL 2099\n2025-03-01;-10,00;Bank cost\n";
   std::ofstream(root / "start" / "other.csv", std::ios::binary)
       << "\xEF\xBB\xBF" "Datum;Belopp;Text\n2025-04-02;100,00;FRÅN 1930\n";
-  run("sbank.csv\n\ny");
-  run("sother.csv\n2099\ny");
-  auto output = run("a1n" + std::string(9, '\x7f') + "Överföring\n1w1");
-  EXPECT_NE(output.find("project> a\n"
+  run("3bank.csv\n\ny");
+  run("3other.csv\n2099\ny");
+  auto output = run("411" + std::string(9, '\x7f') + "Överföring\n121");
+  EXPECT_NE(output.find("project> 4\n"
                         "Statement entries not yet booked:\n"
                         "  1  1930   2025-04-02       -100.00  TILL 2099\n"
                         "  2  2099   2025-04-02        100.00  FRÅN 1930\n"
-                        "\n"
-                        "Press a number to choose an entry, - to go back, h for help, q to quit.\n"
                         "entries?> 1\n"
                         "  1930   2025-04-02       -100.00  Bank\n"
                         "  TILL 2099\n"
                         "  From .cratchit/statements/2026-10-20_1_bank.csv:2, fiscal year 2025-01-01 - 2025-12-31\n"
                         "\n"
-                        "Press n for a new waiting event with it, - to go back, h for help, q to quit.\n"
-                        "entry?> n\n"
+                        "  1  New waiting event with it\n"
+                        "entry?> 1\n"
                         "Type the heading of the event. Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
                         "heading> TILL 2099"),
             std::string::npos)
@@ -1475,15 +1445,13 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
                         "  1  2099   2025-04-02        100.00  FRÅN 1930\n"),
             std::string::npos)
       << output;
-  EXPECT_NE(output.find("entry?> w\n"
-                        "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
+  EXPECT_NE(output.find("entry?> 2\n"
+                        "Add the entry to a waiting event in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  1  2025-04-02        100.00  Överföring\n"
                         "       Account        Debit       Credit\n"
                         "       1930                       100.00  2025-04-02  Bank\n"
                         "       Total           0.00       100.00\n"
                         "       Remaining 100.00 (debit 0.00, credit 100.00, amount 100.00).\n"
-                        "\n"
-                        "Press the number of the event to add the entry to, - to go back, h for help, q to quit.\n"
                         "event?> 1\n"
                         "Updated .cratchit/books/2025-01-01/event_postings.csv in " + folder.string() + "\n"
                         "Added 2099 100.00 to 2025-04-02 \"Överföring\". Balanced. Enter saves.\n"
@@ -1493,7 +1461,7 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
       << output;
 
   // Posted from the waiting list: the event's postings are the rows, and it balances
-  output = run("y0w1\n\ns");
+  output = run("10311\n\n1");
   EXPECT_NE(output.find("       Account        Debit       Credit\n"
                         "       1930                       100.00  2025-04-02  Bank\n"
                         "       2099          100.00               2025-04-02  Result\n"
@@ -1522,55 +1490,50 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
   EXPECT_EQ(saved.postings[0].date, cratchit::parse_iso_date("2025-04-02"));
   EXPECT_TRUE(saved.postings[0].source.empty());
   // Booked now, so nothing waits
-  EXPECT_TRUE(run("a").ends_with("2025> a\nNo statement entries are waiting in this fiscal year. Press s to import a "
+  EXPECT_TRUE(run("6").ends_with("2025> 6\nNo statement entries are waiting in this fiscal year. Press 5 to import a "
                                  "statement.\n2025> \n"));
 }
 
 TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\ny");
+  run("2test.se\ny");
   auto const folder = root / "start" / "Test";
-  auto const output = run("yx0\n");
-  EXPECT_NE(output.find("project> y\n"
+  auto const output = run("1x0\n");
+  EXPECT_NE(output.find("project> 1\n"
                         "Fiscal years of Test AB, 556000-0001 (0 is the newest):\n"
                         "  0  2025-01-01 - 2025-12-31  open\n"
-                        "\n"
-                        "Press a number to open a year, - to go back, h for help, q to quit.\n"
                         "year?> x\n"
-                        "Press a number to open a year, - to go back, h for help, q to quit.\n"
+                        "Unknown key. Other keys: Enter list, - back, h help, q quit.\n"
                         "year?> 0\n"
                         "Updated .cratchit/project.txt in " + folder.string() + "\n"
                         "Opened fiscal year 2025-01-01 - 2025-12-31, open for new vouchers.\n"
                         "2025> \n"
                         "Keys at 2025>:\n"
-                        "  e  Enter a voucher\n"
-                        "  n  Note an event to post later\n"
-                        "  w  Waiting events (0)\n"
-                        "  v  View vouchers (correct one, or use it as a template)\n"
-                        "  s  Import an account statement (only the entries in this year)\n"
-                        "  a  Statement entries not yet booked in this year\n"
-                        "  r  Reports of this year\n"
-                        "  c  Close the year for new vouchers\n"
-                        "  l  Show the log\n"
-                        "  -  Back to project>\n"
-                        "  h  Help (the manual)\n"
-                        "  q  Quit\n"
+                        "  1  Enter a voucher\n"
+                        "  2  Note an event to post later\n"
+                        "  3  Waiting events (0)\n"
+                        "  4  View vouchers (correct one, or use it as a template)\n"
+                        "  5  Import an account statement (only the entries in this year)\n"
+                        "  6  Statement entries not yet booked in this year\n"
+                        "  7  Reports of this year\n"
+                        "  8  Close the year for new vouchers\n"
+                        "  9  Find matches among the waiting events\n"
                         "2025> \n"),
             std::string::npos)
       << output;
   // Reopened with the project; closing stops new vouchers until opened again
-  auto const closing = run("ceoy-");
+  auto const closing = run("818y-");
   EXPECT_NE(closing.find("Opened fiscal year 2025-01-01 - 2025-12-31, open for new vouchers.\n"
-                         "2025> c\n"
+                         "2025> 8\n"
                          "Updated .cratchit/books/books.txt in " + folder.string() + "\n"
                          "Fiscal year 2025-01-01 - 2025-12-31 is now closed for new vouchers.\n"
-                         "2025> e\n"
-                         "Fiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press o to open it.\n"
-                         "2025> o\n"
+                         "2025> 1\n"
+                         "Fiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press 8 to open it.\n"
+                         "2025> 8\n"
                          "Updated .cratchit/books/books.txt in " + folder.string() + "\n"
                          "Fiscal year 2025-01-01 - 2025-12-31 is now open for new vouchers.\n"
-                         "2025> y\nUnknown key.\n"),
+                         "2025> y\nUnknown key. Other keys: Enter list, - back, l log, h help, q quit.\n"),
             std::string::npos)
       << closing;
   EXPECT_TRUE(closing.ends_with("2025> -\nproject> \n")) << closing;
@@ -1580,40 +1543,40 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
 }
 
 TEST_F(WorkspaceRepl, RKeyInAYearShowsItsReports) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  auto const output = run("r-");
-  EXPECT_TRUE(output.ends_with("2025> r\nReports for 2025-01-01 - 2025-12-31:\n  1  Trial balance (saldobalans)\n"
-                               "  2  Vouchers\n  3  Account ledger\n\n"
-                               "Press a number to choose, - to go back, h for help, q to quit.\nreport?> -\n2025> \n"))
+  run("2test.se\ny10");
+  auto const output = run("7-");
+  EXPECT_TRUE(output.ends_with("2025> 7\nReports for 2025-01-01 - 2025-12-31:\n  1  Trial balance (saldobalans)\n"
+                               "  2  Vouchers\n  3  Account ledger\nreport?> -\n2025> \n"))
       << output;
 }
 
 TEST_F(WorkspaceRepl, NoDateOutsideTheYearAsksForIt) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
-  auto const output = run("eBank 35\n");
+  run("2test.se\ny10");
+  auto const output = run("1Bank 35\n");
   EXPECT_NE(output.find("voucher> Bank 35\nNo date, and today is outside the fiscal year. Type the date.\n"),
             std::string::npos)
       << output;
 }
 
 TEST_F(WorkspaceRepl, MAtTheWaitingListFindsMatchesToMakeOneOrDelete) {
-  run("1pnTest\n1");
+  run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("itest.se\nyy0");
+  run("2test.se\ny10");
   auto const folder = root / "start" / "Test";
-  EXPECT_NE(run("nHyra 5000 2025-04-01\nyw").find("d to delete one, m to find matches, - to go back"), std::string::npos);
-  EXPECT_NE(run("wm").find("waiting?> m\n"
-                           "No possible matches among the waiting events (the same amount, at most 4 days apart).\n"),
+  EXPECT_NE(run("2Hyra 5000 2025-04-01\ny\n").find("  9  Find matches among the waiting events\n"), std::string::npos);
+  EXPECT_NE(run("9").find("2025> 9\n"
+                          "No possible matches among the waiting events (the same amount, at most 4 days apart).\n"
+                          "2025> \n"),
             std::string::npos);
-  run("nBank fee 10 2025-03-03\ny");
-  run("nKvitto 249 2025-04-02\ny");
-  run("nKvitto Clas 249 2025-04-04\ny");
-  auto output = run("wm");
-  EXPECT_NE(output.find("waiting?> m\n"
+  run("2Bank fee 10 2025-03-03\ny");
+  run("2Kvitto 249 2025-04-02\ny");
+  run("2Kvitto Clas 249 2025-04-04\ny");
+  auto output = run("9");
+  EXPECT_NE(output.find("2025> 9\n"
                         "Possible matches in fiscal year 2025-01-01 - 2025-12-31 (the same amount, at most 4 days "
                         "apart):\n"
                         "  1  books  2025-03-03         10.00  Bank fee\n"
@@ -1622,14 +1585,12 @@ TEST_F(WorkspaceRepl, MAtTheWaitingListFindsMatchesToMakeOneOrDelete) {
                         "  2  same   2025-04-02        249.00  Kvitto\n"
                         "            2025-04-04        249.00  Kvitto Clas\n"
                         "            2 days apart, shared words: kvitto\n"
-                        "\n"
-                        "Press a number to look at one, - to go back to the waiting list, h for help, q to quit.\n"
                         "match?> \n"),
             std::string::npos)
       << output;
-  // s makes one event of the two: the older event's line to change, then OK
-  output = run("wm2s\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\bKvitto Clas Ohlson 249 2025-04-02\ny");
-  EXPECT_NE(output.find("same?> s\n"
+  // 1 makes one event of the two: the older event's line to change, then OK
+  output = run("921\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\bKvitto Clas Ohlson 249 2025-04-02\ny");
+  EXPECT_NE(output.find("same?> 1\n"
                         "Type the heading, amount and date of the one event; the older event's are typed in for you.\n"
                         "Backspace erases, Enter accepts. Enter on an empty line goes back.\n"
                         "event> Kvitto 249.00 2025-04-02"),
@@ -1642,7 +1603,7 @@ TEST_F(WorkspaceRepl, MAtTheWaitingListFindsMatchesToMakeOneOrDelete) {
             std::string::npos)
       << output;
   // d deletes the waiting event as already in the books; no matches left goes back to the waiting list
-  output = run("wm1dy");
+  output = run("91dy");
   EXPECT_NE(output.find("  Voucher A 2 2025-03-01 \"Bank cost\" 10.00\n"), std::string::npos) << output;
   EXPECT_NE(output.find("booked?> d\n"
                         "Delete it? (y/n) y\n"

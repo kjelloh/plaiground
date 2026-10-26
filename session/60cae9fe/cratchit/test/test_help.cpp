@@ -43,9 +43,7 @@ TEST(HelpBrowser, OpenShowsTitleTextAndNumberedSections) {
                        "Intro\n"
                        "\n"
                        "  1  A\n"
-                       "  2  B\n"
-                       "\n"
-                       "Press a number to open a section, - to go back, q to leave help.\n");
+                       "  2  B\n");
   EXPECT_EQ(help.prompt(), "help> ");
 }
 
@@ -61,9 +59,7 @@ TEST(HelpBrowser, NumbersDrillDownToText) {
   EXPECT_EQ(help.prompt(), "help 1.1> ");
   EXPECT_EQ(out.str(), "A1\n"
                        "\n"
-                       "Text A1\n"
-                       "\n"
-                       "Press - to go back, q to leave help.\n");
+                       "Text A1\n");
 }
 
 TEST(HelpBrowser, MinusGoesBackThenLeaves) {
@@ -129,7 +125,7 @@ TEST(HelpBrowser, TenSectionsScrollWithNineAndZero) {
   out.str("");
   help.on_key(U'9', out);
   EXPECT_TRUE(contains(out.str(), "  0  ...up\n  1  S17\n"));
-  EXPECT_TRUE(contains(out.str(), "  4  S20\n\n"));
+  EXPECT_TRUE(out.str().ends_with("  4  S20\n"));
   EXPECT_FALSE(contains(out.str(), "...down"));
   out.str("");
   EXPECT_EQ(help.on_key(U'9', out), HelpBrowser::Result::Stay);
@@ -170,7 +166,7 @@ TEST(HelpBrowser, LongTextIsPaged) {
 
   out.str("");
   help.on_key(U'\n', out);
-  EXPECT_EQ(out.str(), "5\n\nPress - to go back, q to leave help.\n");
+  EXPECT_EQ(out.str(), "5\n");
   EXPECT_FALSE(help.is_paging());
   EXPECT_EQ(help.prompt(), "help> ");
 }
@@ -197,4 +193,18 @@ TEST(HelpBrowser, MinusWhilePagingGoesBack) {
   EXPECT_EQ(help.on_key(U'-', out), HelpBrowser::Result::Stay);
   EXPECT_FALSE(help.is_paging());
   EXPECT_EQ(help.prompt(), "help> ");
+}
+
+TEST(HelpBrowser, EnterShowsTheSectionAgainAndOtherKeysAreNamed) {
+  auto manual = small_manual();
+  HelpBrowser help(manual, 0);
+  std::ostringstream out;
+  help.open(out);
+  auto const shown = out.str();
+  out.str("");
+  help.on_key(U'\n', out);
+  EXPECT_EQ(out.str(), shown);
+  out.str("");
+  help.on_key(U'x', out);
+  EXPECT_EQ(out.str(), "Unknown key. Other keys: Enter this section again, - back, q leave help.\n");
 }

@@ -398,6 +398,65 @@ Vouchers by date from every fiscal year (a quarter may span two); removed postin
 box 49 calculation, every series counted (incl. M). Not logged (a broken built-in table logs a design insufficiency).
 No manual change. 414 tests pass, no warnings (Debug, trace DEBUG). Not run on real books yet. In review.
 
+Task 46: Numbered options, step 1 of 3 (refactor, no behaviour change). New `core/item_list` (`ItemList`): the page of a
+list picked by number (1-9; over 9: 1-8, 0 up, 9 down). `on_key(key, count)` -> `Pick` (None / Scrolled / Item +
+index), `show(count, out, item)` writes the up/down lines and calls `item(index, key)` per line, `reset`,
+`keep_within(count)`. The eight copies in repl (projects, report years, waiting events, matches, vouchers, statement
+files, statement entries, waiting events to add an entry to) use it; `max_keys`/`range_size` left repl.cpp. The year
+menu (`<` `>`, keys 0-9 = SIE year numbers) is unchanged. No manual change. 417 tests pass, no warnings (Debug, trace
+DEBUG). Only the project list's scrolling is covered by a REPL test; the others by the ItemList tests. In review.
+
+Task 47: Numbered options, step 2 of 3. New `core/operations` (`Operations<Id>`, header only): operations at fixed
+numbers 1-9; `add(number, label, id, offered)` (not offered = a gap; two may share a number when only one is offered),
+`on_key`, `show`. `Repl::Op`, `Repl::operations()` (per prompt), `on_prompt_key` (the four prompts: `-`, `l`, then the
+numbers; replaces `on_year_key` and the per-mode letter code), `on_operation`. `cratchit>`: 1 Workspace menu.
+`workspace>`: 1 Projects. `project>`: 1 Fiscal years, 2 Import SIE, 3 Import statement, 4 Statement entries, 5 Reports.
+Year: 1 Enter voucher, 2 Note event, 3 Waiting events, 4 View vouchers, 5 Import statement, 6 Statement entries,
+7 Reports, 8 Close / Open. Workspace menu: 1 Open saved (gap when none), 2 Browse; hint "Press a number to choose".
+Messages naming these keys follow ("Press 2 at project> to import an SIE file.", "Press 8 to open it.", "Press 3 to post
+it.", "Press 2 to note one.", "Press 4/6 to book them.", "Press 3/5 to import a statement."). Kept: `-`, `l`, `h`, `q`,
+Enter. Not yet: project menu (`n`, `a`), waiting list (`d`, `m`), `same?>`, `booked?>`, `D 4>`, `entry?>`, `postings>`,
+`template?>` (step 3). Manual: workspace menu, workspace, project, fiscal years, year table, entry, noting, waiting
+list, statement entries, SIE/statement import, reports, Using the prompt (new paragraph on fixed numbers). Tests
+rewritten for the new keys, + 3 Operations tests. 420 tests pass, no warnings (Debug, trace DEBUG); checked with piped
+input in a scratch folder. Not REPL-tested: the key list of a closed year (8 Open ...), covered by the Operations test.
+In review.
+
+Task 48: Numbered options, step 3 of 3. Lists only pick; a picked item shows its operations by number (`Operations`,
+`Repl::show_operations`: the operations, `d` where it applies, then "Press a number ..."). Project menu (`project?>`):
+1 Open a project (n listed; left out when none), 2 New, 3 Add existing; 1 lists them at `open?>` (new
+`Mode::ProjectList`, `-` back to the menu). Waiting list (`waiting?>`) only picks; the event is shown at `waiting>`
+(new `Mode::WaitingEvent`, `chosen_waiting_`): 1 Post it, `d` Delete it (`Delete it? (y/n)`; `n`/`-` back to the
+event); `deleting_`, `delete?>` and `to_delete_` are gone. Finding matches moved to the year prompt as 9 (reads the
+books first; `-` at `match?>` goes back to the year; none: message at the year). `same?>`: 1 Make them one event;
+`booked?>`: `d` as before. `D 4>`: 1 Correct it, 2 Use it as a template. `entry?>`: 1 New waiting event, 2 Add to a
+waiting event (left out when the year has none). `postings>`: 1 Save as X, 2 Flip (only with a template); `?`, `-`
+kept. `template?>`: `0  None: type the rows yourself` (was `n`). Only `?` and `d` remain as letter/sign operations
+(plus `-`, `q`, `h`, `l`, Enter, y/n). The match view's sentence now says "a statement entry is listed again".
+Manual: project menu (+ `open?>`), template, rows/postings keys, flipping, saving, voucher view, correcting, waiting
+list (+ `waiting>`), finding matches, statement entries, year table (9), Using the prompt (kept symbols, lists only
+pick). 420 tests pass, no warnings (Debug, trace DEBUG and OFF); checked with piped input in a scratch folder. Test
+names still use the old letters (e.g. `NKeyNotesAnEventAndWPostsIt`); not renamed. Not REPL-tested: help returning to
+`open?>` / `waiting>`. In review.
+
+Task 49: Only numbered choices are shown. Menus, lists, views and the key lists show only their numbered choices; the
+"Press ..." hint lines (15 screens) and the `l`, `-`, `h`, `q`, `d`, `?` lines are gone. `Operations::other(key, word)`
+names a non-number key and `one_liner()` gives "Other keys: Enter list, - back, h help, q quit."; `Repl::operations()`
+adds them per mode (prompts + `l`; `waiting>` + `d delete`; `booked?>` + `d delete the waiting event ...`;
+`postings>` + `? hint of counter accounts`, `- change the rows`; `amount?>` `- change the line`; `template?>`
+`Enter use 1`). Any unknown key prints `Unknown key. <one-liner>` (`Repl::unknown_key`). Enter shows the screen
+again in every single-key mode with numbered choices (`Repl::shows_on_enter`, `Repl::show_screen`, which also
+replaces the help-return chain); at the four prompts it is `Keys at X:` + the numbers; at `postings>` the voucher and
+its numbers. `?` stays the hint (counter accounts at `post>` / `postings>`). Year list (`year?>`): `ItemList` with
+`Start::Zero` (keys 0-9 for up to ten years; more: first page 0-8 + `9 ...down`, later pages `0 ...up`, 1-8,
+`9 ...down`; heading "(key 1 is year N)"); `<` `>` gone. Help browser: no key line; Enter shows the section again;
+unknown key "Other keys: Enter this section again, - back, q leave help."; "No section 5 here." alone; no trailing
+blank line. `event?>` heading is now "Add the entry to a waiting event in fiscal year ...". Kept: typing prompts,
+y/n questions, `series>`/`series?>` letters and their lines, `--More--` (pager, log, help paging). Manual: screen
+examples, year list, Using the prompt (new paragraph + example), Using help, Enter rows. 425 tests pass, no warnings
+(Debug, trace DEBUG and OFF); checked with piped input. Not REPL-tested: the year list with more than ten years
+(ItemList tests cover the paging). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -557,6 +616,17 @@ into a waiting event without making a voucher, several entries chosen at once.
   `momsrapport.csv` (box texts, sections) comes later. Named for the SKV domain (`skv::vat_return`, `box_of`,
   `Document`), not as a mapping. Calendar quarters. Document only, no UI. The Momsrapport voucher (series M) is
   counted like any other: it is meant to zero out what has been reported to SKV.
+
+- 2026-10-26: Operations are picked by number, not letter. Kept as symbols: `-` back, `q` quit, `h` help, `l` log, Enter
+  lists the keys, `y/n` confirm, `d` delete, `?` hint; series letters A-N (data, not operations). A screen either lists
+  items or operations, never both: pick the item (repeat for sub-items), then its numbered operations. An operation's
+  number is fixed; one shown only sometimes leaves a gap rather than renumbering the others. Steps: 1) `ItemList` for
+  the lists, 2) the four main prompts and the workspace menu, 3) the other prompts. In the template list `0` is "no
+  template" (lists start at 1, so 0 is free).
+- 2026-10-26: Only numbered choices are shown in menus, lists and views. Other keys are named in one line by an
+  unknown key; Enter shows the numbered choices again. `?` is the hint where a hint is needed (what it hints
+  depends on the screen). The year list pages with 0/9 like the others (key = SIE year number on the first page).
+  Help follows the same rule; typing prompts, y/n questions, series letters and `--More--` are kept as they are.
 
 ## Open questions
 

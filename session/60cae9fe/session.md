@@ -110,6 +110,19 @@ I now manually created mapping csv-documents.
 
 I now asked Claude to implement code that applies bas_to_momsrapport over vouchers for a period and creates a document type holding the accumulated vat returns form amounts.
 
+At this stage I could not help myself and finishes the day by asking Claude to refactor the whole UI to be totally numbered-option-based.
+
+* I felt I needed to do this before adding more to the UI.
+* Maybe if I do it now, Claude will get better at picking up the design and provide more consistent UI suggestions?
+* In any case, I like to navigate with number keys only (It worked for cratchit::zeroth first and second)?
+
+And it seems Claude was able to do it?
+
+* I did a quick try and I could not spot any errors?
+* It is still inconsistent at some places where Enter on an empty input goes back (where '-' is the one I would like everywhere).
+* And it enters 'line input mode' instead of using self administrated buffering (so it can't pick up '-' on empty buffer)
+
+
 ## 20261025
 
 I have now decided to try and complete booking the events for my companies next VAT returns report and make notes on what works and what may need fixing?
