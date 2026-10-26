@@ -447,7 +447,7 @@ The prompt is `project>`.
 | 1      | Lists the fiscal years to open one (see Fiscal years). |
 | 2      | Imports an SIE file (see Importing an SIE file).    |
 | 3      | Imports an account statement (see Importing an account statement). |
-| 4      | Lists the statement entries not yet booked, to make waiting events of them (see Statement entries). |
+| 4      | Lists the statement entries not yet booked, to make waiting events of them (see Statement entries). The key list shows how many there are. |
 | 5      | Shows reports of the books (see Reports).           |
 | Enter  | Lists the numbered keys.                            |
 | h      | Opens this manual.                                  |
@@ -505,7 +505,7 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | 3      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
 | 4      | Views the vouchers, to correct one or use it as a template (see Viewing and correcting vouchers). |
 | 5      | Imports an account statement, only its entries in this year (see Importing an account statement). |
-| 6      | Lists the statement entries not yet booked in this year (see Statement entries). |
+| 6      | Lists the statement entries not yet booked in this year (see Statement entries). The key list shows how many there are. |
 | 7      | Shows the reports of this year (see Reports). `-` there comes back here. |
 | 8      | Closes the year for new vouchers when it is open, opens it when it is closed. The key list names the one offered. |
 | 9      | Finds waiting events that may be the same event, or already in the books (see Finding matches). |
@@ -1428,7 +1428,7 @@ Keys at project>:
   1  Fiscal years
   2  Import an SIE file
   3  Import an account statement
-  4  Statement entries not yet booked
+  4  Statement entries not yet booked (7)
   5  Reports
 ```
 

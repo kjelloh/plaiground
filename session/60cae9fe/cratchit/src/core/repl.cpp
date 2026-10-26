@@ -25,6 +25,11 @@ constexpr charset::unicode::CodePoint ctrl_d = U'\x04';
 // Esc does nothing: arrow keys also start with it, so the two can't be told apart
 constexpr charset::unicode::CodePoint escape = U'\x1b';
 
+// " (7)" after a label, or nothing when the count is not known
+std::string count_of(std::optional<std::size_t> count) {
+  return count ? std::format(" ({})", *count) : "";
+}
+
 // Voucher numbers in order: by value when both are digits, else as text
 bool number_less(std::string const& a, std::string const& b) {
   auto const digits = [](std::string const& text) {
@@ -273,7 +278,10 @@ bool Repl::is_prompt() const {
   return mode_ == Mode::Main || mode_ == Mode::Workspace || mode_ == Mode::Project || mode_ == Mode::Year;
 }
 
-void Repl::show_keys(std::ostream& out) const {
+void Repl::show_keys(std::ostream& out) {
+  if (mode_ == Mode::Project || mode_ == Mode::Year) {
+    unbooked_count_ = count_unbooked();
+  }
   std::println(out, "Keys at {}:", prompt().substr(0, prompt().size() - 1));
   operations().show(out);
 }
@@ -409,7 +417,7 @@ Operations<Repl::Op> Repl::operations() const {
     operations.add(1, "Fiscal years", Op::FiscalYears)
         .add(2, "Import an SIE file", Op::ImportSie)
         .add(3, "Import an account statement", Op::ImportStatement)
-        .add(4, "Statement entries not yet booked", Op::StatementEntries)
+        .add(4, "Statement entries not yet booked" + count_of(unbooked_count_), Op::StatementEntries)
         .add(5, "Reports", Op::Reports);
     break;
   case Mode::Year: {
@@ -420,7 +428,7 @@ Operations<Repl::Op> Repl::operations() const {
         .add(3, std::format("Waiting events ({})", year ? year->waiting.size() : 0), Op::WaitingEvents)
         .add(4, "View vouchers (correct one, or use it as a template)", Op::ViewVouchers)
         .add(5, "Import an account statement (only the entries in this year)", Op::ImportStatement)
-        .add(6, "Statement entries not yet booked in this year", Op::StatementEntries)
+        .add(6, "Statement entries not yet booked in this year" + count_of(unbooked_count_), Op::StatementEntries)
         .add(7, "Reports of this year", Op::Reports)
         .add(8, "Close the year for new vouchers", Op::CloseYear, year && !closed)
         .add(8, "Open the year for new vouchers", Op::OpenYear, closed)
@@ -2986,6 +2994,24 @@ books::Posting Repl::posting_of(books::OpenEntry const& entry) const {
   posting.text = entry.entry.text;
   posting.source = entry.source;
   return posting;
+}
+
+std::optional<std::size_t> Repl::count_unbooked() const {
+  if (!project_) {
+    return std::nullopt;
+  }
+  auto const imports = books::read_statement_imports(project_->folder);
+  if (!imports) {
+    return std::nullopt;
+  }
+  if (mode_ == Mode::Year) {
+    return books::open_entries(books_, *imports, books_.year_starting(open_year_)).size();
+  }
+  auto const books = books::read_books(project_->folder);
+  if (!books) {
+    return std::nullopt;
+  }
+  return books::open_entries(*books, *imports, nullptr).size();
 }
 
 bool Repl::read_entries(std::ostream& out) {

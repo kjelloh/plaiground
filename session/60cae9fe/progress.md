@@ -469,6 +469,13 @@ typing a folder path (table + `-` row), creating a project, voucher line, rows t
 event line, matches, statement path/account, account ledger, Using the prompt (new paragraph). 428 tests pass, no
 warnings (Debug, trace DEBUG). In review.
 
+Task 51: The key lists at `project>` (4) and the year prompt (6) show how many statement entries are not yet booked:
+`Statement entries not yet booked (7)` / `... in this year (2)`. Counted only when the key list is shown (Enter), not
+per key: `Repl::count_unbooked()` reads the statement stashes (and at `project>` the books) quietly, as the list does;
+on a read error the count is left out. `Repl::unbooked_count_` holds it for `operations()`; `show_keys` is no longer
+const. Manual: project and year key tables, key list example. 428 tests pass, no warnings (Debug, trace DEBUG). Only
+the project count is REPL-tested with entries (the year count is tested at 0). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings

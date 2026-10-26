@@ -207,6 +207,7 @@ private:
   std::optional<books::StatementPlan> statement_plan_; // the import waiting for y/n
   Mode before_entries_ = Mode::Project;             // where the list of statement entries was opened
   std::vector<books::OpenEntry> open_entries_;      // the statement entries not yet booked
+  std::optional<std::size_t> unbooked_count_;       // how many there are, counted for the key list
   ItemList entry_page_;                             // the page of the statement entries
   std::size_t chosen_entry_ = 0;                    // the entry chosen, an index into open_entries_
   std::size_t entry_year_ = 0;                      // its fiscal year, an index into books_.years
@@ -217,7 +218,7 @@ private:
   bool merging_ = false;                            // the event line is the one event the chosen match makes
 
   bool is_prompt() const; // at cratchit>, workspace> or project>
-  void show_keys(std::ostream& out) const;
+  void show_keys(std::ostream& out);
   Operations<Op> operations() const; // of the current prompt, menu or view
   void show_operations(std::ostream& out) const; // the numbered operations
   bool shows_on_enter() const;
@@ -293,6 +294,7 @@ private:
   void import_statement(std::ostream& out);
   void open_entries(std::ostream& out);
   bool read_entries(std::ostream& out); // reads the books and the open entries; false (error shown) on failure
+  std::optional<std::size_t> count_unbooked() const; // the open entries at project> or the year; none on a read error
   void show_entries(std::ostream& out) const;
   void on_entry_list_key(charset::unicode::CodePoint key, std::ostream& out);
   void show_entry_choice(std::ostream& out) const;

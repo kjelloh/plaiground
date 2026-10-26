@@ -795,7 +795,7 @@ TEST_F(WorkspaceRepl, EnterAndUnknownKeysListTheKeysOfAProject) {
                            "  1  Fiscal years\n"
                            "  2  Import an SIE file\n"
                            "  3  Import an account statement\n"
-                           "  4  Statement entries not yet booked\n"
+                           "  4  Statement entries not yet booked (0)\n"
                            "  5  Reports\n";
   auto const output = run("\nx");
   EXPECT_TRUE(output.ends_with("project> \n" + keys +
@@ -1436,6 +1436,9 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
       << "\xEF\xBB\xBF" "Datum;Belopp;Text\n2025-04-02;100,00;FRÅN 1930\n";
   run("3bank.csv\n\ny");
   run("3other.csv\n2099\ny");
+  // The key list counts them
+  auto const keys = run("\n");
+  EXPECT_NE(keys.find("  4  Statement entries not yet booked (2)\n"), std::string::npos) << keys;
   auto output = run("411" + std::string(9, '\x7f') + "Överföring\n121");
   EXPECT_NE(output.find("project> 4\n"
                         "Statement entries not yet booked:\n"
@@ -1530,7 +1533,7 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
                         "  3  Waiting events (0)\n"
                         "  4  View vouchers (correct one, or use it as a template)\n"
                         "  5  Import an account statement (only the entries in this year)\n"
-                        "  6  Statement entries not yet booked in this year\n"
+                        "  6  Statement entries not yet booked in this year (0)\n"
                         "  7  Reports of this year\n"
                         "  8  Close the year for new vouchers\n"
                         "  9  Find matches among the waiting events\n"
