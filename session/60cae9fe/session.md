@@ -68,6 +68,91 @@ I asked Claude to refine the summary and use 'period', 'cleared' and 'charged' (
 * I think I like that we can select older periods too.
     * SKV actually allows us to 'correct' already reported VATs for earlier periods.
 
+I now discover that the VAT for my next period to report is WRONG!
+
+* It seems I have booked the wrong postings from the SKV statement file?
+
+NO! Claude found out that I had manually registered an event from the SKV paper voucher with the wrong amount.
+
+* So while eating Lunch I thought about adding some 'sanity checks' to cratchit to help me not do these stupid mistakes!
+* It seems we should be able to make cratchit match the books against stashed statement entries?
+    * All stashed postings should be in the books?
+    * And no extra postings should be in the books?
+* It seems the booked cleared VAT amount should match the calculated one``
+    * If they differ we need to send in a new report?
+    * Or ensure the discrepancy is carried over to the next report to send?
+* OK, so the correct way to adress reporting the wrong VAT to SKV is to generate a new full correct report.
+    * Can we implement the VAT report generation to always report the full correct report?
+    * Also, if we correct the books we must NOT correct the vat-clearing-accounts until a new report is generated?
+    * Otherwise there is no way to detect the previously generated report?
+
+GOSH! All these complex book keeping intricacies?!!
+
+OK, lets start with checking stashed statement files against the books for the period?
+
+* No. That was easier said than done?
+* Claude gave me different suggestions but ALL seems overly complicated and could give false negatives?
+* I must be able to allow to book on 1630 with a different date than the one on a a statement?
+    * This happens if I chose to book the 'momsbeslut' (VAT charge/settlement) and 'momsutbetalning' (pay) as the same voucher (this is quite usual)?
+* We also have the crux of crossing the VAT period?
+    * Could the error have occurred in the previous VAT period?
+    * If so, then we should apply some more general reconciliation that allows for postings to differ slightly in exact date?
+    * The order and the amounts must match though?
+    * A fuzzy match?
+
+I continued to chat with Claude but got insecure and confused.
+
+* It seems it has implemented cratchit books to be able to carry a date for each posting?
+    * This is fragile as SIE files do NOT do that!
+    * Postings are implicitly assumed to happen date of the voucher (event)
+    * So maybe I need to ask Claude to remove this functionality?
+    * It won't survive exchange with external tools anyhow (SIE file round trip)
+* Claude also explained that there may be errors in how it assumes covered dates for imported statement files.
+    * I may have to ask claude to ONLY use the dates of the actual postings?
+    * And treat optional open and close Saldo as a way to extend the covered range?
+
+GOSH! Do I really benefit anything from using Claude?
+
+* I have now fikat and gone for a run.
+* I now decide to let this idea of reconciliation to simmer a bit more.
+* I DO in fact already get an indication that something is wrong from cratchit.
+
+So AM I now able to fix the A11 voucher?
+
+* I ned to be able to cancel it (it is the wrong amount AND the 'same' as A14)
+
+Well, NO. I don't see an easy way to cancel A11 (nor edit the postings?)
+
+* So maybe first we should add the operation to edit and/or change it?
+* In Fortnox 'Ändringsverification' seems to create a new voucher that cancels all postings on the selected one? 
+    * What is the english name for this?
+    * Should we add this operation?
+* In Fortnox 'Ändra' seems to open an editor where we can edit existing postings and add new ones?
+    * What is the english name for this?
+    * Should we add this operation?
+
+Yes, it is time to add these operations on vouchers!
+
+* The 'Ändringsverification' is straight forward.
+    * Initiate a new voucher with postings from the selected voucher reversed.
+* The 'Ändra' is more elaborated.
+    * We need to comply with 'bokföringslagen'.
+    * Maybe a short-cut is to comply with the SIE file format?
+
+So I have now read the SIE file format.
+
+* It seems we may optionally support the notion of 'Tillagd transaktionspost' (Added post)
+    * This post shall be represented by an '#RTRANS' element in the SIE file voucher '#VER'
+    * But If we do we must still produce also a normal '#TRANS' (normal post)
+* It seems we may optionally support the notion of 'Borttagen transaktionspost' (removed post)
+    * This post shall be represented by an '#BRTANS' element in SIE file voucher '#VER' and NO '#TRANS' for this element shall be provided!
+
+GOSH!!
+
+* Do I really need to implement this behavior?
+    * To implement I need to track #TRANS from SIE file and ensure they get mutated only with #BTRANS (replaces previous #TRANS in imported #VER) or the pair #RTRANS + #TRANS (extends postings in #VER in imported SIE file)
+ 
+ Do I dare let Claude get a go at this?
 
 ## 20261026
 
