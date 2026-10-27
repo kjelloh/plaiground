@@ -154,7 +154,35 @@ GOSH!!
  
  Do I dare let Claude get a go at this?
 
-* I 
+* I now found out how the 'Correct It' actually works (confusing but it is there)
+    * I asked Claude to modify it.
+    * Now 'Correct It' enters 'new voucher' mode with suggested text, amount and date of corrected voucher
+    * From here the flow is the 'normal' new voucher flow (itself still confusing though)
+
+Anyhow, I was able to create a voucher that canceled the faulty A11.
+
+I was now tempted to also add 'delete last voucher in series'.
+
+* But this is not allowed just like that.
+* It seems we should add some mechanism so that cratchit keeps track of whether a posting is 'committed'?
+    * A posting is committed if it comes from an imported SIE file (knowledge about its existence is shared outside cratchit!)
+    * I can imagine other ways a posting is committed.
+    * If the voucher is printed.
+    * If the voucher is exported to an SIE file
+    * If it is counter-posted by a correction voucher?
+    * Do I dare to go down this rabbit hole?
+
+NO! GOD, This was VERY VERY tricky!!
+
+* I have no insight into what architecture Claude as actually built?
+* This makes it hard for me to ask Claude in a way so that I can determine from its answers if the change is 'safe' (would work? Could break anything?)
+
+I need to take a break and sleep on it!
+
+* Either I open up so cratchit always allows deleting the last voucher in a series
+    * It seems like a common operation allowed in other accounting programs?
+    * Fortnox allows it.
+* Or I ignore that for now to brute-force cratchit to report VAT, close the books, Create ÅR and report K2 tax returns to SKV? 
 
 
 ## 20261026
