@@ -1475,26 +1475,26 @@ VAT returns; `monthly` and `yearly` are not supported yet.
 
 The VAT return lists each box of the form that the period's postings report in,
 with its amount, and under it each account with its sum and name and the
-vouchers behind it, then the three steps with their vouchers:
+vouchers behind it with their text, then the three steps with their vouchers:
 
 ```
 VAT return (momsrapport) 2025-01-01 - 2025-03-31
 Test AB, 556000-0001
 
-Box  Account  Voucher  Date                 Amount  Name
+Box  Account  Voucher  Date                 Amount  Text
 
 05                                        -1000.00
      3001                                 -1000.00  Sales 25%
-              B 1      2025-02-10         -1000.00
+              B 1      2025-02-10         -1000.00  Sale
 
 10                                            0.00
      2611                                     0.00  Output VAT 25%
-              B 1      2025-02-10          -250.00
-              M 1      2025-03-31           250.00
+              B 1      2025-02-10          -250.00  Sale
+              M 1      2025-03-31           250.00  Momsrapport
 
 49                                         -250.00
      2650                                  -250.00  VAT clearing
-              M 1      2025-03-31          -250.00
+              M 1      2025-03-31          -250.00  Momsrapport
 
 The VAT of the period:
   Period            -250.00

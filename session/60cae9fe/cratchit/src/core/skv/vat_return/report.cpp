@@ -1,5 +1,6 @@
 #include "core/skv/vat_return/report.hpp"
 
+#include <algorithm>
 #include <format>
 
 namespace cratchit::skv::vat_return {
@@ -15,6 +16,18 @@ std::string row(std::string_view box, std::string_view account, std::string_view
     line += text;
   }
   return line;
+}
+
+// The text of the voucher a posting is in, if the books have it
+std::string heading_of(books::Books const& books, VoucherPosting const& posting) {
+  auto const* year = books.year_starting(posting.fiscal_year);
+  if (!year) {
+    return {};
+  }
+  auto const it = std::ranges::find_if(year->vouchers, [&](books::Voucher const& voucher) {
+    return voucher.series == posting.series && voucher.number == posting.number;
+  });
+  return it == year->vouchers.end() ? std::string{} : it->event.heading;
 }
 
 // A voucher of a step with its date and amount
@@ -83,7 +96,7 @@ std::vector<std::string> report_of(books::Books const& books, Document const& do
     add_steps();
     return lines;
   }
-  lines.push_back(row("Box", "Account", "Voucher", "Date", "Amount", "Name"));
+  lines.push_back(row("Box", "Account", "Voucher", "Date", "Amount", "Text"));
   for (auto const& box : document.boxes) {
     lines.push_back("");
     lines.push_back(row(box.box, "", "", "", format_amount(box.amount), ""));
@@ -92,7 +105,7 @@ std::vector<std::string> report_of(books::Books const& books, Document const& do
       lines.push_back(row("", account.account, "", "", format_amount(account.amount), known ? known->name : ""));
       for (auto const& posting : account.postings) {
         lines.push_back(row("", "", std::format("{} {}", posting.series, posting.number), format_iso_date(posting.date),
-                            format_amount(posting.amount), ""));
+                            format_amount(posting.amount), heading_of(books, posting)));
       }
     }
   }

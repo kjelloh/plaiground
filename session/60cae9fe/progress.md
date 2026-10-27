@@ -514,6 +514,10 @@ unknown-key line only when there is such a quarter. Steps are computed up to the
 trace DEBUG). Not REPL-tested: over ten ended quarters (ItemList tests cover paging), the no-started-quarter message.
 In review.
 
+Task 55: The VAT return report lists each voucher posting under its account with the voucher's text (heading, looked
+up in the books by fiscal year, series and number); the last column is now headed `Text` (account names and voucher
+texts). Manual example updated. 442 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
