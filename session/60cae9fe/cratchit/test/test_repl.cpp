@@ -742,6 +742,7 @@ TEST_F(WorkspaceRepl, RKeyShowsYearsAndReports) {
                         "  1  Trial balance (saldobalans)\n"
                         "  2  Vouchers\n"
                         "  3  Account ledger\n"
+                        "  4  VAT return (momsrapport)\n"
                         "report?> 1\n"
                         "Trial balance (saldobalans) 2025-01-01 - 2025-12-31\n"
                         "Test AB, 556000-0001\n"),
@@ -762,6 +763,91 @@ TEST_F(WorkspaceRepl, RKeyShowsYearsAndReports) {
       << output;
 }
 
+namespace {
+
+// A sale of 1000 plus 250 VAT in February and one of 2000 plus 500 VAT in November
+std::string vat_sie() {
+  return sie_test::sie_file(2025, "",
+                            "#KONTO 3001 \"Sales 25%\"\r\n"
+                            "#KONTO 2611 \"Output VAT 25%\"\r\n"
+                            "#VER B 1 20250210 \"Sale\"\r\n{\r\n"
+                            "#TRANS 1930 {} 1250.00\r\n#TRANS 3001 {} -1000.00\r\n#TRANS 2611 {} -250.00\r\n}\r\n"
+                            "#VER B 2 20251105 \"Sale\"\r\n{\r\n"
+                            "#TRANS 1930 {} 2500.00\r\n#TRANS 3001 {} -2000.00\r\n#TRANS 2611 {} -500.00\r\n}\r\n");
+}
+
+} // namespace
+
+TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
+  run("112Test\n1");
+  write_sie(root / "start" / "vat.se", vat_sie());
+  run("2vat.se\ny");
+  auto const output = run("514x43-");
+  std::string const quarters = "VAT return quarters ending in 2025-01-01 - 2025-12-31:\n"
+                               "  1  2025 Q4  2025-10-01 - 2025-12-31\n"
+                               "  2  2025 Q3  2025-07-01 - 2025-09-30\n"
+                               "  3  2025 Q2  2025-04-01 - 2025-06-30\n"
+                               "  4  2025 Q1  2025-01-01 - 2025-03-31\n";
+  EXPECT_NE(output.find("  4  VAT return (momsrapport)\nreport?> 4\n" + quarters +
+                        "period?> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
+                        "period?> 4\n"
+                        "VAT return (momsrapport) 2025-01-01 - 2025-03-31\n"
+                        "Test AB, 556000-0001\n"
+                        "\n"
+                        "Box  Account  Voucher  Date                 Amount  Name\n"
+                        "\n"
+                        "05                                        -1000.00\n"
+                        "     3001                                 -1000.00  Sales 25%\n"
+                        "              B 1      2025-02-10         -1000.00\n"
+                        "\n"
+                        "10                                         -250.00\n"
+                        "     2611                                  -250.00  Output VAT 25%\n"
+                        "              B 1      2025-02-10          -250.00\n"
+                        "\n"
+                        "Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.\n" +
+                        quarters + "period?> 3\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("period?> 3\nVAT return (momsrapport) 2025-04-01 - 2025-06-30\nTest AB, 556000-0001\n\n"
+                        "No postings in the period on accounts that report in a box.\n" +
+                        quarters + "period?> -\nReports for 2025-01-01 - 2025-12-31:\n"),
+            std::string::npos)
+      << output;
+}
+
+TEST_F(WorkspaceRepl, VatPeriodNoneOrNotQuarterly) {
+  run("112Test\n1");
+  write_sie(root / "start" / "vat.se", vat_sie());
+  run("2vat.se\ny");
+  auto const file = root / "start" / "Test" / ".cratchit" / "project.txt";
+  auto const text = read_file(file);
+  auto const with = [&](std::string const& period) {
+    auto changed = text;
+    changed.replace(changed.find("vat_period = quarterly"), 22, "vat_period = " + period);
+    std::ofstream(file) << changed;
+  };
+  with("none");
+  EXPECT_TRUE(run("514").ends_with("report?> 4\nNo VAT returns: vat_period is none in .cratchit/project.txt.\n"
+                                   "report?> \n"));
+  with("monthly");
+  EXPECT_TRUE(run("514").ends_with("report?> 4\nVAT returns that are monthly (vat_period in .cratchit/project.txt) are "
+                                   "not supported yet.\nreport?> \n"));
+}
+
+TEST_F(WorkspaceRepl, OpeningAProjectWithoutVatPeriodWritesTheDefault) {
+  fs::create_directories(root / "shared" / ".cratchit");
+  std::ofstream(root / "shared" / ".cratchit" / "project.txt")
+      << "created = 2026-10-01\nuuid = " << listed_uuid << "\nname = X\n";
+  run("1");
+  auto const output = run("13../shared\n");
+  EXPECT_TRUE(output.ends_with("Opened project X in " + (root / "shared").string() + "\n"
+                               "Updated .cratchit/project.txt in " + (root / "shared").string() + "\nproject> \n"))
+      << output;
+  EXPECT_EQ(read_file(root / "shared" / ".cratchit" / "project.txt"),
+            "created = 2026-10-01\nuuid = " + std::string(listed_uuid) + "\nname = X\nvat_period = quarterly\n");
+  EXPECT_FALSE(run("").contains("Updated .cratchit/project.txt"));
+}
+
 TEST_F(WorkspaceRepl, LongReportsArePaged) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -775,7 +861,7 @@ TEST_F(WorkspaceRepl, LongReportsArePaged) {
             std::string::npos)
       << out.str();
   EXPECT_TRUE(out.str().ends_with("--More-- -\nReports for 2025-01-01 - 2025-12-31:\n  1  Trial balance (saldobalans)\n"
-                                  "  2  Vouchers\n  3  Account ledger\nreport?> \n"))
+                                  "  2  Vouchers\n  3  Account ledger\n  4  VAT return (momsrapport)\nreport?> \n"))
       << out.str();
 }
 
@@ -1566,7 +1652,8 @@ TEST_F(WorkspaceRepl, RKeyInAYearShowsItsReports) {
   run("2test.se\ny10");
   auto const output = run("7-");
   EXPECT_TRUE(output.ends_with("2025> 7\nReports for 2025-01-01 - 2025-12-31:\n  1  Trial balance (saldobalans)\n"
-                               "  2  Vouchers\n  3  Account ledger\nreport?> -\n2025> \n"))
+                               "  2  Vouchers\n  3  Account ledger\n  4  VAT return (momsrapport)\n"
+                               "report?> -\n2025> \n"))
       << output;
 }
 

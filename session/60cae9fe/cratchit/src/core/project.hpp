@@ -12,6 +12,19 @@
 
 namespace cratchit {
 
+// How often SKV expects a VAT return (momsdeklaration) of the project, from `vat_period`
+// in project.txt: none (not registered for VAT), monthly, quarterly or yearly (the fiscal year)
+enum class VatPeriod { none, monthly, quarterly, yearly };
+
+// The VAT period cratchit writes when project.txt has none
+inline constexpr VatPeriod default_vat_period = VatPeriod::quarterly;
+
+// The name in project.txt: none, monthly, quarterly or yearly
+std::string_view vat_period_name(VatPeriod period);
+
+// The VAT period of its name; nothing for any other text
+std::optional<VatPeriod> vat_period_of(std::string_view name);
+
 // The bookkeeping of one juridical person (private person, company or organisation),
 // kept in a folder whose .cratchit holds project.txt
 struct Project {
@@ -21,6 +34,7 @@ struct Project {
   std::vector<Initiated> initiated;
   std::string orgnr; // the personal or organisation number; empty until set (by the first import)
   std::string year;  // the start (YYYY-MM-DD) of the fiscal year last opened, from `year`; empty if none
+  std::optional<VatPeriod> vat_period; // from `vat_period`; nothing when project.txt has none
 };
 
 // A project listed in workspace.txt as `project.<uuid> = <folder>`
@@ -65,6 +79,10 @@ std::expected<bool, std::string> save_project_identity(std::filesystem::path con
 // Sets `year = <start>` (the fiscal year last opened) in <folder>/.cratchit/project.txt,
 // keeping the other entries. The file is written only when it changes; true if it did.
 std::expected<bool, std::string> save_project_year(std::filesystem::path const& folder, std::string_view start);
+
+// Sets `vat_period = <name>` in <folder>/.cratchit/project.txt, keeping the other entries.
+// The file is written only when it changes; true if it did.
+std::expected<bool, std::string> save_project_vat_period(std::filesystem::path const& folder, VatPeriod period);
 
 // Opens a listed project: its folder must exist and its project.txt hold the listed uuid
 std::expected<Project, std::string> open_listed_project(ListedProject const& listed);

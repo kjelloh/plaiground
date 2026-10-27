@@ -21,6 +21,29 @@ fs::path project_file_name() {
 
 } // namespace
 
+std::string_view vat_period_name(VatPeriod period) {
+  switch (period) {
+  case VatPeriod::none:
+    return "none";
+  case VatPeriod::monthly:
+    return "monthly";
+  case VatPeriod::quarterly:
+    return "quarterly";
+  case VatPeriod::yearly:
+    return "yearly";
+  }
+  return "";
+}
+
+std::optional<VatPeriod> vat_period_of(std::string_view name) {
+  for (auto const period : {VatPeriod::none, VatPeriod::monthly, VatPeriod::quarterly, VatPeriod::yearly}) {
+    if (vat_period_name(period) == name) {
+      return period;
+    }
+  }
+  return std::nullopt;
+}
+
 std::string format_uuid(std::uint64_t high, std::uint64_t low) {
   high = (high & ~std::uint64_t{0xF000}) | 0x4000;                 // version 4
   low = (low & ~(std::uint64_t{0xC} << 60)) | std::uint64_t{0x8} << 60; // variant 10xx
@@ -134,8 +157,21 @@ std::expected<Project, std::string> read_project(fs::path const& folder) {
   if (!name || name->empty()) {
     return std::unexpected(std::format("{}: no 'name = <name>'", file.string()));
   }
-  return Project{*uuid, *name, folder, {}, find_value(*entries, "orgnr").value_or(""),
-                 find_value(*entries, "year").value_or("")};
+  std::optional<VatPeriod> vat_period;
+  if (auto const value = find_value(*entries, "vat_period")) {
+    vat_period = vat_period_of(*value);
+    if (!vat_period) {
+      return std::unexpected(std::format("{}: vat_period '{}' is not none, monthly, quarterly or yearly", file.string(),
+                                         *value));
+    }
+  }
+  return Project{*uuid,
+                 *name,
+                 folder,
+                 {},
+                 find_value(*entries, "orgnr").value_or(""),
+                 find_value(*entries, "year").value_or(""),
+                 vat_period};
 }
 
 std::expected<bool, std::string> save_project_identity(fs::path const& folder, std::string_view name,
@@ -175,6 +211,23 @@ std::expected<bool, std::string> save_project_year(fs::path const& folder, std::
   return true;
 }
 
+std::expected<bool, std::string> save_project_vat_period(fs::path const& folder, VatPeriod period) {
+  auto const file = folder / project_file_name();
+  auto entries = read_path_values(file);
+  if (!entries) {
+    return std::unexpected(entries.error());
+  }
+  auto const name = vat_period_name(period);
+  if (find_value(*entries, "vat_period") == name) {
+    return false;
+  }
+  set_value(*entries, "vat_period", name);
+  if (auto written = write_path_values(file, *entries); !written) {
+    return std::unexpected(written.error());
+  }
+  return true;
+}
+
 std::expected<Project, std::string> open_listed_project(ListedProject const& listed) {
   auto project = read_project(listed.folder);
   if (project && project->uuid != listed.uuid) {
@@ -202,11 +255,15 @@ std::expected<Project, std::string> create_project(fs::path const& folder, std::
   } else if (!fs::create_directory(dot_folder, ec)) {
     return std::unexpected(std::format("Cannot create {}: {}", dot_folder.string(), ec.message()));
   }
-  PathValues const entries{{"created", std::string(today)}, {"uuid", std::string(uuid)}, {"name", std::string(name)}};
+  PathValues const entries{{"created", std::string(today)},
+                           {"uuid", std::string(uuid)},
+                           {"name", std::string(name)},
+                           {"vat_period", std::string(vat_period_name(default_vat_period))}};
   if (auto written = write_path_values(file, entries); !written) {
     return std::unexpected(written.error());
   }
-  return Project{std::string(uuid), std::string(name), folder, {{folder, project_file_name()}}, {}, {}};
+  return Project{std::string(uuid), std::string(name), folder, {{folder, project_file_name()}}, {}, {},
+                 default_vat_period};
 }
 
 std::optional<fs::path> default_project_folder(fs::path const& workspace_folder, std::string_view name) {

@@ -2,6 +2,44 @@
 
 ```#60cae9fe```
 
+## 20261027
+
+So now then we are ready to start generating the VAT Returns form document?
+
+* We have the bas_to_momsrapport.csv table I manually created yesterday.
+    * It is re-created from previous cratchit [Github cratchit thinking](https://kjelloh.github.io/cratchit/docs/thinking/thinking.html)
+    * It is seeded (reversed engineered) from an exported 'kontoplan' in web based Fortnox accounting app.
+* We have the mechanism to map postings to accounts in the books over a period to a VAT Returns document type.
+
+Anyhow, Given the mapping from BAS accounts to boxes on the SKV 'Momsrapport', how do we iterate a mechanism that maps vouchers in the books over a period to a VAT Returns report we can send to SKV?
+
+1. We can start by adding a user interface under 'Reports' to initiate 'Momsrapport'
+2. Then provide some feed back to the user to inspect the generated document for correctness.
+3. Then provide a second step to generate something we can send to SKV?
+    * One form is the XML-file format 'eSKDUpload'
+
+Lets ask Claude to go to work, shall we?
+
+```
+It is now time to initiate the 'Momsrapport' operation. I sugest a user option under '7  Reports of this year'. To begin with the option shall generate the VAT Returns document for a period. I want cratchit to know what VAT Returns period it must use (how often SKV expects a VAT Returns report). This setting should be in the project. Set it to 'Quarterly' for now. What can you propose?
+```
+
+* This made Claude come back with a reasonable proposal and good follow up questions.
+
+```
+1. Facts I shouldn't assume. As I understand it, SKV's periods are calendar month, calendar quarter, or yearly. Yearly follows the fiscal year (beskattningsår), not the calendar year. Is that right? And is "a quarter belongs to the fiscal year its last day is in" what you want?
+2. Sign of the amounts. Should the boxes show amounts signed as in the books (sales come out as credit), or as the amounts you would type into SKV's form (positive)? The second needs a rule per box, which probably belongs with momsrapport.csv later. My suggestion for now is to show the book signs in Debit/Credit columns.
+3. Writing the default. Should cratchit add vat_period = quarterly to existing projects on open, as proposed? Or should a missing entry just mean quarterly without touching the file?
+4. Not VAT-registered. Do you want a none value now, or later?
+```
+
+* I went with don't break quarter for financial year. Ignore signs for boxes for now (later issue). Use quarter as default and VAT period none a possible value.
+
+Claude implemented a reasonable user option to initiate 'Momsrapport'.
+
+* It provided options to select possible quarters (default vat_period is quarterly)
+* It reported back the BAS account postings (voucher referenced) for each box on the form.
+
 ## 20261026
 
 So maybe we should now go straight for the VAT Returns report?
@@ -49,7 +87,7 @@ I tried to browse SKV web site for actual machine readable specifications?
 I browsed around for a while but got nowhere! SO I tried asking Claude.
 
 ```
-I now want to start designing the arhcitecture to create VAT Returns reports to SKV. But it is quite vauge where I can find some reliable specs to use? I have a previous implementation based on a csv-snippet in a constant 'ACCOUNT_VAT_CSV' @/Users/kjell-olovhogdahl/Documents/GitHub/cratchit/src/fiscal/SKVFramework.*. But I seem to have forgotten where I got this csv from. What can you do to help me find the source?
+I now want to start designing the architecture to create VAT Returns reports to SKV. But it is quite vague where I can find some reliable specs to use? I have a previous implementation based on a csv-snippet in a constant 'ACCOUNT_VAT_CSV' @/Users/kjell-olovhogdahl/Documents/GitHub/cratchit/src/fiscal/SKVFramework.*. But I seem to have forgotten where I got this csv from. What can you do to help me find the source?
 ```
 
 I GIVE UP!
@@ -138,7 +176,7 @@ I have now decided to try and complete booking the events for my companies next 
 * I still think it would be nice to be able to enter a financial event with an Euro amount?
     * We know for now that it will be transacted in SEK still
     * So the event / voucher amount needs to be carried along until it is no longer required.
-    * Maybe have the heading of the event be amended with the Eruo amount in the final books?
+    * Maybe have the heading of the event be amended with the Euro amount in the final books?
     * That could at least give a nice feed back for reading the events (although no actual official amounts are booked in Euro for now)?
 * We may need to be able to adjust date and amount when turning a waiting event into a voucher?
     * In this way the user can adjust any errors in entering the event?
@@ -146,7 +184,7 @@ I have now decided to try and complete booking the events for my companies next 
 OK, I hit a show-stopper when trying to enter a return (credit) invoice
 
 * The pick template works (It shall be registered as an invoice in series D ok)
-* And the BAS account 'leverantörsskuklder' cratchit suggests is also correct.
+* And the BAS account 'leverantörsskulder' cratchit suggests is also correct.
 * But the sign is wrong! This credit invoice means to Debit 'leverantörsskulder'
 * I also was not able to 'undo' when I managed to post to the first suggested account.
 * I also do not know how to exit out of the 'add posting' mode (go back to the waiting list)
@@ -169,7 +207,7 @@ So I asked Claude and after some back and forth ti implemented a solution.
 OK, I now realize I have tackled this 'credit invoice' all wrong.
 
 * For a credit invoice we need to cancel the 'cost'
-* But depedning on whether the original invoice is payed or not we need to do different things.
+* But depending on whether the original invoice is payed or not we need to do different things.
 * If it is not yet payed, then we shall cancel the debt to the vendor.
 * If it is payed, then we should book an asset (place a return liability on the vendor)
 
@@ -220,7 +258,7 @@ I am now starting to feel what I heard others working with agentic coding has de
     * When I don't tell the computer with code myself, I feel weary that the code does not in fact do what I want?
     * Also, I lack the insight to catch things I have not thought about (Claude implements and I get to test a back box)
 
-I challanged Claude to implement a 'merge event' mechanism to identify 'same event' from events on the waiting list.
+I challenged Claude to implement a 'merge event' mechanism to identify 'same event' from events on the waiting list.
 
 * At first it sounded good.
 * But when I tried what Claude had implements I discovered the UI was basically no help at all.
@@ -233,13 +271,13 @@ I challanged Claude to implement a 'merge event' mechanism to identify 'same eve
 * So I reverted the changes and went fresh with a new prompt.
 
 ```text
-I now want cratchit to help with identifying 'same event' from the events in the waiting list. For an event to be 'the same' it must be the same amount. And the events can not be further apart than bank days or over a week end. That is because in sweden and using 'fakturametoden' an invoice and following payment is always separate events. I want the listing to chanage so that 'same event' candidates are grouped in the listing. If possible, I would also like the mechanism to try and pick up if the event is already in the books. What can  you propose?
+I now want cratchit to help with identifying 'same event' from the events in the waiting list. For an event to be 'the same' it must be the same amount. And the events can not be further apart than bank days or over a week end. That is because in sweden and using 'fakturametoden' an invoice and following payment is always separate events. I want the listing to change so that 'same event' candidates are grouped in the listing. If possible, I would also like the mechanism to try and pick up if the event is already in the books. What can  you propose?
 ```
 
 * That prompt gave no good design. I tried a new one.
 
 ```
-I now want cratchit to help with identifying waiting events that are in fact the same event. When in 'edit waiting list' mode I want an option with a good name for finding 'same event' and pick to make 'same'. I also want this mechanism to sugest that events may already be in the books. I want 'same event' to be possible only if within days. Define a time window to apply for now. I want the result of the check to be a new list where the user can pick and apply (edit) suggested foiund 'sameness'. What can you propose?
+I now want cratchit to help with identifying waiting events that are in fact the same event. When in 'edit waiting list' mode I want an option with a good name for finding 'same event' and pick to make 'same'. I also want this mechanism to suggest that events may already be in the books. I want 'same event' to be possible only if within days. Define a time window to apply for now. I want the result of the check to be a new list where the user can pick and apply (edit) suggested found 'sameness'. What can you propose?
 ```
 
 * This time I got something that I liked.

@@ -14,6 +14,19 @@ std::optional<Period> quarter_of(std::chrono::year year, unsigned quarter) {
   return Period{year / first / 1, year / last / std::chrono::last};
 }
 
+std::vector<Period> quarters_ending_in(Date first, Date last) {
+  std::vector<Period> quarters;
+  for (auto year = first.year(); year <= last.year(); ++year) {
+    for (unsigned quarter = 1; quarter <= 4; ++quarter) {
+      auto const period = *quarter_of(year, quarter);
+      if (first <= period.last && period.last <= last) {
+        quarters.push_back(period);
+      }
+    }
+  }
+  return quarters;
+}
+
 Document document_of(books::Books const& books, Period period) {
   // box -> account -> its postings
   std::map<Box, std::map<std::string, std::vector<VoucherPosting>>> found;

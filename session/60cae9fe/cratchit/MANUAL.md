@@ -125,14 +125,15 @@ write a relative folder yourself, it is taken from the workspace folder.
 
 `project.txt`, in a project folder's `.cratchit`, holds the date the project
 was created, its uuid, the official name of the person, company or
-organisation whose books it is, after the first import its organisation
-number, and once you have opened one, the start of the fiscal year you last
-opened:
+organisation whose books it is, how often it reports VAT, after the first
+import its organisation number, and once you have opened one, the start of the
+fiscal year you last opened:
 
 ```
 created = 2026-10-21
 uuid = 3f2b8c1e-9a4d-4e7f-b6a2-1c5d8e0f7a93
 name = The ITfied AB
+vat_period = quarterly
 orgnr = 556782-8172
 year = 2026-05-01
 ```
@@ -140,6 +141,14 @@ year = 2026-05-01
 The uuid is made by cratchit when it creates the project and never changes.
 The first SIE import sets `orgnr` and `name` (see Importing an SIE file).
 Opening a fiscal year sets `year` (see Fiscal years).
+
+`vat_period` is how often SKV expects a VAT return (momsdeklaration) of the
+project: `none` (not registered for VAT), `monthly`, `quarterly` or `yearly`
+(per fiscal year). Any other value is an error when the project opens. A new
+project gets `quarterly`. A project without the entry gets `vat_period =
+quarterly` when it opens, shown as `Updated .cratchit/project.txt in <folder>`.
+cratchit has no operation to change it yet; edit the file. Only `quarterly`
+VAT returns can be shown so far (see Reports).
 
 The project's books are in `.cratchit/books` in the project folder:
 
@@ -1392,6 +1401,7 @@ Reports for 2025-05-01 - 2026-04-30:
   1  Trial balance (saldobalans)
   2  Vouchers
   3  Account ledger
+  4  VAT return (momsrapport)
 ```
 
 The prompt is `report?>`.
@@ -1401,6 +1411,7 @@ The prompt is `report?>`.
 | 1      | Trial balance: each balance sheet account with opening balance, change and closing balance, each result account with its result, and totals. It says where the opening balances come from, and lists those that differ from what the source reported. |
 | 2      | Every voucher of the year with its rows in Debit and Credit columns, and the totals. Rows added or struck after registration are marked `(added)` or `(removed)`, with the signature when there is one; a removed row does not count in the totals. |
 | 3      | Account ledger: type an account number at `account>`, then Enter. Shows the opening balance, every row on the account by date in Debit and Credit columns with the balance after it, and the closing balance. `-` or Enter on an empty number goes back. |
+| 4      | VAT return (momsrapport): choose a period (see below). |
 | -      | Goes back: from the reports to the years (or to the fiscal year prompt they were opened from), from the years to `project>`. |
 | h      | Opens this manual.                                              |
 | q      | Quits cratchit.                                                 |
@@ -1410,6 +1421,54 @@ without sign; balances are debit positive and credit negative. A report longer
 than the terminal window is shown a page at a time with `--More--`: space or
 Enter shows the next page, `-` or `q` stops. After a report the report menu is
 shown again.
+
+#### The VAT return
+
+`4` lists the VAT return periods of the year by the project's `vat_period` (see
+The files). A quarterly VAT return covers a calendar quarter; the year lists
+the quarters whose last day is in the year, newest first. A quarter that starts
+in the year before still belongs to the year it ends in, and counts the
+vouchers of both years:
+
+```
+VAT return quarters ending in 2025-05-01 - 2026-04-30:
+  1  2026 Q1  2026-01-01 - 2026-03-31
+  2  2025 Q4  2025-10-01 - 2025-12-31
+  3  2025 Q3  2025-07-01 - 2025-09-30
+  4  2025 Q2  2025-04-01 - 2025-06-30
+```
+
+The prompt is `period?>`. Press a number to see that quarter's VAT return; `-`
+goes back to the reports. With `vat_period = none` cratchit says there are no
+VAT returns; `monthly` and `yearly` are not supported yet.
+
+The VAT return lists each box of the form that the period's postings report in,
+with its amount, and under it each account with its sum and name and the
+vouchers behind it:
+
+```
+VAT return (momsrapport) 2025-01-01 - 2025-03-31
+Test AB, 556000-0001
+
+Box  Account  Voucher  Date                 Amount  Name
+
+05                                        -1000.00
+     3001                                 -1000.00  Sales 25%
+              B 1      2025-02-10         -1000.00
+
+10                                         -250.00
+     2611                                  -250.00  Output VAT 25%
+              B 1      2025-02-10          -250.00
+
+Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.
+```
+
+Which box an account reports in comes from the table built into cratchit
+(`bas_to_momsrapport.csv`). Every voucher dated in the period counts, of every
+series, including the Momsrapport voucher (series M). Removed rows do not
+count. The amounts are not yet turned into the figures you type into SKV's
+form: they keep the sign they have in the books, and box 49 (VAT to pay or get
+back) is not calculated. After the VAT return the periods are shown again.
 
 ## Using the prompt
 
@@ -1510,7 +1569,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, or an account statement it cannot read. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

@@ -116,8 +116,9 @@ TEST_F(ProjectTest, CreateWritesProjectFile) {
   auto const project = cratchit::create_project(root, "ITfied AB", uuid_a, "2026-10-21");
   ASSERT_TRUE(project.has_value()) << project.error();
   EXPECT_EQ(read_file(root / ".cratchit" / "project.txt"),
-            std::format("created = 2026-10-21\nuuid = {}\nname = ITfied AB\n", uuid_a));
+            std::format("created = 2026-10-21\nuuid = {}\nname = ITfied AB\nvat_period = quarterly\n", uuid_a));
   EXPECT_EQ(project->uuid, uuid_a);
+  EXPECT_EQ(project->vat_period, cratchit::VatPeriod::quarterly);
   EXPECT_EQ(project->name, "ITfied AB");
   ASSERT_EQ(project->initiated.size(), 1u);
   EXPECT_EQ(project->initiated[0].file, fs::path(".cratchit") / "project.txt");
@@ -180,6 +181,34 @@ TEST_F(ProjectTest, SaveYearSetsTheLastOpenedYear) {
   EXPECT_EQ(cratchit::save_project_year(root, "2026-05-01"), true);
   EXPECT_EQ(cratchit::save_project_year(root, "2026-05-01"), false);
   EXPECT_EQ(read_file(root / ".cratchit" / "project.txt"),
-            std::format("created = 2026-10-21\nuuid = {}\nname = ITfied AB\nyear = 2026-05-01\n", uuid_a));
+            std::format("created = 2026-10-21\nuuid = {}\nname = ITfied AB\nvat_period = quarterly\nyear = 2026-05-01\n",
+                        uuid_a));
   EXPECT_EQ(cratchit::read_project(root)->year, "2026-05-01");
+}
+
+TEST_F(ProjectTest, ReadVatPeriod) {
+  write_file(root / ".cratchit" / "project.txt", std::format("uuid = {}\nname = X\n", uuid_a));
+  EXPECT_EQ(cratchit::read_project(root)->vat_period, std::nullopt);
+  for (auto const* name : {"none", "monthly", "quarterly", "yearly"}) {
+    write_file(root / ".cratchit" / "project.txt", std::format("uuid = {}\nname = X\nvat_period = {}\n", uuid_a, name));
+    auto const project = cratchit::read_project(root);
+    ASSERT_TRUE(project.has_value()) << project.error();
+    ASSERT_TRUE(project->vat_period.has_value()) << name;
+    EXPECT_EQ(cratchit::vat_period_name(*project->vat_period), name);
+  }
+  write_file(root / ".cratchit" / "project.txt", std::format("uuid = {}\nname = X\nvat_period = weekly\n", uuid_a));
+  auto const wrong = cratchit::read_project(root);
+  ASSERT_FALSE(wrong.has_value());
+  EXPECT_NE(wrong.error().find("vat_period 'weekly' is not none, monthly, quarterly or yearly"), std::string::npos)
+      << wrong.error();
+}
+
+TEST_F(ProjectTest, SaveVatPeriod) {
+  write_file(root / ".cratchit" / "project.txt", std::format("uuid = {}\nname = X\n", uuid_a));
+  EXPECT_EQ(cratchit::save_project_vat_period(root, cratchit::VatPeriod::quarterly), true);
+  EXPECT_EQ(cratchit::save_project_vat_period(root, cratchit::VatPeriod::quarterly), false);
+  EXPECT_EQ(read_file(root / ".cratchit" / "project.txt"),
+            std::format("uuid = {}\nname = X\nvat_period = quarterly\n", uuid_a));
+  EXPECT_EQ(cratchit::save_project_vat_period(root, cratchit::VatPeriod::none), true);
+  EXPECT_EQ(cratchit::read_project(root)->vat_period, cratchit::VatPeriod::none);
 }

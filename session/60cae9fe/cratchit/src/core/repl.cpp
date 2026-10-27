@@ -6,6 +6,7 @@
 #include "core/charset/utf8.hpp"
 #include "core/log.hpp"
 #include "core/sie/file.hpp"
+#include "core/skv/vat_return/report.hpp"
 
 #include <algorithm>
 #include <format>
@@ -130,8 +131,8 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     return Step::Continue;
   case Mode::Paging:
     if (pager_.on_key(key, out) == Pager::Result::Leave) {
-      mode_ = Mode::Reports;
-      show_reports(out);
+      mode_ = before_paging_;
+      show_screen(out);
     }
     return Step::Continue;
   case Mode::ConfirmEvent:
@@ -202,6 +203,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     break;
   case Mode::Reports:
     on_reports_key(key, out);
+    break;
+  case Mode::VatPeriods:
+    on_vat_periods_key(key, out);
     break;
   case Mode::ChooseAmount:
     on_choose_amount_key(key, out);
@@ -300,6 +304,7 @@ bool Repl::shows_on_enter() const {
   case Mode::ProjectFolder:
   case Mode::Years:
   case Mode::Reports:
+  case Mode::VatPeriods:
   case Mode::YearMenu:
   case Mode::ChooseAmount:
   case Mode::Postings:
@@ -348,6 +353,9 @@ void Repl::show_screen(std::ostream& out) {
     break;
   case Mode::Reports:
     show_reports(out);
+    break;
+  case Mode::VatPeriods:
+    show_vat_periods(out);
     break;
   case Mode::ChooseAmount:
     show_readings(out);
@@ -704,6 +712,8 @@ std::string Repl::prompt() const {
   case Mode::Years:
   case Mode::Reports:
     return "report?> ";
+  case Mode::VatPeriods:
+    return "period?> ";
   case Mode::Paging:
     return pager_.prompt();
   case Mode::YearMenu:
@@ -1263,6 +1273,17 @@ void Repl::enter_project(Project const& project, std::ostream& out) {
   std::println(out, "Opened project {} in {}", project.name, project.folder.string());
   LOG_BUSINESS("Opened project {} ({}) in {}", project.name, project.uuid, project.folder.string());
   project_ = project;
+  if (!project_->vat_period) {
+    auto const saved = save_project_vat_period(project_->folder, default_vat_period);
+    if (!saved) {
+      std::println(out, "Error: {}", saved.error());
+    } else {
+      std::println(out, "Updated .cratchit/project.txt in {}", project_->folder.string());
+      LOG_BUSINESS("Project {} ({}) had no vat_period; set it to {}", project_->name, project_->uuid,
+                   vat_period_name(default_vat_period));
+      project_->vat_period = default_vat_period;
+    }
+  }
   mode_ = Mode::Project;
   open_last_year(out);
 }
@@ -1447,6 +1468,7 @@ void Repl::show_reports(std::ostream& out) {
   std::println(out, "  1  Trial balance (saldobalans)");
   std::println(out, "  2  Vouchers");
   std::println(out, "  3  Account ledger");
+  std::println(out, "  4  VAT return (momsrapport)");
 }
 
 void Repl::on_reports_key(charset::unicode::CodePoint key, std::ostream& out) {
@@ -1460,6 +1482,8 @@ void Repl::on_reports_key(charset::unicode::CodePoint key, std::ostream& out) {
     mode_ = Mode::Typing;
     std::println(out, "Type the account number. Backspace erases, Enter accepts. - or Enter on an empty number goes back.");
     out << editor_.prompt();
+  } else if (key == U'4') {
+    open_vat_periods(out);
   } else if (key == U'-' && before_reports_ == Mode::Year) {
     mode_ = Mode::Year;
   } else if (key == U'-') {
@@ -1470,11 +1494,67 @@ void Repl::on_reports_key(charset::unicode::CodePoint key, std::ostream& out) {
   }
 }
 
+// Pages the lines, then shows the menu the report was chosen from again
 void Repl::show_report(std::vector<std::string> lines, std::ostream& out) {
+  before_paging_ = mode_;
   mode_ = Mode::Paging;
   if (pager_.open(std::move(lines), out) == Pager::Result::Leave) {
+    mode_ = before_paging_;
+    show_screen(out);
+  }
+}
+
+// The periods of the project's VAT returns that end in the report year
+void Repl::open_vat_periods(std::ostream& out) {
+  auto const period = project_->vat_period.value_or(default_vat_period);
+  if (period == VatPeriod::none) {
+    std::println(out, "No VAT returns: vat_period is none in .cratchit/project.txt.");
+    return;
+  }
+  if (period != VatPeriod::quarterly) {
+    std::println(out, "VAT returns that are {} (vat_period in .cratchit/project.txt) are not supported yet.",
+                 vat_period_name(period));
+    return;
+  }
+  auto const& year = books_.years[year_];
+  vat_periods_ = skv::vat_return::quarters_ending_in(year.start, year.end);
+  if (vat_periods_.empty()) {
+    std::println(out, "No calendar quarter ends in fiscal year {} - {}.", format_iso_date(year.start),
+                 format_iso_date(year.end));
+    return;
+  }
+  vat_period_page_.reset();
+  mode_ = Mode::VatPeriods;
+  show_vat_periods(out);
+}
+
+// Newest first
+void Repl::show_vat_periods(std::ostream& out) const {
+  auto const& year = books_.years[year_];
+  std::println(out, "VAT return quarters ending in {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
+  auto const n = vat_periods_.size();
+  vat_period_page_.show(n, out, [&](std::size_t index, std::size_t key) {
+    auto const& period = vat_periods_[n - 1 - index];
+    std::println(out, "  {}  {}  {} - {}", key, skv::vat_return::quarter_name(period), format_iso_date(period.first),
+                 format_iso_date(period.last));
+  });
+}
+
+void Repl::on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out) {
+  auto const n = vat_periods_.size();
+  if (key == U'-') {
     mode_ = Mode::Reports;
     show_reports(out);
+    return;
+  }
+  auto const pick = vat_period_page_.on_key(key, n);
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
+    show_vat_periods(out);
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    auto const document = skv::vat_return::document_of(books_, vat_periods_[n - 1 - pick.index]);
+    show_report(skv::vat_return::report_of(books_, document, company()), out);
+  } else {
+    unknown_key(out);
   }
 }
 

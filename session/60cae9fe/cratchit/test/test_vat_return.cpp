@@ -1,6 +1,7 @@
 #include "core/skv/vat_return/account_boxes.hpp"
 #include "core/skv/vat_return/box.hpp"
 #include "core/skv/vat_return/document.hpp"
+#include "core/skv/vat_return/report.hpp"
 
 #include <gtest/gtest.h>
 
@@ -84,6 +85,22 @@ TEST(VatReturn, CalendarQuarters) {
   EXPECT_EQ(quarter_of(2026y, 4), (Period{2026y / October / 1, 2026y / December / 31}));
   EXPECT_EQ(quarter_of(2026y, 0), std::nullopt);
   EXPECT_EQ(quarter_of(2026y, 5), std::nullopt);
+}
+
+TEST(VatReturn, QuartersEndingInAFiscalYear) {
+  EXPECT_EQ(quarters_ending_in(2026y / January / 1, 2026y / December / 31),
+            (std::vector<Period>{*quarter_of(2026y, 1), *quarter_of(2026y, 2), *quarter_of(2026y, 3),
+                                 *quarter_of(2026y, 4)}));
+  // A year ending in April holds the quarter ending in June, but not the one it ends in
+  EXPECT_EQ(quarters_ending_in(2026y / May / 1, 2027y / April / 30),
+            (std::vector<Period>{*quarter_of(2026y, 2), *quarter_of(2026y, 3), *quarter_of(2026y, 4),
+                                 *quarter_of(2027y, 1)}));
+  EXPECT_TRUE(quarters_ending_in(2026y / April / 1, 2026y / May / 31).empty());
+}
+
+TEST(VatReturn, QuarterName) {
+  EXPECT_EQ(quarter_name(*quarter_of(2026y, 1)), "2026 Q1");
+  EXPECT_EQ(quarter_name(*quarter_of(2026y, 3)), "2026 Q3");
 }
 
 TEST(VatReturn, AQuarterAcrossTwoFiscalYears) {

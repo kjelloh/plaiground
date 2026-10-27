@@ -476,6 +476,19 @@ on a read error the count is left out. `Repl::unbooked_count_` holds it for `ope
 const. Manual: project and year key tables, key list example. 428 tests pass, no warnings (Debug, trace DEBUG). Only
 the project count is REPL-tested with entries (the year count is tested at 0). In review.
 
+Task 52: VAT return report, step 1. `project.txt` gets `vat_period = none | monthly | quarterly | yearly`
+(`VatPeriod`, `vat_period_name` / `vat_period_of`, `Project::vat_period` optional, `save_project_vat_period`); any other
+value is a read error. `create_project` writes `quarterly` (`default_vat_period`); opening a project without the entry
+writes it (`Updated .cratchit/project.txt`, business log). No UI to edit it yet. `report?>` 4 VAT return (momsrapport):
+quarterly lists `period?>` (new `Mode::VatPeriods`, ItemList, newest first) with `skv::vat_return::quarters_ending_in`
+(the calendar quarters whose last day is in the fiscal year; a quarter may start in the year before); none: "No VAT
+returns ..."; monthly/yearly: "not supported yet". A quarter shows `report_of(books, document_of(...), company)`
+(`core/skv/vat_return/report`, `quarter_name`): each box with its amount, its accounts with sum and name, the voucher
+postings; amounts signed as in the books (sign rules for the form later), box 49 not calculated, then the periods again
+(`Repl::before_paging_`: a paged report goes back to the menu it came from). Manual: project.txt (`vat_period`), new
+"The VAT return" under Reports, log kinds. 435 tests pass, no warnings (Debug, trace DEBUG); checked with piped input
+in a scratch folder. In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -650,6 +663,11 @@ into a waiting event without making a voucher, several entries chosen at once.
   row), `?` at `post>` shows the hint and stays on the line (an account typed after it hints on Enter). Only on an
   empty line; a line with text typed in for you is not empty. Digits, `h` and `q` stay text (lines can begin with them).
 
+- 2026-10-27: The project's VAT period (`vat_period` in project.txt: none, monthly, quarterly, yearly = the fiscal
+  year) says how often SKV expects a VAT return; default quarterly, written when missing; an edit UI later. A quarter
+  belongs to the fiscal year its last day is in. The VAT return keeps the books' signs for now; rules for how they
+  fill in the form come later.
+
 ## Open questions
 
 - Should a template's rounding row (e.g. 3740 Öres- och kronutjämning) be scaled like the others? Today it takes the
@@ -658,4 +676,7 @@ into a waiting event without making a voucher, several entries chosen at once.
 - Should differing account data (name, SRU) from an older year's file be noted even when not taken?
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
 - Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?
+- A quarter that spans two fiscal years is listed only under the year it ends in (agreed 2026-10-27; SKV accepts it).
+  A split at the fiscal year end may come later. With a broken year the last months (e.g. April) are in a quarter
+  of the next year, so they show only once that year is in the books.
 - Is a CI setup (e.g. GitHub Actions on macOS/Linux/Windows) wanted to verify cross-platform builds?
