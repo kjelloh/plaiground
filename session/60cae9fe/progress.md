@@ -503,6 +503,17 @@ the year listed under it. The quarter report ends with "The VAT of the period:" 
 still count every voucher (clearing and charge rows too). Manual: "The VAT return" rewritten. 440 tests pass, no
 warnings (Debug, trace DEBUG). Not run on real books (the Fortnox samples are outside this session). In review.
 
+Task 54: VAT periods counted from today. `period?>` numbers only the ended quarters of the year (last day before
+today, `places_.today`), newest first from key 0 (`ItemList::Start::Zero`, 0-8 + `9 ...down` over ten). The last
+quarter ended before today is marked `to report next` (`Repl::vat_next_`; only shown when it ends in this year). The
+quarter running today, when it ends in the year, is an unnumbered `so far (+ to view)` line on top (`Repl::vat_current_`); `+`
+opens its report, headed `..., so far (today <date>)` (`report_of` takes optional `so_far`); `+` is named in the
+unknown-key line only when there is such a quarter. Steps are computed up to the quarter running today. New
+`vat_return::quarter_holding(date)`. Still per fiscal year (other years: open them). A year with no started quarter:
+"No calendar quarter of fiscal year ... has started." Manual: "The VAT return". 442 tests pass, no warnings (Debug,
+trace DEBUG). Not REPL-tested: over ten ended quarters (ItemList tests cover paging), the no-started-quarter message.
+In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -686,6 +697,10 @@ into a waiting event without making a voucher, several entries chosen at once.
   record of the filed return), charged (SKV debits or credits the tax account 1630 against 2650/1650), paid (bank <->
   tax account; not a VAT step, it pays the tax account's balance; a later tax account report). Detected by accounts
   (named constants), never by voucher series.
+
+- 2026-10-27: VAT periods: key 0 is the newest ended quarter, older counting up; the last quarter ended before
+  today is the one to report next. `+` peeks at the quarter running today ("so far"); `?` stays a hint. The list
+  stays per fiscal year (switch year for other quarters).
 
 ## Open questions
 

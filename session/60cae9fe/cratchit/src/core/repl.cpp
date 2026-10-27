@@ -499,6 +499,13 @@ Operations<Repl::Op> Repl::operations() const {
         .other("h", "help")
         .other("q", "quit");
     break;
+  case Mode::VatPeriods:
+    operations.other("Enter", "list");
+    if (vat_current_) {
+      operations.other("+", "the running quarter so far");
+    }
+    operations.other("-", "back").other("h", "help").other("q", "quit");
+    break;
   case Mode::WaitingEvent:
     operations.other("Enter", "list").other("d", "delete").other("-", "back").other("h", "help").other("q", "quit");
     break;
@@ -1517,15 +1524,32 @@ void Repl::open_vat_periods(std::ostream& out) {
     return;
   }
   auto const& year = books_.years[year_];
-  vat_periods_ = skv::vat_return::quarters_ending_in(year.start, year.end);
-  if (vat_periods_.empty()) {
-    std::println(out, "No calendar quarter ends in fiscal year {} - {}.", format_iso_date(year.start),
+  // Only the quarters that have ended; the one running today is peeked at with +
+  auto const today = parse_iso_date(places_.today);
+  vat_periods_.clear();
+  vat_current_.reset();
+  vat_next_.reset();
+  for (auto const& quarter : skv::vat_return::quarters_ending_in(year.start, year.end)) {
+    if (!today || quarter.last < *today) {
+      vat_periods_.push_back(quarter);
+    } else if (quarter.first <= *today) {
+      vat_current_ = quarter;
+    }
+  }
+  if (vat_periods_.empty() && !vat_current_) {
+    std::println(out, "No calendar quarter of fiscal year {} - {} has started.", format_iso_date(year.start),
                  format_iso_date(year.end));
     return;
   }
+  auto last = books_.years.back().end;
+  if (today) {
+    vat_next_ = skv::vat_return::quarter_holding(std::chrono::sys_days{skv::vat_return::quarter_holding(*today).first} -
+                                                 std::chrono::days{1});
+    last = std::max(last, skv::vat_return::quarter_holding(*today).last);
+  }
   // Every quarter of the books, so that a charge dated in this year can go to a quarter of the year before
-  vat_steps_ = skv::vat_return::steps_of(
-      books_, skv::vat_return::quarters_ending_in(books_.years.front().start, books_.years.back().end));
+  vat_steps_ = skv::vat_return::steps_of(books_,
+                                         skv::vat_return::quarters_ending_in(books_.years.front().start, last));
   vat_period_page_.reset();
   mode_ = Mode::VatPeriods;
   show_vat_periods(out);
@@ -1537,16 +1561,22 @@ skv::vat_return::PeriodSteps const& Repl::steps_of_period(skv::vat_return::Perio
   return it == vat_steps_.periods.end() ? none : *it;
 }
 
-// Newest first, each with its VAT steps; then the charges dated in the year that no quarter takes
+// The quarter running today (no key), then the ended ones newest first from key 0, each with its VAT steps;
+// then the charges dated in the year that no quarter takes
 void Repl::show_vat_periods(std::ostream& out) const {
   auto const& year = books_.years[year_];
-  std::println(out, "VAT return quarters ending in {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
+  std::println(out, "VAT return quarters ending in {} - {} (today {}):", format_iso_date(year.start),
+               format_iso_date(year.end), places_.today);
   std::println(out, "{:<12}{}", "", skv::vat_return::steps_heading());
+  if (vat_current_) {
+    std::println(out, "     {}{}  so far (+ to view)", skv::vat_return::quarter_name(*vat_current_),
+                 skv::vat_return::steps_row(steps_of_period(*vat_current_)));
+  }
   auto const n = vat_periods_.size();
   vat_period_page_.show(n, out, [&](std::size_t index, std::size_t key) {
     auto const& period = vat_periods_[n - 1 - index];
-    std::println(out, "  {}  {}{}", key, skv::vat_return::quarter_name(period),
-                 skv::vat_return::steps_row(steps_of_period(period)));
+    std::println(out, "  {}  {}{}{}", key, skv::vat_return::quarter_name(period),
+                 skv::vat_return::steps_row(steps_of_period(period)), period == vat_next_ ? "  to report next" : "");
   });
   for (auto const& charge : vat_steps_.unmatched_charges) {
     if (year.holds(charge.date)) {
@@ -1561,6 +1591,13 @@ void Repl::on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out
   if (key == U'-') {
     mode_ = Mode::Reports;
     show_reports(out);
+    return;
+  }
+  if (key == U'+' && vat_current_) {
+    auto const document = skv::vat_return::document_of(books_, *vat_current_);
+    show_report(skv::vat_return::report_of(books_, document, steps_of_period(*vat_current_), company(),
+                                           parse_iso_date(places_.today)),
+                out);
     return;
   }
   auto const pick = vat_period_page_.on_key(key, n);

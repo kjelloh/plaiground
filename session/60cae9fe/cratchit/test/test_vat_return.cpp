@@ -100,6 +100,13 @@ TEST(VatReturn, QuartersEndingInAFiscalYear) {
   EXPECT_TRUE(quarters_ending_in(2026y / April / 1, 2026y / May / 31).empty());
 }
 
+TEST(VatReturn, QuarterHoldingADate) {
+  EXPECT_EQ(quarter_holding(2026y / January / 1), *quarter_of(2026y, 1));
+  EXPECT_EQ(quarter_holding(2026y / June / 30), *quarter_of(2026y, 2));
+  EXPECT_EQ(quarter_holding(2026y / October / 27), *quarter_of(2026y, 4));
+  EXPECT_EQ(quarter_holding(2026y / December / 31), *quarter_of(2026y, 4));
+}
+
 TEST(VatReturn, QuarterName) {
   EXPECT_EQ(quarter_name(*quarter_of(2026y, 1)), "2026 Q1");
   EXPECT_EQ(quarter_name(*quarter_of(2026y, 3)), "2026 Q3");

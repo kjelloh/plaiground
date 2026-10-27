@@ -23,6 +23,9 @@ struct Period {
 // A calendar quarter, 1 (January-March) to 4; nothing for any other quarter
 std::optional<Period> quarter_of(std::chrono::year year, unsigned quarter);
 
+// The calendar quarter a date is in
+Period quarter_holding(Date date);
+
 // The calendar quarters whose last day is in first - last (e.g. a fiscal year), oldest first.
 // A quarter that starts before first still belongs: the VAT return of a quarter may span two fiscal years.
 std::vector<Period> quarters_ending_in(Date first, Date last);

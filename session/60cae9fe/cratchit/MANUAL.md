@@ -1426,19 +1426,27 @@ shown again.
 
 `4` lists the VAT return periods of the year by the project's `vat_period` (see
 The files). A quarterly VAT return covers a calendar quarter; the year lists
-the quarters whose last day is in the year, newest first. A quarter that starts
-in the year before still belongs to the year it ends in, and counts the
-vouchers of both years. Each quarter shows its VAT in three steps:
+the quarters whose last day is in the year. A quarter that starts in the year
+before still belongs to the year it ends in, and counts the vouchers of both
+years. Only the quarters that have ended are numbered, newest first from key
+0. The last quarter that ended before today is marked `to report next`: the VAT
+is cleared after the quarter has ended. The quarter running today, when it ends
+in the year, is shown on top without a key and marked `so far (+ to view)`;
+press `+` to see its VAT return so far. Each quarter shows its VAT in three steps:
 
 ```
-VAT return quarters ending in 2025-01-01 - 2025-12-31:
+VAT return quarters ending in 2026-01-01 - 2026-12-31 (today 2026-10-27):
                   Period     Cleared     Charged
-  1  2025 Q4     -500.00        0.00        0.00
-  2  2025 Q3        0.00        0.00        0.00
-  3  2025 Q2        0.00        0.00        0.00
-  4  2025 Q1     -250.00     -250.00     -250.00  cleared by M 1, charged by A 1
-Charged, not matched to a quarter: A 2  2025-12-12  -100.00
+     2026 Q4      -25.00        0.00        0.00  so far (+ to view)
+  0  2026 Q3     -250.00        0.00        0.00  to report next
+  1  2026 Q2     1120.00     1120.00     1120.00  cleared by M 2, charged by A 3
+  2  2026 Q1     -250.08     -250.00     -250.00  cleared by M 1, charged by A 1
+Charged, not matched to a quarter: A 4  2026-08-13  -9.99
 ```
+
+With more than ten ended quarters, keys 0-8 show the newest and `9 ...down`
+the older ones, as in the year list. A fiscal year none of whose quarters has
+started yet has no VAT returns to show.
 
 | Step    | What it is                                                         |
 |---------|--------------------------------------------------------------------|
@@ -1459,8 +1467,10 @@ quarter takes is listed under the quarters as `Charged, not matched to a
 quarter`. Payments between the tax account and the bank (1630 and e.g. 1930)
 are not a step: they pay the tax account's balance, not one quarter.
 
-The prompt is `period?>`. Press a number to see that quarter's VAT return; `-`
-goes back to the reports. With `vat_period = none` cratchit says there are no
+The prompt is `period?>`. Press a number to see that quarter's VAT return, or
+`+` for the quarter running today so far (its heading ends `so far (today
+...)`); `-` goes back to the reports. To see the quarters of another fiscal
+year, open that year (see Fiscal years). With `vat_period = none` cratchit says there are no
 VAT returns; `monthly` and `yearly` are not supported yet.
 
 The VAT return lists each box of the form that the period's postings report in,

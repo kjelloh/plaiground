@@ -55,9 +55,11 @@ std::string quarter_name(Period period) {
 }
 
 std::vector<std::string> report_of(books::Books const& books, Document const& document, PeriodSteps const& steps,
-                                   std::string_view company) {
-  std::vector<std::string> lines{std::format("VAT return (momsrapport) {} - {}", format_iso_date(document.period.first),
-                                             format_iso_date(document.period.last)),
+                                   std::string_view company, std::optional<Date> so_far) {
+  std::vector<std::string> lines{std::format("VAT return (momsrapport) {} - {}{}", format_iso_date(document.period.first),
+                                             format_iso_date(document.period.last),
+                                             so_far ? std::format(", so far (today {})", format_iso_date(*so_far))
+                                                    : std::string{}),
                                  std::string(company), ""};
   auto const add_steps = [&] {
     lines.push_back("");

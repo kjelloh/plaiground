@@ -14,6 +14,10 @@ std::optional<Period> quarter_of(std::chrono::year year, unsigned quarter) {
   return Period{year / first / 1, year / last / std::chrono::last};
 }
 
+Period quarter_holding(Date date) {
+  return *quarter_of(date.year(), (static_cast<unsigned>(date.month()) + 2) / 3);
+}
+
 std::vector<Period> quarters_ending_in(Date first, Date last) {
   std::vector<Period> quarters;
   for (auto year = first.year(); year <= last.year(); ++year) {

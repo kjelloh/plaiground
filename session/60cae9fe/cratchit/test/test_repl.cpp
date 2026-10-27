@@ -791,18 +791,18 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
   run("112Test\n1");
   write_sie(root / "start" / "vat.se", vat_sie());
   run("2vat.se\ny");
-  auto const output = run("514x43-");
+  auto const output = run("514x32-");
   std::string const quarters =
-      "VAT return quarters ending in 2025-01-01 - 2025-12-31:\n"
+      "VAT return quarters ending in 2025-01-01 - 2025-12-31 (today 2026-10-20):\n"
       "                  Period     Cleared     Charged\n"
-      "  1  2025 Q4     -500.00        0.00        0.00\n"
-      "  2  2025 Q3        0.00        0.00        0.00\n"
-      "  3  2025 Q2        0.00        0.00        0.00\n"
-      "  4  2025 Q1     -250.00     -250.00     -250.00  cleared by M 1, charged by A 1\n"
+      "  0  2025 Q4     -500.00        0.00        0.00\n"
+      "  1  2025 Q3        0.00        0.00        0.00\n"
+      "  2  2025 Q2        0.00        0.00        0.00\n"
+      "  3  2025 Q1     -250.00     -250.00     -250.00  cleared by M 1, charged by A 1\n"
       "Charged, not matched to a quarter: A 2  2025-12-12  -100.00\n";
   EXPECT_NE(output.find("  4  VAT return (momsrapport)\nreport?> 4\n" + quarters +
                         "period?> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
-                        "period?> 4\n"
+                        "period?> 3\n"
                         "VAT return (momsrapport) 2025-01-01 - 2025-03-31\n"
                         "Test AB, 556000-0001\n"
                         "\n"
@@ -827,10 +827,10 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "  Charged           -250.00  A 1  2025-05-12\n"
                         "\n"
                         "Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.\n" +
-                        quarters + "period?> 3\n"),
+                        quarters + "period?> 2\n"),
             std::string::npos)
       << output;
-  EXPECT_NE(output.find("period?> 3\nVAT return (momsrapport) 2025-04-01 - 2025-06-30\nTest AB, 556000-0001\n\n"
+  EXPECT_NE(output.find("period?> 2\nVAT return (momsrapport) 2025-04-01 - 2025-06-30\nTest AB, 556000-0001\n\n"
                         "Box  Account  Voucher  Date                 Amount  Name\n"
                         "\n"
                         "49                                          250.00\n"
@@ -845,6 +845,41 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.\n" +
                         quarters + "period?> -\nReports for 2025-01-01 - 2025-12-31:\n"),
             std::string::npos)
+      << output;
+}
+
+TEST_F(WorkspaceRepl, VatReturnsOfTheYearRunningToday) {
+  run("112Test\n1");
+  write_sie(root / "start" / "vat.se",
+            sie_test::sie_file(2026, "",
+                               "#KONTO 3001 \"Sales 25%\"\r\n#KONTO 2611 \"Output VAT 25%\"\r\n"
+                               "#VER B 1 20260810 \"Sale\"\r\n{\r\n"
+                               "#TRANS 1930 {} 1250.00\r\n#TRANS 3001 {} -1000.00\r\n#TRANS 2611 {} -250.00\r\n}\r\n"
+                               "#VER B 2 20261015 \"Sale\"\r\n{\r\n"
+                               "#TRANS 1930 {} 125.00\r\n#TRANS 3001 {} -100.00\r\n#TRANS 2611 {} -25.00\r\n}\r\n"));
+  run("2vat.se\ny");
+  auto const output = run("514x+-");
+  std::string const quarters = "VAT return quarters ending in 2026-01-01 - 2026-12-31 (today 2026-10-20):\n"
+                               "                  Period     Cleared     Charged\n"
+                               "     2026 Q4      -25.00        0.00        0.00  so far (+ to view)\n"
+                               "  0  2026 Q3     -250.00        0.00        0.00  to report next\n"
+                               "  1  2026 Q2        0.00        0.00        0.00\n"
+                               "  2  2026 Q1        0.00        0.00        0.00\n";
+  EXPECT_NE(output.find("report?> 4\n" + quarters +
+                        "period?> x\nUnknown key. Other keys: Enter list, + the running quarter so far, - back, h help, "
+                        "q quit.\n"
+                        "period?> +\n"
+                        "VAT return (momsrapport) 2026-10-01 - 2026-12-31, so far (today 2026-10-20)\n"
+                        "Test AB, 556000-0001\n"
+                        "\n"
+                        "Box  Account  Voucher  Date                 Amount  Name\n"
+                        "\n"
+                        "05                                         -100.00\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with(quarters + "period?> -\nReports for 2026-01-01 - 2026-12-31:\n"
+                               "  1  Trial balance (saldobalans)\n  2  Vouchers\n  3  Account ledger\n"
+                               "  4  VAT return (momsrapport)\nreport?> \n"))
       << output;
 }
 

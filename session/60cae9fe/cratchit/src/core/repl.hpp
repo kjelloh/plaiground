@@ -180,9 +180,11 @@ private:
   std::size_t year_ = 0;                // the year of the reports, an index into books_.years
   Pager pager_;
   Mode before_paging_ = Mode::Reports;  // the menu a paged report goes back to
-  std::vector<skv::vat_return::Period> vat_periods_; // the VAT return periods of the report year, oldest first
+  std::vector<skv::vat_return::Period> vat_periods_; // the ended VAT return periods of the report year, oldest first
+  std::optional<skv::vat_return::Period> vat_current_; // the period running today, when it ends in the report year
+  std::optional<skv::vat_return::Period> vat_next_;    // the last period ended before today: the one to report next
   skv::vat_return::Steps vat_steps_;    // the steps of every quarter of the books
-  ItemList vat_period_page_;            // the page of the VAT return periods
+  ItemList vat_period_page_{ItemList::Start::Zero}; // the page of the VAT return periods, key 0 the newest ended
   ItemList year_menu_page_{ItemList::Start::Zero}; // the page of the year menu, keys from 0 as SIE numbers years
   Date open_year_;                      // the start of the fiscal year at the year prompt
   Mode before_reports_ = Mode::Years;   // where - leaves the report menu for
