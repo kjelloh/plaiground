@@ -1428,15 +1428,36 @@ shown again.
 The files). A quarterly VAT return covers a calendar quarter; the year lists
 the quarters whose last day is in the year, newest first. A quarter that starts
 in the year before still belongs to the year it ends in, and counts the
-vouchers of both years:
+vouchers of both years. Each quarter shows its VAT in three steps:
 
 ```
-VAT return quarters ending in 2025-05-01 - 2026-04-30:
-  1  2026 Q1  2026-01-01 - 2026-03-31
-  2  2025 Q4  2025-10-01 - 2025-12-31
-  3  2025 Q3  2025-07-01 - 2025-09-30
-  4  2025 Q2  2025-04-01 - 2025-06-30
+VAT return quarters ending in 2025-01-01 - 2025-12-31:
+                  Period     Cleared     Charged
+  1  2025 Q4     -500.00        0.00        0.00
+  2  2025 Q3        0.00        0.00        0.00
+  3  2025 Q2        0.00        0.00        0.00
+  4  2025 Q1     -250.00     -250.00     -250.00  cleared by M 1, charged by A 1
+Charged, not matched to a quarter: A 2  2025-12-12  -100.00
 ```
+
+| Step    | What it is                                                         |
+|---------|--------------------------------------------------------------------|
+| Period  | The VAT the period's vouchers post on the VAT accounts: those that report in boxes 10-12, 30-32, 60-62 (output VAT) and 48 (input VAT). Clearing vouchers are left out. |
+| Cleared | What clearing vouchers dated in the period move from the VAT accounts to 2650 (Redovisningskonto för moms) or 1650 (Momsfordran). A clearing voucher is any voucher with rows on 2650 or 1650 and on a VAT account, whatever its series. The amount is the rows on 2650 and 1650. |
+| Charged | What SKV charged or credited the tax account (1630, Skattekonto) for the period. A charge voucher has rows on 2650 or 1650 and on 1630, and none on a VAT account. The amount is the rows on 2650 and 1650, with the sign turned. |
+
+The figures keep the sign of the VAT accounts: VAT to pay is negative (credit),
+VAT to get back positive (debit). A quarter that is cleared and charged shows
+about the same amount three times; Cleared and Charged are in whole kronor, so
+they may differ from Period by the rounding.
+
+A charge is usually dated after its quarter, so it is not placed by its date:
+taking the charges in date order, each goes to the oldest quarter that is
+cleared by the same amount, starts on or before the charge's date and has no
+charge yet, in any fiscal year of the books. A charge dated in the year that no
+quarter takes is listed under the quarters as `Charged, not matched to a
+quarter`. Payments between the tax account and the bank (1630 and e.g. 1930)
+are not a step: they pay the tax account's balance, not one quarter.
 
 The prompt is `period?>`. Press a number to see that quarter's VAT return; `-`
 goes back to the reports. With `vat_period = none` cratchit says there are no
@@ -1444,7 +1465,7 @@ VAT returns; `monthly` and `yearly` are not supported yet.
 
 The VAT return lists each box of the form that the period's postings report in,
 with its amount, and under it each account with its sum and name and the
-vouchers behind it:
+vouchers behind it, then the three steps with their vouchers:
 
 ```
 VAT return (momsrapport) 2025-01-01 - 2025-03-31
@@ -1456,16 +1477,26 @@ Box  Account  Voucher  Date                 Amount  Name
      3001                                 -1000.00  Sales 25%
               B 1      2025-02-10         -1000.00
 
-10                                         -250.00
-     2611                                  -250.00  Output VAT 25%
+10                                            0.00
+     2611                                     0.00  Output VAT 25%
               B 1      2025-02-10          -250.00
+              M 1      2025-03-31           250.00
+
+49                                         -250.00
+     2650                                  -250.00  VAT clearing
+              M 1      2025-03-31          -250.00
+
+The VAT of the period:
+  Period            -250.00
+  Cleared           -250.00  M 1  2025-03-31
+  Charged           -250.00  A 1  2025-05-12
 
 Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.
 ```
 
 Which box an account reports in comes from the table built into cratchit
-(`bas_to_momsrapport.csv`). Every voucher dated in the period counts, of every
-series, including the Momsrapport voucher (series M). Removed rows do not
+(`bas_to_momsrapport.csv`). The boxes count every voucher dated in the period,
+of every series, including clearing and charge vouchers. Removed rows do not
 count. The amounts are not yet turned into the figures you type into SKV's
 form: they keep the sign they have in the books, and box 49 (VAT to pay or get
 back) is not calculated. After the VAT return the periods are shown again.

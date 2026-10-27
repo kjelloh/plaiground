@@ -64,6 +64,7 @@ add_library(cratchit_core
   ${CMAKE_CURRENT_BINARY_DIR}/generated/account_boxes.cpp
   src/core/skv/vat_return/document.cpp
   src/core/skv/vat_return/report.cpp
+  src/core/skv/vat_return/steps.cpp
   src/core/statement/statement.cpp
   src/core/terminal.cpp
   src/core/terminal_encoding.cpp

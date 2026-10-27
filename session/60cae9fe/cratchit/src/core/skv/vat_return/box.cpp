@@ -79,4 +79,13 @@ std::optional<Box> box_of(std::string_view account) {
   return std::nullopt;
 }
 
+bool is_vat_account(std::string_view account) {
+  auto const box = box_of(account);
+  return box && std::ranges::find(vat_boxes, *box) != vat_boxes.end();
+}
+
+bool is_vat_clearing_account(std::string_view account) {
+  return account == vat_liability_account || account == vat_receivable_account;
+}
+
 } // namespace cratchit::skv::vat_return

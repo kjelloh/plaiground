@@ -17,18 +17,68 @@ std::string row(std::string_view box, std::string_view account, std::string_view
   return line;
 }
 
+// A voucher of a step with its date and amount
+std::string step_line(std::string_view step, VoucherPosting const& voucher) {
+  return std::format("  {:<10}{:>15}  {} {}  {}", step, format_amount(voucher.amount), voucher.series, voucher.number,
+                     format_iso_date(voucher.date));
+}
+
 } // namespace
+
+std::string vouchers_text(std::vector<VoucherPosting> const& vouchers) {
+  std::string text;
+  for (auto const& voucher : vouchers) {
+    text += text.empty() ? "" : ", ";
+    text += std::format("{} {}", voucher.series, voucher.number);
+  }
+  return text;
+}
+
+std::string steps_heading() {
+  return std::format("{:>12}{:>12}{:>12}", "Period", "Cleared", "Charged");
+}
+
+std::string steps_row(PeriodSteps const& steps) {
+  auto line = std::format("{:>12}{:>12}{:>12}", format_amount(steps.period_vat), format_amount(steps.cleared),
+                          format_amount(steps.charged));
+  if (!steps.clearings.empty()) {
+    line += "  cleared by " + vouchers_text(steps.clearings);
+  }
+  if (!steps.charges.empty()) {
+    line += ", charged by " + vouchers_text(steps.charges);
+  }
+  return line;
+}
 
 std::string quarter_name(Period period) {
   return std::format("{} Q{}", static_cast<int>(period.last.year()), (static_cast<unsigned>(period.last.month()) + 2) / 3);
 }
 
-std::vector<std::string> report_of(books::Books const& books, Document const& document, std::string_view company) {
+std::vector<std::string> report_of(books::Books const& books, Document const& document, PeriodSteps const& steps,
+                                   std::string_view company) {
   std::vector<std::string> lines{std::format("VAT return (momsrapport) {} - {}", format_iso_date(document.period.first),
                                              format_iso_date(document.period.last)),
                                  std::string(company), ""};
+  auto const add_steps = [&] {
+    lines.push_back("");
+    lines.push_back("The VAT of the period:");
+    lines.push_back(std::format("  {:<10}{:>15}", "Period", format_amount(steps.period_vat)));
+    if (steps.clearings.empty()) {
+      lines.push_back(std::format("  {:<10}{:>15}", "Cleared", format_amount(0)));
+    }
+    for (auto const& clearing : steps.clearings) {
+      lines.push_back(step_line("Cleared", clearing));
+    }
+    if (steps.charges.empty()) {
+      lines.push_back(std::format("  {:<10}{:>15}", "Charged", format_amount(0)));
+    }
+    for (auto const& charge : steps.charges) {
+      lines.push_back(step_line("Charged", charge));
+    }
+  };
   if (document.boxes.empty()) {
     lines.push_back("No postings in the period on accounts that report in a box.");
+    add_steps();
     return lines;
   }
   lines.push_back(row("Box", "Account", "Voucher", "Date", "Amount", "Name"));
@@ -44,6 +94,7 @@ std::vector<std::string> report_of(books::Books const& books, Document const& do
       }
     }
   }
+  add_steps();
   lines.push_back("");
   lines.push_back("Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.");
   return lines;

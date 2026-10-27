@@ -2,9 +2,11 @@
 #include "core/skv/vat_return/box.hpp"
 #include "core/skv/vat_return/document.hpp"
 #include "core/skv/vat_return/report.hpp"
+#include "core/skv/vat_return/steps.hpp"
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <string>
 #include <vector>
@@ -123,4 +125,109 @@ TEST(VatReturn, AQuarterAcrossTwoFiscalYears) {
 TEST(VatReturn, NoVouchersInThePeriodGiveNoBoxes) {
   auto const document = document_of(two_years(), *quarter_of(2025y, 4));
   EXPECT_TRUE(document.boxes.empty());
+}
+
+namespace {
+
+// A year of quarterly VAT: Q1 to pay 250 (cleared M 1 with rounding, charged in May), Q2 to get back 120
+// (cleared M 2 to 1650, credited in August), Q3 not cleared; a payment to the tax account and a charge that
+// matches nothing
+books::Books steps_year() {
+  books::Books books;
+  books.years.push_back({.start = 2026y / January / 1, .end = 2026y / December / 31});
+  auto& v = books.years[0].vouchers;
+  v.push_back(voucher("B", "1", 2026y / February / 10, {posting("1510", 125040), posting("3001", -100032),
+                                                        posting("2611", -25008)}));
+  v.push_back(voucher("M", "1", 2026y / March / 31, {posting("2611", 25008), posting("2650", -25000),
+                                                     posting("3740", -8)}));
+  v.push_back(voucher("D", "1", 2026y / April / 3, {posting("2440", -60000), posting("4010", 48000),
+                                                    posting("2641", 12000)}));
+  v.push_back(voucher("A", "1", 2026y / May / 12, {posting("2650", 25000), posting("1630", -25000)}));
+  v.push_back(voucher("M", "2", 2026y / June / 30, {posting("2641", -12000), posting("1650", 12000)}));
+  v.push_back(voucher("A", "2", 2026y / July / 3, {posting("1630", 50000), posting("1930", -50000)}));
+  v.push_back(voucher("A", "3", 2026y / August / 12, {posting("1630", 12000), posting("1650", -12000)}));
+  v.push_back(voucher("A", "4", 2026y / August / 13, {posting("2650", 999), posting("1630", -999)}));
+  v.push_back(voucher("B", "2", 2026y / September / 1, {posting("1510", 5000), posting("3001", -4000),
+                                                        posting("2611", -1000),
+                                                        posting("2650", -1000, books::Posting::Kind::removed)}));
+  return books;
+}
+
+} // namespace
+
+TEST(VatReturn, ClearingAccountsAndVatAccounts) {
+  EXPECT_TRUE(is_vat_clearing_account(vat_liability_account));
+  EXPECT_TRUE(is_vat_clearing_account(vat_receivable_account));
+  EXPECT_FALSE(is_vat_clearing_account("2611"));
+  EXPECT_TRUE(is_vat_account("2611"));
+  EXPECT_TRUE(is_vat_account("2641"));
+  EXPECT_FALSE(is_vat_account("2650"));
+  EXPECT_FALSE(is_vat_account("3001"));
+}
+
+TEST(VatReturn, StepsOfQuarters) {
+  auto const steps = steps_of(steps_year(), quarters_ending_in(2026y / January / 1, 2026y / December / 31));
+  ASSERT_EQ(steps.periods.size(), 4u);
+  auto const& q1 = steps.periods[0];
+  EXPECT_EQ(q1.period_vat, -25008);
+  EXPECT_EQ(q1.cleared, -25000);
+  EXPECT_EQ(q1.clearings, (std::vector<VoucherPosting>{{2026y / January / 1, "M", "1", 2026y / March / 31, -25000}}));
+  EXPECT_EQ(q1.charged, -25000);
+  EXPECT_EQ(q1.charges, (std::vector<VoucherPosting>{{2026y / January / 1, "A", "1", 2026y / May / 12, -25000}}));
+  auto const& q2 = steps.periods[1];
+  EXPECT_EQ(q2.period_vat, 12000);
+  EXPECT_EQ(q2.cleared, 12000);
+  EXPECT_EQ(q2.charged, 12000);
+  ASSERT_EQ(q2.charges.size(), 1u);
+  EXPECT_EQ(q2.charges[0].number, "3");
+  // A removed posting on 2650 does not make B 2 a clearing voucher
+  auto const& q3 = steps.periods[2];
+  EXPECT_EQ(q3.period_vat, -1000);
+  EXPECT_EQ(q3.cleared, 0);
+  EXPECT_TRUE(q3.clearings.empty());
+  EXPECT_EQ(q3.charged, 0);
+  EXPECT_EQ(steps.periods[3], (PeriodSteps{*quarter_of(2026y, 4), 0, 0, {}, 0, {}}));
+  // A 2 pays into the tax account and is no step; A 4 matches no cleared quarter
+  EXPECT_EQ(steps.unmatched_charges,
+            (std::vector<VoucherPosting>{{2026y / January / 1, "A", "4", 2026y / August / 13, -999}}));
+}
+
+TEST(VatReturn, AChargeGoesToTheOldestQuarterClearedByItsAmountAndOnlyOnce) {
+  books::Books books;
+  books.years.push_back({.start = 2026y / January / 1, .end = 2026y / December / 31});
+  auto& v = books.years[0].vouchers;
+  v.push_back(voucher("B", "1", 2026y / February / 1, {posting("1510", 500), posting("2611", -500)}));
+  v.push_back(voucher("M", "1", 2026y / March / 31, {posting("2611", 500), posting("2650", -500)}));
+  v.push_back(voucher("B", "2", 2026y / May / 1, {posting("1510", 500), posting("2611", -500)}));
+  v.push_back(voucher("M", "2", 2026y / June / 30, {posting("2611", 500), posting("2650", -500)}));
+  // Charged before the second quarter starts: only the first can take it
+  v.push_back(voucher("A", "1", 2026y / March / 31, {posting("2650", 500), posting("1630", -500)}));
+  v.push_back(voucher("A", "2", 2026y / August / 12, {posting("2650", 500), posting("1630", -500)}));
+  v.push_back(voucher("A", "3", 2026y / November / 12, {posting("2650", 500), posting("1630", -500)}));
+  auto const steps = steps_of(books, quarters_ending_in(2026y / January / 1, 2026y / December / 31));
+  EXPECT_EQ(steps.periods[0].charges[0].number, "1");
+  EXPECT_EQ(steps.periods[1].charges[0].number, "2");
+  ASSERT_EQ(steps.unmatched_charges.size(), 1u);
+  EXPECT_EQ(steps.unmatched_charges[0].number, "3");
+}
+
+TEST(VatReturn, AChargeFindsItsQuarterInTheYearBefore) {
+  auto books = two_years();
+  // Q1 2026 (in 2025/26) cleared in April, charged in the next fiscal year
+  books.years[0].vouchers.push_back(voucher("M", "1", 2026y / March / 31, {posting("2611", 2500), posting("2650", -2500)}));
+  books.years[1].vouchers.push_back(voucher("A", "1", 2026y / May / 12, {posting("2650", 2500), posting("1630", -2500)}));
+  auto const steps = steps_of(books, quarters_ending_in(2025y / May / 1, 2027y / April / 30));
+  auto const q1 = std::ranges::find(steps.periods, *quarter_of(2026y, 1), &PeriodSteps::period);
+  ASSERT_NE(q1, steps.periods.end());
+  EXPECT_EQ(q1->cleared, -2500);
+  EXPECT_EQ(q1->charged, -2500);
+  EXPECT_EQ(q1->charges[0].fiscal_year, 2026y / May / 1);
+  EXPECT_TRUE(steps.unmatched_charges.empty());
+}
+
+TEST(VatReturn, StepsRow) {
+  EXPECT_EQ(steps_heading(), "      Period     Cleared     Charged");
+  PeriodSteps const steps{*quarter_of(2026y, 1), -25008, -25000,
+                          {{2026y / January / 1, "M", "1", 2026y / March / 31, -25000}}, 0, {}};
+  EXPECT_EQ(steps_row(steps), "     -250.08     -250.00        0.00  cleared by M 1");
 }

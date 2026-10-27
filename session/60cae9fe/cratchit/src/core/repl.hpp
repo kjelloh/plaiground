@@ -16,6 +16,7 @@
 #include "core/path_editor.hpp"
 #include "core/project.hpp"
 #include "core/skv/vat_return/document.hpp"
+#include "core/skv/vat_return/steps.hpp"
 #include "core/workspace.hpp"
 
 #include <cstddef>
@@ -180,6 +181,7 @@ private:
   Pager pager_;
   Mode before_paging_ = Mode::Reports;  // the menu a paged report goes back to
   std::vector<skv::vat_return::Period> vat_periods_; // the VAT return periods of the report year, oldest first
+  skv::vat_return::Steps vat_steps_;    // the steps of every quarter of the books
   ItemList vat_period_page_;            // the page of the VAT return periods
   ItemList year_menu_page_{ItemList::Start::Zero}; // the page of the year menu, keys from 0 as SIE numbers years
   Date open_year_;                      // the start of the fiscal year at the year prompt
@@ -270,6 +272,7 @@ private:
   void show_report(std::vector<std::string> lines, std::ostream& out);
   void open_vat_periods(std::ostream& out);
   void show_vat_periods(std::ostream& out) const;
+  skv::vat_return::PeriodSteps const& steps_of_period(skv::vat_return::Period const& period) const;
   void on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out);
   std::string company() const;
   void open_year_menu(std::ostream& out);

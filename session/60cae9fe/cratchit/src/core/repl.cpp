@@ -1523,21 +1523,37 @@ void Repl::open_vat_periods(std::ostream& out) {
                  format_iso_date(year.end));
     return;
   }
+  // Every quarter of the books, so that a charge dated in this year can go to a quarter of the year before
+  vat_steps_ = skv::vat_return::steps_of(
+      books_, skv::vat_return::quarters_ending_in(books_.years.front().start, books_.years.back().end));
   vat_period_page_.reset();
   mode_ = Mode::VatPeriods;
   show_vat_periods(out);
 }
 
-// Newest first
+skv::vat_return::PeriodSteps const& Repl::steps_of_period(skv::vat_return::Period const& period) const {
+  static skv::vat_return::PeriodSteps const none{};
+  auto const it = std::ranges::find(vat_steps_.periods, period, &skv::vat_return::PeriodSteps::period);
+  return it == vat_steps_.periods.end() ? none : *it;
+}
+
+// Newest first, each with its VAT steps; then the charges dated in the year that no quarter takes
 void Repl::show_vat_periods(std::ostream& out) const {
   auto const& year = books_.years[year_];
   std::println(out, "VAT return quarters ending in {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
+  std::println(out, "{:<12}{}", "", skv::vat_return::steps_heading());
   auto const n = vat_periods_.size();
   vat_period_page_.show(n, out, [&](std::size_t index, std::size_t key) {
     auto const& period = vat_periods_[n - 1 - index];
-    std::println(out, "  {}  {}  {} - {}", key, skv::vat_return::quarter_name(period), format_iso_date(period.first),
-                 format_iso_date(period.last));
+    std::println(out, "  {}  {}{}", key, skv::vat_return::quarter_name(period),
+                 skv::vat_return::steps_row(steps_of_period(period)));
   });
+  for (auto const& charge : vat_steps_.unmatched_charges) {
+    if (year.holds(charge.date)) {
+      std::println(out, "Charged, not matched to a quarter: {} {}  {}  {}", charge.series, charge.number,
+                   format_iso_date(charge.date), format_amount(charge.amount));
+    }
+  }
 }
 
 void Repl::on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out) {
@@ -1551,8 +1567,9 @@ void Repl::on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out
   if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_vat_periods(out);
   } else if (pick.kind == ItemList::Pick::Kind::Item) {
-    auto const document = skv::vat_return::document_of(books_, vat_periods_[n - 1 - pick.index]);
-    show_report(skv::vat_return::report_of(books_, document, company()), out);
+    auto const& period = vat_periods_[n - 1 - pick.index];
+    auto const document = skv::vat_return::document_of(books_, period);
+    show_report(skv::vat_return::report_of(books_, document, steps_of_period(period), company()), out);
   } else {
     unknown_key(out);
   }

@@ -489,6 +489,20 @@ postings; amounts signed as in the books (sign rules for the form later), box 49
 "The VAT return" under Reports, log kinds. 435 tests pass, no warnings (Debug, trace DEBUG); checked with piped input
 in a scratch folder. In review.
 
+Task 53: VAT steps per quarter: period, cleared, charged. Named constants: `skv::tax_account` = 1630
+(`core/skv/accounts.hpp`), `vat_liability_account` = 2650, `vat_receivable_account` = 1650, `vat_boxes` (10-12,
+30-32, 60-62, 48) in `vat_return/box.hpp` with `is_vat_account`, `is_vat_clearing_account`. `vat_return::steps_of(books,
+periods)` (`core/skv/vat_return/steps`), by accounts, never by series: clearing voucher = counted rows on 2650/1650 and
+on a VAT account (cleared = its 2650/1650 rows, in the quarter it is dated in); charge voucher = rows on 2650/1650 and
+1630, none on a VAT account (charged = its 2650/1650 rows negated); period VAT = VAT-account rows of the other
+vouchers. All signed as on the VAT accounts, so a done quarter shows the same amount three times. Charges in date
+order go to the oldest quarter cleared by the same amount, starting on or before the charge, without a charge yet,
+over all quarters of the books (`Steps::unmatched_charges` else). Payments 1630 <-> bank are no step. `period?>` list:
+column heading + `Period Cleared Charged` per quarter + `cleared by M 1, charged by A 1`; unmatched charges dated in
+the year listed under it. The quarter report ends with "The VAT of the period:" and the step vouchers. The boxes
+still count every voucher (clearing and charge rows too). Manual: "The VAT return" rewritten. 440 tests pass, no
+warnings (Debug, trace DEBUG). Not run on real books (the Fortnox samples are outside this session). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -668,6 +682,11 @@ into a waiting event without making a voucher, several entries chosen at once.
   belongs to the fiscal year its last day is in. The VAT return keeps the books' signs for now; rules for how they
   fill in the form come later.
 
+- 2026-10-27: VAT steps, named in English: period VAT (on the VAT accounts), cleared (moved to 2650/1650, the books'
+  record of the filed return), charged (SKV debits or credits the tax account 1630 against 2650/1650), paid (bank <->
+  tax account; not a VAT step, it pays the tax account's balance; a later tax account report). Detected by accounts
+  (named constants), never by voucher series.
+
 ## Open questions
 
 - Should a template's rounding row (e.g. 3740 Öres- och kronutjämning) be scaled like the others? Today it takes the
@@ -679,4 +698,6 @@ into a waiting event without making a voucher, several entries chosen at once.
 - A quarter that spans two fiscal years is listed only under the year it ends in (agreed 2026-10-27; SKV accepts it).
   A split at the fiscal year end may come later. With a broken year the last months (e.g. April) are in a quarter
   of the next year, so they show only once that year is in the books.
+- Should the box report (the form) leave out clearing and charge vouchers? Today a cleared quarter shows box 10 etc.
+  as 0.00 and box 49 with the clearing, and a charge shows up as box 49 in the quarter it is dated in.
 - Is a CI setup (e.g. GitHub Actions on macOS/Linux/Windows) wanted to verify cross-platform builds?

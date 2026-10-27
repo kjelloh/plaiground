@@ -765,15 +765,24 @@ TEST_F(WorkspaceRepl, RKeyShowsYearsAndReports) {
 
 namespace {
 
-// A sale of 1000 plus 250 VAT in February and one of 2000 plus 500 VAT in November
+// A sale of 1000 plus 250 VAT in February, cleared in March (M 1) and charged in May (A 1); one of 2000 plus
+// 500 VAT in November, not cleared; and a charge in December that matches no quarter (A 2)
 std::string vat_sie() {
   return sie_test::sie_file(2025, "",
                             "#KONTO 3001 \"Sales 25%\"\r\n"
                             "#KONTO 2611 \"Output VAT 25%\"\r\n"
+                            "#KONTO 2650 \"VAT clearing\"\r\n"
+                            "#KONTO 1630 \"Tax account\"\r\n"
                             "#VER B 1 20250210 \"Sale\"\r\n{\r\n"
                             "#TRANS 1930 {} 1250.00\r\n#TRANS 3001 {} -1000.00\r\n#TRANS 2611 {} -250.00\r\n}\r\n"
+                            "#VER M 1 20250331 \"Momsrapport\"\r\n{\r\n"
+                            "#TRANS 2611 {} 250.00\r\n#TRANS 2650 {} -250.00\r\n}\r\n"
+                            "#VER A 1 20250512 \"Moms\"\r\n{\r\n"
+                            "#TRANS 2650 {} 250.00\r\n#TRANS 1630 {} -250.00\r\n}\r\n"
                             "#VER B 2 20251105 \"Sale\"\r\n{\r\n"
-                            "#TRANS 1930 {} 2500.00\r\n#TRANS 3001 {} -2000.00\r\n#TRANS 2611 {} -500.00\r\n}\r\n");
+                            "#TRANS 1930 {} 2500.00\r\n#TRANS 3001 {} -2000.00\r\n#TRANS 2611 {} -500.00\r\n}\r\n"
+                            "#VER A 2 20251212 \"Moms\"\r\n{\r\n"
+                            "#TRANS 2650 {} 100.00\r\n#TRANS 1630 {} -100.00\r\n}\r\n");
 }
 
 } // namespace
@@ -783,11 +792,14 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
   write_sie(root / "start" / "vat.se", vat_sie());
   run("2vat.se\ny");
   auto const output = run("514x43-");
-  std::string const quarters = "VAT return quarters ending in 2025-01-01 - 2025-12-31:\n"
-                               "  1  2025 Q4  2025-10-01 - 2025-12-31\n"
-                               "  2  2025 Q3  2025-07-01 - 2025-09-30\n"
-                               "  3  2025 Q2  2025-04-01 - 2025-06-30\n"
-                               "  4  2025 Q1  2025-01-01 - 2025-03-31\n";
+  std::string const quarters =
+      "VAT return quarters ending in 2025-01-01 - 2025-12-31:\n"
+      "                  Period     Cleared     Charged\n"
+      "  1  2025 Q4     -500.00        0.00        0.00\n"
+      "  2  2025 Q3        0.00        0.00        0.00\n"
+      "  3  2025 Q2        0.00        0.00        0.00\n"
+      "  4  2025 Q1     -250.00     -250.00     -250.00  cleared by M 1, charged by A 1\n"
+      "Charged, not matched to a quarter: A 2  2025-12-12  -100.00\n";
   EXPECT_NE(output.find("  4  VAT return (momsrapport)\nreport?> 4\n" + quarters +
                         "period?> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
                         "period?> 4\n"
@@ -800,16 +812,37 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "     3001                                 -1000.00  Sales 25%\n"
                         "              B 1      2025-02-10         -1000.00\n"
                         "\n"
-                        "10                                         -250.00\n"
-                        "     2611                                  -250.00  Output VAT 25%\n"
+                        "10                                            0.00\n"
+                        "     2611                                     0.00  Output VAT 25%\n"
                         "              B 1      2025-02-10          -250.00\n"
+                        "              M 1      2025-03-31           250.00\n"
+                        "\n"
+                        "49                                         -250.00\n"
+                        "     2650                                  -250.00  VAT clearing\n"
+                        "              M 1      2025-03-31          -250.00\n"
+                        "\n"
+                        "The VAT of the period:\n"
+                        "  Period            -250.00\n"
+                        "  Cleared           -250.00  M 1  2025-03-31\n"
+                        "  Charged           -250.00  A 1  2025-05-12\n"
                         "\n"
                         "Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.\n" +
                         quarters + "period?> 3\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("period?> 3\nVAT return (momsrapport) 2025-04-01 - 2025-06-30\nTest AB, 556000-0001\n\n"
-                        "No postings in the period on accounts that report in a box.\n" +
+                        "Box  Account  Voucher  Date                 Amount  Name\n"
+                        "\n"
+                        "49                                          250.00\n"
+                        "     2650                                   250.00  VAT clearing\n"
+                        "              A 1      2025-05-12           250.00\n"
+                        "\n"
+                        "The VAT of the period:\n"
+                        "  Period               0.00\n"
+                        "  Cleared              0.00\n"
+                        "  Charged              0.00\n"
+                        "\n"
+                        "Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.\n" +
                         quarters + "period?> -\nReports for 2025-01-01 - 2025-12-31:\n"),
             std::string::npos)
       << output;

@@ -40,6 +40,35 @@ Claude implemented a reasonable user option to initiate 'Momsrapport'.
 * It provided options to select possible quarters (default vat_period is quarterly)
 * It reported back the BAS account postings (voucher referenced) for each box on the form.
 
+I now asked Claude to show the VAT for each period option.
+
+* I asked for the terms 'period' vs 'cleared' for calculated vs amount(s) posted to 2650, 1650.
+
+Can I assume the 2650, and 1650 are NOT mapped to a VAT returns form box?
+
+* [bas_to_momsrapport](./cratchit/resources/momsrapport/bas_to_momsrapport.csv)
+
+    * They ARE mapped, but to box 49.
+    * So the mapping assumes we enter the amount to clear to 2650 or 1650.
+    * And then the mapping will take care of placing this amount on to the form box 49.
+
+* So the algorithm to 'clear' VAT over a period goes through the books?
+
+    * The 'report' boxes are calculated from BAS account mappings over the period.
+    * The amount to clear is booked to 2650 or 1650.
+    * Then we generate the VAT returns form again?
+    * NO. This seems awkward?
+
+It actually seems like the bas_to_momsrapport is the mapping AFTER the VAT has been cleared and booked to 2650 or 1650?
+
+I asked Claude to refine the summary and use 'period', 'cleared' and 'charged' (although I may still preferr 'settled'?).
+
+* Anyhow, I did a quick try and it seems to work ok.
+* The options should be in the opposite order though (with option 0 being the next tp report to SKV)
+* I think I like that we can select older periods too.
+    * SKV actually allows us to 'correct' already reported VATs for earlier periods.
+
+
 ## 20261026
 
 So maybe we should now go straight for the VAT Returns report?
