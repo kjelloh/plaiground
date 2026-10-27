@@ -101,7 +101,6 @@ private:
     VoucherSeries,
     VoucherList,
     VoucherView,
-    ConfirmRight,
     StatementFiles,
     ConfirmStatement,
     EntryList,
@@ -205,7 +204,6 @@ private:
   std::size_t viewed_ = 0;              // the voucher shown, an index into the open year's vouchers
   std::optional<books::VoucherKey> template_key_; // the template chosen before the voucher line, if any
   std::optional<books::VoucherKey> correcting_;   // the voucher being corrected (its rows reversed), if any
-  std::optional<books::VoucherKey> corrected_;    // the voucher just corrected, for entering the right one
   Mode before_statement_ = Mode::Project;           // where a statement import started (project or year prompt)
   std::vector<books::StatementImport> statement_imports_; // the statements already imported
   std::vector<std::filesystem::path> statement_files_;    // the files listed in a folder
@@ -295,7 +293,6 @@ private:
   void on_voucher_list_key(charset::unicode::CodePoint key, std::ostream& out);
   void show_voucher(std::ostream& out) const;
   void on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& out);
-  void on_confirm_right_key(charset::unicode::CodePoint key, std::ostream& out);
   void start_statement(std::ostream& out);
   void on_statement_path(PathEditor::Result result, std::ostream& out);
   void show_statement_files(std::ostream& out) const;

@@ -16,7 +16,8 @@
 namespace cratchit::books {
 
 // The event typed first (see Event): heading, amount and date in any order, separated by spaces. The date is the
-// last word that is a date (YYYY-MM-DD or YYYYMMDD); without one, today, if given. The
+// last word that is a date (YYYY-MM-DD or YYYYMMDD); without one, today, if given
+// (none given: the date is needed). The
 // amount is the last other number: digits with an optional sign and a decimal
 // comma or point, e.g. -1118,00; a no-break space inside it is dropped. The
 // rest, in the order typed, is the heading. Number words just before the amount

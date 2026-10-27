@@ -107,8 +107,7 @@ TEST(ParseEvent, Errors) {
 }
 
 TEST(ParseEvent, NoDateAndNoTodayIsAnError) {
-  EXPECT_EQ(parse_event("Telia 1118", std::nullopt).error(),
-            "No date, and today is outside the fiscal year. Type the date.");
+  EXPECT_EQ(parse_event("Telia 1118", std::nullopt).error(), "No date. Type the date, e.g. 2026-10-22.");
   EXPECT_EQ(parse_event("Telia 1118 2026-10-01", std::nullopt)->front().date, (Date{2026y, October, 1d}));
 }
 

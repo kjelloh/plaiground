@@ -984,7 +984,8 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
   EXPECT_NE(output.find("2025> 1\n"
                         "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 "
                         "2026-10-22.\n"
-                        "No date means today. Backspace erases, Enter accepts. - or Enter on an empty line goes back.\n"
+                        "The date is needed (today is 2026-10-20). Backspace erases, Enter accepts. - or Enter on an "
+                        "empty line\ngoes back.\n"
                         "voucher> Bank cost march 35 2025-03-31\n"
                         "  Heading  Bank cost march\n"
                         "  Amount   35.00\n"
@@ -1395,6 +1396,17 @@ TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
   EXPECT_NE(plain.find(postings_keys("A 4", false) + "2\nUnknown key. Other keys:"), std::string::npos) << plain;
 }
 
+namespace {
+// The echo of n backspaces
+std::string erased(std::size_t n) {
+  std::string result;
+  for (std::size_t i = 0; i < n; ++i) {
+    result += "\b \b";
+  }
+  return result;
+}
+} // namespace
+
 TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -1433,9 +1445,9 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
             std::string::npos)
       << output;
   // The correction reverses the rows, in the same series, and then the right voucher can follow
-  output = run("4a11 2025-04-01\ny\n1y" + std::string(5, '\x7f') + "40 2025-03-31\ny\n1");
+  output = run("4a11" + std::string(10, '\x7f') + "2025-04-01\ny\n1");
   EXPECT_NE(output.find("A 3> 1\n"), std::string::npos) << output;
-  EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-04-01\n"
+  EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-03-31" + erased(10) + "2025-04-01\n"
                         "  Heading  Rättelse av A 3: Bank cost march\n"
                         "  Amount   35.00\n"
                         "  Date     2025-04-01   (fiscal year 2025-01-01 - 2025-12-31)\n"
@@ -1453,30 +1465,19 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
                             postings_keys("A 4", true) + "1\n"),
             std::string::npos)
       << output;
-  EXPECT_NE(output.find("Saved voucher A 4 into fiscal year 2025-01-01 - 2025-12-31.\n"
-                        "A 4 reverses A 3. The right voucher can follow, with A 3 as the template.\n"
-                        "Enter the right voucher now? (y/n) y\n"),
-            std::string::npos)
+  // Saved, the correction ends there: no right voucher follows
+  EXPECT_TRUE(output.ends_with("Saved voucher A 4 into fiscal year 2025-01-01 - 2025-12-31.\n"
+                               "A 4 reverses A 3.\n2025> \n"))
       << output;
-  EXPECT_NE(output.find("voucher> Bank cost march 35.00"), std::string::npos) << output;
-  EXPECT_NE(output.find("  Heading  Bank cost march\n  Amount   40.00\n"), std::string::npos) << output;
-  EXPECT_NE(output.find("OK? (y/n) y\nSeries (Enter = A, as A 3 2025-03-31 \"Bank cost march\"):\n"), std::string::npos)
-      << output;
-  EXPECT_NE(output.find("Suggested from A 3, scaled to the amount:\n"
-                        "Voucher A 5 2025-03-31 \"Bank cost march\"\n"
-                        "  Account        Debit       Credit\n"
-                        "  6570           40.00               Bank costs\n"),
-            std::string::npos)
-      << output;
-  EXPECT_TRUE(output.ends_with("Saved voucher A 5 into fiscal year 2025-01-01 - 2025-12-31.\n2025> \n")) << output;
+  // The correction's line has the corrected voucher's date
+  EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-03-31"), std::string::npos) << output;
   auto const books = cratchit::books::read_books(root / "start" / "Test");
   ASSERT_TRUE(books.has_value()) << books.error();
   auto const& vouchers = books->years.front().vouchers;
-  ASSERT_EQ(vouchers.size(), 5u);
+  ASSERT_EQ(vouchers.size(), 4u);
   EXPECT_EQ(vouchers[3].event.heading, "Rättelse av A 3: Bank cost march");
   EXPECT_EQ(vouchers[3].postings[0].amount, -3500);
   EXPECT_EQ(vouchers[3].postings[1].amount, 3500);
-  EXPECT_EQ(vouchers[4].postings[0].amount, 4000);
 }
 
 TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
@@ -1730,9 +1731,20 @@ TEST_F(WorkspaceRepl, NoDateOutsideTheYearAsksForIt) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   auto const output = run("1Bank 35\n");
-  EXPECT_NE(output.find("voucher> Bank 35\nNo date, and today is outside the fiscal year. Type the date.\n"),
+  EXPECT_NE(output.find("voucher> Bank 35\nNo date. Type the date, e.g. 2026-10-22.\n"), std::string::npos) << output;
+}
+
+TEST_F(WorkspaceRepl, AVoucherNeedsItsDateEvenWhenTheYearHoldsToday) {
+  run("112Test\n1");
+  write_sie(root / "start" / "this.se", sie_test::sie_file(2026, "", ""));
+  run("2this.se\ny10");
+  auto output = run("1Bank 35\n");
+  EXPECT_NE(output.find("voucher> Bank 35\nNo date. Type the date, e.g. 2026-10-22.\nvoucher> Bank 35"),
             std::string::npos)
       << output;
+  // An event to note may still leave it out for today
+  output = run("2Bank 35\n");
+  EXPECT_NE(output.find("  Date     2026-10-20"), std::string::npos) << output;
 }
 
 TEST_F(WorkspaceRepl, MAtTheWaitingListFindsMatchesToMakeOneOrDelete) {

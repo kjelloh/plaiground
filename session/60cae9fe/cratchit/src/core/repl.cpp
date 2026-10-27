@@ -158,9 +158,6 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
     }
     on_voucher_series_key(key, out);
     return Step::Continue;
-  case Mode::ConfirmRight:
-    on_confirm_right_key(key, out);
-    return Step::Continue;
   case Mode::ConfirmStatement:
     on_confirm_statement_key(key, out);
     return Step::Continue;
@@ -642,9 +639,9 @@ void Repl::on_operation(Op op, std::ostream& out) {
       std::println(out, "came from and import the file again.");
       break;
     }
-    // The line is the correction's heading and amount; no date means today
-    auto const line = std::format("Rättelse av {} {}: {} {}", voucher.series, voucher.number, voucher.event.heading,
-                                  format_amount(voucher.event.amount));
+    // The line is the correction's heading, amount and date, the date being the corrected voucher's
+    auto const line = std::format("Rättelse av {} {}: {} {} {}", voucher.series, voucher.number, voucher.event.heading,
+                                  format_amount(voucher.event.amount), format_iso_date(voucher.event.date));
     if (start_entry(false, out, line)) {
       correcting_ = viewed;
     }
@@ -762,8 +759,6 @@ std::string Repl::prompt() const {
                ? std::format("{} {}> ", year->vouchers[viewed_].series, year->vouchers[viewed_].number)
                : "voucher> ";
   }
-  case Mode::ConfirmRight:
-    return "Enter the right voucher now? (y/n) ";
   case Mode::StatementFiles:
     return "statement?> ";
   case Mode::ConfirmStatement:
@@ -1757,7 +1752,13 @@ bool Repl::start_entry(bool noting, std::ostream& out, std::string const& line) 
   mode_ = Mode::Typing;
   std::println(out, "Type the heading, amount and date of the {}, e.g. Telia faktura oktober 1118,00 2026-10-22.",
                noting ? "event to post later" : "voucher");
-  std::println(out, "No date means today. Backspace erases, Enter accepts. - or Enter on an empty line goes back.");
+  if (noting) {
+    std::println(out, "No date means today. Backspace erases, Enter accepts. - or Enter on an empty line goes back.");
+  } else {
+    std::println(out, "The date is needed (today is {}). Backspace erases, Enter accepts. - or Enter on an empty line",
+                 places_.today);
+    std::println(out, "goes back.");
+  }
   out << editor_.prompt();
   return true;
 }
@@ -1767,8 +1768,9 @@ bool Repl::start_entry(bool noting, std::ostream& out, std::string const& line) 
 void Repl::on_voucher_line(std::ostream& out) {
   auto const year = static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data());
   auto const& fiscal = books_.years[year];
+  // A voucher needs its date typed; an event to note may leave it out for today
   auto today = parse_iso_date(places_.today);
-  if (today && !fiscal.holds(*today)) {
+  if (today && (!fiscal.holds(*today) || (!noting_ && !merging_))) {
     today.reset();
   }
   auto readings = books::parse_event(editor_.text(), today);
@@ -2272,10 +2274,8 @@ void Repl::save_voucher(std::ostream& out) {
                draft.flipped ? ", flipped" : "",
                project_->name, project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
   if (correcting_) {
-    corrected_ = std::exchange(correcting_, std::nullopt);
-    std::println(out, "{} {} reverses {}. The right voucher can follow, with {} as the template.", draft.series, number_,
-                 draft.corrects, draft.corrects);
-    mode_ = Mode::ConfirmRight;
+    correcting_.reset();
+    std::println(out, "{} {} reverses {}.", draft.series, number_, draft.corrects);
   }
 }
 
@@ -2817,24 +2817,6 @@ void Repl::on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& ou
   }
 }
 
-// After a correction is saved: the right voucher, with the corrected one as its template
-void Repl::on_confirm_right_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U'y') {
-    auto const corrected = *std::exchange(corrected_, std::nullopt);
-    auto const* voucher = voucher_of(corrected);
-    auto const line = voucher ? std::format("{} {}", voucher->event.heading, format_amount(voucher->event.amount)) : "";
-    if (start_entry(false, out, line)) {
-      template_key_ = corrected;
-    } else {
-      mode_ = Mode::Year;
-    }
-  } else if (key == U'n' || key == U'-') {
-    corrected_.reset();
-    mode_ = Mode::Year;
-  } else {
-    std::println(out, "Press y to enter the right voucher, n not to.");
-  }
-}
 
 namespace {
 

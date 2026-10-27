@@ -553,9 +553,9 @@ OK? (y/n)
 ```
 
 - The date is the last word that is a date, written `2026-10-22` or
-  `20261022`. Without a date, today is used when it is in the fiscal year;
-  else cratchit asks for it:
-  `No date, and today is outside the fiscal year. Type the date.`
+  `20261022`. A voucher needs its date typed; the line above the prompt
+  names today (`The date is needed (today is 2026-10-27).`). Without a date
+  the line is kept for you to add it: `No date. Type the date, e.g. 2026-10-22.`
 - The amount is the last other number: digits with an optional `-`, and a
   decimal comma or point, at most two decimals (`1118`, `1118,5`, `-1118.00`).
   A no-break space inside a number, as a bank may write it, is dropped.
@@ -925,11 +925,11 @@ D 4>
 A correction is a new voucher that reverses the wrong one: the same rows with
 the opposite signs, so together they add up to nothing. The wrong voucher
 stays in the books as it is. `1` starts the voucher line with the correction's
-heading and amount, for you to change or accept; without a date it is dated
-today (asked for when today is outside the year):
+heading, amount and date, for you to change or accept. The date is the
+corrected voucher's date:
 
 ```
-voucher> Rättelse av D 4: Faktura Telia november 1245.00
+voucher> Rättelse av D 4: Faktura Telia november 1245.00 2026-10-24
 ```
 
 Then, as in Entering a voucher: `OK? (y/n)`, the series (by default the
@@ -937,16 +937,12 @@ corrected voucher's series), and the corrected voucher's rows reversed, shown
 as the whole voucher to save (`The rows of D 4, reversed:`, then `postings>`:
 `1` saves, `2` flips the rows, `-` puts the rows in place at `post>` to change
 them, as in The rows).
-When it is saved, cratchit offers to enter the right voucher:
+When it is saved, cratchit says so and goes back to the year prompt:
 
 ```
 Saved voucher D 5 into fiscal year 2026-05-01 - 2027-04-30.
-D 5 reverses D 4. The right voucher can follow, with D 4 as the template.
-Enter the right voucher now? (y/n) 
+D 5 reverses D 4.
 ```
-
-`y` starts the voucher line with the corrected voucher's heading and amount,
-and its rows are the template. `n` goes back to the year prompt.
 
 An imported voucher is not corrected in cratchit:
 `D 3 came with an SIE import, so cratchit does not correct it. Correct it in
@@ -964,7 +960,9 @@ reports.
 Press `2` at the prompt of an open fiscal year. Type the heading, amount and
 date at `event>` as at `voucher>` (see Entering a voucher): the same rules,
 the same `amount?>` question for an unclear amount, and a date outside the
-year is refused. Press `y` to note it:
+year is refused. Unlike a voucher, an event may leave out the date: then it is
+today, when the year holds it (else `No date. Type the date, e.g. 2026-10-22.`).
+Press `y` to note it:
 
 ```
 2026/27> n

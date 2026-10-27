@@ -195,7 +195,7 @@ std::expected<std::vector<Event>, std::string> parse_event(std::string_view text
            (i == *last || !has_decimals(i));
   };
   if (!date_at && !today) {
-    return std::unexpected("No date, and today is outside the fiscal year. Type the date.");
+    return std::unexpected("No date. Type the date, e.g. 2026-10-22.");
   }
   auto const date = date_at ? *date_of(words[*date_at]) : *today;
   std::vector<Event> choices;

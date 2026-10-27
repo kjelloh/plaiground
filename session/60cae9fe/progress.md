@@ -518,6 +518,19 @@ Task 55: The VAT return report lists each voucher posting under its account with
 up in the books by fiscal year, series and number); the last column is now headed `Text` (account names and voucher
 texts). Manual example updated. 442 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 56: `voucher>` needs the date typed (no date = today only at `event>`, when the year holds it). The line above
+`voucher>` names today (`The date is needed (today is <date>).`); a line without a date stays: `No date. Type the
+date, e.g. 2026-10-22.` (parse_event's error, was "No date, and today is outside ..."). The correction's line
+(`1` at `D 4>`) now ends with the corrected voucher's date (agreed in chat, was today), as does the right
+voucher's line after it. Manual: Heading, amount and date; Correcting a voucher;
+Noting an event. 443 tests pass, no warnings (Debug, trace DEBUG). In review.
+
+Task 57: The correction no longer offers the right voucher after it is saved (`Enter the right voucher now? (y/n)`,
+`Mode::ConfirmRight`, `corrected_` gone): the right postings are meant to be added in the correction voucher itself.
+Saved: `D 5 reverses D 4.` and back to the year prompt. Manual: Correcting a voucher. 443 tests pass, no warnings
+(Debug, trace DEBUG). Open: adding rows beyond the reversal cannot be saved yet (debit and credit must each equal the
+voucher amount). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
