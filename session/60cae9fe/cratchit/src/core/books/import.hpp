@@ -19,6 +19,15 @@ struct Identity {
   std::string orgnr; // empty until the first import sets it
 };
 
+// A voucher by the start of its fiscal year, its series and its number
+struct VoucherKey {
+  Date year;
+  std::string series;
+  std::string number;
+
+  auto operator<=>(VoucherKey const&) const = default;
+};
+
 // What importing an SIE file into the books would do
 struct ImportPlan {
   std::vector<std::string> errors; // when any, nothing may be imported
@@ -30,9 +39,23 @@ struct ImportPlan {
   Date year_end;
   std::size_t vouchers_added = 0;
   std::size_t vouchers_changed = 0; // in the books, with rows struck or added in the file
+  std::size_t vouchers_forced = 0;  // in the books, replaced by the file's against the history rule (see Forcing)
+  std::vector<std::string> forced;  // each forced voucher with its old and new version, for the log and the record
+  std::size_t forceable = 0;        // the errors a forced import would take (each also in errors)
   std::size_t vouchers_known = 0;   // already in the books, identical
   std::size_t accounts_added = 0;
   std::size_t accounts_changed = 0;
+
+  // True when there are errors and a forced import would take every one of them
+  bool can_force() const { return !errors.empty() && forceable == errors.size(); }
+};
+
+// The vouchers that came with SIE imports (see imported_vouchers), and whether to force: a voucher of an open year
+// that differs from the one in the books against the history rule is then taken from the file, when the one in the
+// books was imported (one entered in cratchit is another event with the same number, never forced)
+struct Forcing {
+  std::set<VoucherKey> imported;
+  bool force = false;
 };
 
 // Plans importing a parsed SIE 4E file (see sie::check_document for the file's own
@@ -48,6 +71,8 @@ struct ImportPlan {
 //   date and text may be edited), each row of the books in its place unchanged or struck
 //   (#BTRANS), a struck row still struck, and any further rows added (#RTRANS).
 //   Any other difference is an error, and so is a change in a closed year.
+//   With forcing, a differing voucher that was imported, in an open year, is
+//   taken from the file anyway; without, its error counts as forceable.
 //   Vouchers in the books but not in the file are noted.
 // - Accounts, dimensions, objects and company details: new ones are added;
 //   changes are taken (and noted) only from a file whose year is the latest in
@@ -57,7 +82,8 @@ struct ImportPlan {
 //   also of earlier years in the books) are only checked; each difference is
 //   noted with the vouchers that may explain it (those with that amount on the
 //   account), and so is any opening balance the import changes in other years.
-ImportPlan plan_import(Books const& books, Identity const& identity, sie::Document const& document);
+ImportPlan plan_import(Books const& books, Identity const& identity, sie::Document const& document,
+                       Forcing const& forcing = {});
 
 // True when the plan (without errors) adds nothing to the books: no new voucher, account or identity, and its year
 // is already there
@@ -103,18 +129,9 @@ struct Saved {
 // as .cratchit/imports/<today>_<n>_<file name> (n from 1, the first free) with a
 // record <copy>.txt of `path = value` lines: imported, source, encoding,
 // program, generated, company, orgnr, year, vouchers_added, vouchers_changed,
-// vouchers_known, notes. Must not be called for a plan with errors.
+// vouchers_known, notes, and `forced` (the vouchers, comma separated) when any. Must not be called for a plan with errors.
 std::expected<Saved, std::string> save_import(std::filesystem::path const& project_folder, ImportPlan const& plan,
                                               ImportSource const& source);
-
-// A voucher by the start of its fiscal year, its series and its number
-struct VoucherKey {
-  Date year;
-  std::string series;
-  std::string number;
-
-  auto operator<=>(VoucherKey const&) const = default;
-};
 
 // The vouchers that came with an SIE import: those of the stashed copies in
 // .cratchit/imports (every file there but the .txt records). No such folder

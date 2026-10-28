@@ -14,7 +14,7 @@ namespace cratchit {
 class PathEditor {
 public:
   enum class Result { Typing, Accepted, Cancelled, Back, Hint };
-  enum class Kind { Path, File, Name, Account, Voucher, Event, Row, Heading };
+  enum class Kind { Path, File, Name, Account, Voucher, Event, Row, Heading, Force };
 
   // Start over with text in the buffer, e.g. the root folder
   void start(std::string text, Kind kind = Kind::Path);
@@ -25,7 +25,8 @@ public:
 
   std::string const& text() const;
 
-  // "path> ", "name> ", "account> ", "voucher> ", "event> ", "post> " or "heading> " followed by the text so far
+  // "path> ", "name> ", "account> ", "voucher> ", "event> ", "post> ", "heading> " or "force> " followed by the text
+  // so far
   std::string prompt() const;
 
 private:

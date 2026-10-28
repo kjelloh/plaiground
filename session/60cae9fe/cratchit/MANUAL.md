@@ -188,7 +188,8 @@ separated list, for example `1,100,6,P1`. `type` is `T`, `S`, `K` or `I`
 imported file, named `<date>_<n>_<file name>`, and next to it a record
 `<date>_<n>_<file name>.txt` of the import: `imported`, `source`, `encoding`,
 `program`, `generated`, `company`, `orgnr`, `year`, `vouchers_added`,
-`vouchers_known` and `notes` (the number of notes shown).
+`vouchers_changed`, `vouchers_known`, `notes` (the number of notes shown) and,
+after a forced import, `forced` (the forced vouchers, e.g. `A 1, E 25`).
 
 `.cratchit/statements` in the project folder keeps an unchanged copy of every
 imported account statement file, named `<date>_<n>_<file name>`, and next to
@@ -1339,6 +1340,39 @@ Nothing is imported when the file:
 - has a checksum (`#KSUMMA`) that does not match its content
 - does not match the project or the books, as above
 
+#### Forcing an import
+
+When the only errors are vouchers that differ from the ones in the books
+against the rule above (`Voucher A 1 in the file differs from the one in the
+books (...)`), the import can be forced as a last resort, for example when the
+other program changed a voucher in a way the rule does not allow:
+
+```
+Nothing is imported.
+As a last resort the import can be forced: the file's 1 voucher then replaces the one in the books, against the history rule.
+Type force and Enter to see the forced import before it is done, or Enter alone not to.
+force> 
+```
+
+Type `force` and Enter: cratchit checks the file again with those vouchers
+taken from the file, and shows it as usual, with `1 forced` on the Vouchers
+line and a note per voucher (`Voucher A 1 is forced: the file's replaces the one
+in the books (the registration date differs)`), then asks `Import it? (y/n)`.
+Anything else, Enter alone or `-` imports nothing.
+
+Force is offered only when every error is such a voucher, and only for a
+voucher that came from an SIE import, in an open fiscal year. Never for:
+
+- another organisation number or company name, a year that overlaps or ends
+  otherwise, or any error in the file itself (see Errors)
+- a voucher of a closed year (open the year first)
+- a voucher entered in cratchit: a voucher in the file with its series and
+  number is another event, not a change
+
+A forced import logs each forced voucher with its version in the books and in
+the file (see The log), and its record lists them as `forced`. The earlier
+file stays stashed in `.cratchit/imports`, so the old version can still be read.
+
 #### Balances and notes
 
 cratchit keeps its own balances: a fiscal year directly after another in the
@@ -1834,7 +1868,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, each voucher forced by an import (its old and new version), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, an eSKD or SIE file it could not write, or an SIE export with characters CP437 does not have. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

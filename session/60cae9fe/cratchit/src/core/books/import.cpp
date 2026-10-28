@@ -294,7 +294,22 @@ void merge_master_data(ImportPlan& plan, sie::Document const& document, bool is_
 }
 
 // Adds the file's new vouchers to the year; the number of vouchers in the books missing from the file
-std::size_t merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear& year) {
+// A voucher in full for the log, e.g. `2026-04-20 "Loopia" registered 2026-07-15: row 1920 -323.75, row 2440 323.75`
+std::string voucher_text(Voucher const& voucher) {
+  auto text = std::format("{} \"{}\"", format_iso_date(voucher.event.date), voucher.event.heading);
+  if (voucher.registered) {
+    text += " registered " + format_iso_date(*voucher.registered);
+  }
+  if (!voucher.signature.empty()) {
+    text += " signed " + voucher.signature;
+  }
+  for (std::size_t i = 0; i < voucher.postings.size(); ++i) {
+    text += (i == 0 ? ": " : ", ") + posting_text(voucher.postings[i]);
+  }
+  return text;
+}
+
+std::size_t merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear& year, Forcing const& forcing) {
   std::set<std::pair<std::string, std::string>> in_file;
   std::vector<Voucher> added;
   for (auto const& record : document.vouchers) {
@@ -311,9 +326,22 @@ std::size_t merge_vouchers(ImportPlan& plan, sie::Document const& document, Fisc
     } else if (*it == voucher) {
       ++plan.vouchers_known;
     } else if (auto const reason = not_extended(*it, voucher)) {
+      auto const forceable = !year.closed && forcing.imported.contains({year.start, voucher.series, voucher.number});
+      if (forceable && forcing.force) {
+        plan.notes.push_back(std::format("Voucher {} is forced: the file's replaces the one in the books ({})",
+                                         voucher_name(voucher), *reason));
+        plan.forced.push_back(std::format("{} in fiscal year {}: in the books {}; in the file {}", voucher_name(voucher),
+                                          year_text(year), voucher_text(*it), voucher_text(voucher)));
+        *it = std::move(voucher);
+        ++plan.vouchers_forced;
+        continue;
+      }
       plan.errors.push_back(std::format("Voucher {} in the file differs from the one in the books ({}). A voucher in "
                                         "the books may only change by struck (#BTRANS) and added (#RTRANS) rows",
                                         voucher_name(voucher), *reason));
+      if (forceable) {
+        ++plan.forceable;
+      }
     } else if (year.closed) {
       plan.errors.push_back(std::format("Voucher {} in the file changes the one in the books ({}), but fiscal year {} "
                                         "is closed. Open the year to import the change",
@@ -460,7 +488,8 @@ void check_balances(ImportPlan& plan, Books const& before_books, sie::Document c
 
 } // namespace
 
-ImportPlan plan_import(Books const& books, Identity const& identity, sie::Document const& document) {
+ImportPlan plan_import(Books const& books, Identity const& identity, sie::Document const& document,
+                       Forcing const& forcing) {
   ImportPlan plan;
   plan.books = books;
   plan.identity = identity;
@@ -521,7 +550,7 @@ ImportPlan plan_import(Books const& books, Identity const& identity, sie::Docume
 
   auto& target = years[index_of(plan.books, year->start)];
   target.reported_opening = by_account(document.opening, 0);
-  auto const vouchers_missing = merge_vouchers(plan, document, target);
+  auto const vouchers_missing = merge_vouchers(plan, document, target, forcing);
   check_balances(plan, books, document, vouchers_missing);
   return plan;
 }
@@ -553,7 +582,7 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
       return std::unexpected(std::format("Cannot copy {} to {}: {}", source.file.string(),
                                          (project_folder / stash).string(), ec.message()));
     }
-    PathValues const entries{
+    PathValues entries{
         {"imported", source.today},
         {"source", source.file.string()},
         {"encoding", source.encoding},
@@ -567,6 +596,13 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
         {"vouchers_known", std::to_string(plan.vouchers_known)},
         {"notes", std::to_string(plan.notes.size())},
     };
+    if (plan.vouchers_forced > 0) {
+      std::string names;
+      for (auto const& forced : plan.forced) {
+        names += (names.empty() ? "" : ", ") + forced.substr(0, forced.find(" in fiscal year"));
+      }
+      entries.push_back({"forced", names});
+    }
     if (auto const result = write_path_values(project_folder / record, entries); !result) {
       return std::unexpected(result.error());
     }
@@ -577,7 +613,8 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
 }
 
 bool nothing_to_import(Books const& books, ImportPlan const& plan) {
-  return plan.vouchers_added == 0 && plan.vouchers_changed == 0 && plan.accounts_added == 0 && plan.accounts_changed == 0 &&
+  return plan.vouchers_added == 0 && plan.vouchers_changed == 0 && plan.vouchers_forced == 0 &&
+         plan.accounts_added == 0 && plan.accounts_changed == 0 &&
          !plan.identity_changed && books.year_starting(plan.year_start);
 }
 

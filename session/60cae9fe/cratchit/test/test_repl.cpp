@@ -737,6 +737,39 @@ TEST_F(WorkspaceRepl, AVoucherChangedByStruckAndAddedRowsImports) {
   EXPECT_EQ(books->years[0].vouchers[1].postings.size(), 4u);
 }
 
+TEST_F(WorkspaceRepl, ARefusedImportCanBeForced) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny");
+  auto later = good_sie();
+  later.replace(later.find("\"Sale\" 20250205"), 15, "\"Sale\" 20250206");
+  write_sie(root / "start" / "later.se", later);
+  auto const force_offer = std::string{
+      "Errors:\n"
+      "  - Voucher A 1 in the file differs from the one in the books (the registration date differs). A voucher in the "
+      "books may only change by struck (#BTRANS) and added (#RTRANS) rows\n"
+      "Nothing is imported.\n"
+      "As a last resort the import can be forced: the file's 1 voucher then replaces the one in the books, against the "
+      "history rule.\n"
+      "Type force and Enter to see the forced import before it is done, or Enter alone not to.\n"
+      "force> "};
+  // Anything but force imports nothing
+  auto const declined = run("2later.se\nno\n");
+  EXPECT_TRUE(declined.ends_with(force_offer + "no\nNothing is imported.\nproject> \n")) << declined;
+  auto const output = run("2later.se\nforce\ny");
+  EXPECT_NE(output.find(force_offer + "force\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("  Vouchers     2: 0 new, 1 forced, 1 already in the books\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("  - Voucher A 1 is forced: the file's replaces the one in the books (the registration date "
+                        "differs)\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Imported 0 vouchers and forced 1 into fiscal year 2025-01-01 - 2025-12-31 (1 already "
+                               "in the books).\nproject> \n"))
+      << output;
+  auto const record = read_file(root / "start" / "Test" / ".cratchit" / "imports" / "2026-10-20_1_later.se.txt");
+  EXPECT_NE(record.find("forced = A 1\n"), std::string::npos) << record;
+}
+
 TEST_F(WorkspaceRepl, FileWithErrorsIsNotImported) {
   run("112Test\n1");
   write_sie(root / "start" / "bad.se",

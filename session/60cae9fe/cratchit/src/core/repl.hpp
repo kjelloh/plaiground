@@ -163,6 +163,7 @@ private:
     StatementFile,
     StatementAccount,
     EventHeading,
+    Force,
   };
 
   WorkspacePlaces places_;
@@ -185,6 +186,7 @@ private:
   std::optional<books::ImportPlan> plan_; // the import waiting for y/n
   books::ImportSource import_source_;
   Mode before_import_ = Mode::Project;   // where an SIE import started (project or year prompt)
+  std::filesystem::path refused_file_;   // the SIE file whose import was refused, to force at force>
   books::SieFolder sie_folder_;          // the SIE files listed in a folder
   ItemList sie_page_;                    // the page of the SIE files
   books::Books books_;                  // the books the reports are about
@@ -277,7 +279,7 @@ private:
   void add_existing_project(std::filesystem::path const& folder, std::ostream& out);
   void enter_project(Project const& project, std::ostream& out);
   void start_import(std::ostream& out);
-  void check_import(std::filesystem::path const& file, std::ostream& out);
+  void check_import(std::filesystem::path const& file, std::ostream& out, bool force = false);
   void on_confirm_import_key(charset::unicode::CodePoint key, std::ostream& out);
   void import(std::ostream& out);
   void open_years(std::ostream& out);

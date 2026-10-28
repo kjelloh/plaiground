@@ -960,6 +960,15 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
     on_row(result, out);
     return;
   }
+  if (purpose_ == Purpose::Force) {
+    if (result == PathEditor::Result::Accepted && editor_.text() == "force") {
+      check_import(refused_file_, out, true);
+      return;
+    }
+    std::println(out, "Nothing is imported.");
+    mode_ = before_import_;
+    return;
+  }
   if (purpose_ == Purpose::SieFile) {
     if (result == PathEditor::Result::Cancelled) {
       mode_ = before_import_;
@@ -1449,7 +1458,8 @@ void Repl::on_sie_files_key(charset::unicode::CodePoint key, std::ostream& out) 
 }
 
 // Reads, checks and plans the import of an SIE file, shows what it would do, and asks
-void Repl::check_import(fs::path const& file, std::ostream& out) {
+// With force, vouchers that differ against the history rule are taken from the file (see books::Forcing)
+void Repl::check_import(fs::path const& file, std::ostream& out, bool force) {
   mode_ = before_import_;
   auto const lexed = sie::lex_file(file);
   if (!lexed) {
@@ -1462,7 +1472,13 @@ void Repl::check_import(fs::path const& file, std::ostream& out) {
     std::println(out, "Error: {}", books.error());
     return;
   }
-  auto plan = books::plan_import(*books, {project_->name, project_->orgnr}, parsed.document);
+  auto imported = books::imported_vouchers(project_->folder);
+  if (!imported) {
+    std::println(out, "Error: {}", imported.error());
+    return;
+  }
+  auto plan = books::plan_import(*books, {project_->name, project_->orgnr}, parsed.document,
+                                 {std::move(*imported), force});
   plan.errors.insert(plan.errors.begin(), parsed.errors.begin(), parsed.errors.end());
   if (!lexed->alert.empty()) {
     plan.notes.insert(plan.notes.begin(), lexed->alert);
@@ -1478,9 +1494,10 @@ void Repl::check_import(fs::path const& file, std::ostream& out) {
   }
   std::println(out, "  Accounts     {}: {} new, {} changed", document.accounts.size(), plan.accounts_added,
                plan.accounts_changed);
-  std::println(out, "  Vouchers     {}: {} new, {}{} already in the books", document.vouchers.size(),
+  std::println(out, "  Vouchers     {}: {} new, {}{}{} already in the books", document.vouchers.size(),
                plan.vouchers_added,
                plan.vouchers_changed > 0 ? std::format("{} changed, ", plan.vouchers_changed) : std::string{},
+               plan.vouchers_forced > 0 ? std::format("{} forced, ", plan.vouchers_forced) : std::string{},
                plan.vouchers_known);
   if (!plan.notes.empty()) {
     std::println(out, "Notes:");
@@ -1503,6 +1520,18 @@ void Repl::check_import(fs::path const& file, std::ostream& out) {
       LOG_BUSINESS("Import refused: {}", error);
     }
     std::println(out, "Nothing is imported.");
+    if (plan.can_force()) {
+      refused_file_ = file;
+      std::println(out, "As a last resort the import can be forced: the file's {} then replace{} the one{} in the books, "
+                    "against the history rule.",
+                   counted(plan.forceable, "voucher", "vouchers"), plan.forceable == 1 ? "s" : "",
+                   plan.forceable == 1 ? "" : "s");
+      std::println(out, "Type force and Enter to see the forced import before it is done, or Enter alone not to.");
+      purpose_ = Purpose::Force;
+      editor_.start("", PathEditor::Kind::Force);
+      mode_ = Mode::Typing;
+      out << editor_.prompt();
+    }
     return;
   }
   if (books::nothing_to_import(*books, plan)) {
@@ -1556,15 +1585,19 @@ void Repl::import(std::ostream& out) {
     }
   }
   std::println(out, "Stashed the file as {} in {}", saved->stashed.generic_string(), project_->folder.string());
-  std::println(out, "Imported {} voucher{}{} into fiscal year {} - {} ({} already in the books).", plan.vouchers_added,
-               plan.vouchers_added == 1 ? "" : "s",
+  std::println(out, "Imported {} voucher{}{}{} into fiscal year {} - {} ({} already in the books).",
+               plan.vouchers_added, plan.vouchers_added == 1 ? "" : "s",
                plan.vouchers_changed > 0 ? std::format(" and changed {}", plan.vouchers_changed) : std::string{},
+               plan.vouchers_forced > 0 ? std::format(" and forced {}", plan.vouchers_forced) : std::string{},
                format_iso_date(plan.year_start), format_iso_date(plan.year_end), plan.vouchers_known);
   LOG_BUSINESS("Imported SIE file {} into project {} ({}): fiscal year {} - {}, {} vouchers added, {} changed, {} "
-               "already in the books, stashed as {}",
+               "forced, {} already in the books, stashed as {}",
                import_source_.file.string(), project_->name, project_->uuid, format_iso_date(plan.year_start),
-               format_iso_date(plan.year_end), plan.vouchers_added, plan.vouchers_changed, plan.vouchers_known,
-               saved->stashed.generic_string());
+               format_iso_date(plan.year_end), plan.vouchers_added, plan.vouchers_changed, plan.vouchers_forced,
+               plan.vouchers_known, saved->stashed.generic_string());
+  for (auto const& forced : plan.forced) {
+    LOG_BUSINESS("Forced voucher {}", forced);
+  }
   for (auto const& note : plan.notes) {
     LOG_BUSINESS("Import note: {}", note);
   }

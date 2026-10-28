@@ -137,6 +137,58 @@ TEST(Import, AnotherRegistrationDateIsAnError) {
       << all(plan.errors);
 }
 
+// The 2025 file with voucher A 1 registered a day later, which the history rule refuses
+std::string registered_later() {
+  auto file = file_2025();
+  file.replace(file.find("\"Sale\" 20250205"), 15, "\"Sale\" 20250206");
+  return file;
+}
+
+cratchit::books::VoucherKey const a1{2025y / January / 1, "A", "1"};
+
+TEST(Import, AnImportedVoucherThatDiffersCanBeForced) {
+  auto const books = imported({file_2025()});
+  auto const refused = plan_import(books, known, parse_sie(registered_later()), {{a1}, false});
+  EXPECT_EQ(refused.errors.size(), 1u) << all(refused.errors);
+  EXPECT_EQ(refused.forceable, 1u);
+  EXPECT_TRUE(refused.can_force());
+  auto const forced = plan_import(books, known, parse_sie(registered_later()), {{a1}, true});
+  EXPECT_TRUE(forced.errors.empty()) << all(forced.errors);
+  EXPECT_EQ(forced.vouchers_forced, 1u);
+  EXPECT_TRUE(has(forced.notes, "Voucher A 1 is forced: the file's replaces the one in the books (the registration "
+                                "date differs)"))
+      << all(forced.notes);
+  ASSERT_EQ(forced.forced.size(), 1u);
+  EXPECT_EQ(forced.forced[0], "A 1 in fiscal year 2025-01-01 - 2025-12-31: in the books 2025-02-01 \"Sale\" registered "
+                              "2025-02-05: row 1930 500.00, row 3010 -500.00; in the file 2025-02-01 \"Sale\" "
+                              "registered 2025-02-06: row 1930 500.00, row 3010 -500.00");
+  EXPECT_EQ(forced.books.years[0].vouchers[0].registered, 2025y / February / 6);
+  EXPECT_FALSE(cratchit::books::nothing_to_import(books, forced));
+}
+
+TEST(Import, NotForcedInAClosedYearOrOverAnEnteredVoucher) {
+  auto books = imported({file_2025()});
+  // Not imported: entered in cratchit, another event with the same number
+  auto const entered = plan_import(books, known, parse_sie(registered_later()), {{}, true});
+  EXPECT_EQ(entered.errors.size(), 1u);
+  EXPECT_EQ(entered.forceable, 0u);
+  EXPECT_FALSE(entered.can_force());
+  books.years[0].closed = true;
+  auto const closed = plan_import(books, known, parse_sie(registered_later()), {{a1}, true});
+  EXPECT_EQ(closed.errors.size(), 1u);
+  EXPECT_EQ(closed.vouchers_forced, 0u);
+  EXPECT_FALSE(closed.can_force());
+}
+
+TEST(Import, NoForceWithOtherErrors) {
+  auto const books = imported({file_2025()});
+  auto const file = registered_later() + "#VER A 3 20250401 \"Odd\"\r\n{\r\n#TRANS 1930 {} 1\r\n}\r\n";
+  auto const plan = plan_import(books, known, parse_sie(file), {{a1}, false});
+  EXPECT_EQ(plan.forceable, 1u);
+  EXPECT_GT(plan.errors.size(), 1u);
+  EXPECT_FALSE(plan.can_force());
+}
+
 TEST(Import, AnEditedTextOrDateChangesAVoucher) {
   auto const books = imported({file_2025()});
   auto text = file_2025();

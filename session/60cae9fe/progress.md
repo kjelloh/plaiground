@@ -729,6 +729,21 @@ entries are matched by date, so booked/not booked may shift. Tests: `AChangedVou
 `AnotherRegistrationDateIsAnError`; new `AnEditedTextOrDateChangesAVoucher`, `AnEditedDateWithStruckAndAddedRows`,
 closed-year text edit. Manual: What the import does. 485 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 76: Forcing an SIE import (last resort). `books::Forcing` (imported `VoucherKey`s + `force`), optional 4th
+argument of `plan_import`; `VoucherKey` moved above `ImportPlan`. A voucher that fails the history rule (`not_extended`)
+is forceable when it was imported (key in `imported_vouchers`) and its year is open; `ImportPlan::forceable` counts
+those errors, `can_force()` = errors and all of them forceable (file errors inserted by `check_import` are not, so a
+file with other errors is never forceable). With force: the file's voucher replaces the one in the books, note
+`Voucher A 1 is forced: the file's replaces the one in the books (<reason>)`, `vouchers_forced`, `forced` (`A 1 in
+fiscal year ...: in the books <voucher_text>; in the file <voucher_text>`). Never forced: a closed year, a voucher
+entered in cratchit, any non-voucher error. REPL: after `Nothing is imported.` a forceable plan offers `force>` (new
+`PathEditor::Kind::Force`, `Purpose::Force`, `Repl::refused_file_`); `force` + Enter re-checks with force
+(`check_import(file, out, force)`) and shows the summary (`1 forced,`) and `Import it? (y/n)`; anything else, Enter or
+`-`: `Nothing is imported.`. Import: `Imported 0 vouchers and forced 1 ...`, business log per forced voucher (`Forced
+voucher ...` with old and new), record line `forced = A 1, ...` (only when any). `check_import` now reads
+`imported_vouchers` (an unreadable stash is an error). Picker unchanged (shows `n errors`). Manual: files (record),
+new "Forcing an import", log kinds. 489 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -932,7 +947,10 @@ into a waiting event without making a voucher, several entries chosen at once.
 
 - 2026-10-28: An SIE import is the truth, but may change a voucher in the books only by history: rows struck
   (#BTRANS) in place and rows added (#RTRANS) after; its text and date may be edited (Fortnox allows it), its
-  registration date and signature not. Anything else, or a change in a closed year, stops the import
+  registration date and signature not.
+- 2026-10-28: A refused SIE import can be forced as a last resort (type `force`), only when every error is an
+  imported voucher of an open year differing against the history rule; never over a voucher entered in cratchit, in a
+  closed year, or with other errors. Each forced voucher is logged with its old and new version. Anything else, or a change in a closed year, stops the import
   with the reason shown and logged (business). Checks of reports over changed periods are a separate task.
 
 - 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted

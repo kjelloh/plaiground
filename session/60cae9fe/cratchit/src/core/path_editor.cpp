@@ -96,6 +96,8 @@ std::string PathEditor::prompt() const {
     return "post> " + text_;
   case Kind::Heading:
     return "heading> " + text_;
+  case Kind::Force:
+    return "force> " + text_;
   default:
     return "path> " + text_;
   }

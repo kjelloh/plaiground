@@ -82,6 +82,11 @@ I now also discovered that Fortnox allows the text and date of an existing vouch
     * And registration DAte and signature is still strict.
     * That seems reasonable to me!
 
+I now also made Claude implement a 'force import' (to allow resolution of tricky situations)
+
+* But force only allows import of vouchers with violated history.
+* The import must still be for same company, same financial year start/end etc.
+
 ## 20261027
 
 So now then we are ready to start generating the VAT Returns form document?
