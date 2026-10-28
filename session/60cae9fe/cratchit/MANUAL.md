@@ -1305,15 +1305,18 @@ and nothing is imported.
 - New vouchers are added. A voucher already in the books (same series and
   number) is skipped when it is identical. The file is the truth, but history
   may only be added to: a voucher that differs is taken from the file only when
-  its date, text, registration date and signature are the same, each of its
-  rows in the books is in the file in the same place, unchanged or struck
-  (`#BTRANS`), a struck row is still struck, and any further rows are added
-  (`#RTRANS`, possibly struck since). It is then noted, e.g.
-  `Voucher E 25 changes: 2 rows struck, 2 added (signed Kjell-Olov Högdahl)`,
+  its registration date and signature are the same (its date and text may have
+  been edited), each of its rows in the books is in the file in the same place,
+  unchanged or struck (`#BTRANS`), a struck row is still struck, and any
+  further rows are added (`#RTRANS`, possibly struck since). It is then noted,
+  e.g. `Voucher E 25 changes: date 2026-04-20 to 2026-04-22, 2 rows struck, 2
+  added (signed Kjell-Olov Högdahl)` or `Voucher A 2 changes: text "Bank cost"
+  to "Bank fee"`,
   and the summary says `Vouchers 116: 0 new, 1 changed, 115 already in the
   books`. Any other difference is an error that names the voucher and what
   differs, for example `row 1 is row 6570 10.00 in the books, row 6570 12.00
-  in the file; a row may only be struck`, and nothing is imported. So is a
+  in the file; a row may only be struck` or `the registration date differs`,
+  and nothing is imported. So is a
   change to a voucher of a closed fiscal year: open the year (8 at the year
   prompt) and import again. Vouchers in the books that the file lacks are
   noted and kept.

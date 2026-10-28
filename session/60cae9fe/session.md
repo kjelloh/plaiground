@@ -76,6 +76,11 @@ I have now worked on SIE file import some more.
 
 I now also discovered that Fortnox allows the text and date of an existing voucher to be changed.
 
+* I asked Claude to make the SIE Import to accept voucher text and date to change compared to whats already in  cratchit books.
+    * It says it succeeded.
+    * In SIE a voucher comes with both 'registration date' and 'date' (event date)
+    * And registration DAte and signature is still strict.
+    * That seems reasonable to me!
 
 ## 20261027
 

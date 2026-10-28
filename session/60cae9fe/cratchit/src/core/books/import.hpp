@@ -44,8 +44,8 @@ struct ImportPlan {
 //   the same start must have the same end.
 // - Vouchers: new ones are added. One already in the books (same series and
 //   number) is skipped when identical. It is taken from the file (and noted)
-//   when only history is added: the same date, text, registration and
-//   signature, each row of the books in its place unchanged or struck
+//   when only history is added: the same registration and signature (the
+//   date and text may be edited), each row of the books in its place unchanged or struck
 //   (#BTRANS), a struck row still struck, and any further rows added (#RTRANS).
 //   Any other difference is an error, and so is a change in a closed year.
 //   Vouchers in the books but not in the file are noted.

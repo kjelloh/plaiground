@@ -61,47 +61,21 @@ std::string posting_text(Posting const& t) {
                      t.text.empty() ? "" : std::format(" \"{}\"", t.text));
 }
 
-// What differs between a voucher in the books and the one in the file
-std::string difference(Voucher const& books, Voucher const& file) {
-  if (books.event.date != file.event.date) {
-    return std::format("date {} in the books, {} in the file", format_iso_date(books.event.date),
-                       format_iso_date(file.event.date));
-  }
-  if (books.event.heading != file.event.heading) {
-    return std::format("text \"{}\" in the books, \"{}\" in the file", books.event.heading, file.event.heading);
-  }
-  if (books.registered != file.registered) {
-    return "the registration date differs";
-  }
-  if (books.signature != file.signature) {
-    return "the signature differs";
-  }
-  for (std::size_t i = 0; i < std::min(books.postings.size(), file.postings.size()); ++i) {
-    if (books.postings[i] != file.postings[i]) {
-      return std::format("{} in the books, {} in the file", posting_text(books.postings[i]),
-                         posting_text(file.postings[i]));
-    }
-  }
-  if (books.postings.size() == file.postings.size()) {
-    return std::format("amount {} in the books, {} in the file", format_amount(books.event.amount),
-                       format_amount(file.event.amount));
-  }
-  return std::format("{} rows in the books, {} in the file", books.postings.size(), file.postings.size());
-}
-
 // The same row but for its kind and signature, e.g. a row and the same row struck
 bool same_row(Posting const& a, Posting const& b) {
   return a.account == b.account && a.objects == b.objects && a.amount == b.amount && a.date == b.date &&
          a.text == b.text && a.quantity == b.quantity;
 }
 
-// Why the file's voucher is not the one in the books with history added, or nothing when it is: the same date, text,
-// registration and signature; each row of the books in its place, unchanged or struck (#BTRANS), a struck row still
-// struck; any rows after them added (#RTRANS, possibly struck since)
+// Why the file's voucher is not the one in the books with history added, or nothing when it is: the same
+// registration and signature (the date and text may be edited); each row of the books in its place, unchanged or
+// struck (#BTRANS), a struck row still struck; any rows after them added (#RTRANS, possibly struck since)
 std::optional<std::string> not_extended(Voucher const& books, Voucher const& file) {
-  if (books.event.date != file.event.date || books.event.heading != file.event.heading ||
-      books.registered != file.registered || books.signature != file.signature) {
-    return difference(books, file);
+  if (books.registered != file.registered) {
+    return "the registration date differs";
+  }
+  if (books.signature != file.signature) {
+    return "the signature differs";
   }
   if (file.postings.size() < books.postings.size()) {
     return std::format("{} rows in the books, {} in the file; a row may be struck, not left out",
@@ -127,8 +101,17 @@ std::optional<std::string> not_extended(Voucher const& books, Voucher const& fil
   return std::nullopt;
 }
 
-// What a change to a voucher did, e.g. "2 rows struck, 2 added (signed Kjell-Olov Högdahl)"
+// What a change to a voucher did, e.g. "date 2026-04-20 to 2026-04-22, 2 rows struck, 2 added (signed Kjell-Olov
+// Högdahl)"; rows only when rows changed
 std::string change_text(Voucher const& books, Voucher const& file) {
+  std::vector<std::string> parts;
+  if (books.event.heading != file.event.heading) {
+    parts.push_back(std::format("text \"{}\" to \"{}\"", books.event.heading, file.event.heading));
+  }
+  if (books.event.date != file.event.date) {
+    parts.push_back(
+        std::format("date {} to {}", format_iso_date(books.event.date), format_iso_date(file.event.date)));
+  }
   std::size_t struck = 0;
   std::vector<std::string> signatures;
   auto const sign = [&](Posting const& p) {
@@ -151,8 +134,15 @@ std::string change_text(Voucher const& books, Voucher const& file) {
   for (auto const& signature : signatures) {
     signed_by += (signed_by.empty() ? " (signed " : ", ") + signature;
   }
-  return std::format("{} row{} struck, {} added{}", struck, struck == 1 ? "" : "s", added,
-                     signed_by.empty() ? "" : signed_by + ")");
+  if (struck > 0 || added > 0) {
+    parts.push_back(std::format("{} row{} struck, {} added{}", struck, struck == 1 ? "" : "s", added,
+                                signed_by.empty() ? "" : signed_by + ")"));
+  }
+  std::string result;
+  for (auto const& part : parts) {
+    result += (result.empty() ? "" : ", ") + part;
+  }
+  return result;
 }
 
 std::map<std::string, Amount> by_account(std::vector<sie::Balance> const& balances, int year) {

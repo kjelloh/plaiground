@@ -126,15 +126,32 @@ TEST(Import, NewVouchersOfAKnownYearAreAdded) {
   EXPECT_EQ(plan.books.years[0].vouchers.size(), 2u);
 }
 
-TEST(Import, AChangedVoucherIsAnError) {
+TEST(Import, AnotherRegistrationDateIsAnError) {
   auto const books = imported({file_2025()});
   auto changed = file_2025();
-  changed.replace(changed.find("\"Bank cost\""), 11, "\"Bank fee\"");
+  changed.replace(changed.find("\"Sale\" 20250205"), 15, "\"Sale\" 20250206");
   auto const plan = plan_import(books, known, parse_sie(changed));
-  EXPECT_TRUE(has(plan.errors, "Voucher A 2 in the file differs from the one in the books (text \"Bank cost\" in the "
-                               "books, \"Bank fee\" in the file). A voucher in the books may only change by struck "
-                               "(#BTRANS) and added (#RTRANS) rows"))
+  EXPECT_TRUE(has(plan.errors, "Voucher A 1 in the file differs from the one in the books (the registration date "
+                               "differs). A voucher in the books may only change by struck (#BTRANS) and added "
+                               "(#RTRANS) rows"))
       << all(plan.errors);
+}
+
+TEST(Import, AnEditedTextOrDateChangesAVoucher) {
+  auto const books = imported({file_2025()});
+  auto text = file_2025();
+  text.replace(text.find("\"Bank cost\""), 11, "\"Bank fee\"");
+  auto const by_text = plan_import(books, known, parse_sie(text));
+  EXPECT_TRUE(by_text.errors.empty()) << all(by_text.errors);
+  EXPECT_TRUE(has(by_text.notes, "Voucher A 2 changes: text \"Bank cost\" to \"Bank fee\"")) << all(by_text.notes);
+  EXPECT_EQ(by_text.vouchers_changed, 1u);
+  EXPECT_EQ(by_text.books.years[0].vouchers[1].event.heading, "Bank fee");
+  auto date = file_2025();
+  date.replace(date.find("A 2 20250301"), 12, "A 2 20250303");
+  auto const by_date = plan_import(books, known, parse_sie(date));
+  EXPECT_TRUE(by_date.errors.empty()) << all(by_date.errors);
+  EXPECT_TRUE(has(by_date.notes, "Voucher A 2 changes: date 2025-03-01 to 2025-03-03")) << all(by_date.notes);
+  EXPECT_EQ(by_date.books.years[0].vouchers[1].event.date, 2025y / March / 3);
 }
 
 // The 2025 file with the given rows (CRLF lines) in voucher A 2 instead of 6570 10 and 1930 -10
@@ -168,6 +185,17 @@ TEST(Import, StruckAndAddedRowsChangeAVoucher) {
   EXPECT_TRUE(again.errors.empty()) << all(again.errors);
   EXPECT_EQ(again.vouchers_changed, 0u);
   EXPECT_TRUE(cratchit::books::nothing_to_import(plan.books, again));
+}
+
+TEST(Import, AnEditedDateWithStruckAndAddedRows) {
+  auto const books = imported({file_2025()});
+  auto file = with_a2_rows(struck_and_added);
+  file.replace(file.find("A 2 20250301"), 12, "A 2 20250303");
+  auto const plan = plan_import(books, known, parse_sie(file));
+  EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+  EXPECT_TRUE(has(plan.notes, "Voucher A 2 changes: date 2025-03-01 to 2025-03-03, 2 rows struck, 2 added (signed "
+                              "Kjell)"))
+      << all(plan.notes);
 }
 
 TEST(Import, AnAddedRowMayBeStruckLater) {
@@ -227,6 +255,14 @@ TEST(Import, AChangeInAClosedYearIsAnError) {
                                "the change"))
       << all(plan.errors);
   EXPECT_EQ(plan.vouchers_changed, 0u);
+  // Also an edited text
+  auto text = file_2025();
+  text.replace(text.find("\"Bank cost\""), 11, "\"Bank fee\"");
+  auto const by_text = plan_import(books, known, parse_sie(text));
+  EXPECT_TRUE(has(by_text.errors, "Voucher A 2 in the file changes the one in the books (text \"Bank cost\" to \"Bank "
+                                  "fee\"), but fiscal year 2025-01-01 - 2025-12-31 is closed. Open the year to import "
+                                  "the change"))
+      << all(by_text.errors);
 }
 
 TEST(Import, VouchersMissingFromTheFileAreNoted) {

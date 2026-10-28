@@ -720,6 +720,15 @@ back as plain rows, added rows left out) followed by Fortnox's real file: 3 chan
 A 56: 2 added), no errors. Not REPL-tested: the closed-year refusal and the log line (unit-tested / by reading). In
 review.
 
+Task 75: Fortnox lets a voucher's text and date be edited, so the import accepts them: `not_extended` checks only the
+registration date and signature (`the registration date differs` / `the signature differs`), then the rows as
+before. `change_text` names `text "a" to "b"` and `date X to Y` before the rows, which are named only when rows
+changed (`Voucher A 2 changes: text "Bank cost" to "Bank fee"`). Closed year: an edited text or date is refused like
+any change. `difference` removed (unused). A voucher's rows without their own date follow its new date; statement
+entries are matched by date, so booked/not booked may shift. Tests: `AChangedVoucherIsAnError` became
+`AnotherRegistrationDateIsAnError`; new `AnEditedTextOrDateChangesAVoucher`, `AnEditedDateWithStruckAndAddedRows`,
+closed-year text edit. Manual: What the import does. 485 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -922,7 +931,8 @@ into a waiting event without making a voucher, several entries chosen at once.
   note, waiting events, statement entries, view vouchers. The other year keys keep their numbers (2, 3, 4, 6 free).
 
 - 2026-10-28: An SIE import is the truth, but may change a voucher in the books only by history: rows struck
-  (#BTRANS) in place and rows added (#RTRANS) after. Anything else, or a change in a closed year, stops the import
+  (#BTRANS) in place and rows added (#RTRANS) after; its text and date may be edited (Fortnox allows it), its
+  registration date and signature not. Anything else, or a change in a closed year, stops the import
   with the reason shown and logged (business). Checks of reports over changed periods are a separate task.
 
 - 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted
