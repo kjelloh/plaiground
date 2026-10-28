@@ -22,6 +22,7 @@ I AM SOOO TIRED!!
 * Claude now also shows only boxes aggregated FROM BAS accounts (49 mapped to out bas accounts excluded)
 * Claude implemented calculation of Box 49 (and the signs seem legit for now)
 * Vibe coded so all VAT boxes are truncated to whole SEK (round towards zero)
+* Vibe coded a Vat Returns report voucher candidate mechanism.
 
 ## 20261027
 

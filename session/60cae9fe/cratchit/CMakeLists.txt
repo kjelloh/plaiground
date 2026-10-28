@@ -61,6 +61,7 @@ add_library(cratchit_core
   src/core/sie/file.cpp
   src/core/sie/lexer.cpp
   src/core/skv/vat_return/box.cpp
+  src/core/skv/vat_return/clearing.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/account_boxes.cpp
   src/core/skv/vat_return/document.cpp
   src/core/skv/vat_return/report.cpp

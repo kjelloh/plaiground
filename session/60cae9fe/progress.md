@@ -551,6 +551,15 @@ Task 60: VAT return boxes in whole kronor. `document_of` truncates each box's am
 the truncated boxes. Steps unchanged (not rounded). Test `AQuarterAcrossTwoFiscalYears` expects boxes 10 -17.00 and
 48 2.00. Manual: "The VAT return". 446 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 61: VAT clearing voucher candidate (`core/skv/vat_return/clearing`), in memory only, no UI. `clearing_of(Document)`
+-> optional `Clearing` (`books::Event` + `books::Postings`, no series or number): each account of a VAT box
+(`vat_boxes`) minus its change in the period (öre and all; not the saldo, which is zero at each period start when
+every period is cleared); box 49 (`vat_to_pay`, whole kronor): to pay credits 2650, to get back debits 1650, none at
+0; `rounding_account` = 3740 takes what makes the voucher add up to zero (none when nothing). Event: `Momsrapport
+<first> - <last>`, the period's last day, amount = debit total. Nothing when no VAT account changed (so a period
+already cleared gives none; may change when the full report can be generated again). By `steps_of`'s rule it is a
+clearing voucher. No manual change (no user operation). 451 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -738,6 +747,10 @@ into a waiting event without making a voucher, several entries chosen at once.
 - 2026-10-27: VAT periods: key 0 is the newest ended quarter, older counting up; the last quarter ended before
   today is the one to report next. `+` peeks at the quarter running today ("so far"); `?` stays a hint. The list
   stays per fiscal year (switch year for other quarters).
+
+- 2026-10-28: The VAT return form's boxes are whole kronor, öre dropped (towards zero). The clearing voucher empties
+  the period's changes on the VAT box accounts (not the saldo), books box 49 on 2650 (to pay) or 1650 (to get back)
+  by its sign, and the rest on 3740 Öres- och kronutjämning; series M, dated the period's last day.
 
 ## Open questions
 

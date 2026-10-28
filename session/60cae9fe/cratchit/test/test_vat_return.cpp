@@ -1,5 +1,6 @@
 #include "core/skv/vat_return/account_boxes.hpp"
 #include "core/skv/vat_return/box.hpp"
+#include "core/skv/vat_return/clearing.hpp"
 #include "core/skv/vat_return/document.hpp"
 #include "core/skv/vat_return/report.hpp"
 #include "core/skv/vat_return/steps.hpp"
@@ -265,4 +266,48 @@ TEST(VatReturn, ReportBox49IsMinusBox48WithOnlyInputVat) {
   EXPECT_NE(std::ranges::find(lines, "49                                         -120.00  10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48"),
             lines.end());
   EXPECT_EQ(lines.back(), "Box 49 on the form: 120.00 to get back.");
+}
+
+TEST(VatReturn, ClearingToPayBooksTheOreOnTheRoundingAccount) {
+  // Box 10 2611 -250.50 (form 250), box 48 2641 100.30 (form 100): 150 to pay, 0.20 left
+  Document const document{*quarter_of(2026y, 2),
+                          {{"05", -100000, {{"3001", -100000, {}}}},
+                           {"10", -25000, {{"2611", -25050, {}}}},
+                           {"48", 10000, {{"2641", 10030, {}}}}}};
+  auto const clearing = clearing_of(document);
+  ASSERT_TRUE(clearing);
+  EXPECT_EQ(clearing->event, (books::Event{"Momsrapport 2026-04-01 - 2026-06-30", 25050, 2026y / June / 30}));
+  EXPECT_EQ(clearing->postings, (books::Postings{posting("2611", 25050), posting("2641", -10030),
+                                                 posting("2650", -15000), posting("3740", -20)}));
+}
+
+TEST(VatReturn, ClearingToGetBackDebitsTheReceivable) {
+  Document const document{*quarter_of(2026y, 3), {{"48", 12000, {{"2641", 12030, {}}}}}};
+  auto const clearing = clearing_of(document);
+  ASSERT_TRUE(clearing);
+  EXPECT_EQ(clearing->postings, (books::Postings{posting("2641", -12030), posting("1650", 12000), posting("3740", 30)}));
+  EXPECT_EQ(clearing->event.amount, 12030);
+}
+
+TEST(VatReturn, ClearingOfNothingToPayHasNoBox49Row) {
+  Document const document{*quarter_of(2026y, 3),
+                          {{"10", -10000, {{"2611", -10050, {}}}}, {"48", 10000, {{"2641", 10050, {}}}}}};
+  auto const clearing = clearing_of(document);
+  ASSERT_TRUE(clearing);
+  EXPECT_EQ(clearing->postings, (books::Postings{posting("2611", 10050), posting("2641", -10050)}));
+}
+
+TEST(VatReturn, ClearingNeedsAVatAccountThatChanged) {
+  EXPECT_FALSE(clearing_of(Document{*quarter_of(2026y, 3), {{"05", -100000, {{"3001", -100000, {}}}}}}));
+  EXPECT_FALSE(clearing_of(Document{*quarter_of(2026y, 3), {{"10", 0, {{"2611", 0, {}}}}}}));
+}
+
+TEST(VatReturn, ClearingOfTheBooksBalances) {
+  // Box 10 2611 -17.50 (form 17), box 48 2641 2.50 (form 2): 15 to pay, the öre cancel out
+  auto const document = document_of(two_years(), *quarter_of(2026y, 2));
+  auto const clearing = clearing_of(document);
+  ASSERT_TRUE(clearing);
+  EXPECT_EQ(clearing->postings, (books::Postings{posting("2611", 1750), posting("2641", -250), posting("2650", -1500)}));
+  EXPECT_EQ(books::debit(clearing->postings), books::credit(clearing->postings));
+  EXPECT_EQ(clearing->event.amount, 1750);
 }
