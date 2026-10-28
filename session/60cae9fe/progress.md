@@ -577,6 +577,15 @@ return was filed (D 29 2022, I 6 2025); 7 hand-made early ones (2017-18, 2021 Q4
 clearing rule (2650/1650 + VAT account) also takes corrections (A 18 2023, A 1 2024) and a reverse-charge purchase
 posted against 2650 (A 48 2026) as clearings.
 
+Task 63: VAT return boxes as on the form. `box.hpp`: `credit_boxes` (05-08, 10-12, 30-32, 35, 36, 38-42, 60-62:
+sales and output VAT, credit in the books). `document_of` turns the sign of a credit box's sum, then truncates; the
+purchase bases (20-24, 37, 50) and 48 keep the books' sign. Accounts and voucher postings under a box keep the books'
+sign (so `clearing_of` is unchanged). `vat_to_pay` is plain addition of form figures (same results). Report line now
+"Box amounts are as on the form; accounts and vouchers as in the books: debit positive, credit negative." Confirmed by
+momsrapport.csv (no signs; box 48 has its own choice for the negative case), SKV's eSKD page and the filed
+moms_202603.eskd. Also added `resources/momsrapport/momsrapport_box_to_eskd.csv` (`box;tag`, 29 boxes in SKV's file
+order; not read by code yet). Manual: "The VAT return". 453 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -768,6 +777,11 @@ into a waiting event without making a voucher, several entries chosen at once.
 - 2026-10-28: The VAT return form's boxes are whole kronor, öre dropped (towards zero). The clearing voucher empties
   the period's changes on the VAT box accounts (not the saldo), books box 49 on 2650 (to pay) or 1650 (to get back)
   by its sign, and the rest on 3740 Öres- och kronutjämning; series M, dated the period's last day.
+
+- 2026-10-28: VAT return box amounts are the form's figures: sales and output VAT (credit in the books) turned to
+  positive, purchase bases and input VAT kept; accounts and vouchers under a box keep the books' sign. The eSKD file
+  takes the box amounts as they are. `momsrapport_box_to_eskd.csv` is a mapping only (`box;tag`, in file order);
+  everything else about the eSKD file is in code.
 
 ## Open questions
 

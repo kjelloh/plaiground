@@ -808,7 +808,7 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "\n"
                         "Box  Account  Voucher  Date                 Amount  Text\n"
                         "\n"
-                        "05                                        -1000.00\n"
+                        "05                                         1000.00\n"
                         "     3001                                 -1000.00  Sales 25%\n"
                         "              B 1      2025-02-10         -1000.00  Sale\n"
                         "\n"
@@ -824,7 +824,8 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "  Cleared           -250.00  M 1  2025-03-31\n"
                         "  Charged           -250.00  A 1  2025-05-12\n"
                         "\n"
-                        "Amounts are as in the books: debit positive, credit negative.\n"
+                        "Box amounts are as on the form; accounts and vouchers as in the books: debit positive, credit "
+                        "negative.\n"
                         "Box 49 on the form: 0.00, nothing to pay or get back.\n"
                         "Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q1.\n"
                         "\n"
@@ -867,6 +868,15 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
                                "\n"
                                "  1  Book it as M 2\n"
                                "  2  Show the report again\n";
+  // Box amounts as on the form (credit positive), accounts and vouchers as in the books
+  EXPECT_NE(output.find("05                                         2000.00\n"
+                        "     3001                                 -2000.00  Sales 25%\n"
+                        "              B 2      2025-11-05         -2000.00  Sale\n"
+                        "\n"
+                        "10                                          500.00\n"
+                        "     2611                                  -500.00  Output VAT 25%\n"),
+            std::string::npos)
+      << output;
   EXPECT_NE(output.find("Box 49 on the form: 500.00 to pay.\n" + proposed + "2025 Q4> 2\n"
                         "VAT return (momsrapport) 2025-10-01 - 2025-12-31\n"),
             std::string::npos)
@@ -934,7 +944,7 @@ TEST_F(WorkspaceRepl, VatReturnsOfTheYearRunningToday) {
                         "\n"
                         "Box  Account  Voucher  Date                 Amount  Text\n"
                         "\n"
-                        "05                                         -100.00\n"),
+                        "05                                          100.00\n"),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with(quarters + "period?> -\nReports for 2026-01-01 - 2026-12-31:\n"

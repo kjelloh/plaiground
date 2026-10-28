@@ -126,10 +126,10 @@ TEST(VatReturn, AQuarterAcrossTwoFiscalYears) {
   EXPECT_EQ(document.period, period);
   EXPECT_EQ(document.boxes,
             (std::vector<BoxAmount>{
-                {"05", -7000,
+                {"05", 7000,
                  {{"3001", -5000, {{2025y / May / 1, "B", "2", 2026y / April / 1, -5000}}},
                   {"3002", -2000, {{2026y / May / 1, "B", "1", 2026y / May / 2, -2000}}}}},
-                {"10", -1700, // truncated: the account keeps -17.50
+                {"10", 1700, // the form figure, truncated: the account keeps -17.50
                  {{"2611", -1750,
                    {{2025y / May / 1, "B", "2", 2026y / April / 1, -1250},
                     {2026y / May / 1, "B", "1", 2026y / May / 2, -500}}}}},
@@ -138,12 +138,12 @@ TEST(VatReturn, AQuarterAcrossTwoFiscalYears) {
 }
 
 TEST(VatReturn, VatToPayAddsUpBox49AsTheForm) {
-  // Output VAT 250 + 60 + 25 (credit), input VAT 100 (debit), sales box 05 not counted
+  // Output VAT 250 + 60 + 25, input VAT 100, all positive on the form; sales box 05 not counted
   Document const document{*quarter_of(2026y, 1),
-                          {{"05", -100000, {}}, {"10", -25000, {}}, {"11", -6000, {}}, {"30", -2500, {}},
+                          {{"05", 100000, {}}, {"10", 25000, {}}, {"11", 6000, {}}, {"30", 2500, {}},
                            {"48", 10000, {}}}};
   EXPECT_EQ(vat_to_pay(document), 23500);
-  Document const back{*quarter_of(2026y, 1), {{"10", -2500, {}}, {"48", 10000, {}}}};
+  Document const back{*quarter_of(2026y, 1), {{"10", 2500, {}}, {"48", 10000, {}}}};
   EXPECT_EQ(vat_to_pay(back), -7500);
   EXPECT_EQ(vat_to_pay(Document{*quarter_of(2026y, 1), {}}), 0);
 }
@@ -271,8 +271,8 @@ TEST(VatReturn, ReportBox49IsMinusBox48WithOnlyInputVat) {
 TEST(VatReturn, ClearingToPayBooksTheOreOnTheRoundingAccount) {
   // Box 10 2611 -250.50 (form 250), box 48 2641 100.30 (form 100): 150 to pay, 0.20 left
   Document const document{*quarter_of(2026y, 2),
-                          {{"05", -100000, {{"3001", -100000, {}}}},
-                           {"10", -25000, {{"2611", -25050, {}}}},
+                          {{"05", 100000, {{"3001", -100000, {}}}},
+                           {"10", 25000, {{"2611", -25050, {}}}},
                            {"48", 10000, {{"2641", 10030, {}}}}}};
   auto const clearing = clearing_of(document);
   ASSERT_TRUE(clearing);
@@ -291,14 +291,14 @@ TEST(VatReturn, ClearingToGetBackDebitsTheReceivable) {
 
 TEST(VatReturn, ClearingOfNothingToPayHasNoBox49Row) {
   Document const document{*quarter_of(2026y, 3),
-                          {{"10", -10000, {{"2611", -10050, {}}}}, {"48", 10000, {{"2641", 10050, {}}}}}};
+                          {{"10", 10000, {{"2611", -10050, {}}}}, {"48", 10000, {{"2641", 10050, {}}}}}};
   auto const clearing = clearing_of(document);
   ASSERT_TRUE(clearing);
   EXPECT_EQ(clearing->postings, (books::Postings{posting("2611", 10050), posting("2641", -10050)}));
 }
 
 TEST(VatReturn, ClearingNeedsAVatAccountThatChanged) {
-  EXPECT_FALSE(clearing_of(Document{*quarter_of(2026y, 3), {{"05", -100000, {{"3001", -100000, {}}}}}}));
+  EXPECT_FALSE(clearing_of(Document{*quarter_of(2026y, 3), {{"05", 100000, {{"3001", -100000, {}}}}}}));
   EXPECT_FALSE(clearing_of(Document{*quarter_of(2026y, 3), {{"10", 0, {{"2611", 0, {}}}}}}));
 }
 

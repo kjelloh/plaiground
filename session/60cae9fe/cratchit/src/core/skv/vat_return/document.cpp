@@ -63,6 +63,9 @@ Document document_of(books::Books const& books, Period period) {
       box_amount.amount += account_amount.amount;
       box_amount.accounts.push_back(std::move(account_amount));
     }
+    if (std::ranges::find(credit_boxes, box) != credit_boxes.end()) {
+      box_amount.amount = -box_amount.amount; // the form takes credit as a positive figure
+    }
     box_amount.amount = box_amount.amount / 100 * 100; // the form takes whole kronor, öre dropped
     document.boxes.push_back(std::move(box_amount));
   }
@@ -73,10 +76,10 @@ Amount vat_to_pay(Document const& document) {
   Amount total = 0;
   for (auto const& box : document.boxes) {
     if (std::ranges::find(vat_to_pay_added, box.box) != vat_to_pay_added.end()) {
-      total -= box.amount; // output VAT is credit in the books
+      total += box.amount;
     }
     if (std::ranges::find(vat_to_pay_subtracted, box.box) != vat_to_pay_subtracted.end()) {
-      total -= box.amount; // input VAT is debit in the books
+      total -= box.amount;
     }
   }
   return total;

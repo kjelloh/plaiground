@@ -39,6 +39,10 @@ Now I asked Claude to create a mapping from VAt returns form to eskd-file tag.
 
 * [momsrapport_box_to_eskd](./cratchit/resources/momsrapport/momsrapport_box_to_eskd.csv)
 
+In the chat with Claude I now discovered the VAT Returns boxes for income and sales had the wrong sign (Credit means '-' but the form seems to expect those to also be positive).
+
+* So I made Claude flip the sign of boxes that aggregates from 'credit' accounts (accounts where '-' is the 'normal').
+
 ## 20261027
 
 So now then we are ready to start generating the VAT Returns form document?

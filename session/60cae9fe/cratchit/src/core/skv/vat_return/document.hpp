@@ -50,7 +50,8 @@ struct AccountAmount {
   bool operator==(AccountAmount const&) const = default;
 };
 
-// A box's amount: the sum of its accounts
+// A box's amount as on the form: the sum of its accounts, the sign turned
+// for credit_boxes, in whole kronor (öre dropped)
 struct BoxAmount {
   Box box;
   Amount amount = 0;
@@ -59,8 +60,9 @@ struct BoxAmount {
   bool operator==(BoxAmount const&) const = default;
 };
 
-// The VAT return of a period, as the books give it. Amounts are signed as in
-// the books (debit positive, credit negative).
+// The VAT return of a period, as the books give it. Box amounts are the form's
+// figures; account and voucher amounts are signed as in the books (debit
+// positive, credit negative).
 struct Document {
   Period period;
   std::vector<BoxAmount> boxes; // by box number; only boxes with postings
@@ -73,9 +75,8 @@ struct Document {
 // reports in a box (see box_of) adds to that box
 Document document_of(books::Books const& books, Period period);
 
-// Box 49 as the form adds it up (see vat_to_pay_added): positive is VAT to pay,
-// negative VAT to get back. The form takes output VAT (credit in the books) and
-// input VAT (box 48, debit in the books) as positive figures.
+// Box 49 as the form adds it up from the box amounts (see vat_to_pay_added):
+// positive is VAT to pay, negative VAT to get back
 Amount vat_to_pay(Document const& document);
 
 } // namespace cratchit::skv::vat_return

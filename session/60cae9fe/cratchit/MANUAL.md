@@ -1482,7 +1482,7 @@ Test AB, 556000-0001
 
 Box  Account  Voucher  Date                 Amount  Text
 
-05                                        -1000.00
+05                                         1000.00
      3001                                 -1000.00  Sales 25%
               B 1      2025-02-10         -1000.00  Sale
 
@@ -1498,7 +1498,7 @@ The VAT of the period:
   Cleared           -250.00  M 1  2025-03-31
   Charged           -250.00  A 1  2025-05-12
 
-Amounts are as in the books: debit positive, credit negative.
+Box amounts are as on the form; accounts and vouchers as in the books: debit positive, credit negative.
 Box 49 on the form: 0.00, nothing to pay or get back.
 ```
 
@@ -1507,18 +1507,24 @@ Which box an account reports in comes from the table built into cratchit
 listed with accounts: the table names 2650 and 1650 as sources of box 49, not as
 accounts that report in it. The boxes count every voucher dated in the period,
 of every series, including clearing and charge vouchers. Removed rows do not
-count. The amounts are not yet turned into the figures you type into SKV's
-form: they keep the sign they have in the books.
+count.
+
+A box's amount is the figure you give on SKV's form. Sales (boxes 05-08, 35,
+36, 38-42) and output VAT (10-12, 30-32, 60-62) are credit in the books, so the
+form takes their sum with the sign turned: sales of 1000.00 are 1000 in box 05.
+Purchase bases (20-24, 37, 50) and input VAT (48) are debit in the books and keep
+their sign. A box is negative only when its postings go the other way, e.g. credit
+notes larger than the input VAT in box 48. The accounts and vouchers under a box
+keep the sign they have in the books (debit positive, credit negative).
 
 A box's amount is in whole kronor, as on the form: the öre are dropped (rounded
-towards zero, so -17.50 becomes -17.00 and 2.50 becomes 2.00). The accounts and
-vouchers under it keep their öre, so they may add up to up to 0.99 more than the
-box. The steps (Period, Cleared, Charged) are not rounded.
+towards zero, so 17.50 becomes 17.00 and -2.50 becomes -2.00). The accounts and
+vouchers under it keep their öre, so their sum may be up to 0.99 larger (sign
+aside) than the box. The steps (Period, Cleared, Charged) are not rounded.
 
 Box 49 (Moms att betala eller få tillbaka) is added up as the form does it:
-10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48. The form takes output VAT
-(credit in the books) and input VAT in box 48 (debit in the books) as positive
-figures. The box 49 row shows the form's figure: positive is VAT to pay,
+10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48, from the box amounts. The box
+49 row shows the form's figure: positive is VAT to pay,
 negative VAT to get back (with only input VAT, box 49 is minus box 48). The
 last line says it in words. A period without postings in any box shows no box 49.
 After the VAT return of the quarter running today (`+`) the periods are shown again.

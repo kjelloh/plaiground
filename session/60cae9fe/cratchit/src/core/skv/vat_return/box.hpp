@@ -18,6 +18,14 @@ std::optional<Box> box_of(std::string_view account);
 // The boxes that hold VAT: output VAT (10-12, 30-32, 60-62) and input VAT (48)
 inline constexpr std::array<std::string_view, 10> vat_boxes{"10", "11", "12", "30", "31", "32", "60", "61", "62", "48"};
 
+// The boxes the books have as credit: sales (05-08, 35-42 but 37) and output VAT (10-12, 30-32,
+// 60-62). The form takes them as positive figures, so their amount is the books' sum with the sign
+// turned. The other boxes, the purchase bases (20-24, 37, 50) and input VAT (48), are debit in the
+// books and keep the sign.
+inline constexpr std::array<std::string_view, 20> credit_boxes{"05", "06", "07", "08", "10", "11", "12",
+                                                               "30", "31", "32", "35", "36", "38", "39",
+                                                               "40", "41", "42", "60", "61", "62"};
+
 // Box 49, Moms att betala eller få tillbaka: not reported in by accounts; the
 // form adds it up from the other VAT boxes as 10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48
 inline constexpr std::string_view vat_to_pay_box = "49";
