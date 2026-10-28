@@ -63,7 +63,7 @@ TEST(VatReturn, BoxOfAnAccount) {
   EXPECT_EQ(box_of("2611"), "10");
   EXPECT_EQ(box_of("2641"), "48");
   EXPECT_EQ(box_of("3305"), "40");
-  EXPECT_EQ(box_of("2650"), "49");
+  EXPECT_EQ(box_of("2650"), std::nullopt); // a source of box 49, not added up into it
   EXPECT_EQ(box_of("1930"), std::nullopt);
   EXPECT_EQ(box_of(""), std::nullopt);
 }
@@ -77,7 +77,7 @@ TEST(VatReturn, AccountBoxesText) {
 TEST(VatReturn, AccountBoxesTextWithHeadingAndOutColumn) {
   auto const boxes = account_boxes("in;vat;out;hint\r\n3001;05;;MP1\r\n;49;2650;R2\r\n");
   ASSERT_TRUE(boxes.has_value()) << boxes.error();
-  EXPECT_EQ(*boxes, (std::map<std::string, Box>{{"2650", "49"}, {"3001", "05"}}));
+  EXPECT_EQ(*boxes, (std::map<std::string, Box>{{"3001", "05"}}));
 }
 
 TEST(VatReturn, AccountBoxesErrorsNameTheLine) {

@@ -817,10 +817,6 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "              B 1      2025-02-10          -250.00  Sale\n"
                         "              M 1      2025-03-31           250.00  Momsrapport\n"
                         "\n"
-                        "49                                         -250.00\n"
-                        "     2650                                  -250.00  VAT clearing\n"
-                        "              M 1      2025-03-31          -250.00  Momsrapport\n"
-                        "\n"
                         "The VAT of the period:\n"
                         "  Period            -250.00\n"
                         "  Cleared           -250.00  M 1  2025-03-31\n"
@@ -831,18 +827,12 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
             std::string::npos)
       << output;
   EXPECT_NE(output.find("period?> 2\nVAT return (momsrapport) 2025-04-01 - 2025-06-30\nTest AB, 556000-0001\n\n"
-                        "Box  Account  Voucher  Date                 Amount  Text\n"
-                        "\n"
-                        "49                                          250.00\n"
-                        "     2650                                   250.00  VAT clearing\n"
-                        "              A 1      2025-05-12           250.00  Moms\n"
+                        "No postings in the period on accounts that report in a box.\n"
                         "\n"
                         "The VAT of the period:\n"
                         "  Period               0.00\n"
                         "  Cleared              0.00\n"
-                        "  Charged              0.00\n"
-                        "\n"
-                        "Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.\n" +
+                        "  Charged              0.00\n" +
                         quarters + "period?> -\nReports for 2025-01-01 - 2025-12-31:\n"),
             std::string::npos)
       << output;

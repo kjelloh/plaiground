@@ -532,9 +532,10 @@ Saved: `D 5 reverses D 4.` and back to the year prompt. Manual: Correcting a vou
 voucher amount). In review.
 
 Task 58: `bas_to_momsrapport.csv` has a heading line (`in;vat;out;hint`) and an `out` column; box 49's accounts
-(2650, 1650) are now in `out` (`;49;2650;R2`). `account_boxes` skips a first line starting with `in;` and takes the
-account from `out` when `in` is empty, so `box_of` gives the same boxes as before (2650/1650 -> 49). No manual change.
-444 tests pass, no warnings (Debug, trace DEBUG). In review.
+(2650, 1650) are now in `out` (`;49;2650;R2`). `account_boxes` skips a first line starting with `in;` and lines with only an `out` account (a source of the box,
+not added up into it). So 2650/1650 no longer report in box 49 and the VAT return lists only boxes that add up
+postings on accounts (box 49 gone; a quarter with only clearing/charge vouchers says "No postings ..."). Manual: "The
+VAT return" example and text. 444 tests pass, no warnings (Debug, trace DEBUG). In review.
 
 ## Next
 

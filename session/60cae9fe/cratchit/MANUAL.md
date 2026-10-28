@@ -1490,10 +1490,6 @@ Box  Account  Voucher  Date                 Amount  Text
               B 1      2025-02-10          -250.00  Sale
               M 1      2025-03-31           250.00  Momsrapport
 
-49                                         -250.00
-     2650                                  -250.00  VAT clearing
-              M 1      2025-03-31          -250.00  Momsrapport
-
 The VAT of the period:
   Period            -250.00
   Cleared           -250.00  M 1  2025-03-31
@@ -1503,7 +1499,9 @@ Amounts are as in the books: debit positive, credit negative. Box 49 is not calc
 ```
 
 Which box an account reports in comes from the table built into cratchit
-(`bas_to_momsrapport.csv`). The boxes count every voucher dated in the period,
+(`bas_to_momsrapport.csv`). Only boxes that add up postings on accounts are
+shown: the table names 2650 and 1650 as sources of box 49, not as accounts that
+report in it, so box 49 is not listed. The boxes count every voucher dated in the period,
 of every series, including clearing and charge vouchers. Removed rows do not
 count. The amounts are not yet turned into the figures you type into SKV's
 form: they keep the sign they have in the books, and box 49 (VAT to pay or get
