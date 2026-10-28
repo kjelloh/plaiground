@@ -1340,6 +1340,31 @@ TEST_F(WorkspaceRepl, YearKey2ExportsTheYearAsAnSieFile) {
   EXPECT_EQ(read_file(folder / "sie_2025_2.se"), text);
 }
 
+TEST_F(WorkspaceRepl, YearKey3ImportsAnSieFileAndComesBackToTheYear) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny10");
+  write_sie(root / "start" / "older.se",
+            sie_test::sie_file(2024, sie_test::balanced_balances(), sie_test::sale_and_cost(2024)));
+  // n at the question and a file already in the books stay at the year, as does the import
+  auto const output = run("3older.se\nn3test.se\n3older.se\ny");
+  EXPECT_NE(output.find("2025> 3\n"
+                        "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace "
+                        "erases,\nEnter accepts. - or Enter on an empty path goes back.\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Import it? (y/n) n\nNothing is imported.\n2025> 3\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("Everything in the file is already in the books. Nothing to import.\n2025> 3\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Imported 2 vouchers into fiscal year 2024-01-01 - 2024-12-31 (0 already in the "
+                               "books).\n2025> \n"))
+      << output;
+  auto const books = cratchit::books::read_books(root / "start" / "Test");
+  ASSERT_TRUE(books.has_value()) << books.error();
+  EXPECT_EQ(books->years.size(), 2u);
+}
+
 TEST_F(WorkspaceRepl, WaitingEventsAreListedOldestFirst) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -1887,6 +1912,7 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
                         "Keys at 2025>:\n"
                         "  1  Booking (waiting: 0 events, 0 statement entries)\n"
                         "  2  Export the year as an SIE file\n"
+                        "  3  Import an SIE file\n"
                         "  5  Import an account statement (only the entries in this year)\n"
                         "  7  Reports of this year\n"
                         "  8  Close the year for new vouchers\n"

@@ -183,6 +183,7 @@ private:
   std::optional<Project> project_;      // the open project
   std::optional<books::ImportPlan> plan_; // the import waiting for y/n
   books::ImportSource import_source_;
+  Mode before_import_ = Mode::Project;   // where an SIE import started (project or year prompt)
   books::Books books_;                  // the books the reports are about
   ItemList year_page_;                  // the page of the report years
   std::size_t year_ = 0;                // the year of the reports, an index into books_.years

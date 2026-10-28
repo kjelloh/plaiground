@@ -452,6 +452,7 @@ Operations<Repl::Op> Repl::operations() const {
     }
     operations.add(1, std::format("Booking ({})", waiting), Op::Booking)
         .add(2, "Export the year as an SIE file", Op::ExportSie)
+        .add(3, "Import an SIE file", Op::ImportSie)
         .add(5, "Import an account statement (only the entries in this year)", Op::ImportStatement)
         .add(7, "Reports of this year", Op::Reports)
         .add(8, "Close the year for new vouchers", Op::CloseYear, year && !closed)
@@ -952,7 +953,7 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
   }
   if (purpose_ == Purpose::SieFile) {
     if (result == PathEditor::Result::Cancelled) {
-      mode_ = Mode::Project;
+      mode_ = before_import_;
       return;
     }
     auto const file = typed_folder(places_.start_folder);
@@ -1361,6 +1362,7 @@ std::string Repl::company() const {
 }
 
 void Repl::start_import(std::ostream& out) {
+  before_import_ = mode_;
   purpose_ = Purpose::SieFile;
   editor_.start((places_.start_folder / "").string(), PathEditor::Kind::File);
   mode_ = Mode::Typing;
@@ -1371,7 +1373,7 @@ void Repl::start_import(std::ostream& out) {
 
 // Reads, checks and plans the import of an SIE file, shows what it would do, and asks
 void Repl::check_import(fs::path const& file, std::ostream& out) {
-  mode_ = Mode::Project;
+  mode_ = before_import_;
   auto const lexed = sie::lex_file(file);
   if (!lexed) {
     std::println(out, "Error: {}", lexed.error());
@@ -1439,14 +1441,14 @@ void Repl::on_confirm_import_key(charset::unicode::CodePoint key, std::ostream& 
   } else if (key == U'n' || key == U'-') {
     std::println(out, "Nothing is imported.");
     plan_.reset();
-    mode_ = Mode::Project;
+    mode_ = before_import_;
   } else {
     std::println(out, "Press y to import the file, n not to.");
   }
 }
 
 void Repl::import(std::ostream& out) {
-  mode_ = Mode::Project;
+  mode_ = before_import_;
   auto const plan = std::move(*plan_);
   plan_.reset();
   auto const saved = books::save_import(project_->folder, plan, import_source_);
@@ -1483,6 +1485,10 @@ void Repl::import(std::ostream& out) {
                saved->stashed.generic_string());
   for (auto const& note : plan.notes) {
     LOG_BUSINESS("Import note: {}", note);
+  }
+  if (mode_ == Mode::Year) {
+    // The year prompt works on the books read when the year opened
+    read_open_year(out);
   }
 }
 

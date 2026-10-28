@@ -680,6 +680,14 @@ sie_2025.se and sie_2025_2.se, identical, which lex, parse and import back into 
 REPL-tested: the `<U+` message (cp437_of is unit-tested). Manual: project files, year table (2; free 3, 4, 6), new
 "Exporting a fiscal year as an SIE file", log kinds. 476 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 72: SIE import at year key 3 (`Import an SIE file`), the same flow as `2` at `project>`. Any fiscal year's file
+(agreed: no year limit). `Repl::before_import_` (set in `start_import`) is where the path cancel, a check that stops,
+`n` and the import go back to (was always `project>`). An import that ends at the year prompt re-reads the books
+(`read_open_year`), whose copy the year prompt uses. Tests: year key list has 3; new
+`YearKey3ImportsAnSieFileAndComesBackToTheYear` (n, nothing to import, a 2024 file imported, all back at `2025>`).
+Not REPL-tested: `-` on the path at the year, the books re-read. Manual: year table (3; free 4, 6), Importing an SIE
+file. 477 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings

@@ -522,6 +522,7 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 |--------|-----------------------------------------------------|
 | 1      | Booking: entering and noting, the two waiting lists and the vouchers (see Booking, below). The key list shows how many waiting events and statement entries not yet booked the year has, both always, e.g. `Booking (waiting: 1 event, 7 statement entries)`. |
 | 2      | Exports the year as an SIE 4E file in the project folder (see Exporting a fiscal year as an SIE file). Also for a closed year. |
+| 3      | Imports an SIE file, as `2` at `project>` (see Importing an SIE file). Any fiscal year's file, not only this one's. You come back here. |
 | 5      | Imports an account statement, only its entries in this year (see Importing an account statement). |
 | 7      | Shows the reports of this year (see Reports). `-` there comes back here. |
 | 8      | Closes the year for new vouchers when it is open, opens it when it is closed. The key list names the one offered. |
@@ -533,7 +534,7 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | q      | Quits cratchit.                                     |
 | Ctrl-D | Quits cratchit.                                     |
 
-Keys 3, 4 and 6 are free: they were the booking operations before these
+Keys 4 and 6 are free: they were the booking operations before these
 moved under 1, and the other keys kept their numbers.
 
 A new year from an SIE import is open. Closing it stops new vouchers from being
@@ -1223,8 +1224,9 @@ Fortnox. cratchit imports SIE type 4 files (4E, with vouchers), one fiscal year
 per file: the year the file calls year 0. Export one file per fiscal year and
 import them in any order.
 
-Press `2` at the `project>` prompt and type the path of the file (see Typing a
-folder path). cratchit reads and checks the file and shows what importing it
+Press `2` at the `project>` prompt, or `3` at a fiscal year's prompt, and type
+the path of the file (see Typing a folder path). Either way the file may be of
+any fiscal year, and you come back to the prompt you started from. cratchit reads and checks the file and shows what importing it
 would do, without changing anything:
 
 ```
