@@ -515,12 +515,8 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 
 | Key    | What it does                                        |
 |--------|-----------------------------------------------------|
-| 1      | Enters a voucher (see Entering a voucher). Only in an open year. |
-| 2      | Notes an event to post later (see Waiting events). Only in an open year. |
-| 3      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
-| 4      | Views the vouchers, to correct one or use it as a template (see Viewing and correcting vouchers). |
+| 1      | Booking: entering and noting, the two waiting lists and the vouchers (see Booking, below). The key list shows how many waiting events and statement entries not yet booked the year has, both always, e.g. `Booking (waiting: 1 event, 7 statement entries)`. |
 | 5      | Imports an account statement, only its entries in this year (see Importing an account statement). |
-| 6      | Lists the statement entries not yet booked in this year (see Statement entries). The key list shows how many there are. |
 | 7      | Shows the reports of this year (see Reports). `-` there comes back here. |
 | 8      | Closes the year for new vouchers when it is open, opens it when it is closed. The key list names the one offered. |
 | 9      | Finds waiting events that may be the same event, or already in the books (see Finding matches). |
@@ -531,16 +527,52 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | q      | Quits cratchit.                                     |
 | Ctrl-D | Quits cratchit.                                     |
 
+Keys 2, 3, 4 and 6 are free: they were the booking operations before these
+moved under 1, and the other keys kept their numbers.
+
 A new year from an SIE import is open. Closing it stops new vouchers from being
-entered in it until you open it again; `1` then says
-`Fiscal year 2025-05-01 - 2026-04-30 is closed for new vouchers. Press 8 to open it.`
+entered in it until you open it again; `1` at `booking>` then says
+`Fiscal year 2025-05-01 - 2026-04-30 is closed for new vouchers. Press 8 at the year prompt to open it.`
 cratchit saves the setting in `books.txt` (see The files) and logs it. Closing
 a year changes nothing else: its vouchers, balances and reports stay as they are,
 and an SIE import into it still works.
 
+#### Booking
+
+`1` at the year prompt gathers what you do to book the year's events. The
+prompt is `booking>`:
+
+```
+2026/27> 1
+Keys at booking>:
+  1  Enter a voucher
+  2  Note an event to post later
+  3  Waiting events (1)
+  4  Statement entries not yet booked in this year (7)
+  5  View vouchers (correct one, or use it as a template)
+booking> 
+```
+
+| Key    | What it does                                        |
+|--------|-----------------------------------------------------|
+| 1      | Enters a voucher (see Entering a voucher). Only in an open year. |
+| 2      | Notes an event to post later (see Waiting events). Only in an open year. |
+| 3      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
+| 4      | Lists the statement entries not yet booked in this year (see Statement entries). The key list shows how many there are. |
+| 5      | Views the vouchers, to correct one or use it as a template (see Viewing and correcting vouchers). |
+| Enter  | Lists the numbered keys.                            |
+| h      | Opens this manual.                                  |
+| l      | Shows the log (see The log).                        |
+| -      | Goes back to the year prompt.                       |
+| q      | Quits cratchit.                                     |
+| Ctrl-D | Quits cratchit.                                     |
+
+When one of these is done (a voucher saved or dropped, an event noted, `-` from
+a list), cratchit comes back to `booking>`.
+
 ### Entering a voucher
 
-Press `1` at the prompt of an open fiscal year (see Fiscal years). A voucher
+Press `1` at `booking>` in an open fiscal year (see Booking). A voucher
 (verifikation) records one financial event. You type it in steps: what
 happened, an earlier voucher to use as a template (when there is one), the
 series, and the rows on the accounts. Nothing is saved until the rows balance
@@ -595,7 +627,7 @@ outside the open fiscal year is refused:
 Refused: 2027-05-03 is outside fiscal year 2026-05-01 - 2027-04-30.
 ```
 
-`-` or Enter on an empty line goes back to the year prompt.
+`-` or Enter on an empty line goes back to `booking>`.
 
 #### The template
 
@@ -875,9 +907,9 @@ or the other, until cratchit can sync them.
 
 ### Viewing and correcting vouchers
 
-Press `4` at the prompt of a fiscal year. cratchit lists the series used in
+Press `5` at `booking>` (see Booking). cratchit lists the series used in
 the year; press a letter to list that series (the prompt is `series?>`; here
-`h` is series H, so help is not offered; `-` goes back to the year):
+`h` is series H, so help is not offered; `-` goes back to `booking>`):
 
 ```
 Series in fiscal year 2026-05-01 - 2027-04-30:
@@ -943,7 +975,7 @@ corrected voucher's series), and the corrected voucher's rows reversed, shown
 as the whole voucher to save (`The rows of D 4, reversed:`, then `postings>`:
 `1` saves, `2` flips the rows, `-` puts the rows in place at `post>` to change
 them, as in The rows).
-When it is saved, cratchit says so and goes back to the year prompt:
+When it is saved, cratchit says so and goes back to `booking>`:
 
 ```
 Saved voucher D 5 into fiscal year 2026-05-01 - 2027-04-30.
@@ -963,7 +995,7 @@ reports.
 
 #### Noting an event
 
-Press `2` at the prompt of an open fiscal year. Type the heading, amount and
+Press `2` at `booking>` in an open fiscal year. Type the heading, amount and
 date at `event>` as at `voucher>` (see Entering a voucher): the same rules,
 the same `amount?>` question for an unclear amount, and a date outside the
 year is refused. Unlike a voucher, an event may leave out the date: then it is
@@ -988,7 +1020,7 @@ the year's `events.csv` (see The files) and logs it.
 
 #### The waiting list
 
-Press `3` at the year prompt. The prompt is `waiting?>`:
+Press `3` at `booking>`. The prompt is `waiting?>`:
 
 ```
 Waiting events in fiscal year 2026-05-01 - 2027-04-30:
@@ -1001,7 +1033,7 @@ They are listed by date, oldest first; events with the same date in the order
 noted. With more than nine, keys 1-8 show eight
 at a time, `0` shows the ones before and `9` the ones after. With none,
 `3` says `No events are waiting in fiscal year ... Press 2 to note one.`
-`-` goes back to the year prompt.
+`-` goes back to `booking>`.
 
 A number shows that event with its postings. The prompt is `waiting>`:
 
@@ -1136,8 +1168,8 @@ shows the waiting list.
 #### Statement entries
 
 The entries of the imported account statements (see Importing an account
-statement) wait to be booked. Press `4` at `project>`, or `6` at a fiscal
-year's prompt for only that year's entries. The prompt is `entries?>`:
+statement) wait to be booked. Press `4` at `project>`, or `4` at `booking>`
+in a fiscal year for only that year's entries. The prompt is `entries?>`:
 
 ```
 Statement entries not yet booked in fiscal year 2026-05-01 - 2027-04-30:
@@ -1375,7 +1407,7 @@ Stashed the file as .cratchit/statements/2026-10-24_1_PLUSGIROKONTO FTG 51 86 87
 Imported 15 entries for account 1920 (0 already known, 0 outside). Press 4 to book them.
 ```
 
-At a fiscal year's prompt the last line says `Press 6 to book them.`
+At a fiscal year's prompt the last line says `Press 1 and then 4 to book them.`
 
 An entry already in a statement imported for the account (same date,
 amount, saldo and text) is known, and not imported again; files that overlap
@@ -1622,7 +1654,7 @@ account number, a voucher or event line, or a row (see Typing a folder path,
 Creating a project, Entering a voucher and Waiting events).
 
 At the `cratchit>`, `workspace>`, `project>`, fiscal year (such as
-`2026/27>`) prompts, Enter lists the numbered keys you can press there, for
+`2026/27>`) and `booking>` prompts, Enter lists the numbered keys you can press there, for
 example:
 
 ```

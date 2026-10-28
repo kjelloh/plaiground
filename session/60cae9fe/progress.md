@@ -656,6 +656,20 @@ in an SIE file; the marker only lets a person see what was lost. It is not decod
 `&#x20AC;`, whose `&amp;` escaping would change every `&` (e.g. "Kjell&Company") for SIE readers. 473 tests pass, no
 warnings (Debug, trace DEBUG). In review.
 
+Task 70: Booking group at the year prompt. Year: `1  Booking (waiting: 1 event, 7 statement entries)` (both counts
+always, singular/plural; the entries left out only when they cannot be counted), 5 Import statement, 7 Reports, 8
+Close/Open, 9 Find matches; 2, 3, 4, 6 free (agreed: nothing else moves). New prompt `booking>` (`Mode::Booking`, a
+prompt like the year: Enter lists `Keys at booking>:`, `-` back to the year, `l`, `h`, `q`): 1 Enter a voucher, 2 Note
+an event, 3 Waiting events (n), 4 Statement entries not yet booked in this year (n), 5 View vouchers. Flows started there
+come back to `booking>` (voucher saved or dropped, empty voucher line, event noted, `-` from the waiting list or the
+voucher series, last waiting event deleted, statement entries from `booking>`); matches (9) stay at the year. Messages:
+"Press 8 at the year prompt to open it.", "Press 5 at the year prompt to import a statement.", "Press 1 and then 4 to
+book them." (statement imported at the year). Tests: 20 REPL tests take the new keys (`11`, `12`, `13`, `14`, `15`) and
+`booking>`; new `booking_keys` helper and test `BookingGroupsTheBookingOperationsAndCountsBothWaitingLists`. Manual: In a
+fiscal year (table, free keys), new "Booking", Entering a voucher, correcting, Noting an event, The waiting list,
+Viewing vouchers, Statement entries, statement import, Using the prompt. 474 tests pass, no warnings (Debug, trace
+DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -852,6 +866,10 @@ into a waiting event without making a voucher, several entries chosen at once.
   positive, purchase bases and input VAT kept; accounts and vouchers under a box keep the books' sign. The eSKD file
   takes the box amounts as they are. `momsrapport_box_to_eskd.csv` is a mapping only (`box;tag`, in file order);
   everything else about the eSKD file is in code.
+
+- 2026-10-28: The year prompt groups the booking operations under `1  Booking (waiting: <n> event(s), <n> statement
+  entr(y/ies))`, both counts always (they count the waiting lists, not all there is to book). Inside, `booking>`: enter,
+  note, waiting events, statement entries, view vouchers. The other year keys keep their numbers (2, 3, 4, 6 free).
 
 - 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted
   cratchit's file without it.

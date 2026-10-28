@@ -31,6 +31,11 @@ std::string count_of(std::optional<std::size_t> count) {
   return count ? std::format(" ({})", *count) : "";
 }
 
+// "1 event", "7 events"
+std::string counted(std::size_t count, std::string_view one, std::string_view many) {
+  return std::format("{} {}", count, count == 1 ? one : many);
+}
+
 // Voucher numbers in order: by value when both are digits, else as text
 bool number_less(std::string const& a, std::string const& b) {
   auto const digits = [](std::string const& text) {
@@ -279,11 +284,12 @@ bool Repl::ignores(charset::unicode::CodePoint key) const {
 }
 
 bool Repl::is_prompt() const {
-  return mode_ == Mode::Main || mode_ == Mode::Workspace || mode_ == Mode::Project || mode_ == Mode::Year;
+  return mode_ == Mode::Main || mode_ == Mode::Workspace || mode_ == Mode::Project || mode_ == Mode::Year ||
+         mode_ == Mode::Booking;
 }
 
 void Repl::show_keys(std::ostream& out) {
-  if (mode_ == Mode::Project || mode_ == Mode::Year) {
+  if (mode_ == Mode::Project || mode_ == Mode::Year || mode_ == Mode::Booking) {
     unbooked_count_ = count_unbooked();
   }
   std::println(out, "Keys at {}:", prompt().substr(0, prompt().size() - 1));
@@ -297,6 +303,7 @@ bool Repl::shows_on_enter() const {
   case Mode::Workspace:
   case Mode::Project:
   case Mode::Year:
+  case Mode::Booking:
   case Mode::Menu:
   case Mode::Choose:
   case Mode::Projects:
@@ -332,6 +339,7 @@ void Repl::show_screen(std::ostream& out) {
   case Mode::Workspace:
   case Mode::Project:
   case Mode::Year:
+  case Mode::Booking:
     show_keys(out);
     break;
   case Mode::Menu:
@@ -435,16 +443,26 @@ Operations<Repl::Op> Repl::operations() const {
   case Mode::Year: {
     auto const* year = books_.year_starting(open_year_);
     auto const closed = year && year->closed;
-    operations.add(1, "Enter a voucher", Op::EnterVoucher)
-        .add(2, "Note an event to post later", Op::NoteEvent)
-        .add(3, std::format("Waiting events ({})", year ? year->waiting.size() : 0), Op::WaitingEvents)
-        .add(4, "View vouchers (correct one, or use it as a template)", Op::ViewVouchers)
+    // Both waiting lists, always; the entries are left out only when they cannot be counted
+    auto waiting = std::format("waiting: {}", counted(year ? year->waiting.size() : 0, "event", "events"));
+    if (unbooked_count_) {
+      waiting += ", " + counted(*unbooked_count_, "statement entry", "statement entries");
+    }
+    operations.add(1, std::format("Booking ({})", waiting), Op::Booking)
         .add(5, "Import an account statement (only the entries in this year)", Op::ImportStatement)
-        .add(6, "Statement entries not yet booked in this year" + count_of(unbooked_count_), Op::StatementEntries)
         .add(7, "Reports of this year", Op::Reports)
         .add(8, "Close the year for new vouchers", Op::CloseYear, year && !closed)
         .add(8, "Open the year for new vouchers", Op::OpenYear, closed)
         .add(9, "Find matches among the waiting events", Op::FindMatches);
+    break;
+  }
+  case Mode::Booking: {
+    auto const* year = books_.year_starting(open_year_);
+    operations.add(1, "Enter a voucher", Op::EnterVoucher)
+        .add(2, "Note an event to post later", Op::NoteEvent)
+        .add(3, std::format("Waiting events ({})", year ? year->waiting.size() : 0), Op::WaitingEvents)
+        .add(4, "Statement entries not yet booked in this year" + count_of(unbooked_count_), Op::StatementEntries)
+        .add(5, "View vouchers (correct one, or use it as a template)", Op::ViewVouchers);
     break;
   }
   case Mode::Projects:
@@ -500,6 +518,7 @@ Operations<Repl::Op> Repl::operations() const {
   case Mode::Workspace:
   case Mode::Project:
   case Mode::Year:
+  case Mode::Booking:
     operations.other("Enter", "list").other("-", "back").other("l", "log").other("h", "help").other("q", "quit");
     break;
   case Mode::ChooseAmount:
@@ -547,7 +566,10 @@ void Repl::show_operations(std::ostream& out) const {
 // A key at cratchit>, workspace>, project> or the year prompt
 void Repl::on_prompt_key(charset::unicode::CodePoint key, std::ostream& out) {
   if (key == U'-' && mode_ != Mode::Main) {
-    mode_ = mode_ == Mode::Workspace ? Mode::Main : mode_ == Mode::Project ? Mode::Workspace : Mode::Project;
+    mode_ = mode_ == Mode::Workspace ? Mode::Main
+            : mode_ == Mode::Project ? Mode::Workspace
+            : mode_ == Mode::Booking ? Mode::Year
+                                     : Mode::Project;
   } else if (key == U'l') {
     open_log(out);
   } else if (auto const op = operations().on_key(key)) {
@@ -586,6 +608,12 @@ void Repl::on_operation(Op op, std::ostream& out) {
       before_reports_ = Mode::Year;
       mode_ = Mode::Reports;
       show_reports(out);
+    }
+    break;
+  case Op::Booking:
+    if (read_open_year(out)) {
+      mode_ = Mode::Booking;
+      show_keys(out);
     }
     break;
   case Op::EnterVoucher:
@@ -752,6 +780,8 @@ std::string Repl::prompt() const {
     return pager_.prompt();
   case Mode::YearMenu:
     return "year?> ";
+  case Mode::Booking:
+    return "booking> ";
   case Mode::Year: {
     // The fiscal year, e.g. 2026/27, or 2025 for a calendar year
     auto const* year = books_.year_starting(open_year_);
@@ -904,7 +934,7 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
       return;
     }
     if (result == PathEditor::Result::Cancelled) {
-      mode_ = Mode::Year;
+      mode_ = Mode::Booking;
       return;
     }
     on_voucher_line(out);
@@ -1876,8 +1906,8 @@ bool Repl::start_entry(bool noting, std::ostream& out, std::string const& line) 
   }
   auto const& year = books_.years[*index];
   if (year.closed) {
-    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press 8 to open it.", format_iso_date(year.start),
-                 format_iso_date(year.end));
+    std::println(out, "Fiscal year {} - {} is closed for new vouchers. Press 8 at the year prompt to open it.",
+                 format_iso_date(year.start), format_iso_date(year.end));
     return false;
   }
   draft_.reset();
@@ -2211,7 +2241,7 @@ void Repl::on_row(PathEditor::Result result, std::ostream& out) {
       std::println(out, "Dropped the voucher. Nothing is saved.{}", from_waiting_ ? " The event is still waiting." : "");
       draft_.reset();
       from_waiting_.reset();
-      mode_ = Mode::Year;
+      mode_ = Mode::Booking;
       return;
     }
     std::print(out, "Removed");
@@ -2381,7 +2411,7 @@ void Repl::on_postings_key(charset::unicode::CodePoint key, std::ostream& out) {
 }
 
 void Repl::save_voucher(std::ostream& out) {
-  mode_ = Mode::Year;
+  mode_ = Mode::Booking;
   auto const draft = std::move(*draft_);
   draft_.reset();
   auto const from_waiting = std::exchange(from_waiting_, std::nullopt);
@@ -2432,7 +2462,7 @@ bool Repl::write_books(std::ostream& out) {
 
 // The event typed, noted in its year's waiting events
 void Repl::note_event(std::ostream& out) {
-  mode_ = Mode::Year;
+  mode_ = Mode::Booking;
   auto const draft = std::move(*draft_);
   draft_.reset();
   auto& year = books_.years[draft.year];
@@ -2479,7 +2509,7 @@ void Repl::show_waiting(std::ostream& out) {
 
 void Repl::on_waiting_key(charset::unicode::CodePoint key, std::ostream& out) {
   if (key == U'-') {
-    mode_ = Mode::Year;
+    mode_ = Mode::Booking;
     return;
   }
   auto const pick = waiting_page_.on_key(key, books_.year_starting(open_year_)->waiting.size());
@@ -2552,7 +2582,7 @@ void Repl::on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& 
                  project_->name, project_->uuid, format_iso_date(year.start), format_iso_date(year.end));
     if (year.waiting.empty()) {
       std::println(out, "No events are waiting now.");
-      mode_ = Mode::Year;
+      mode_ = Mode::Booking;
       return;
     }
     waiting_page_.keep_within(year.waiting.size());
@@ -2852,7 +2882,7 @@ void Repl::show_voucher_series(std::ostream& out) const {
 
 void Repl::on_voucher_series_key(charset::unicode::CodePoint key, std::ostream& out) {
   if (key == U'-') {
-    mode_ = Mode::Year;
+    mode_ = Mode::Booking;
     return;
   }
   std::string letter;
@@ -3204,7 +3234,7 @@ void Repl::import_statement(std::ostream& out) {
   std::println(out, "Stashed the file as {} in {}", saved->stashed.generic_string(), project_->folder.string());
   std::println(out, "Imported {} entr{} for account {} ({} already known, {} outside). Press {} to book them.",
                plan.added.size(), plan.added.size() == 1 ? "y" : "ies", plan.account, plan.known, plan.outside,
-               before_statement_ == Mode::Year ? 6 : 4);
+               before_statement_ == Mode::Year ? "1 and then 4" : "4");
   LOG_BUSINESS("Imported statement file {} for account {} into project {} ({}): {} entries added, {} already known, "
                "{} outside{}, stashed as {}",
                statement_file_.string(), plan.account, project_->name, project_->uuid, plan.added.size(), plan.known,
@@ -3259,7 +3289,7 @@ std::optional<std::size_t> Repl::count_unbooked() const {
   if (!imports) {
     return std::nullopt;
   }
-  if (mode_ == Mode::Year) {
+  if (mode_ == Mode::Year || mode_ == Mode::Booking) {
     return books::open_entries(books_, *imports, books_.year_starting(open_year_)).size();
   }
   auto const books = books::read_books(project_->folder);
@@ -3270,7 +3300,7 @@ std::optional<std::size_t> Repl::count_unbooked() const {
 }
 
 bool Repl::read_entries(std::ostream& out) {
-  if (before_entries_ == Mode::Year) {
+  if (before_entries_ == Mode::Booking) {
     if (!read_open_year(out)) {
       return false;
     }
@@ -3287,7 +3317,7 @@ bool Repl::read_entries(std::ostream& out) {
     std::println(out, "Error: {}", imports.error());
     return false;
   }
-  auto const* year = before_entries_ == Mode::Year ? books_.year_starting(open_year_) : nullptr;
+  auto const* year = before_entries_ == Mode::Booking ? books_.year_starting(open_year_) : nullptr;
   open_entries_ = books::open_entries(books_, *imports, year);
   return true;
 }
@@ -3300,7 +3330,8 @@ void Repl::open_entries(std::ostream& out) {
   }
   if (open_entries_.empty()) {
     std::println(out, "No statement entries are waiting{}. Press {} to import a statement.",
-                 before_entries_ == Mode::Year ? " in this fiscal year" : "", before_entries_ == Mode::Year ? 5 : 3);
+                 before_entries_ == Mode::Booking ? " in this fiscal year" : "",
+                 before_entries_ == Mode::Booking ? "5 at the year prompt" : "3");
     return;
   }
   entry_page_.reset();
@@ -3326,7 +3357,7 @@ void Repl::back_to_entries(std::ostream& out) {
 
 // Numbered from 1, by account and date; over 9, keys 1-8 with 0 up and 9 down
 void Repl::show_entries(std::ostream& out) const {
-  auto const* year = before_entries_ == Mode::Year ? books_.year_starting(open_year_) : nullptr;
+  auto const* year = before_entries_ == Mode::Booking ? books_.year_starting(open_year_) : nullptr;
   std::println(out, "Statement entries not yet booked{}:",
                year ? std::format(" in fiscal year {} - {}", format_iso_date(year->start), format_iso_date(year->end))
                     : "");

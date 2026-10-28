@@ -93,6 +93,7 @@ private:
     Paging,
     YearMenu,
     Year,
+    Booking,
     ChooseAmount,
     ConfirmEvent,
     Template,
@@ -116,6 +117,7 @@ private:
   // What a number picks at cratchit>, workspace>, project>, the year prompt, and in the menus and views of one item
   enum class Op {
     WorkspaceMenu,
+    Booking,
     Projects,
     FiscalYears,
     ImportSie,
@@ -221,7 +223,7 @@ private:
   std::optional<statement::Document> statement_;    // its postings
   std::optional<books::AccountGuess> statement_guess_;
   std::optional<books::StatementPlan> statement_plan_; // the import waiting for y/n
-  Mode before_entries_ = Mode::Project;             // where the list of statement entries was opened
+  Mode before_entries_ = Mode::Project;             // where the list of statement entries was opened (project or booking)
   std::vector<books::OpenEntry> open_entries_;      // the statement entries not yet booked
   std::optional<std::size_t> unbooked_count_;       // how many there are, counted for the key list
   ItemList entry_page_;                             // the page of the statement entries
@@ -233,7 +235,7 @@ private:
   std::size_t chosen_match_ = 0;                    // the match chosen, an index into matches_
   bool merging_ = false;                            // the event line is the one event the chosen match makes
 
-  bool is_prompt() const; // at cratchit>, workspace> or project>
+  bool is_prompt() const; // at cratchit>, workspace>, project>, the year prompt or booking>
   void show_keys(std::ostream& out);
   Operations<Op> operations() const; // of the current prompt, menu or view
   void show_operations(std::ostream& out) const; // the numbered operations

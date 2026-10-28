@@ -47,6 +47,16 @@ std::string postings_keys(std::string const& voucher, bool flip) {
          "postings> ";
 }
 
+// The key list at booking>, with the waiting events and the statement entries not yet booked
+std::string booking_keys(int waiting, int entries) {
+  return "Keys at booking>:\n"
+         "  1  Enter a voucher\n"
+         "  2  Note an event to post later\n"
+         "  3  Waiting events (" + std::to_string(waiting) + ")\n"
+         "  4  Statement entries not yet booked in this year (" + std::to_string(entries) + ")\n"
+         "  5  View vouchers (correct one, or use it as a template)\n";
+}
+
 } // namespace
 
 TEST(Repl, HOpensHelp) {
@@ -1117,9 +1127,9 @@ TEST_F(WorkspaceRepl, MinusOnAnEmptyLineGoesBackAndIsTypedOtherwise) {
   run("12Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  auto const output = run("1Lunch-\x7f\x7f\x7f\x7f\x7f\x7f-");
+  auto const output = run("11Lunch-\x7f\x7f\x7f\x7f\x7f\x7f-");
   EXPECT_NE(output.find("voucher> Lunch-\b \b"), std::string::npos) << output;
-  EXPECT_TRUE(output.ends_with("\b \b-\n2025> \n")) << output;
+  EXPECT_TRUE(output.ends_with("\b \b-\nbooking> \n")) << output;
 }
 
 TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
@@ -1127,8 +1137,8 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   auto const folder = root / "start" / "Test";
-  auto const output = run("1Bank cost march 35 2025-03-31\ny\n\n1");
-  EXPECT_NE(output.find("2025> 1\n"
+  auto const output = run("11Bank cost march 35 2025-03-31\ny\n\n1");
+  EXPECT_NE(output.find("booking> 1\n"
                         "Type the heading, amount and date of the voucher, e.g. Telia faktura oktober 1118,00 "
                         "2026-10-22.\n"
                         "The date is needed (today is 2026-10-20). Backspace erases, Enter accepts. - or Enter on an "
@@ -1163,7 +1173,7 @@ TEST_F(WorkspaceRepl, EKeyEntersAndSavesAVoucher) {
                         "Updated .cratchit/books/2025-01-01/vouchers.csv in " + folder.string() + "\n"
                         "Updated .cratchit/books/2025-01-01/postings.csv in " + folder.string() + "\n"
                         "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"
-                        "2025> \n"),
+                        "booking> \n"),
             std::string::npos)
       << output;
   auto const books = cratchit::books::read_books(folder);
@@ -1185,8 +1195,8 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
   auto const folder = root / "start" / "Test";
   auto const events = folder / ".cratchit" / "books" / "2025-01-01" / "events.csv";
   EXPECT_FALSE(fs::exists(events));
-  auto output = run("2Bank cost march -35 2025-03-31\ny");
-  EXPECT_NE(output.find("2025> 2\n"
+  auto output = run("12Bank cost march -35 2025-03-31\ny");
+  EXPECT_NE(output.find("booking> 2\n"
                         "Type the heading, amount and date of the event to post later, e.g. Telia faktura oktober "
                         "1118,00 2026-10-22.\n"
                         "No date means today. Backspace erases, Enter accepts. - or Enter on an empty line goes back.\n"
@@ -1197,7 +1207,7 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
                         "OK? (y/n) y\n"
                         "Initiated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
                         "Noted: 2025-03-31 Bank cost march 35.00 (1 waiting). Press 3 to post it.\n"
-                        "2025> \n"),
+                        "booking> \n"),
             std::string::npos)
       << output;
   std::ifstream in(events);
@@ -1205,8 +1215,8 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
   EXPECT_EQ(text, "date,text,amount,noted\n2025-03-31,Bank cost march,35.00,2026-10-20\n");
   in.close();
 
-  output = run("3110\n6570\n1930\n\n1");
-  EXPECT_NE(output.find("2025> 3\n"
+  output = run("13110\n6570\n1930\n\n1");
+  EXPECT_NE(output.find("booking> 3\n"
                         "Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  1  2025-03-31         35.00  Bank cost march\n"
                         "waiting?> 1\n"
@@ -1226,7 +1236,7 @@ TEST_F(WorkspaceRepl, NKeyNotesAnEventAndWPostsIt) {
                         "Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
                         "Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n"
                         "The event is no longer waiting (0 still waiting).\n"
-                        "2025> \n"),
+                        "booking> \n"),
             std::string::npos)
       << output;
   EXPECT_FALSE(fs::exists(events));
@@ -1242,33 +1252,33 @@ TEST_F(WorkspaceRepl, WaitingEventsStayUntilPostedOrDeleted) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   auto const folder = root / "start" / "Test";
-  EXPECT_TRUE(run("3").ends_with(
-      "2025> 3\nNo events are waiting in fiscal year 2025-01-01 - 2025-12-31. Press 2 to note one.\n2025> \n"));
-  run("2Telia 1118 2025-04-01\ny");
-  run("2Kvitto 249 2025-04-02\ny");
+  EXPECT_TRUE(run("13").ends_with(
+      "booking> 3\nNo events are waiting in fiscal year 2025-01-01 - 2025-12-31. Press 2 to note one.\nbooking> \n"));
+  run("12Telia 1118 2025-04-01\ny");
+  run("12Kvitto 249 2025-04-02\ny");
   // - at series> goes back to the list; - at post> with no rows drops the voucher, not the event
-  auto output = run("321-11A-\n");
+  auto output = run("1321-11A-\n");
   EXPECT_NE(output.find("waiting> 1\nSeries"), std::string::npos) << output;
   EXPECT_NE(output.find("series> -\nWaiting events in fiscal year 2025-01-01 - 2025-12-31:\n"), std::string::npos)
       << output;
-  EXPECT_NE(output.find("post> -\nDropped the voucher. Nothing is saved. The event is still waiting.\n2025> \n"),
+  EXPECT_NE(output.find("post> -\nDropped the voucher. Nothing is saved. The event is still waiting.\nbooking> \n"),
             std::string::npos)
       << output;
   // d asks first; n goes back to the event, - from there to the list
   std::string const kvitto = "  2025-04-02        249.00  Kvitto\n"
                              "\n"
                              "  1  Post it: enter its voucher\n";
-  output = run("32dn-");
+  output = run("132dn-");
   EXPECT_NE(output.find("waiting?> 2\n" + kvitto + "waiting> d\nDelete it? (y/n) n\n" + kvitto +
                         "waiting> -\nWaiting events in"),
             std::string::npos)
       << output;
   // d is not listed, but named by an unknown key
-  output = run("31x");
+  output = run("131x");
   EXPECT_TRUE(output.ends_with("waiting> x\nUnknown key. Other keys: Enter list, d delete, - back, h help, q quit.\n"
                                "waiting> \n"))
       << output;
-  output = run("31dy");
+  output = run("131dy");
   EXPECT_NE(output.find("Delete it? (y/n) y\n"
                         "Updated .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
                         "Deleted the waiting event 2025-04-01 \"Telia\" 1118.00.\n"
@@ -1276,11 +1286,28 @@ TEST_F(WorkspaceRepl, WaitingEventsStayUntilPostedOrDeleted) {
                         "  1  2025-04-02        249.00  Kvitto\n"),
             std::string::npos)
       << output;
-  output = run("31dy");
+  output = run("131dy");
   EXPECT_NE(output.find("Removed .cratchit/books/2025-01-01/events.csv in " + folder.string() + "\n"
                         "Deleted the waiting event 2025-04-02 \"Kvitto\" 249.00.\n"
                         "No events are waiting now.\n"
-                        "2025> \n"),
+                        "booking> \n"),
+            std::string::npos)
+      << output;
+}
+
+TEST_F(WorkspaceRepl, BookingGroupsTheBookingOperationsAndCountsBothWaitingLists) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny10");
+  run("12Telia 1118 2025-04-01\ny");
+  // Enter lists the keys at booking>; - goes back to the year, whose key list counts both waiting lists
+  auto const output = run("1\nx-\n");
+  EXPECT_NE(output.find("2025> 1\n" + booking_keys(1, 0) + "booking> \n" + booking_keys(1, 0) +
+                        "booking> x\nUnknown key. Other keys: Enter list, - back, l log, h help, q quit.\n"
+                        "booking> -\n"
+                        "2025> \n"
+                        "Keys at 2025>:\n"
+                        "  1  Booking (waiting: 1 event, 0 statement entries)\n"),
             std::string::npos)
       << output;
 }
@@ -1289,11 +1316,11 @@ TEST_F(WorkspaceRepl, WaitingEventsAreListedOldestFirst) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  run("2Telia 1118 2025-04-01\ny");
-  run("2Hyra 5000 2025-05-01\ny");
-  run("2Kvitto 249 2025-03-15\ny");
-  run("2Telia rest 10 2025-04-01\ny");
-  auto const output = run("3");
+  run("12Telia 1118 2025-04-01\ny");
+  run("12Hyra 5000 2025-05-01\ny");
+  run("12Kvitto 249 2025-03-15\ny");
+  run("12Telia rest 10 2025-04-01\ny");
+  auto const output = run("13");
   EXPECT_NE(output.find("Waiting events in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  1  2025-03-15        249.00  Kvitto\n"
                         "  2  2025-04-01       1118.00  Telia\n"
@@ -1307,7 +1334,7 @@ TEST_F(WorkspaceRepl, EmptyVoucherLineGoesBackToTheYear) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  EXPECT_TRUE(run("1\n").ends_with("voucher> \n2025> \n")) << run("1\n");
+  EXPECT_TRUE(run("11\n").ends_with("voucher> \nbooking> \n")) << run("11\n");
 }
 
 TEST_F(WorkspaceRepl, VoucherLineIsRefusedAndKeptForEditing) {
@@ -1315,7 +1342,7 @@ TEST_F(WorkspaceRepl, VoucherLineIsRefusedAndKeptForEditing) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   // Backspace (DEL) edits the kept line
-  auto const output = run("1Bank 35 2027-01-01\n" + std::string(10, '\x7f') + "2025-01-01\nn");
+  auto const output = run("11Bank 35 2027-01-01\n" + std::string(10, '\x7f') + "2025-01-01\nn");
   EXPECT_NE(output.find("voucher> Bank 35 2027-01-01\n"
                         "Refused: 2027-01-01 is outside fiscal year 2025-01-01 - 2025-12-31.\n"
                         "voucher> Bank 35 2027-01-01"),
@@ -1332,7 +1359,7 @@ TEST_F(WorkspaceRepl, QuestionMarkHintsTheCounterAccounts) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   // ? on an empty row hints at once and stays typed; Enter then only clears it, an account typed after it hints on Enter
-  auto const output = run("1Lunch 10 2025-05-05\nyb?\n1930 -10\n?\n? 6570\n? bank\n6570\n\n?----");
+  auto const output = run("11Lunch 10 2025-05-05\nyb?\n1930 -10\n?\n? 6570\n? bank\n6570\n\n?----");
   auto const hint_1930 = "Hint for 1930 C Bank, from vouchers and waiting events with 1930 on credit:\n"
                          "  Counter accounts in the latest 1:\n"
                          "    6570   D   1  Bank costs\n"
@@ -1372,21 +1399,21 @@ TEST_F(WorkspaceRepl, RowsListAccountsRemoveAndDrop) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  auto const output = run("1Lunch 100 2025-05-05\nyb" "bank\n1930 -100\n\n--");
+  auto const output = run("11Lunch 100 2025-05-05\nyb" "bank\n1930 -100\n\n--");
   EXPECT_NE(output.find("Voucher B 1 (Kundfakturor) 2025-05-05 \"Lunch\" 100.00\n"), std::string::npos) << output;
   EXPECT_NE(output.find("post> bank\nAccounts matching bank:\n  1930  Bank\n  6570  Bank costs\n"), std::string::npos)
       << output;
   EXPECT_NE(output.find("post> \n  Remaining 100.00 (debit 0.00, credit 100.00, amount 100.00).\n"), std::string::npos)
       << output;
   EXPECT_NE(output.find("post> -\nRemoved  1930                       100.00  Bank\n  No rows.\n"), std::string::npos) << output;
-  EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\n2025> \n")) << output;
+  EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\nbooking> \n")) << output;
 }
 
 TEST_F(WorkspaceRepl, SpacedAmountMustBeChosen) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  auto const output = run("1Faktura 87 500 2025-05-05\nx3-\n2n");
+  auto const output = run("11Faktura 87 500 2025-05-05\nx3-\n2n");
   EXPECT_NE(output.find("voucher> Faktura 87 500 2025-05-05\n"
                         "The amount is unclear: spaces may separate thousands. Which is it?\n"
                         "  1           500.00  Faktura 87\n"
@@ -1413,7 +1440,7 @@ TEST_F(WorkspaceRepl, RowsMustAddUpToTheAmountToSave) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  auto const output = run("1Bank cost 35 2025-03-31\ny0\n6570 10\n1930\n\n6570\n6570 25\n1930 -25\n\n");
+  auto const output = run("11Bank cost 35 2025-03-31\ny0\n6570 10\n1930\n\n6570\n6570 25\n1930 -25\n\n");
   EXPECT_NE(output.find("post> 1930\n"
                         "  1930                        10.00  Bank\n"
                         "  Debit 10.00, credit 10.00, amount 35.00: debit and credit must each reach the amount.\n"
@@ -1440,7 +1467,7 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   // 2 picks A 1; - at series> goes back to the list, - there back to the line
-  auto const output = run("1Bank cost sale 25 2025-04-01\ny2--\ny1\n---3010 -20\n\n---");
+  auto const output = run("11Bank cost sale 25 2025-04-01\ny2--\ny1\n---3010 -20\n\n---");
   EXPECT_NE(output.find("OK? (y/n) y\n"
                         "Earlier vouchers like this one:\n"
                         "  1  A 2  2025-03-01         10.00  Bank cost\n"
@@ -1497,7 +1524,7 @@ TEST_F(WorkspaceRepl, TemplateGuidesTheRows) {
                         "  Suggested 1930           20.00               Bank\n"),
             std::string::npos)
       << output;
-  EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\n2025> \n")) << output;
+  EXPECT_TRUE(output.ends_with("post> -\nDropped the voucher. Nothing is saved.\nbooking> \n")) << output;
 }
 
 TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
@@ -1505,7 +1532,7 @@ TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   // Enter takes template A 2 and series A; 2 flips, x and Enter list the keys, 2 flips back, 2 again and 1 saves
-  auto const output = run("1Bank refund 35 2025-04-03\ny\n\n2x\n221");
+  auto const output = run("11Bank refund 35 2025-04-03\ny\n\n2x\n221");
   auto const flipped = std::string("2\n"
                                    "Suggested from A 2, scaled to the amount and flipped:\n"
                                    "Voucher A 3 2025-04-03 \"Bank refund\"\n"
@@ -1530,7 +1557,7 @@ TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
       << output;
   EXPECT_NE(output.find("postings> 2\nSuggested from A 2, scaled to the amount:\n"), std::string::npos) << output;
   EXPECT_NE(output.find(flipped + "1\n"), std::string::npos) << output;
-  EXPECT_TRUE(output.ends_with("Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\n2025> \n")) << output;
+  EXPECT_TRUE(output.ends_with("Saved voucher A 3 into fiscal year 2025-01-01 - 2025-12-31.\nbooking> \n")) << output;
   auto const books = cratchit::books::read_books(root / "start" / "Test");
   ASSERT_TRUE(books.has_value()) << books.error();
   auto const& saved = books->years.front().vouchers.back();
@@ -1539,7 +1566,7 @@ TEST_F(WorkspaceRepl, FAtPostingsFlipsTheTemplate) {
   EXPECT_EQ(saved.postings[0].amount, -3500);
   EXPECT_EQ(saved.postings[1].amount, 3500);
   // Without a template, 2 (flip) is not offered
-  auto const plain = run("1Lunch 20 2025-04-04\ny\n6570 20\n1930\n\n2----");
+  auto const plain = run("11Lunch 20 2025-04-04\ny\n6570 20\n1930\n\n2----");
   EXPECT_NE(plain.find(postings_keys("A 4", false) + "2\nUnknown key. Other keys:"), std::string::npos) << plain;
 }
 
@@ -1558,9 +1585,9 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  run("1Bank cost march 35 2025-03-31\ny\n\n1");
-  auto output = run("4xa1");
-  EXPECT_NE(output.find("2025> 4\n"
+  run("11Bank cost march 35 2025-03-31\ny\n\n1");
+  auto output = run("15xa1");
+  EXPECT_NE(output.find("booking> 5\n"
                         "Series in fiscal year 2025-01-01 - 2025-12-31:\n"
                         "  A  Redovisning                         3 vouchers, last A 3 2025-03-31\n"
                         "\n"
@@ -1586,13 +1613,13 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
             std::string::npos)
       << output;
   // An imported voucher is not corrected
-  output = run("4a31-");
+  output = run("15a31-");
   EXPECT_NE(output.find("A 1> 1\nA 1 came with an SIE import, so cratchit does not correct it. Correct it in the program "
                         "it\ncame from and import the file again.\nA 1> -\nVouchers A"),
             std::string::npos)
       << output;
   // The correction reverses the rows, in the same series, and then the right voucher can follow
-  output = run("4a11" + std::string(10, '\x7f') + "2025-04-01\ny\n1");
+  output = run("15a11" + std::string(10, '\x7f') + "2025-04-01\ny\n1");
   EXPECT_NE(output.find("A 3> 1\n"), std::string::npos) << output;
   EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-03-31" + erased(10) + "2025-04-01\n"
                         "  Heading  Rättelse av A 3: Bank cost march\n"
@@ -1614,7 +1641,7 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
       << output;
   // Saved, the correction ends there: no right voucher follows
   EXPECT_TRUE(output.ends_with("Saved voucher A 4 into fiscal year 2025-01-01 - 2025-12-31.\n"
-                               "A 4 reverses A 3.\n2025> \n"))
+                               "A 4 reverses A 3.\nbooking> \n"))
       << output;
   // The correction's line has the corrected voucher's date
   EXPECT_NE(output.find("voucher> Rättelse av A 3: Bank cost march 35.00 2025-03-31"), std::string::npos) << output;
@@ -1632,7 +1659,7 @@ TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   // No template list: the viewed voucher is the template, even with no shared word
-  auto const output = run("4a12Lunch 20 2025-04-02\ny\n");
+  auto const output = run("15a12Lunch 20 2025-04-02\ny\n");
   EXPECT_NE(output.find("A 2> 2\nType the heading"), std::string::npos) << output;
   EXPECT_NE(output.find("OK? (y/n) y\nSeries (Enter = A, as A 2 2025-03-01 \"Bank cost\"):\n"), std::string::npos)
       << output;
@@ -1646,8 +1673,8 @@ TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {
             std::string::npos)
       << output;
   // A closed year refuses it
-  auto const closed = run("84a12");
-  EXPECT_NE(closed.find("A 2> 2\nFiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press 8 to open it.\n"
+  auto const closed = run("815a12");
+  EXPECT_NE(closed.find("A 2> 2\nFiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press 8 at the year prompt to open it.\n"
                         "A 2> "),
             std::string::npos)
       << closed;
@@ -1781,7 +1808,7 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
       << output;
 
   // Posted from the waiting list: the event's postings are the rows, and it balances
-  output = run("10311\n\n1");
+  output = run("101311\n\n1");
   EXPECT_NE(output.find("       Account        Debit       Credit\n"
                         "       1930                       100.00  2025-04-02  Bank\n"
                         "       2099          100.00               2025-04-02  Result\n"
@@ -1810,8 +1837,8 @@ TEST_F(WorkspaceRepl, AKeyTurnsStatementEntriesIntoAWaitingEventAndAVoucher) {
   EXPECT_EQ(saved.postings[0].date, cratchit::parse_iso_date("2025-04-02"));
   EXPECT_TRUE(saved.postings[0].source.empty());
   // Booked now, so nothing waits
-  EXPECT_TRUE(run("6").ends_with("2025> 6\nNo statement entries are waiting in this fiscal year. Press 5 to import a "
-                                 "statement.\n2025> \n"));
+  EXPECT_TRUE(run("14").ends_with("booking> 4\nNo statement entries are waiting in this fiscal year. Press 5 at the "
+                                  "year prompt to import a statement.\nbooking> \n"));
 }
 
 TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
@@ -1830,12 +1857,8 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
                         "Opened fiscal year 2025-01-01 - 2025-12-31, open for new vouchers.\n"
                         "2025> \n"
                         "Keys at 2025>:\n"
-                        "  1  Enter a voucher\n"
-                        "  2  Note an event to post later\n"
-                        "  3  Waiting events (0)\n"
-                        "  4  View vouchers (correct one, or use it as a template)\n"
+                        "  1  Booking (waiting: 0 events, 0 statement entries)\n"
                         "  5  Import an account statement (only the entries in this year)\n"
-                        "  6  Statement entries not yet booked in this year (0)\n"
                         "  7  Reports of this year\n"
                         "  8  Close the year for new vouchers\n"
                         "  9  Find matches among the waiting events\n"
@@ -1843,13 +1866,16 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
             std::string::npos)
       << output;
   // Reopened with the project; closing stops new vouchers until opened again
-  auto const closing = run("818y-");
+  auto const closing = run("811-8y-");
   EXPECT_NE(closing.find("Opened fiscal year 2025-01-01 - 2025-12-31, open for new vouchers.\n"
                          "2025> 8\n"
                          "Updated .cratchit/books/books.txt in " + folder.string() + "\n"
                          "Fiscal year 2025-01-01 - 2025-12-31 is now closed for new vouchers.\n"
-                         "2025> 1\n"
-                         "Fiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press 8 to open it.\n"
+                         "2025> 1\n" + booking_keys(0, 0) +
+                         "booking> 1\n"
+                         "Fiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers. Press 8 at the year prompt to "
+                         "open it.\n"
+                         "booking> -\n"
                          "2025> 8\n"
                          "Updated .cratchit/books/books.txt in " + folder.string() + "\n"
                          "Fiscal year 2025-01-01 - 2025-12-31 is now open for new vouchers.\n"
@@ -1877,7 +1903,7 @@ TEST_F(WorkspaceRepl, NoDateOutsideTheYearAsksForIt) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
-  auto const output = run("1Bank 35\n");
+  auto const output = run("11Bank 35\n");
   EXPECT_NE(output.find("voucher> Bank 35\nNo date. Type the date, e.g. 2026-10-22.\n"), std::string::npos) << output;
 }
 
@@ -1885,12 +1911,12 @@ TEST_F(WorkspaceRepl, AVoucherNeedsItsDateEvenWhenTheYearHoldsToday) {
   run("112Test\n1");
   write_sie(root / "start" / "this.se", sie_test::sie_file(2026, "", ""));
   run("2this.se\ny10");
-  auto output = run("1Bank 35\n");
+  auto output = run("11Bank 35\n");
   EXPECT_NE(output.find("voucher> Bank 35\nNo date. Type the date, e.g. 2026-10-22.\nvoucher> Bank 35"),
             std::string::npos)
       << output;
   // An event to note may still leave it out for today
-  output = run("2Bank 35\n");
+  output = run("12Bank 35\n");
   EXPECT_NE(output.find("  Date     2026-10-20"), std::string::npos) << output;
 }
 
@@ -1899,14 +1925,14 @@ TEST_F(WorkspaceRepl, MAtTheWaitingListFindsMatchesToMakeOneOrDelete) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   auto const folder = root / "start" / "Test";
-  EXPECT_NE(run("2Hyra 5000 2025-04-01\ny\n").find("  9  Find matches among the waiting events\n"), std::string::npos);
+  EXPECT_NE(run("12Hyra 5000 2025-04-01\ny-\n").find("  9  Find matches among the waiting events\n"), std::string::npos);
   EXPECT_NE(run("9").find("2025> 9\n"
                           "No possible matches among the waiting events (the same amount, at most 4 days apart).\n"
                           "2025> \n"),
             std::string::npos);
-  run("2Bank fee 10 2025-03-03\ny");
-  run("2Kvitto 249 2025-04-02\ny");
-  run("2Kvitto Clas 249 2025-04-04\ny");
+  run("12Bank fee 10 2025-03-03\ny");
+  run("12Kvitto 249 2025-04-02\ny");
+  run("12Kvitto Clas 249 2025-04-04\ny");
   auto output = run("9");
   EXPECT_NE(output.find("2025> 9\n"
                         "Possible matches in fiscal year 2025-01-01 - 2025-12-31 (the same amount, at most 4 days "
