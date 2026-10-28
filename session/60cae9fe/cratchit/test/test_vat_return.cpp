@@ -136,6 +136,17 @@ TEST(VatReturn, AQuarterAcrossTwoFiscalYears) {
             }));
 }
 
+TEST(VatReturn, VatToPayAddsUpBox49AsTheForm) {
+  // Output VAT 250 + 60 + 25 (credit), input VAT 100 (debit), sales box 05 not counted
+  Document const document{*quarter_of(2026y, 1),
+                          {{"05", -100000, {}}, {"10", -25000, {}}, {"11", -6000, {}}, {"30", -2500, {}},
+                           {"48", 10000, {}}}};
+  EXPECT_EQ(vat_to_pay(document), 23500);
+  Document const back{*quarter_of(2026y, 1), {{"10", -2500, {}}, {"48", 10000, {}}}};
+  EXPECT_EQ(vat_to_pay(back), -7500);
+  EXPECT_EQ(vat_to_pay(Document{*quarter_of(2026y, 1), {}}), 0);
+}
+
 TEST(VatReturn, NoVouchersInThePeriodGiveNoBoxes) {
   auto const document = document_of(two_years(), *quarter_of(2025y, 4));
   EXPECT_TRUE(document.boxes.empty());
@@ -244,4 +255,14 @@ TEST(VatReturn, StepsRow) {
   PeriodSteps const steps{*quarter_of(2026y, 1), -25008, -25000,
                           {{2026y / January / 1, "M", "1", 2026y / March / 31, -25000}}, 0, {}};
   EXPECT_EQ(steps_row(steps), "     -250.08     -250.00        0.00  cleared by M 1");
+}
+
+TEST(VatReturn, ReportBox49IsMinusBox48WithOnlyInputVat) {
+  Document const document{*quarter_of(2026y, 2), {{"48", 12000, {}}}};
+  PeriodSteps const steps{*quarter_of(2026y, 2), 12000, 0, {}, 0, {}};
+  auto const lines = report_of(books::Books{}, document, steps, "Test AB", std::nullopt);
+  EXPECT_NE(std::ranges::find(lines, "48                                          120.00"), lines.end());
+  EXPECT_NE(std::ranges::find(lines, "49                                         -120.00  10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48"),
+            lines.end());
+  EXPECT_EQ(lines.back(), "Box 49 on the form: 120.00 to get back.");
 }

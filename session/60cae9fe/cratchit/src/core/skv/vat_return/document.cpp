@@ -1,5 +1,6 @@
 #include "core/skv/vat_return/document.hpp"
 
+#include <algorithm>
 #include <map>
 #include <utility>
 
@@ -65,6 +66,19 @@ Document document_of(books::Books const& books, Period period) {
     document.boxes.push_back(std::move(box_amount));
   }
   return document;
+}
+
+Amount vat_to_pay(Document const& document) {
+  Amount total = 0;
+  for (auto const& box : document.boxes) {
+    if (std::ranges::find(vat_to_pay_added, box.box) != vat_to_pay_added.end()) {
+      total -= box.amount; // output VAT is credit in the books
+    }
+    if (std::ranges::find(vat_to_pay_subtracted, box.box) != vat_to_pay_subtracted.end()) {
+      total -= box.amount; // input VAT is debit in the books
+    }
+  }
+  return total;
 }
 
 } // namespace cratchit::skv::vat_return

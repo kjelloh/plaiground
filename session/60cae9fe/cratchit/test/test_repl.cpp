@@ -817,12 +817,15 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "              B 1      2025-02-10          -250.00  Sale\n"
                         "              M 1      2025-03-31           250.00  Momsrapport\n"
                         "\n"
+                        "49                                            0.00  10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48\n"
+                        "\n"
                         "The VAT of the period:\n"
                         "  Period            -250.00\n"
                         "  Cleared           -250.00  M 1  2025-03-31\n"
                         "  Charged           -250.00  A 1  2025-05-12\n"
                         "\n"
-                        "Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.\n" +
+                        "Amounts are as in the books: debit positive, credit negative.\n"
+                        "Box 49 on the form: 0.00, nothing to pay or get back.\n" +
                         quarters + "period?> 2\n"),
             std::string::npos)
       << output;

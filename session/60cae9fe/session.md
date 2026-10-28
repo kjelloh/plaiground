@@ -20,6 +20,7 @@ I AM SOOO TIRED!!
 * Anyhow, I changed the format of bas_to_momsrapport to have anm out column and made box 49 map to out 1650, 2650.
 * And Claude could make the changes to apply and parse this new file format ok.
 * Claude now also shows only boxes aggregated FROM BAS accounts (49 mapped to out bas accounts excluded)
+* Claude implemented calculation of Box 49 (and the signs seem legit for now)
 
 ## 20261027
 

@@ -73,4 +73,9 @@ struct Document {
 // reports in a box (see box_of) adds to that box
 Document document_of(books::Books const& books, Period period);
 
+// Box 49 as the form adds it up (see vat_to_pay_added): positive is VAT to pay,
+// negative VAT to get back. The form takes output VAT (credit in the books) and
+// input VAT (box 48, debit in the books) as positive figures.
+Amount vat_to_pay(Document const& document);
+
 } // namespace cratchit::skv::vat_return

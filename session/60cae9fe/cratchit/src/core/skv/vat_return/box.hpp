@@ -18,6 +18,13 @@ std::optional<Box> box_of(std::string_view account);
 // The boxes that hold VAT: output VAT (10-12, 30-32, 60-62) and input VAT (48)
 inline constexpr std::array<std::string_view, 10> vat_boxes{"10", "11", "12", "30", "31", "32", "60", "61", "62", "48"};
 
+// Box 49, Moms att betala eller få tillbaka: not reported in by accounts; the
+// form adds it up from the other VAT boxes as 10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48
+inline constexpr std::string_view vat_to_pay_box = "49";
+inline constexpr std::array<std::string_view, 9> vat_to_pay_added{"10", "11", "12", "30", "31", "32", "60", "61", "62"};
+inline constexpr std::array<std::string_view, 1> vat_to_pay_subtracted{"48"};
+inline constexpr std::string_view vat_to_pay_expression = "10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48";
+
 // True for an account that reports in one of vat_boxes
 bool is_vat_account(std::string_view account);
 

@@ -537,6 +537,15 @@ not added up into it). So 2650/1650 no longer report in box 49 and the VAT retur
 postings on accounts (box 49 gone; a quarter with only clearing/charge vouchers says "No postings ..."). Manual: "The
 VAT return" example and text. 444 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 59: Box 49 calculated. `box.hpp`: `vat_to_pay_box` = 49, `vat_to_pay_added` (10-12, 30-32, 60-62),
+`vat_to_pay_subtracted` (48), `vat_to_pay_expression`. `vat_to_pay(Document)` (document.hpp): the form's figure,
+positive = to pay; the form takes output VAT (credit in the books) and box 48 (debit) as positive, so it is minus the
+books' sum of those boxes. The report adds a `49` row after the boxes (books' sign, the expression as text) and ends
+with `Box 49 on the form: X to pay.` / `to get back.` / `0.00, nothing to pay or get back.` (replaces "Box 49 is not
+calculated yet."). Not in a period with no boxes ("No postings ..."). Fix after review: the `49` row shows the form's figure (was
+negated to the books' sign, so with only box 48 both showed positive; new report test). Manual: "The VAT return". 446 tests pass, no
+warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings

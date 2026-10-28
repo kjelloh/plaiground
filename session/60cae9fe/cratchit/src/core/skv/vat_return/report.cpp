@@ -109,9 +109,15 @@ std::vector<std::string> report_of(books::Books const& books, Document const& do
       }
     }
   }
+  auto const to_pay = vat_to_pay(document);
+  lines.push_back("");
+  lines.push_back(row(vat_to_pay_box, "", "", "", format_amount(to_pay), vat_to_pay_expression));
   add_steps();
   lines.push_back("");
-  lines.push_back("Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.");
+  lines.push_back("Amounts are as in the books: debit positive, credit negative.");
+  lines.push_back(to_pay > 0   ? std::format("Box 49 on the form: {} to pay.", format_amount(to_pay))
+                  : to_pay < 0 ? std::format("Box 49 on the form: {} to get back.", format_amount(-to_pay))
+                               : std::string("Box 49 on the form: 0.00, nothing to pay or get back."));
   return lines;
 }
 

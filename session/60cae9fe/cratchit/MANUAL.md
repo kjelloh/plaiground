@@ -1473,7 +1473,7 @@ VAT returns; `monthly` and `yearly` are not supported yet.
 
 The VAT return lists each box of the form that the period's postings report in,
 with its amount, and under it each account with its sum and name and the
-vouchers behind it with their text, then the three steps with their vouchers:
+vouchers behind it with their text, then box 49, then the three steps with their vouchers:
 
 ```
 VAT return (momsrapport) 2025-01-01 - 2025-03-31
@@ -1490,22 +1490,32 @@ Box  Account  Voucher  Date                 Amount  Text
               B 1      2025-02-10          -250.00  Sale
               M 1      2025-03-31           250.00  Momsrapport
 
+49                                            0.00  10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48
+
 The VAT of the period:
   Period            -250.00
   Cleared           -250.00  M 1  2025-03-31
   Charged           -250.00  A 1  2025-05-12
 
-Amounts are as in the books: debit positive, credit negative. Box 49 is not calculated yet.
+Amounts are as in the books: debit positive, credit negative.
+Box 49 on the form: 0.00, nothing to pay or get back.
 ```
 
 Which box an account reports in comes from the table built into cratchit
 (`bas_to_momsrapport.csv`). Only boxes that add up postings on accounts are
-shown: the table names 2650 and 1650 as sources of box 49, not as accounts that
-report in it, so box 49 is not listed. The boxes count every voucher dated in the period,
+listed with accounts: the table names 2650 and 1650 as sources of box 49, not as
+accounts that report in it. The boxes count every voucher dated in the period,
 of every series, including clearing and charge vouchers. Removed rows do not
 count. The amounts are not yet turned into the figures you type into SKV's
-form: they keep the sign they have in the books, and box 49 (VAT to pay or get
-back) is not calculated. After the VAT return the periods are shown again.
+form: they keep the sign they have in the books.
+
+Box 49 (Moms att betala eller få tillbaka) is added up as the form does it:
+10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48. The form takes output VAT
+(credit in the books) and input VAT in box 48 (debit in the books) as positive
+figures. The box 49 row shows the form's figure: positive is VAT to pay,
+negative VAT to get back (with only input VAT, box 49 is minus box 48). The
+last line says it in words. A period without postings in any box shows no box 49.
+After the VAT return the periods are shown again.
 
 ## Using the prompt
 
