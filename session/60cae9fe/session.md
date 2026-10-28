@@ -48,6 +48,12 @@ Now I asked Claude to implement a mechanism to create an eskd-Document from a VA
 * I asked Claude to also apply the mechanism to historic data and compare with historic eskd-files.
 * Claude reported they comply well (they differ only because the books contained errors)
 
+And now I asked Claude to generate the actual XML-file + UI
+
+* Option before and after creating the VAT clearing voucher
+* Output to project folder.
+* I tested to upload it to live SKV web service and it accepted the file and content looked ok.
+
 
 ## 20261027
 

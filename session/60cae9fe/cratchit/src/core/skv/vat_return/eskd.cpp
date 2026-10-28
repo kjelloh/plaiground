@@ -7,6 +7,7 @@
 #include <cctype>
 #include <chrono>
 #include <format>
+#include <fstream>
 #include <set>
 #include <utility>
 
@@ -89,6 +90,45 @@ Document document_of(vat_return::Document const& form, std::string_view orgnr) {
     }
   }
   return document;
+}
+
+std::string xml_of(Document const& document) {
+  std::string text = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
+                     "<eSKDUpload Version=\"6.0\">\n";
+  text += std::format("  <OrgNr>{}</OrgNr>\n", document.orgnr);
+  text += "  <Moms>\n";
+  text += std::format("    <Period>{}</Period>\n", document.period);
+  for (auto const& field : document.fields) {
+    text += std::format("    <{0}>{1}</{0}>\n", field.tag, field.amount / 100);
+  }
+  text += "  </Moms>\n</eSKDUpload>\n";
+  return text;
+}
+
+std::string file_name(std::string_view period, int index) {
+  return index < 2 ? std::format("moms_{}.eskd", period) : std::format("moms_{}_{}.eskd", period, index);
+}
+
+std::filesystem::path free_file(std::filesystem::path const& folder, std::string_view period) {
+  for (int index = 1;; ++index) {
+    auto path = folder / file_name(period, index);
+    std::error_code error;
+    if (!std::filesystem::exists(path, error)) {
+      return path;
+    }
+  }
+}
+
+std::expected<std::filesystem::path, std::string> write_file(std::filesystem::path const& folder,
+                                                             Document const& document) {
+  auto const path = free_file(folder, document.period);
+  std::ofstream out(path, std::ios::binary);
+  out << xml_of(document);
+  out.close();
+  if (!out) {
+    return std::unexpected(std::format("Could not write {}", path.string()));
+  }
+  return path;
 }
 
 } // namespace eskd

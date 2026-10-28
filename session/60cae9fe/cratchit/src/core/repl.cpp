@@ -479,8 +479,10 @@ Operations<Repl::Op> Repl::operations() const {
       operations
           .add(1, std::format("Book it as {} {}", skv::vat_return::clearing_series,
                               books::next_number(year, skv::vat_return::clearing_series)),
-               Op::BookVatClearing, vat_clearing_.has_value() && !year.closed)
-          .add(2, "Show the report again", Op::ShowVatReport);
+               Op::BookVatClearing, vat_clearing_.has_value() && !year.closed && !project_->orgnr.empty())
+          .add(2, "Show the report again", Op::ShowVatReport)
+          .add(3, "Write the eSKD file only (no voucher, e.g. to test it)", Op::WriteVatEskd,
+               vat_clearing_.has_value() && !project_->orgnr.empty());
     }
     break;
   case Mode::Menu:
@@ -697,6 +699,9 @@ void Repl::on_operation(Op op, std::ostream& out) {
     break;
   case Op::BookVatClearing:
     book_vat_clearing(out);
+    break;
+  case Op::WriteVatEskd:
+    write_vat_eskd(false, out);
     break;
   case Op::ShowVatReport:
     show_vat_report(out);
@@ -1634,9 +1639,9 @@ void Repl::on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out
 
 // The chosen quarter's VAT return, paged, then the quarter with its clearing voucher
 void Repl::show_vat_report(std::ostream& out) {
-  auto const document = skv::vat_return::document_of(books_, vat_quarter_);
-  vat_clearing_ = skv::vat_return::clearing_of(document);
-  show_report(skv::vat_return::report_of(books_, document, steps_of_period(vat_quarter_), company()), out);
+  vat_form_ = skv::vat_return::document_of(books_, vat_quarter_);
+  vat_clearing_ = skv::vat_return::clearing_of(vat_form_);
+  show_report(skv::vat_return::report_of(books_, vat_form_, steps_of_period(vat_quarter_), company()), out);
 }
 
 // The voucher that would clear the quarter's VAT, as it would be saved
@@ -1656,9 +1661,20 @@ void Repl::show_vat_quarter(std::ostream& out) const {
       show_row(row, out);
     }
     std::println(out, "  {}", books::posting_total(clearing.postings));
+    std::println(out, "");
+    auto const eskd = skv::vat_return::eskd::document_of(vat_form_, project_->orgnr);
+    std::println(out, "eSKD file {}:",
+                 skv::vat_return::eskd::free_file(project_->folder, eskd.period).filename().string());
+    for (auto const& field : eskd.fields) {
+      std::println(out, "  {:<24}{:>10}", field.tag, field.amount / 100);
+    }
     if (year.closed) {
       std::println(out, "Fiscal year {} - {} is closed for new vouchers, so it cannot be booked.",
                    format_iso_date(year.start), format_iso_date(year.end));
+    }
+    if (project_->orgnr.empty()) {
+      std::println(out, "The eSKD file needs the organisation number (orgnr in .cratchit/project.txt), so it cannot be");
+      std::println(out, "booked or written. An SIE import sets it.");
     }
   }
   std::println(out, "");
@@ -1676,7 +1692,8 @@ void Repl::on_vat_quarter_key(charset::unicode::CodePoint key, std::ostream& out
   }
 }
 
-// Saves the proposed clearing voucher as it is, then lists the periods with their steps again
+// Saves the proposed clearing voucher as it is and writes the eSKD file of the same VAT return,
+// then lists the periods with their steps again
 void Repl::book_vat_clearing(std::ostream& out) {
   auto const& clearing = *vat_clearing_;
   auto& year = books_.years[year_];
@@ -1699,8 +1716,34 @@ void Repl::book_vat_clearing(std::ostream& out) {
                series, number, format_iso_date(clearing.event.date), clearing.event.heading, clearing.postings.size(),
                format_amount(books::debit(clearing.postings)), name, project_->name, project_->uuid,
                format_iso_date(year.start), format_iso_date(year.end));
+  // The voucher is the record; the file comes from the VAT return it was made from
+  write_vat_eskd(true, out);
   vat_clearing_.reset();
   open_vat_periods(out);
+}
+
+// Writes the eSKD file of the VAT return shown, in the project folder, after booking its clearing voucher or alone
+void Repl::write_vat_eskd(bool booked, std::ostream& out) {
+  auto const name = skv::vat_return::quarter_name(vat_quarter_);
+  auto const eskd = skv::vat_return::eskd::document_of(vat_form_, project_->orgnr);
+  auto const written = skv::vat_return::eskd::write_file(project_->folder, eskd);
+  if (!written) {
+    std::println(out, "Error: {}. {}", written.error(),
+                 booked ? "The voucher is saved, but the eSKD file is not written." : "The eSKD file is not written.");
+    LOG_DESIGN_INSUFFICIENCY("eSKD file for {} of project {} ({}) not written: {}", name, project_->name,
+                             project_->uuid, written.error());
+    return;
+  }
+  if (booked) {
+    std::println(out, "Wrote {} in {}. Upload it in Skatteverket's e-service Lämna momsdeklaration.",
+                 written->filename().string(), project_->folder.string());
+  } else {
+    std::println(out, "Wrote {} in {}. No voucher is booked: the VAT of {} is not cleared in the books.",
+                 written->filename().string(), project_->folder.string(), name);
+  }
+  LOG_BUSINESS("Wrote eSKD file {} for {} (MomsBetala {}){} of project {} ({})", written->string(), name,
+               skv::vat_return::vat_to_pay(vat_form_) / 100, booked ? "" : " without booking its clearing voucher",
+               project_->name, project_->uuid);
 }
 
 void Repl::open_year_menu(std::ostream& out) {

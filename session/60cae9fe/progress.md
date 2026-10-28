@@ -604,6 +604,35 @@ number and period right in all 18; values the same in 16. 2025 Q2: I 6 (register
 Tag order as SKV's current page in all but 2021 Q3 and 2022 Q3, which used the old order (purchases first). Older
 files list every tag with 0; the seed writes boxes with postings + MomsBetala, as most files since 2021.
 
+Task 65: Booking the VAT clearing voucher writes the eSKD file. `eskd::xml_of` (XML declaration ISO-8859-1,
+`eSKDUpload Version="6.0"`, OrgNr, Moms with Period and the fields, one element per line, LF, whole kronor, `-` straight
+before a negative amount, no DOCTYPE; all ASCII), `file_name` (`moms_<period>.eskd`, index 2 up `moms_<period>_2.eskd`),
+`free_file`, `write_file` (never overwrites). The quarter screen keeps the VAT return it was made from (`vat_form_`) and
+lists the eSKD fields under the voucher (`eSKD file moms_202512.eskd (written when booked):`). 1 saves the voucher, then
+writes the file in the project folder (agreed: project folder, index postfix) from that same VAT return:
+`Wrote moms_202512.eskd in <folder>. Upload it in Skatteverket's e-service Lämna momsdeklaration.`; logged (business);
+a write error leaves the voucher saved, is shown and logged (design insufficiency). No orgnr in project.txt: 1 left out
+with a line saying so. Once booked the quarter adds up to zero, so the file cannot be written again from the books.
+Manual: project files (the eSKD file), Clearing the VAT of a quarter (screen, file, example, key 1, no orgnr), log
+kinds. 464 tests pass, no warnings (Debug, trace DEBUG). In review.
+Checked (scratch program): files written by `write_file` for the 18 filed periods in `_resources/_eskd_irl`. None is
+byte-identical (the filed ones have a DOCTYPE; Fortnox's put eSKDUpload on one line, the two cratchit-era ones have
+no XML declaration and 3-space indents). Ignoring declaration, DOCTYPE and layout: 11 identical; 2 more with the
+same values but all 29 tags at 0 (2020); 2 with the old tag order (2021 Q3, 2022 Q3); 2 with extra 0 tags (the
+cratchit-era moms_202503, moms_202603, the latter also A 48); 1 with other values (2025 Q2, I 6 after filing).
+
+Task 66: Write the eSKD file without booking. The quarter screen offers `3  Write the eSKD file only (no voucher, e.g.
+to test it)` when there is something to clear and the project has an orgnr (also in a closed year, books unchanged):
+writes the next free `moms_<period>[_n].eskd` in the project folder, says `Wrote ... No voucher is booked: the VAT of
+2025 Q4 is not cleared in the books.`, stays at the quarter prompt; logged (business, "without booking its clearing
+voucher"). Booking and 3 share `Repl::write_vat_eskd(booked)`. Screen heading now `eSKD file moms_202512.eskd:`; the
+no-orgnr line says "cannot be booked or written". Manual: project files, Clearing the VAT of a quarter (screen, key
+3, closed year, no orgnr). 465 tests pass, no warnings (Debug, trace DEBUG). In review.
+
+Task 67: A DOCTYPE line was added to `eskd::xml_of` after a refused test upload ("Felaktig teckenuppsättning"), then
+reverted: the real e-service accepted the file without it (2026-10-28). The file stays as in Task 65 (no DOCTYPE).
+465 tests pass, no warnings (Debug, trace DEBUG).
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -800,6 +829,9 @@ into a waiting event without making a voucher, several entries chosen at once.
   positive, purchase bases and input VAT kept; accounts and vouchers under a box keep the books' sign. The eSKD file
   takes the box amounts as they are. `momsrapport_box_to_eskd.csv` is a mapping only (`box;tag`, in file order);
   everything else about the eSKD file is in code.
+
+- 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted
+  cratchit's file without it.
 
 ## Open questions
 

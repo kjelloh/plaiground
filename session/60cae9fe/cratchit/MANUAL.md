@@ -150,6 +150,12 @@ quarterly` when it opens, shown as `Updated .cratchit/project.txt in <folder>`.
 cratchit has no operation to change it yet; edit the file. Only `quarterly`
 VAT returns can be shown so far (see Reports).
 
+Booking the VAT clearing voucher of a quarter (or writing the file alone, to test
+it) writes its eSKD file in the project folder itself (not in `.cratchit`), named `moms_<period>.eskd`, e.g.
+`moms_202512.eskd`, for you to upload to Skatteverket (see Clearing the VAT of a
+quarter). cratchit never overwrites one: when the name is taken it writes
+`moms_202512_2.eskd`, then `_3` and so on. cratchit does not read these files.
+
 The project's books are in `.cratchit/books` in the project folder:
 
 | File | What it holds |
@@ -1542,8 +1548,14 @@ Voucher M 2 2025-12-31 "Momsrapport 2025-10-01 - 2025-12-31"
   2650                       500.00  VAT clearing
   Total         500.00       500.00
 
+eSKD file moms_202512.eskd:
+  ForsMomsEjAnnan               2000
+  MomsUtgHog                     500
+  MomsBetala                     500
+
   1  Book it as M 2
   2  Show the report again
+  3  Write the eSKD file only (no voucher, e.g. to test it)
 ```
 
 The voucher is made from the VAT return:
@@ -1557,10 +1569,37 @@ The voucher is made from the VAT return:
 It is dated the quarter's last day, headed `Momsrapport <first day> - <last
 day>`, in series M (Momsrapport) with the next number of the year.
 
+The eSKD file is the VAT return as Skatteverket's e-service "Lämna
+momsdeklaration" takes it as a file (eSKDUpload 6.0, XML). It is made from the
+same VAT return as the voucher, and the screen lists what it will hold, in file
+order: each box with postings under its tag (e.g. `MomsUtgHog` for box 10),
+with the box's amount in whole kronor, then `MomsBetala` (box 49), always. The
+file has the organisation number (`orgnr` in `.cratchit/project.txt`) and the
+period as the year and the quarter's last month, e.g. `202512`. Which tag each
+box goes in comes from the table built into cratchit
+(`momsrapport_box_to_eskd.csv`). For example:
+
+```
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<eSKDUpload Version="6.0">
+  <OrgNr>556000-0001</OrgNr>
+  <Moms>
+    <Period>202512</Period>
+    <ForsMomsEjAnnan>2000</ForsMomsEjAnnan>
+    <MomsUtgHog>500</MomsUtgHog>
+    <MomsBetala>500</MomsBetala>
+  </Moms>
+</eSKDUpload>
+```
+
+A negative amount has `-` straight before it (box 49 to get back, box 48 when
+credit notes take it below zero).
+
 | Key   | What it does                                                         |
 |-------|----------------------------------------------------------------------|
-| 1     | Book the voucher as it is shown (it cannot be changed here). Then the quarters are listed again, the quarter now with its Cleared amount. |
+| 1     | Book the voucher as it is shown (it cannot be changed here) and write the eSKD file in the project folder: `Wrote moms_202512.eskd in <folder>. Upload it in Skatteverket's e-service Lämna momsdeklaration.` Then the quarters are listed again, the quarter now with its Cleared amount. If the file cannot be written, the voucher is still saved and cratchit says so. |
 | 2     | Show the quarter's VAT return again, then this screen.                 |
+| 3     | Write the eSKD file only, without booking the voucher: `Wrote moms_202512.eskd in <folder>. No voucher is booked: the VAT of 2025 Q4 is not cleared in the books.` You stay at the quarter. Use it to try the file in Skatteverket's e-service before you book. Each press writes a new file (`_2`, `_3`, ...); the name on the screen is the next one free (Enter shows it again). Also in a closed year, as the books do not change. |
 | Enter | Show this screen again.                                              |
 | -     | Back to the quarters (`period?>`).                                   |
 
@@ -1568,7 +1607,12 @@ When the VAT accounts already add up to zero in the quarter, for example
 because it is cleared, cratchit says `Nothing to clear: the VAT accounts add up
 to 0.00 in 2025 Q4.` and only 2 is offered. In a fiscal year closed for new
 vouchers the voucher is shown, with a line saying it cannot be booked, and 1 is
-left out.
+left out (3 is still offered). A project without an organisation number (`orgnr`,
+set by the first SIE import) gets neither 1 nor 3, as the eSKD file needs it.
+
+Once booked, the quarter adds up to zero, so cratchit cannot write its eSKD file
+again from the books. Keep the file you uploaded; to try the file first, use 3
+before you book.
 
 ## Using the prompt
 
@@ -1669,8 +1713,8 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
-| DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, or an account statement it cannot read. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, or an eSKD file it could not write. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 
 ### Viewing the log

@@ -866,8 +866,14 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
                                "  2650                       500.00  VAT clearing\n"
                                "  Total         500.00       500.00\n"
                                "\n"
+                               "eSKD file moms_202512.eskd:\n"
+                               "  ForsMomsEjAnnan               2000\n"
+                               "  MomsUtgHog                     500\n"
+                               "  MomsBetala                     500\n"
+                               "\n"
                                "  1  Book it as M 2\n"
-                               "  2  Show the report again\n";
+                               "  2  Show the report again\n"
+                               "  3  Write the eSKD file only (no voucher, e.g. to test it)\n";
   // Box amounts as on the form (credit positive), accounts and vouchers as in the books
   EXPECT_NE(output.find("05                                         2000.00\n"
                         "     3001                                 -2000.00  Sales 25%\n"
@@ -884,6 +890,8 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
   auto const folder = root / "start" / "Test";
   EXPECT_NE(output.find(proposed + "2025 Q4> 1\n"), std::string::npos) << output;
   EXPECT_NE(output.find("Saved voucher M 2 into fiscal year 2025-01-01 - 2025-12-31: the VAT of 2025 Q4 is cleared.\n"
+                       "Wrote moms_202512.eskd in " + folder.string() +
+                       ". Upload it in Skatteverket's e-service Lämna momsdeklaration.\n"
                        "VAT return quarters ending in 2025-01-01 - 2025-12-31 (today 2026-10-20):\n"
                        "                  Period     Cleared     Charged\n"
                        "  0  2025 Q4     -500.00     -500.00        0.00  cleared by M 2\n"),
@@ -902,6 +910,69 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
   EXPECT_EQ(voucher.event.heading, "Momsrapport 2025-10-01 - 2025-12-31");
   EXPECT_EQ(voucher.event.amount, 50000);
   EXPECT_EQ(voucher.registered, cratchit::parse_iso_date("2026-10-20"));
+
+  // The eSKD file of the same VAT return, in the project folder
+  EXPECT_EQ(read_file(folder / "moms_202512.eskd"),
+            "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
+            "<eSKDUpload Version=\"6.0\">\n"
+            "  <OrgNr>556000-0001</OrgNr>\n"
+            "  <Moms>\n"
+            "    <Period>202512</Period>\n"
+            "    <ForsMomsEjAnnan>2000</ForsMomsEjAnnan>\n"
+            "    <MomsUtgHog>500</MomsUtgHog>\n"
+            "    <MomsBetala>500</MomsBetala>\n"
+            "  </Moms>\n"
+            "</eSKDUpload>\n");
+}
+
+TEST_F(WorkspaceRepl, VatReturnWritesTheEskdFileWithoutAVoucher) {
+  run("112Test\n1");
+  write_sie(root / "start" / "vat.se", vat_sie());
+  run("2vat.se\ny");
+  auto const folder = root / "start" / "Test";
+  auto const output = run("514033-");
+  EXPECT_NE(output.find("2025 Q4> 3\nWrote moms_202512.eskd in " + folder.string() +
+                        ". No voucher is booked: the VAT of 2025 Q4 is not cleared in the books.\n"
+                        "2025 Q4> 3\nWrote moms_202512_2.eskd in " + folder.string() +
+                        ". No voucher is booked: the VAT of 2025 Q4 is not cleared in the books.\n"
+                        "2025 Q4> -\n"
+                        "VAT return quarters ending in 2025-01-01 - 2025-12-31 (today 2026-10-20):\n"
+                        "                  Period     Cleared     Charged\n"
+                        "  0  2025 Q4     -500.00        0.00        0.00\n"),
+            std::string::npos)
+      << output;
+  EXPECT_EQ(read_file(folder / "moms_202512.eskd"), read_file(folder / "moms_202512_2.eskd"));
+  EXPECT_NE(read_file(folder / "moms_202512.eskd").find("    <MomsBetala>500</MomsBetala>\n"), std::string::npos);
+  auto const books = cratchit::books::read_books(folder);
+  ASSERT_TRUE(books) << books.error();
+  EXPECT_EQ(books->years[0].vouchers.back().series, "A"); // no M 2
+}
+
+TEST_F(WorkspaceRepl, VatReturnWithoutOrgnrIsNotBooked) {
+  run("112Test\n1");
+  write_sie(root / "start" / "vat.se", vat_sie());
+  run("2vat.se\ny");
+  // A project file without orgnr, as before an SIE import set it
+  auto const project_file = root / "start" / "Test" / ".cratchit" / "project.txt";
+  std::ifstream in(project_file);
+  std::string kept, line;
+  while (std::getline(in, line)) {
+    if (!line.starts_with("orgnr")) {
+      kept += line + "\n";
+    }
+  }
+  in.close();
+  std::ofstream(project_file) << kept;
+  auto const output = run("51401");
+  EXPECT_NE(output.find("  MomsBetala                     500\n"
+                        "The eSKD file needs the organisation number (orgnr in .cratchit/project.txt), so it cannot be\n"
+                        "booked or written. An SIE import sets it.\n"
+                        "\n"
+                        "  2  Show the report again\n"
+                        "2025 Q4> 1\nUnknown key."),
+            std::string::npos)
+      << output;
+  EXPECT_FALSE(std::filesystem::exists(root / "start" / "Test" / "moms_202512.eskd"));
 }
 
 TEST_F(WorkspaceRepl, VatReturnOfAClosedYearIsNotBooked) {
@@ -910,9 +981,15 @@ TEST_F(WorkspaceRepl, VatReturnOfAClosedYearIsNotBooked) {
   run("2vat.se\ny");
   auto const output = run("1087401");
   EXPECT_NE(output.find("  Total         500.00       500.00\n"
+                        "\n"
+                        "eSKD file moms_202512.eskd:\n"
+                        "  ForsMomsEjAnnan               2000\n"
+                        "  MomsUtgHog                     500\n"
+                        "  MomsBetala                     500\n"
                         "Fiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers, so it cannot be booked.\n"
                         "\n"
                         "  2  Show the report again\n"
+                        "  3  Write the eSKD file only (no voucher, e.g. to test it)\n"
                         "2025 Q4> 1\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"),
             std::string::npos)
       << output;

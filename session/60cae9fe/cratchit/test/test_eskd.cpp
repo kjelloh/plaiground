@@ -6,6 +6,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -79,4 +82,51 @@ TEST(Eskd, DocumentWithoutBoxesHasMomsBetalaOnly) {
   auto const document = eskd::document_of(Document{*quarter_of(2026y, 4), {}}, "556000-0175");
   EXPECT_EQ(document.period, "202612");
   EXPECT_EQ(document.fields, (std::vector<eskd::Field>{{"MomsBetala", 0}}));
+}
+
+TEST(Eskd, XmlOfTheFiledReturnOfQ1_2026) {
+  eskd::Document const document{"556782-8172",
+                                "202603",
+                                {{"InkopVaruAnnatEg", 12400},
+                                 {"MomsInkopUtgHog", 3100},
+                                 {"MomsIngAvdr", 205100},
+                                 {"MomsBetala", -202000}}};
+  EXPECT_EQ(eskd::xml_of(document), "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
+                                    "<eSKDUpload Version=\"6.0\">\n"
+                                    "  <OrgNr>556782-8172</OrgNr>\n"
+                                    "  <Moms>\n"
+                                    "    <Period>202603</Period>\n"
+                                    "    <InkopVaruAnnatEg>124</InkopVaruAnnatEg>\n"
+                                    "    <MomsInkopUtgHog>31</MomsInkopUtgHog>\n"
+                                    "    <MomsIngAvdr>2051</MomsIngAvdr>\n"
+                                    "    <MomsBetala>-2020</MomsBetala>\n"
+                                    "  </Moms>\n"
+                                    "</eSKDUpload>\n");
+}
+
+TEST(Eskd, FileNames) {
+  EXPECT_EQ(eskd::file_name("202603"), "moms_202603.eskd");
+  EXPECT_EQ(eskd::file_name("202603", 2), "moms_202603_2.eskd");
+}
+
+TEST(Eskd, WriteFileNeverOverwrites) {
+  auto const folder = std::filesystem::temp_directory_path() / "cratchit_eskd_write";
+  std::filesystem::remove_all(folder);
+  std::filesystem::create_directories(folder);
+  eskd::Document const first{"556000-0175", "202603", {{"MomsBetala", 10000}}};
+  eskd::Document const second{"556000-0175", "202603", {{"MomsBetala", 20000}}};
+  auto const written = eskd::write_file(folder, first);
+  ASSERT_TRUE(written) << written.error();
+  EXPECT_EQ(*written, folder / "moms_202603.eskd");
+  auto const again = eskd::write_file(folder, second);
+  ASSERT_TRUE(again) << again.error();
+  EXPECT_EQ(*again, folder / "moms_202603_2.eskd");
+  auto const text = [](std::filesystem::path const& path) {
+    std::ifstream in(path, std::ios::binary);
+    return std::string{std::istreambuf_iterator<char>(in), {}};
+  };
+  EXPECT_EQ(text(*written), eskd::xml_of(first));
+  EXPECT_EQ(text(*again), eskd::xml_of(second));
+  EXPECT_EQ(eskd::free_file(folder, "202603"), folder / "moms_202603_3.eskd");
+  std::filesystem::remove_all(folder);
 }
