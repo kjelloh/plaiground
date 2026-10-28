@@ -109,6 +109,9 @@ struct SieFolder {
 };
 SieFolder sie_files_in(std::filesystem::path const& folder, Books const& books, Identity const& identity);
 
+// A voucher in full for the log, e.g. `2026-04-20 "Loopia" registered 2026-07-15: row 1920 -323.75, row 2440 323.75`
+std::string voucher_text(Voucher const& voucher);
+
 // Where an imported file came from, for the record kept with its stashed copy
 struct ImportSource {
   std::filesystem::path file; // as given, in full

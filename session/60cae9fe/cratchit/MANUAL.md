@@ -557,7 +557,7 @@ Keys at booking>:
   2  Note an event to post later
   3  Waiting events (1)
   4  Statement entries not yet booked in this year (7)
-  5  View vouchers (correct one, or use it as a template)
+  5  View vouchers (correct one, use it as a template, or delete the last of a series)
 booking> 
 ```
 
@@ -567,7 +567,7 @@ booking>
 | 2      | Notes an event to post later (see Waiting events). Only in an open year. |
 | 3      | Lists the waiting events, to post or delete them (see Waiting events). The key list shows how many there are. |
 | 4      | Lists the statement entries not yet booked in this year (see Statement entries). The key list shows how many there are. |
-| 5      | Views the vouchers, to correct one or use it as a template (see Viewing and correcting vouchers). |
+| 5      | Views the vouchers, to correct one, use it as a template, or delete the last of a series (see Viewing and correcting vouchers). |
 | Enter  | Lists the numbered keys.                            |
 | h      | Opens this manual.                                  |
 | l      | Shows the log (see The log).                        |
@@ -955,6 +955,7 @@ Voucher D 4 2026-10-24 "Faktura Telia november" 1245.00
 
   1  Correct it
   2  Use it as a template
+  3  Delete it (the last voucher of series D)
 D 4> 
 ```
 
@@ -962,6 +963,7 @@ D 4>
 |--------|--------------|
 | 1      | Corrects the voucher with a new one (below). Only for an entered voucher, in an open year. |
 | 2      | Enters a new voucher with this one as the template: the voucher line, then the series and the rows, as in Entering a voucher, without the list of templates. Only in an open year. |
+| 3      | Deletes the voucher (see Deleting the last voucher of a series, below). Shown only for the last voucher of its series (the highest number in the year), in an open year. |
 | -      | Goes back to the list. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
@@ -993,6 +995,34 @@ D 5 reverses D 4.
 An imported voucher is not corrected in cratchit:
 `D 3 came with an SIE import, so cratchit does not correct it. Correct it in
 the program it came from and import the file again.`
+
+#### Deleting the last voucher of a series
+
+The last voucher of a series can be deleted, as some bookkeeping programs
+allow (Fortnox does), so the series keeps its numbers in an unbroken row. Use
+it to remove a voucher that should not be there; a voucher with wrong amounts
+is better corrected (above), which keeps it in the books. `3` at the voucher
+asks `Delete D 4? (y/n)`; `n` or `-` keeps it. `y` deletes it from the books,
+entered or imported:
+
+```
+Deleted voucher D 4 2026-10-24 "Faktura Telia november" 1245.00.
+```
+
+Then cratchit lists the series again (the series list when it has no voucher
+left, `booking>` when the year has none). The next voucher entered in the
+series gets the number again. The deleted voucher is logged in full: its date,
+text, registration and rows (see The log).
+
+An imported voucher is deleted only from cratchit's books: an SIE file that
+still has it adds it again when imported. cratchit says so before it asks:
+
+```
+D 3> 3
+D 3 came with an SIE import. Deleting it here changes only cratchit's books. Delete it in
+the program it came from too, or the next import of a file that still has it adds it again.
+Delete D 3? (y/n)
+```
 
 ### Waiting events
 
@@ -1868,7 +1898,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, each voucher forced by an import (its old and new version), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, each voucher forced by an import (its old and new version), a deleted voucher (in full), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, an eSKD or SIE file it could not write, or an SIE export with characters CP437 does not have. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

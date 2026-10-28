@@ -54,7 +54,7 @@ std::string booking_keys(int waiting, int entries) {
          "  2  Note an event to post later\n"
          "  3  Waiting events (" + std::to_string(waiting) + ")\n"
          "  4  Statement entries not yet booked in this year (" + std::to_string(entries) + ")\n"
-         "  5  View vouchers (correct one, or use it as a template)\n";
+         "  5  View vouchers (correct one, use it as a template, or delete the last of a series)\n";
 }
 
 } // namespace
@@ -1761,6 +1761,7 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
                         "\n"
                         "  1  Correct it\n"
                         "  2  Use it as a template\n"
+                        "  3  Delete it (the last voucher of series A)\n"
                         "A 3> \n"),
             std::string::npos)
       << output;
@@ -1804,6 +1805,50 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
   EXPECT_EQ(vouchers[3].event.heading, "Rättelse av A 3: Bank cost march");
   EXPECT_EQ(vouchers[3].postings[0].amount, -3500);
   EXPECT_EQ(vouchers[3].postings[1].amount, 3500);
+}
+
+TEST_F(WorkspaceRepl, TheLastVoucherOfASeriesCanBeDeleted) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny10");
+  run("11Bank cost march 35 2025-03-31\ny\n\n1");
+  // Not the last of its series: no 3
+  auto output = run("15a23");
+  EXPECT_NE(output.find("  2  Use it as a template\nA 2> 3\nUnknown key."), std::string::npos) << output;
+  // n keeps it; y deletes it and lists the series again
+  output = run("15a13n3y13y");
+  // An entered one has no hint
+  EXPECT_NE(output.find("  3  Delete it (the last voucher of series A)\nA 3> 3\nDelete A 3? (y/n) n\n"
+                        "Voucher A 3 2025-03-31 \"Bank cost march\" 35.00\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Delete A 3? (y/n) y\nUpdated .cratchit/books/2025-01-01/vouchers.csv in "),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Deleted voucher A 3 2025-03-31 \"Bank cost march\" 35.00.\n"
+                        "Vouchers A in fiscal year 2025-01-01 - 2025-12-31, newest first:\n"
+                        "  1  A 2     2025-03-01         10.00  Bank cost  (imported)\n"),
+            std::string::npos)
+      << output;
+  // An imported one: told before the question that the other program still has it
+  EXPECT_NE(output.find("A 2> 3\n"
+                        "A 2 came with an SIE import. Deleting it here changes only cratchit's books. Delete it in\n"
+                        "the program it came from too, or the next import of a file that still has it adds it again.\n"
+                        "Delete A 2? (y/n) y\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("Deleted voucher A 2 2025-03-01 \"Bank cost\" 10.00.\n"
+                        "Vouchers A in fiscal year 2025-01-01 - 2025-12-31, newest first:\n"
+                        "  1  A 1     2025-02-01        500.00  Sale  (imported)\n"
+                        "voucher?> \n"),
+            std::string::npos)
+      << output;
+  auto const books = cratchit::books::read_books(root / "start" / "Test");
+  ASSERT_TRUE(books.has_value()) << books.error();
+  EXPECT_EQ(books->years.front().vouchers.size(), 1u);
+  // Not in a closed year
+  output = run("815a13");
+  EXPECT_NE(output.find("  2  Use it as a template\nA 1> 3\nUnknown key."), std::string::npos) << output;
 }
 
 TEST_F(WorkspaceRepl, TKeyUsesTheViewedVoucherAsTheTemplate) {

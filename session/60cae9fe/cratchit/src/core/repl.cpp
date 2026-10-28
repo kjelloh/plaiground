@@ -155,6 +155,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::ConfirmDelete:
     on_confirm_delete_key(key, out);
     return Step::Continue;
+  case Mode::ConfirmDeleteVoucher:
+    on_confirm_delete_voucher_key(key, out);
+    return Step::Continue;
   case Mode::ConfirmBooked:
     on_confirm_booked_key(key, out);
     return Step::Continue;
@@ -473,7 +476,7 @@ Operations<Repl::Op> Repl::operations() const {
         .add(2, "Note an event to post later", Op::NoteEvent)
         .add(3, std::format("Waiting events ({})", year ? year->waiting.size() : 0), Op::WaitingEvents)
         .add(4, "Statement entries not yet booked in this year" + count_of(unbooked_count_), Op::StatementEntries)
-        .add(5, "View vouchers (correct one, or use it as a template)", Op::ViewVouchers);
+        .add(5, "View vouchers (correct one, use it as a template, or delete the last of a series)", Op::ViewVouchers);
     break;
   }
   case Mode::Projects:
@@ -489,7 +492,12 @@ Operations<Repl::Op> Repl::operations() const {
                    chosen_match_ < matches_.size() && matches_[chosen_match_].kind == books::Match::Kind::same);
     break;
   case Mode::VoucherView:
-    operations.add(1, "Correct it", Op::CorrectVoucher).add(2, "Use it as a template", Op::VoucherAsTemplate);
+    operations.add(1, "Correct it", Op::CorrectVoucher)
+        .add(2, "Use it as a template", Op::VoucherAsTemplate)
+        .add(3,
+             std::format("Delete it (the last voucher of series {})",
+                         viewed_is_last() ? books_.year_starting(open_year_)->vouchers[viewed_].series : ""),
+             Op::DeleteVoucher, viewed_is_last() && !books_.year_starting(open_year_)->closed);
     break;
   case Mode::EntryChoice:
     operations.add(1, "New waiting event with it", Op::NewEventFromEntry)
@@ -715,6 +723,17 @@ void Repl::on_operation(Op op, std::ostream& out) {
     }
     break;
   }
+  case Op::DeleteVoucher: {
+    auto const& voucher = books_.year_starting(open_year_)->vouchers[viewed_];
+    if (imported_.contains(key_of(voucher))) {
+      // Said before the question: the other program still has it
+      std::println(out, "{} {} came with an SIE import. Deleting it here changes only cratchit's books. Delete it in",
+                   voucher.series, voucher.number);
+      std::println(out, "the program it came from too, or the next import of a file that still has it adds it again.");
+    }
+    mode_ = Mode::ConfirmDeleteVoucher;
+    break;
+  }
   case Op::NewEventFromEntry:
   case Op::AddEntryToEvent: {
     auto const& year = books_.years[entry_year_];
@@ -823,6 +842,10 @@ std::string Repl::prompt() const {
   case Mode::ConfirmDelete:
   case Mode::ConfirmBooked:
     return "Delete it? (y/n) ";
+  case Mode::ConfirmDeleteVoucher: {
+    auto const& voucher = books_.year_starting(open_year_)->vouchers[viewed_];
+    return std::format("Delete {} {}? (y/n) ", voucher.series, voucher.number);
+  }
   case Mode::VoucherSeries:
     return "series?> ";
   case Mode::VoucherList:
@@ -3133,6 +3156,55 @@ void Repl::show_voucher(std::ostream& out) const {
   }
   std::println(out, "");
   show_operations(out);
+}
+
+// True when the viewed voucher has the highest number of its series in the open year
+bool Repl::viewed_is_last() const {
+  auto const* year = books_.year_starting(open_year_);
+  if (!year || viewed_ >= year->vouchers.size()) {
+    return false;
+  }
+  auto const& viewed = year->vouchers[viewed_];
+  return std::ranges::none_of(year->vouchers, [&](books::Voucher const& voucher) {
+    return voucher.series == viewed.series && number_less(viewed.number, voucher.number);
+  });
+}
+
+// Deletes the viewed voucher, the last of its series, from the books
+void Repl::on_confirm_delete_voucher_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'n' || key == U'-') {
+    mode_ = Mode::VoucherView;
+    show_voucher(out);
+    return;
+  }
+  if (key != U'y') {
+    std::println(out, "Press y to delete the voucher, n not to.");
+    return;
+  }
+  auto& year = books_.years[static_cast<std::size_t>(books_.year_starting(open_year_) - books_.years.data())];
+  auto const deleted = year.vouchers[viewed_];
+  year.vouchers.erase(year.vouchers.begin() + static_cast<std::ptrdiff_t>(viewed_));
+  if (!write_books(out)) {
+    year.vouchers.insert(year.vouchers.begin() + static_cast<std::ptrdiff_t>(viewed_), deleted);
+    mode_ = Mode::VoucherView;
+    return;
+  }
+  auto const imported = imported_.contains(key_of(deleted));
+  std::println(out, "Deleted voucher {} {} {} \"{}\" {}.", deleted.series, deleted.number,
+               format_iso_date(deleted.event.date), deleted.event.heading, format_amount(deleted.event.amount));
+  LOG_BUSINESS("Deleted voucher {} {} ({}) from project {} ({}), fiscal year {} - {}: {}", deleted.series,
+               deleted.number, imported ? "imported" : "entered", project_->name, project_->uuid,
+               format_iso_date(year.start), format_iso_date(year.end), books::voucher_text(deleted));
+  if (year.vouchers.empty()) {
+    std::println(out, "No vouchers in fiscal year {} - {} now.", format_iso_date(year.start), format_iso_date(year.end));
+    mode_ = Mode::Booking;
+  } else if (std::ranges::any_of(year.vouchers,
+                                 [&](books::Voucher const& voucher) { return voucher.series == view_series_; })) {
+    list_vouchers(out);
+  } else {
+    mode_ = Mode::VoucherSeries;
+    show_voucher_series(out);
+  }
 }
 
 void Repl::on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& out) {

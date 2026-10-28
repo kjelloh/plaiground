@@ -87,6 +87,11 @@ I now also made Claude implement a 'force import' (to allow resolution of tricky
 * But force only allows import of vouchers with violated history.
 * The import must still be for same company, same financial year start/end etc.
 
+I now vibe coded 'delete voucher'.
+
+* It is provided if selected voucher is the last one in a series.
+* It comes with a note for imported voucher to delete it where it came from too.
+
 ## 20261027
 
 So now then we are ready to start generating the VAT Returns form document?

@@ -102,6 +102,7 @@ private:
     Waiting,
     WaitingEvent,
     ConfirmDelete,
+    ConfirmDeleteVoucher,
     VoucherSeries,
     VoucherList,
     VoucherView,
@@ -142,6 +143,7 @@ private:
     MakeOneEvent,
     CorrectVoucher,
     VoucherAsTemplate,
+    DeleteVoucher,
     NewEventFromEntry,
     AddEntryToEvent,
     SaveVoucher,
@@ -375,6 +377,8 @@ private:
   void on_waiting_key(charset::unicode::CodePoint key, std::ostream& out);
   void post_waiting(std::size_t index, std::ostream& out);
   void on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& out);
+  bool viewed_is_last() const;
+  void on_confirm_delete_voucher_key(charset::unicode::CodePoint key, std::ostream& out);
   void open_matches(std::ostream& out);
   void back_to_matches(std::ostream& out);
   void show_matches(std::ostream& out) const;

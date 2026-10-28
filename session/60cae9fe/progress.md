@@ -744,6 +744,21 @@ voucher ...` with old and new), record line `forced = A 1, ...` (only when any).
 `imported_vouchers` (an unreadable stash is an error). Picker unchanged (shows `n errors`). Manual: files (record),
 new "Forcing an import", log kinds. 489 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 77: Delete the last voucher of a series, by hand. At the voucher view (`D 4>`), `3  Delete it (the last voucher
+of series D)` (`Op::DeleteVoucher`), offered only when the voucher has the highest number of its series in the open
+year (`Repl::viewed_is_last`) and the year is open (else a gap). `Delete D 4? (y/n)` (new `Mode::ConfirmDeleteVoucher`):
+`n`/`-` back to the voucher; `y` erases it, writes the books (restored on a write error), says `Deleted voucher D 4
+<date> "<text>" <amount>.`, for an imported voucher also that a file still holding it adds it again, logs it in full
+(business, `books::voucher_text`, now public in import.hpp, entered/imported), then the series' list (or the series
+list, or `booking>` when the year has no voucher left). Both entered and imported vouchers (agreed). Manual: year/booking table, voucher view
+(screen, key 3), new "Deleting the last voucher of a series", log kinds. 490 tests pass, no warnings (Debug, trace
+DEBUG). Not REPL-tested: the series list / `booking>` after the last voucher of a series / year is deleted. In review.
+Task 77 change: for an imported voucher the hint comes before `Delete D 3? (y/n)`: `D 3 came with an SIE import.
+Deleting it here changes only cratchit's books. Delete it in / the program it came from too, or the next import of a
+file that still has it adds it again.` (the line after deleting is gone). Test and manual updated. 490 tests pass.
+Task 77 change 2: `booking>` key 5 is now `View vouchers (correct one, use it as a template, or delete the last of a
+series)` (repl, the `booking_keys` test helper, manual). 490 tests pass.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -854,7 +869,8 @@ into a waiting event without making a voucher, several entries chosen at once.
   negative amounts (credit invoices).
 
 - 2026-10-24: Vouchers are never edited or deleted; a wrong voucher is corrected with a new voucher reversing it, in
-  the same series, optionally followed by the right one. Imported vouchers are not corrected in cratchit (for now).
+  the same series, optionally followed by the right one. (2026-10-28: except that the last voucher of a series may be
+  deleted by hand, entered or imported, in an open year, as Fortnox allows.) Imported vouchers are not corrected in cratchit (for now).
   Whether a voucher is imported is derived from the stashed SIE files, not stored.
 
 - 2026-10-24: Account statements are parsed into an in-memory document of valid postings (date, amount, text,

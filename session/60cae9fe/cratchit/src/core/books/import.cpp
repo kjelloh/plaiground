@@ -294,21 +294,6 @@ void merge_master_data(ImportPlan& plan, sie::Document const& document, bool is_
 }
 
 // Adds the file's new vouchers to the year; the number of vouchers in the books missing from the file
-// A voucher in full for the log, e.g. `2026-04-20 "Loopia" registered 2026-07-15: row 1920 -323.75, row 2440 323.75`
-std::string voucher_text(Voucher const& voucher) {
-  auto text = std::format("{} \"{}\"", format_iso_date(voucher.event.date), voucher.event.heading);
-  if (voucher.registered) {
-    text += " registered " + format_iso_date(*voucher.registered);
-  }
-  if (!voucher.signature.empty()) {
-    text += " signed " + voucher.signature;
-  }
-  for (std::size_t i = 0; i < voucher.postings.size(); ++i) {
-    text += (i == 0 ? ": " : ", ") + posting_text(voucher.postings[i]);
-  }
-  return text;
-}
-
 std::size_t merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear& year, Forcing const& forcing) {
   std::set<std::pair<std::string, std::string>> in_file;
   std::vector<Voucher> added;
@@ -610,6 +595,20 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
     saved.record = record;
     return saved;
   }
+}
+
+std::string voucher_text(Voucher const& voucher) {
+  auto text = std::format("{} \"{}\"", format_iso_date(voucher.event.date), voucher.event.heading);
+  if (voucher.registered) {
+    text += " registered " + format_iso_date(*voucher.registered);
+  }
+  if (!voucher.signature.empty()) {
+    text += " signed " + voucher.signature;
+  }
+  for (std::size_t i = 0; i < voucher.postings.size(); ++i) {
+    text += (i == 0 ? ": " : ", ") + posting_text(voucher.postings[i]);
+  }
+  return text;
 }
 
 bool nothing_to_import(Books const& books, ImportPlan const& plan) {
