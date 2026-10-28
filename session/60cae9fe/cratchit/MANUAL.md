@@ -156,6 +156,11 @@ it) writes its eSKD file in the project folder itself (not in `.cratchit`), name
 quarter). cratchit never overwrites one: when the name is taken it writes
 `moms_202512_2.eskd`, then `_3` and so on. cratchit does not read these files.
 
+Exporting a fiscal year (`2` at its prompt, see Exporting a fiscal year as an SIE
+file) writes `sie_2026-27.se` (or `sie_2025.se` for a calendar year) in the
+project folder in the same way, never overwriting an earlier export
+(`sie_2026-27_2.se`, ...).
+
 The project's books are in `.cratchit/books` in the project folder:
 
 | File | What it holds |
@@ -516,6 +521,7 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | Key    | What it does                                        |
 |--------|-----------------------------------------------------|
 | 1      | Booking: entering and noting, the two waiting lists and the vouchers (see Booking, below). The key list shows how many waiting events and statement entries not yet booked the year has, both always, e.g. `Booking (waiting: 1 event, 7 statement entries)`. |
+| 2      | Exports the year as an SIE 4E file in the project folder (see Exporting a fiscal year as an SIE file). Also for a closed year. |
 | 5      | Imports an account statement, only its entries in this year (see Importing an account statement). |
 | 7      | Shows the reports of this year (see Reports). `-` there comes back here. |
 | 8      | Closes the year for new vouchers when it is open, opens it when it is closed. The key list names the one offered. |
@@ -527,7 +533,7 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | q      | Quits cratchit.                                     |
 | Ctrl-D | Quits cratchit.                                     |
 
-Keys 2, 3, 4 and 6 are free: they were the booking operations before these
+Keys 3, 4 and 6 are free: they were the booking operations before these
 moved under 1, and the other keys kept their numbers.
 
 A new year from an SIE import is open. Closing it stops new vouchers from being
@@ -1312,6 +1318,41 @@ account, the note names them as the possible cause, for example
 
 Unknown records in the file are ignored and noted, as SIE requires.
 
+### Exporting a fiscal year as an SIE file
+
+`2` at a fiscal year's prompt writes the year as an SIE 4E file (the format
+Fortnox and other programs import) in the project folder:
+
+```
+2026/27> 2
+Wrote sie_2026-27.se in /Users/me/Documents/cratchit/The ITfied AB: fiscal year 2026-05-01 - 2027-04-30, 17 vouchers (SIE 4E).
+```
+
+The file has, as Fortnox's own export does:
+
+| Part | What it is |
+|------|------------|
+| Identification | cratchit as the program and the day of the export; the project's name and organisation number; the company id, address and chart type the books took from the SIE import; the year as year 0, and the year before as -1 when it is in the books. |
+| Accounts | Every account in the books with its name, type, SRU code and unit (the newest ones, see Importing an SIE file), every dimension and object. |
+| Balances | `#IB` and `#UB` (opening and closing) of each balance account where either is not zero, and `#RES` (the year's result) of each other account that is not zero, for year 0 and -1. They are cratchit's own figures (see Reports): a year opens with the closing balances of the year before when that year is in the books, so they may differ from what Fortnox reported. |
+| Vouchers | The year's vouchers, imported and entered, with every row (rows added or struck after registration as `#RTRANS` and `#BTRANS`). |
+
+Waiting events are not in the file: they are not vouchers yet. Nor are period
+balances (`#PSALDO`) or a checksum (`#KSUMMA`).
+
+The file is in CP437 (PC8), as SIE requires. A character CP437 does not have,
+such as `€`, does not belong in an SIE file; cratchit writes it as its Unicode
+code point, e.g. `<U+20AC>`, says how many there are and logs it:
+
+```
+1 character SIE (CP437) does not have is written as its code point, e.g. <U+20AC>. Search the
+file for <U+ to find them, and correct the texts in the books.
+```
+
+A second export of the same year is written next to the first
+(`sie_2026-27_2.se`); cratchit never overwrites a file. cratchit can import its
+own export again: it finds nothing new.
+
 ### Importing an account statement
 
 An account statement is a file from the bank or from Skatteverket listing the
@@ -1745,8 +1786,8 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
-| DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, or an eSKD file it could not write. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, an eSKD or SIE file it could not write, or an SIE export with characters CP437 does not have. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 
 ### Viewing the log

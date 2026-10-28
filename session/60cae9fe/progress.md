@@ -670,6 +670,16 @@ fiscal year (table, free keys), new "Booking", Entering a voucher, correcting, N
 Viewing vouchers, Statement entries, statement import, Using the prompt. 474 tests pass, no warnings (Debug, trace
 DEBUG). In review.
 
+Task 71: SIE export at year key 2 (`Export the year as an SIE file`, also in a closed year). `books::export_file_name`
+(named as the year's prompt: `sie_2026-27.se`, `sie_2025.se`; index 2 up `sie_2026-27_2.se`), `books::write_export`
+(first free name in the folder, never overwrites). `Repl::export_sie`: reads the books, `export_document` (today as
+#GEN) -> `text_of` -> `cp437_of` -> the project folder: `Wrote sie_2025.se in <folder>: fiscal year ... , 2 vouchers
+(SIE 4E).`; logged (business). Characters CP437 lacks: told (count, search for `<U+`) and logged (design
+insufficiency); a write error shown and logged (design insufficiency). Tests: file names; REPL: two exports give
+sie_2025.se and sie_2025_2.se, identical, which lex, parse and import back into the books with nothing new. Not
+REPL-tested: the `<U+` message (cp437_of is unit-tested). Manual: project files, year table (2; free 3, 4, 6), new
+"Exporting a fiscal year as an SIE file", log kinds. 476 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings

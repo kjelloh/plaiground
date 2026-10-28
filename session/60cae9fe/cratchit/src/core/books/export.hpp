@@ -6,6 +6,11 @@
 #include "core/sie/document.hpp"
 
 #include <cstddef>
+#include <cstdint>
+#include <expected>
+#include <filesystem>
+#include <span>
+#include <string>
 
 // Exporting a fiscal year of the books as an SIE 4E file: the inverse of the import
 namespace cratchit::books {
@@ -22,5 +27,16 @@ namespace cratchit::books {
 // (added) and #BTRANS (removed). Waiting events are not exported; nor are
 // object or period balances, which the books do not keep.
 sie::Document export_document(Books const& books, Identity const& identity, std::size_t index, Date generated);
+
+// The file name of a fiscal year's export, named as its prompt: sie_2026-27.se for
+// a year from 2026 into 2027, sie_2025.se for a calendar year; with index 2 or
+// more sie_2026-27_2.se
+std::string export_file_name(FiscalYear const& year, int index = 1);
+
+// Writes the bytes to the first export_file_name of the year in the folder that
+// is not taken, so an earlier export is never overwritten; the file written, or error text
+std::expected<std::filesystem::path, std::string> write_export(std::filesystem::path const& folder,
+                                                               FiscalYear const& year,
+                                                               std::span<std::uint8_t const> bytes);
 
 } // namespace cratchit::books

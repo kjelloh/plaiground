@@ -1,11 +1,13 @@
 #include "core/repl.hpp"
 
 #include "core/books/columns.hpp"
+#include "core/books/export.hpp"
 #include "core/books/hint.hpp"
 #include "core/books/report.hpp"
 #include "core/charset/utf8.hpp"
 #include "core/log.hpp"
 #include "core/sie/file.hpp"
+#include "core/sie/writer.hpp"
 #include "core/skv/vat_return/report.hpp"
 
 #include <algorithm>
@@ -449,6 +451,7 @@ Operations<Repl::Op> Repl::operations() const {
       waiting += ", " + counted(*unbooked_count_, "statement entry", "statement entries");
     }
     operations.add(1, std::format("Booking ({})", waiting), Op::Booking)
+        .add(2, "Export the year as an SIE file", Op::ExportSie)
         .add(5, "Import an account statement (only the entries in this year)", Op::ImportStatement)
         .add(7, "Reports of this year", Op::Reports)
         .add(8, "Close the year for new vouchers", Op::CloseYear, year && !closed)
@@ -627,6 +630,9 @@ void Repl::on_operation(Op op, std::ostream& out) {
     break;
   case Op::ViewVouchers:
     open_vouchers(out);
+    break;
+  case Op::ExportSie:
+    export_sie(out);
     break;
   case Op::CloseYear:
     set_closed(true, out);
@@ -1896,6 +1902,39 @@ void Repl::set_closed(bool closed, std::ostream& out) {
                format_iso_date(year.end), closed ? "closed" : "open");
   LOG_BUSINESS("{} fiscal year {} - {} of project {} ({}) for new vouchers", closed ? "Closed" : "Opened",
                format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid);
+}
+
+// Writes the open year as an SIE 4E file in the project folder, the year before as -1 (see books::export_document)
+void Repl::export_sie(std::ostream& out) {
+  auto const index = read_open_year(out);
+  if (!index) {
+    return;
+  }
+  auto const& year = books_.years[*index];
+  auto const today = parse_iso_date(places_.today).value_or(year.end);
+  auto const document = books::export_document(books_, {project_->name, project_->orgnr}, *index, today);
+  auto const encoded = sie::cp437_of(sie::text_of(document));
+  auto const written = books::write_export(project_->folder, year, encoded.bytes);
+  if (!written) {
+    std::println(out, "Error: {}", written.error());
+    LOG_DESIGN_INSUFFICIENCY("SIE file of fiscal year {} - {} of project {} ({}) not written: {}",
+                             format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid,
+                             written.error());
+    return;
+  }
+  std::println(out, "Wrote {} in {}: fiscal year {} - {}, {} voucher{} (SIE 4E).", written->filename().string(),
+               project_->folder.string(), format_iso_date(year.start), format_iso_date(year.end),
+               document.vouchers.size(), document.vouchers.size() == 1 ? "" : "s");
+  LOG_BUSINESS("Exported fiscal year {} - {} of project {} ({}) as SIE file {} ({} vouchers)",
+               format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid,
+               written->string(), document.vouchers.size());
+  if (encoded.unmapped > 0) {
+    std::println(out, "{} character{} SIE (CP437) does not have {} written as its code point, e.g. <U+20AC>. Search the",
+                 encoded.unmapped, encoded.unmapped == 1 ? "" : "s", encoded.unmapped == 1 ? "is" : "are");
+    std::println(out, "file for <U+ to find them, and correct the texts in the books.");
+    LOG_DESIGN_INSUFFICIENCY("SIE file {} has {} characters CP437 does not have, written as <U+XXXX>",
+                             written->string(), encoded.unmapped);
+  }
 }
 
 // The voucher line of a new voucher, or of an event to note when noting, starting with line; false when refused

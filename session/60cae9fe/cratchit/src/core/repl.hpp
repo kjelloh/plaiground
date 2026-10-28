@@ -128,6 +128,7 @@ private:
     NoteEvent,
     WaitingEvents,
     ViewVouchers,
+    ExportSie,
     CloseYear,
     OpenYear,
     FindMatches,
@@ -298,6 +299,7 @@ private:
   void open_last_year(std::ostream& out);
   std::optional<std::size_t> read_open_year(std::ostream& out);
   void set_closed(bool closed, std::ostream& out);
+  void export_sie(std::ostream& out);
   bool start_entry(bool noting, std::ostream& out, std::string const& line = "");
   books::Voucher const* voucher_of(books::VoucherKey const& key) const;
   books::VoucherKey key_of(books::Voucher const& voucher) const; // in the open year

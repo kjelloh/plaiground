@@ -215,3 +215,11 @@ TEST(SieExport, ImportsBackAsTheSameBooks) {
   EXPECT_EQ(second.books.accounts, books.accounts);
   EXPECT_EQ(second.identity.orgnr, "556000-0001");
 }
+
+TEST(SieExport, FileNamedAsTheYearsPrompt) {
+  books::FiscalYear broken{.start = 2026y / May / 1, .end = 2027y / April / 30};
+  books::FiscalYear calendar{.start = 2025y / January / 1, .end = 2025y / December / 31};
+  EXPECT_EQ(books::export_file_name(broken), "sie_2026-27.se");
+  EXPECT_EQ(books::export_file_name(calendar), "sie_2025.se");
+  EXPECT_EQ(books::export_file_name(broken, 2), "sie_2026-27_2.se");
+}

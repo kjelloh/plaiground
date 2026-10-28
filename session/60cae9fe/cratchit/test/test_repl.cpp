@@ -1312,6 +1312,34 @@ TEST_F(WorkspaceRepl, BookingGroupsTheBookingOperationsAndCountsBothWaitingLists
       << output;
 }
 
+TEST_F(WorkspaceRepl, YearKey2ExportsTheYearAsAnSieFile) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny10");
+  auto const folder = root / "start" / "Test";
+  auto const output = run("22");
+  EXPECT_NE(output.find("2025> 2\nWrote sie_2025.se in " + folder.string() +
+                        ": fiscal year 2025-01-01 - 2025-12-31, 2 vouchers (SIE 4E).\n"
+                        "2025> 2\nWrote sie_2025_2.se in " + folder.string() +
+                        ": fiscal year 2025-01-01 - 2025-12-31, 2 vouchers (SIE 4E).\n"
+                        "2025> \n"),
+            std::string::npos)
+      << output;
+  // The file reads back through the import's own path, with the vouchers of the books
+  auto const text = read_file(folder / "sie_2025.se");
+  EXPECT_TRUE(text.starts_with("#FLAGGA 0\r\n#FORMAT PC8\r\n#SIETYP 4\r\n#PROGRAM \"cratchit\" ")) << text;
+  auto const lexed = cratchit::sie::lex_bytes(std::vector<std::uint8_t>(text.begin(), text.end()));
+  ASSERT_TRUE(lexed.has_value()) << lexed.error();
+  auto const parsed = cratchit::sie::parse_document(lexed->lines);
+  EXPECT_TRUE(parsed.errors.empty());
+  auto const books = cratchit::books::read_books(folder);
+  ASSERT_TRUE(books.has_value()) << books.error();
+  auto const plan = cratchit::books::plan_import(*books, {"Test AB", "556000-0001"}, parsed.document);
+  EXPECT_TRUE(plan.errors.empty());
+  EXPECT_EQ(plan.vouchers_added, 0u);
+  EXPECT_EQ(read_file(folder / "sie_2025_2.se"), text);
+}
+
 TEST_F(WorkspaceRepl, WaitingEventsAreListedOldestFirst) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -1858,6 +1886,7 @@ TEST_F(WorkspaceRepl, YKeyOpensAYearWhichIsRememberedAndCanBeClosed) {
                         "2025> \n"
                         "Keys at 2025>:\n"
                         "  1  Booking (waiting: 0 events, 0 statement entries)\n"
+                        "  2  Export the year as an SIE file\n"
                         "  5  Import an account statement (only the entries in this year)\n"
                         "  7  Reports of this year\n"
                         "  8  Close the year for new vouchers\n"
