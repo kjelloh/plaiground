@@ -35,6 +35,10 @@ Yes it did. Claude tells me a large bulk of historic VAT clearing vouchers match
 
 * Vibe coded creation of actual VAT Return clearing voucher ok.
 
+Now I asked Claude to create a mapping from VAt returns form to eskd-file tag.
+
+* [momsrapport_box_to_eskd](./cratchit/resources/momsrapport/momsrapport_box_to_eskd.csv)
+
 ## 20261027
 
 So now then we are ready to start generating the VAT Returns form document?
