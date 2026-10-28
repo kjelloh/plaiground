@@ -650,6 +650,12 @@ Fortnox years (scratch program): every voucher (1379) the same as Fortnox's; ide
 #IB/#UB the same except 2026/27 1650/2641 (cratchit's carried opening, known); accounts: ours are the books' 506 with
 the newest names and SRU (Fortnox: that year's 493-501, older names); #PSALDO not written. No manual change. In review.
 
+Task 69: SIE export writes a character CP437 lacks as its code point, `<U+20AC>` (at least four hex digits; bytes that
+are not UTF-8 give `<U+FFFD>`), not `?`, still counted in `Encoded::unmapped`. Agreed: such a character is an error
+in an SIE file; the marker only lets a person see what was lost. It is not decoded on import. Chosen over markup's
+`&#x20AC;`, whose `&amp;` escaping would change every `&` (e.g. "Kjell&Company") for SIE readers. 473 tests pass, no
+warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings

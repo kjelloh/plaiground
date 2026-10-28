@@ -133,8 +133,22 @@ TEST(SieWriter, TextReadsBackAsTheSameDocument) {
 }
 
 TEST(SieWriter, Cp437) {
-  auto const encoded = sie::cp437_of("Högdal Ä€");
-  EXPECT_EQ(encoded.bytes, (std::vector<std::uint8_t>{'H', 0x94, 'g', 'd', 'a', 'l', ' ', 0x8E, '?'}));
+  auto const encoded = sie::cp437_of("Högdal Ä");
+  EXPECT_EQ(encoded.bytes, (std::vector<std::uint8_t>{'H', 0x94, 'g', 'd', 'a', 'l', ' ', 0x8E}));
+  EXPECT_EQ(encoded.unmapped, 0u);
+}
+
+TEST(SieWriter, Cp437WritesTheCodePointOfACharacterItLacks) {
+  // The euro sign, a Polish ł and an emoji beyond U+FFFF
+  auto const encoded = sie::cp437_of("100 € Łódź 😀");
+  std::string const text(encoded.bytes.begin(), encoded.bytes.end());
+  EXPECT_EQ(text, "100 <U+20AC> <U+0141>\xA2" "d<U+017A> <U+1F600>");
+  EXPECT_EQ(encoded.unmapped, 4u);
+}
+
+TEST(SieWriter, Cp437MarksBytesThatAreNotUtf8) {
+  auto const encoded = sie::cp437_of("a\xFF" "b");
+  EXPECT_EQ(std::string(encoded.bytes.begin(), encoded.bytes.end()), "a<U+FFFD>b");
   EXPECT_EQ(encoded.unmapped, 1u);
 }
 

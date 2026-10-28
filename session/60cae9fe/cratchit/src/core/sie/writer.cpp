@@ -292,7 +292,9 @@ Encoded cp437_of(std::string_view text) {
     if (auto const byte = to_cp437.push(code_point)) {
       encoded.bytes.push_back(*byte);
     } else {
-      encoded.bytes.push_back('?');
+      for (auto const c : std::format("<U+{:04X}>", static_cast<std::uint32_t>(code_point))) {
+        encoded.bytes.push_back(static_cast<std::uint8_t>(c));
+      }
       ++encoded.unmapped;
     }
   };
