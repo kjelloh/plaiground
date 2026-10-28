@@ -15,6 +15,9 @@ namespace cratchit::skv::vat_return {
 // VAT accounts (öre and all) do not add up
 inline constexpr std::string_view rounding_account = "3740";
 
+// The series a clearing voucher is booked in: M Momsrapport (Fortnox's default series). Fixed for now.
+inline constexpr std::string_view clearing_series = "M";
+
 // A voucher candidate, not yet in the books: no series or number
 struct Clearing {
   books::Event event;

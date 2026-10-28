@@ -791,7 +791,7 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
   run("112Test\n1");
   write_sie(root / "start" / "vat.se", vat_sie());
   run("2vat.se\ny");
-  auto const output = run("514x32-");
+  auto const output = run("514x3x\n-2--");
   std::string const quarters =
       "VAT return quarters ending in 2025-01-01 - 2025-12-31 (today 2026-10-20):\n"
       "                  Period     Cleared     Charged\n"
@@ -825,7 +825,15 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "  Charged           -250.00  A 1  2025-05-12\n"
                         "\n"
                         "Amounts are as in the books: debit positive, credit negative.\n"
-                        "Box 49 on the form: 0.00, nothing to pay or get back.\n" +
+                        "Box 49 on the form: 0.00, nothing to pay or get back.\n"
+                        "Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q1.\n"
+                        "\n"
+                        "  2  Show the report again\n"
+                        "2025 Q1> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
+                        "2025 Q1> \nNothing to clear: the VAT accounts add up to 0.00 in 2025 Q1.\n"
+                        "\n"
+                        "  2  Show the report again\n"
+                        "2025 Q1> -\n" +
                         quarters + "period?> 2\n"),
             std::string::npos)
       << output;
@@ -835,8 +843,67 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "The VAT of the period:\n"
                         "  Period               0.00\n"
                         "  Cleared              0.00\n"
-                        "  Charged              0.00\n" +
+                        "  Charged              0.00\n"
+                        "Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q2.\n"
+                        "\n"
+                        "  2  Show the report again\n"
+                        "2025 Q2> -\n" +
                         quarters + "period?> -\nReports for 2025-01-01 - 2025-12-31:\n"),
+            std::string::npos)
+      << output;
+}
+
+TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
+  run("112Test\n1");
+  write_sie(root / "start" / "vat.se", vat_sie());
+  run("2vat.se\ny");
+  auto const output = run("5140210");
+  std::string const proposed = "VAT clearing voucher for 2025 Q4 (proposed):\n"
+                               "Voucher M 2 2025-12-31 \"Momsrapport 2025-10-01 - 2025-12-31\"\n"
+                               "  Account        Debit       Credit\n"
+                               "  2611          500.00               Output VAT 25%\n"
+                               "  2650                       500.00  VAT clearing\n"
+                               "  Total         500.00       500.00\n"
+                               "\n"
+                               "  1  Book it as M 2\n"
+                               "  2  Show the report again\n";
+  EXPECT_NE(output.find("Box 49 on the form: 500.00 to pay.\n" + proposed + "2025 Q4> 2\n"
+                        "VAT return (momsrapport) 2025-10-01 - 2025-12-31\n"),
+            std::string::npos)
+      << output;
+  auto const folder = root / "start" / "Test";
+  EXPECT_NE(output.find(proposed + "2025 Q4> 1\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("Saved voucher M 2 into fiscal year 2025-01-01 - 2025-12-31: the VAT of 2025 Q4 is cleared.\n"
+                       "VAT return quarters ending in 2025-01-01 - 2025-12-31 (today 2026-10-20):\n"
+                       "                  Period     Cleared     Charged\n"
+                       "  0  2025 Q4     -500.00     -500.00        0.00  cleared by M 2\n"),
+            std::string::npos)
+      << output;
+
+  // Cleared now: nothing more to clear
+  EXPECT_TRUE(output.ends_with("Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q4.\n\n"
+                              "  2  Show the report again\n2025 Q4> \n"))
+      << output;
+  auto const books = cratchit::books::read_books(folder);
+  ASSERT_TRUE(books) << books.error();
+  auto const& voucher = books->years[0].vouchers.back();
+  EXPECT_EQ(voucher.series, "M");
+  EXPECT_EQ(voucher.number, "2");
+  EXPECT_EQ(voucher.event.heading, "Momsrapport 2025-10-01 - 2025-12-31");
+  EXPECT_EQ(voucher.event.amount, 50000);
+  EXPECT_EQ(voucher.registered, cratchit::parse_iso_date("2026-10-20"));
+}
+
+TEST_F(WorkspaceRepl, VatReturnOfAClosedYearIsNotBooked) {
+  run("112Test\n1");
+  write_sie(root / "start" / "vat.se", vat_sie());
+  run("2vat.se\ny");
+  auto const output = run("1087401");
+  EXPECT_NE(output.find("  Total         500.00       500.00\n"
+                        "Fiscal year 2025-01-01 - 2025-12-31 is closed for new vouchers, so it cannot be booked.\n"
+                        "\n"
+                        "  2  Show the report again\n"
+                        "2025 Q4> 1\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"),
             std::string::npos)
       << output;
 }

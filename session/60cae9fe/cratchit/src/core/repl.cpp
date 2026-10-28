@@ -204,6 +204,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::VatPeriods:
     on_vat_periods_key(key, out);
     break;
+  case Mode::VatQuarter:
+    on_vat_quarter_key(key, out);
+    break;
   case Mode::ChooseAmount:
     on_choose_amount_key(key, out);
     break;
@@ -302,6 +305,7 @@ bool Repl::shows_on_enter() const {
   case Mode::Years:
   case Mode::Reports:
   case Mode::VatPeriods:
+  case Mode::VatQuarter:
   case Mode::YearMenu:
   case Mode::ChooseAmount:
   case Mode::Postings:
@@ -353,6 +357,9 @@ void Repl::show_screen(std::ostream& out) {
     break;
   case Mode::VatPeriods:
     show_vat_periods(out);
+    break;
+  case Mode::VatQuarter:
+    show_vat_quarter(out);
     break;
   case Mode::ChooseAmount:
     show_readings(out);
@@ -464,6 +471,16 @@ Operations<Repl::Op> Repl::operations() const {
     if (draft_) {
       operations.add(1, std::format("Save as {} {}", draft_->series, number_), Op::SaveVoucher)
           .add(2, "Flip the template's rows (debit becomes credit)", Op::FlipTemplate, !draft_->guide.empty());
+    }
+    break;
+  case Mode::VatQuarter:
+    if (year_ < books_.years.size()) {
+      auto const& year = books_.years[year_];
+      operations
+          .add(1, std::format("Book it as {} {}", skv::vat_return::clearing_series,
+                              books::next_number(year, skv::vat_return::clearing_series)),
+               Op::BookVatClearing, vat_clearing_.has_value() && !year.closed)
+          .add(2, "Show the report again", Op::ShowVatReport);
     }
     break;
   case Mode::Menu:
@@ -678,6 +695,12 @@ void Repl::on_operation(Op op, std::ostream& out) {
     whole_suggested_ = false;
     save_voucher(out);
     break;
+  case Op::BookVatClearing:
+    book_vat_clearing(out);
+    break;
+  case Op::ShowVatReport:
+    show_vat_report(out);
+    break;
   case Op::FlipTemplate:
     draft_->flip_guide();
     apply_guide(out);
@@ -718,6 +741,8 @@ std::string Repl::prompt() const {
     return "report?> ";
   case Mode::VatPeriods:
     return "period?> ";
+  case Mode::VatQuarter:
+    return skv::vat_return::quarter_name(vat_quarter_) + "> ";
   case Mode::Paging:
     return pager_.prompt();
   case Mode::YearMenu:
@@ -1599,12 +1624,83 @@ void Repl::on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out
   if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_vat_periods(out);
   } else if (pick.kind == ItemList::Pick::Kind::Item) {
-    auto const& period = vat_periods_[n - 1 - pick.index];
-    auto const document = skv::vat_return::document_of(books_, period);
-    show_report(skv::vat_return::report_of(books_, document, steps_of_period(period), company()), out);
+    vat_quarter_ = vat_periods_[n - 1 - pick.index];
+    mode_ = Mode::VatQuarter;
+    show_vat_report(out);
   } else {
     unknown_key(out);
   }
+}
+
+// The chosen quarter's VAT return, paged, then the quarter with its clearing voucher
+void Repl::show_vat_report(std::ostream& out) {
+  auto const document = skv::vat_return::document_of(books_, vat_quarter_);
+  vat_clearing_ = skv::vat_return::clearing_of(document);
+  show_report(skv::vat_return::report_of(books_, document, steps_of_period(vat_quarter_), company()), out);
+}
+
+// The voucher that would clear the quarter's VAT, as it would be saved
+void Repl::show_vat_quarter(std::ostream& out) const {
+  auto const name = skv::vat_return::quarter_name(vat_quarter_);
+  auto const& year = books_.years[year_];
+  if (!vat_clearing_) {
+    std::println(out, "Nothing to clear: the VAT accounts add up to 0.00 in {}.", name);
+  } else {
+    auto const& clearing = *vat_clearing_;
+    std::println(out, "VAT clearing voucher for {} (proposed):", name);
+    std::println(out, "Voucher {} {} {} \"{}\"", skv::vat_return::clearing_series,
+                 books::next_number(year, skv::vat_return::clearing_series), format_iso_date(clearing.event.date),
+                 clearing.event.heading);
+    std::println(out, "  {}", books::posting_heading());
+    for (auto const& row : clearing.postings) {
+      show_row(row, out);
+    }
+    std::println(out, "  {}", books::posting_total(clearing.postings));
+    if (year.closed) {
+      std::println(out, "Fiscal year {} - {} is closed for new vouchers, so it cannot be booked.",
+                   format_iso_date(year.start), format_iso_date(year.end));
+    }
+  }
+  std::println(out, "");
+  show_operations(out);
+}
+
+void Repl::on_vat_quarter_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::VatPeriods;
+    show_vat_periods(out);
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
+  } else {
+    unknown_key(out);
+  }
+}
+
+// Saves the proposed clearing voucher as it is, then lists the periods with their steps again
+void Repl::book_vat_clearing(std::ostream& out) {
+  auto const& clearing = *vat_clearing_;
+  auto& year = books_.years[year_];
+  auto const series = std::string{skv::vat_return::clearing_series};
+  auto const number = books::next_number(year, series);
+  year.vouchers.push_back({.series = series,
+                           .number = number,
+                           .event = clearing.event,
+                           .registered = parse_iso_date(places_.today).value_or(clearing.event.date),
+                           .postings = clearing.postings});
+  if (!write_books(out)) {
+    year.vouchers.pop_back();
+    return;
+  }
+  auto const name = skv::vat_return::quarter_name(vat_quarter_);
+  std::println(out, "Saved voucher {} {} into fiscal year {} - {}: the VAT of {} is cleared.", series, number,
+               format_iso_date(year.start), format_iso_date(year.end), name);
+  LOG_BUSINESS("Saved voucher {} {} {} \"{}\" ({} rows, debit {}) as the VAT clearing of {} into project {} ({}), "
+               "fiscal year {} - {}",
+               series, number, format_iso_date(clearing.event.date), clearing.event.heading, clearing.postings.size(),
+               format_amount(books::debit(clearing.postings)), name, project_->name, project_->uuid,
+               format_iso_date(year.start), format_iso_date(year.end));
+  vat_clearing_.reset();
+  open_vat_periods(out);
 }
 
 void Repl::open_year_menu(std::ostream& out) {

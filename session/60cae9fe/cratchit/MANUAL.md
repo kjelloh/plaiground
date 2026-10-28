@@ -1465,8 +1465,9 @@ quarter takes is listed under the quarters as `Charged, not matched to a
 quarter`. Payments between the tax account and the bank (1630 and e.g. 1930)
 are not a step: they pay the tax account's balance, not one quarter.
 
-The prompt is `period?>`. Press a number to see that quarter's VAT return, or
-`+` for the quarter running today so far (its heading ends `so far (today
+The prompt is `period?>`. Press a number to see that quarter's VAT return and
+then its clearing voucher (see Clearing the VAT of a quarter), or
+`+` for the quarter running today so far (the VAT return only) (its heading ends `so far (today
 ...)`); `-` goes back to the reports. To see the quarters of another fiscal
 year, open that year (see Fiscal years). With `vat_period = none` cratchit says there are no
 VAT returns; `monthly` and `yearly` are not supported yet.
@@ -1520,7 +1521,48 @@ Box 49 (Moms att betala eller få tillbaka) is added up as the form does it:
 figures. The box 49 row shows the form's figure: positive is VAT to pay,
 negative VAT to get back (with only input VAT, box 49 is minus box 48). The
 last line says it in words. A period without postings in any box shows no box 49.
-After the VAT return the periods are shown again.
+After the VAT return of the quarter running today (`+`) the periods are shown again.
+
+#### Clearing the VAT of a quarter
+
+After the VAT return of an ended quarter, cratchit proposes the voucher that
+clears it, at a prompt named after the quarter (e.g. `2025 Q4>`):
+
+```
+VAT clearing voucher for 2025 Q4 (proposed):
+Voucher M 2 2025-12-31 "Momsrapport 2025-10-01 - 2025-12-31"
+  Account        Debit       Credit
+  2611          500.00               Output VAT 25%
+  2650                       500.00  VAT clearing
+  Total         500.00       500.00
+
+  1  Book it as M 2
+  2  Show the report again
+```
+
+The voucher is made from the VAT return:
+
+| Row  | What it is                                                         |
+|------|--------------------------------------------------------------------|
+| VAT accounts | Each account of a VAT box (10-12, 30-32, 60-62, 48) gets minus what the quarter's vouchers posted on it, öre and all, so the quarter leaves it at zero. Other boxes (such as 05) are not touched. |
+| 2650 or 1650 | Box 49 as on the form (whole kronor): VAT to pay is credited to 2650 (Redovisningskonto för moms), VAT to get back debited to 1650 (Momsfordran). No row when box 49 is 0. |
+| 3740 | Öres- och kronutjämning: what is left, because the boxes drop their öre, so that debit and credit add up. No row when nothing is left. |
+
+It is dated the quarter's last day, headed `Momsrapport <first day> - <last
+day>`, in series M (Momsrapport) with the next number of the year.
+
+| Key   | What it does                                                         |
+|-------|----------------------------------------------------------------------|
+| 1     | Book the voucher as it is shown (it cannot be changed here). Then the quarters are listed again, the quarter now with its Cleared amount. |
+| 2     | Show the quarter's VAT return again, then this screen.                 |
+| Enter | Show this screen again.                                              |
+| -     | Back to the quarters (`period?>`).                                   |
+
+When the VAT accounts already add up to zero in the quarter, for example
+because it is cleared, cratchit says `Nothing to clear: the VAT accounts add up
+to 0.00 in 2025 Q4.` and only 2 is offered. In a fiscal year closed for new
+vouchers the voucher is shown, with a line saying it cannot be booked, and 1 is
+left out.
 
 ## Using the prompt
 
@@ -1621,7 +1663,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, or an account statement it cannot read. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

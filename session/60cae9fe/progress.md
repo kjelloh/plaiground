@@ -560,6 +560,23 @@ every period is cleared); box 49 (`vat_to_pay`, whole kronor): to pay credits 26
 already cleared gives none; may change when the full report can be generated again). By `steps_of`'s rule it is a
 clearing voucher. No manual change (no user operation). 451 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 62: The VAT clearing voucher is proposed after a quarter's VAT return. Picking an ended quarter at `period?>`
+pages its report, then shows the quarter at its own prompt (`2025 Q4>`, new `Mode::VatQuarter`, `vat_quarter_`,
+`vat_clearing_`): the `clearing_of` candidate as `Voucher M <next> <date> "<heading>"` with Debit/Credit rows and
+Total, then `1 Book it as M <n>` (left out in a closed year, with a line saying so) and `2 Show the report again`;
+`-` back to `period?>`. Nothing to clear: "Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q4." and only 2.
+1 saves as shown (no editing, agreed), series M hard-coded (`skv::vat_return::clearing_series`), registered today,
+logged (business, "as the VAT clearing of 2025 Q4"), then the periods again with fresh steps (Cleared filled in).
+`+` (quarter so far) unchanged: report only. Manual: new "Clearing the VAT of a quarter", period?> text, log kinds.
+453 tests pass, no warnings (Debug, trace DEBUG). In review.
+
+Checked (2026-10-28, scratch program, not in the repo): `clearing_of` against the 38 Fortnox M vouchers in
+`_resources/_sie_in`: 23 identical to the öre; 6 identical but for 9xxx memo accounts (9021/9022 vs 9099, base of
+boxes 20-22, which Fortnox clears too) and/or 2650 used for VAT to get back; 2 differ by vouchers registered after the
+return was filed (D 29 2022, I 6 2025); 7 hand-made early ones (2017-18, 2021 Q4, 2022 Q1). Found: the steps_of
+clearing rule (2650/1650 + VAT account) also takes corrections (A 18 2023, A 1 2024) and a reverse-charge purchase
+posted against 2650 (A 48 2026) as clearings.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -753,6 +770,10 @@ into a waiting event without making a voucher, several entries chosen at once.
   by its sign, and the rest on 3740 Öres- och kronutjämning; series M, dated the period's last day.
 
 ## Open questions
+
+- Should the clearing voucher also clear the 9xxx memo accounts (base of boxes 20-22) against 9099, as Fortnox does?
+- Should steps_of tell corrections and purchases posted against 2650 from clearing vouchers (today they count as
+  Cleared)?
 
 - Should a template's rounding row (e.g. 3740 Öres- och kronutjämning) be scaled like the others? Today it takes the
   scaling remainder, so VAT ends up slightly off (Telia 1245.00: 2641 248.97, 3740 0.14).

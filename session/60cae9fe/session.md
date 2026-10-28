@@ -24,6 +24,17 @@ I AM SOOO TIRED!!
 * Vibe coded so all VAT boxes are truncated to whole SEK (round towards zero)
 * Vibe coded a Vat Returns report voucher candidate mechanism.
 
+At this stage I got the brilliant idea to ask Claude to compare our VAT Returns voucher candidate against historical SIE file (I have 11 years in a folder)
+
+* It seems I now did things in the right order?
+* I first narrowed the Claude task down to the voucher generation code.
+* Then asked Claude to verify the mechanism against actual existing vouchers!
+* FINGERS CROSSED this works!
+
+Yes it did. Claude tells me a large bulk of historic VAT clearing vouchers matches the voucher we would have generated OK!
+
+* Vibe coded creation of actual VAT Return clearing voucher ok.
+
 ## 20261027
 
 So now then we are ready to start generating the VAT Returns form document?

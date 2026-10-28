@@ -15,6 +15,7 @@
 #include "core/pager.hpp"
 #include "core/path_editor.hpp"
 #include "core/project.hpp"
+#include "core/skv/vat_return/clearing.hpp"
 #include "core/skv/vat_return/document.hpp"
 #include "core/skv/vat_return/steps.hpp"
 #include "core/workspace.hpp"
@@ -87,6 +88,7 @@ private:
     Years,
     Reports,
     VatPeriods,
+    VatQuarter,
     Paging,
     YearMenu,
     Year,
@@ -139,6 +141,8 @@ private:
     AddEntryToEvent,
     SaveVoucher,
     FlipTemplate,
+    BookVatClearing,
+    ShowVatReport,
   };
   // What the text typed in the editor is for
   enum class Purpose {
@@ -184,6 +188,8 @@ private:
   std::optional<skv::vat_return::Period> vat_next_;    // the last period ended before today: the one to report next
   skv::vat_return::Steps vat_steps_;    // the steps of every quarter of the books
   ItemList vat_period_page_{ItemList::Start::Zero}; // the page of the VAT return periods, key 0 the newest ended
+  skv::vat_return::Period vat_quarter_;  // the ended period chosen, shown with its clearing voucher
+  std::optional<skv::vat_return::Clearing> vat_clearing_; // the voucher proposed to clear it, if anything changed
   ItemList year_menu_page_{ItemList::Start::Zero}; // the page of the year menu, keys from 0 as SIE numbers years
   Date open_year_;                      // the start of the fiscal year at the year prompt
   Mode before_reports_ = Mode::Years;   // where - leaves the report menu for
@@ -274,6 +280,10 @@ private:
   void show_vat_periods(std::ostream& out) const;
   skv::vat_return::PeriodSteps const& steps_of_period(skv::vat_return::Period const& period) const;
   void on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_vat_report(std::ostream& out);
+  void show_vat_quarter(std::ostream& out) const;
+  void on_vat_quarter_key(charset::unicode::CodePoint key, std::ostream& out);
+  void book_vat_clearing(std::ostream& out);
   std::string company() const;
   void open_year_menu(std::ostream& out);
   void show_year_menu(std::ostream& out);
