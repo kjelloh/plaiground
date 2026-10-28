@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iterator>
 #include <set>
+#include <tuple>
 
 namespace cratchit::books {
 
@@ -507,6 +508,46 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
     saved.record = record;
     return saved;
   }
+}
+
+bool nothing_to_import(Books const& books, ImportPlan const& plan) {
+  return plan.vouchers_added == 0 && plan.accounts_added == 0 && plan.accounts_changed == 0 &&
+         !plan.identity_changed && books.year_starting(plan.year_start);
+}
+
+SieFolder sie_files_in(std::filesystem::path const& folder, Books const& books, Identity const& identity) {
+  namespace fs = std::filesystem;
+  SieFolder result;
+  std::error_code ec;
+  for (auto const& entry : fs::directory_iterator(folder, ec)) {
+    if (!entry.is_regular_file(ec) || entry.path().filename().string().starts_with('.')) {
+      continue;
+    }
+    std::ifstream in(entry.path(), std::ios::binary);
+    std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    auto const lexed = sie::lex_bytes(bytes);
+    auto parsed = lexed ? sie::parse_document(lexed->lines) : sie::Parsed{};
+    if (!in || !lexed || parsed.document.sie_type.empty()) {
+      ++result.others;
+      continue;
+    }
+    auto const plan = plan_import(books, identity, parsed.document);
+    SieFileSummary summary{entry.path(), std::move(parsed.document), false, plan.errors.size() + parsed.errors.size(),
+                           false, plan.vouchers_added};
+    summary.other_company = !identity.orgnr.empty() && summary.document.orgnr != identity.orgnr;
+    summary.nothing_new = summary.errors == 0 && nothing_to_import(books, plan);
+    result.files.push_back(std::move(summary));
+  }
+  auto const key = [](SieFileSummary const& summary) {
+    auto const year = summary.document.year(0);
+    return std::tuple{year ? std::optional{year->start} : std::nullopt, summary.document.generated};
+  };
+  std::ranges::sort(result.files, [&](SieFileSummary const& a, SieFileSummary const& b) {
+    auto const ka = key(a);
+    auto const kb = key(b);
+    return ka != kb ? ka > kb : a.file < b.file;
+  });
+  return result;
 }
 
 std::expected<std::set<VoucherKey>, std::string> imported_vouchers(std::filesystem::path const& project_folder) {

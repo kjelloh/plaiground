@@ -105,6 +105,7 @@ private:
     VoucherSeries,
     VoucherList,
     VoucherView,
+    SieFiles,
     StatementFiles,
     ConfirmStatement,
     EntryList,
@@ -184,6 +185,8 @@ private:
   std::optional<books::ImportPlan> plan_; // the import waiting for y/n
   books::ImportSource import_source_;
   Mode before_import_ = Mode::Project;   // where an SIE import started (project or year prompt)
+  books::SieFolder sie_folder_;          // the SIE files listed in a folder
+  ItemList sie_page_;                    // the page of the SIE files
   books::Books books_;                  // the books the reports are about
   ItemList year_page_;                  // the page of the report years
   std::size_t year_ = 0;                // the year of the reports, an index into books_.years
@@ -314,6 +317,9 @@ private:
   void on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& out);
   void start_statement(std::ostream& out);
   void on_statement_path(PathEditor::Result result, std::ostream& out);
+  void list_sie_files(std::filesystem::path const& folder, std::ostream& out);
+  void show_sie_files(std::ostream& out) const;
+  void on_sie_files_key(charset::unicode::CodePoint key, std::ostream& out);
   void show_statement_files(std::ostream& out) const;
   void on_statement_files_key(charset::unicode::CodePoint key, std::ostream& out);
   void check_statement(std::filesystem::path const& file, std::ostream& out);

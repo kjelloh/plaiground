@@ -238,6 +238,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::VoucherView:
     on_voucher_view_key(key, out);
     break;
+  case Mode::SieFiles:
+    on_sie_files_key(key, out);
+    break;
   case Mode::StatementFiles:
     on_statement_files_key(key, out);
     break;
@@ -322,6 +325,7 @@ bool Repl::shows_on_enter() const {
   case Mode::WaitingEvent:
   case Mode::VoucherList:
   case Mode::VoucherView:
+  case Mode::SieFiles:
   case Mode::StatementFiles:
   case Mode::EntryList:
   case Mode::EntryChoice:
@@ -396,6 +400,9 @@ void Repl::show_screen(std::ostream& out) {
     break;
   case Mode::VoucherView:
     show_voucher(out);
+    break;
+  case Mode::SieFiles:
+    show_sie_files(out);
     break;
   case Mode::StatementFiles:
     show_statement_files(out);
@@ -826,6 +833,8 @@ std::string Repl::prompt() const {
                ? std::format("{} {}> ", year->vouchers[viewed_].series, year->vouchers[viewed_].number)
                : "voucher> ";
   }
+  case Mode::SieFiles:
+    return "sie?> ";
   case Mode::StatementFiles:
     return "statement?> ";
   case Mode::ConfirmStatement:
@@ -958,8 +967,12 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
     }
     auto const file = typed_folder(places_.start_folder);
     std::error_code ec;
+    if (fs::is_directory(file, ec)) {
+      list_sie_files(file, out);
+      return;
+    }
     if (!fs::is_regular_file(file, ec)) {
-      std::println(out, "No file {}.", file.string());
+      std::println(out, "No file or folder {}.", file.string());
       out << editor_.prompt();
       return;
     }
@@ -1366,9 +1379,69 @@ void Repl::start_import(std::ostream& out) {
   purpose_ = Purpose::SieFile;
   editor_.start((places_.start_folder / "").string(), PathEditor::Kind::File);
   mode_ = Mode::Typing;
-  std::println(out, "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace erases,");
-  std::println(out, "Enter accepts. - or Enter on an empty path goes back.");
+  std::println(out, "Type the path of the SIE file to import, or of a folder to list its SIE files. Tab completes a");
+  std::println(out, "folder or file name, Backspace erases, Enter accepts. - or Enter on an empty path goes back.");
   out << editor_.prompt();
+}
+
+// Lists the SIE files of a folder to pick one, each planned against the books
+void Repl::list_sie_files(fs::path const& folder, std::ostream& out) {
+  auto const books = books::read_books(project_->folder);
+  if (!books) {
+    std::println(out, "Error: {}", books.error());
+    out << editor_.prompt();
+    return;
+  }
+  sie_folder_ = books::sie_files_in(folder, *books, {project_->name, project_->orgnr});
+  if (sie_folder_.files.empty()) {
+    std::println(out, "No SIE files in {} ({} other file{}).", folder.string(), sie_folder_.others,
+                 sie_folder_.others == 1 ? "" : "s");
+    out << editor_.prompt();
+    return;
+  }
+  sie_page_.reset();
+  mode_ = Mode::SieFiles;
+  show_sie_files(out);
+}
+
+// Newest fiscal year first; numbered from 1, over 9 keys 1-8 with 0 up and 9 down
+void Repl::show_sie_files(std::ostream& out) const {
+  std::println(out, "SIE files in {}:", sie_folder_.files.front().file.parent_path().string());
+  sie_page_.show(sie_folder_.files.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& summary = sie_folder_.files[index];
+    auto const& document = summary.document;
+    auto const year = document.year(0);
+    std::println(out, "  {}  {}", key, summary.file.filename().string());
+    std::println(out, "       {}, {}; year {}; {} {}{}", document.company_name, document.orgnr,
+                 year ? format_iso_date(year->start) + " - " + format_iso_date(year->end) : "none",
+                 document.program, document.program_version,
+                 document.generated ? ", generated " + format_iso_date(*document.generated) : std::string{});
+    auto const status = summary.other_company ? std::string{"not this project's company"}
+                        : summary.errors > 0  ? counted(summary.errors, "error", "errors")
+                        : summary.nothing_new ? std::string{"all in the books"}
+                        : summary.vouchers_added > 0 ? std::format("{} new", summary.vouchers_added)
+                                                     : std::string{"no new vouchers, other data new"};
+    std::println(out, "       {}: {}", counted(document.vouchers.size(), "voucher", "vouchers"), status);
+  });
+  if (sie_folder_.others > 0) {
+    std::println(out, "({} other file{} left out)", sie_folder_.others, sie_folder_.others == 1 ? "" : "s");
+  }
+}
+
+void Repl::on_sie_files_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::Typing;
+    out << editor_.prompt();
+    return;
+  }
+  auto const pick = sie_page_.on_key(key, sie_folder_.files.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
+    show_sie_files(out);
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    check_import(sie_folder_.files[pick.index].file, out);
+  } else {
+    unknown_key(out);
+  }
 }
 
 // Reads, checks and plans the import of an SIE file, shows what it would do, and asks
@@ -1423,8 +1496,7 @@ void Repl::check_import(fs::path const& file, std::ostream& out) {
     std::println(out, "Nothing is imported.");
     return;
   }
-  if (plan.vouchers_added == 0 && plan.accounts_added == 0 && plan.accounts_changed == 0 && !plan.identity_changed &&
-      books->year_starting(plan.year_start)) {
+  if (books::nothing_to_import(*books, plan)) {
     std::println(out, "Everything in the file is already in the books. Nothing to import.");
     return;
   }

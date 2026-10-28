@@ -669,8 +669,8 @@ TEST_F(WorkspaceRepl, IKeyChecksTheFileAndImportsOnYes) {
   write_sie(file, good_sie());
   auto const output = run("2test.se\ny");
   EXPECT_NE(output.find("project> 2\n"
-                        "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace "
-                        "erases,\nEnter accepts. - or Enter on an empty path goes back.\n"
+                        "Type the path of the SIE file to import, or of a folder to list its SIE files. Tab completes a\n"
+                        "folder or file name, Backspace erases, Enter accepts. - or Enter on an empty path goes back.\n"
                         "path> " + (root / "start").string() + "/test.se\n"
                         "SIE file " + file.string() + "\n"
                         "  Read as      CP437\n"
@@ -728,9 +728,52 @@ TEST_F(WorkspaceRepl, FileWithErrorsIsNotImported) {
 TEST_F(WorkspaceRepl, MissingSieFileKeepsThePath) {
   run("112Test\n1");
   auto const output = run("2nope.se\n");
-  EXPECT_TRUE(output.ends_with("No file " + (root / "start" / "nope.se").string() + ".\npath> " +
+  EXPECT_TRUE(output.ends_with("No file or folder " + (root / "start" / "nope.se").string() + ".\npath> " +
                                (root / "start").string() + "/nope.se\n"))
       << output;
+}
+
+TEST_F(WorkspaceRepl, AFolderListsItsSieFilesNewestYearFirst) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny");
+  auto const folder = root / "start" / "sie";
+  fs::create_directories(folder);
+  write_sie(folder / "test.se", good_sie());
+  write_sie(folder / "older.se",
+            sie_test::sie_file(2024, sie_test::balanced_balances(), sie_test::sale_and_cost(2024)));
+  write_sie(folder / "other.se", sie_test::sie_file(2025, sie_test::balanced_balances(), sie_test::sale_and_cost(2025),
+                                                    "\"Other AB\"", "556111-2222"));
+  write_sie(folder / "notes.txt", "Not an SIE file\n");
+  // A year and export date in common are ordered by name; - goes back to the path, Enter lists again
+  auto const listed = "SIE files in " + folder.string() + ":\n"
+                      "  1  other.se\n"
+                      "       Other AB, 556111-2222; year 2025-01-01 - 2025-12-31; Test 1.0, generated 2026-10-19\n"
+                      "       2 vouchers: not this project's company\n"
+                      "  2  test.se\n"
+                      "       Test AB, 556000-0001; year 2025-01-01 - 2025-12-31; Test 1.0, generated 2026-10-19\n"
+                      "       2 vouchers: all in the books\n"
+                      "  3  older.se\n"
+                      "       Test AB, 556000-0001; year 2024-01-01 - 2024-12-31; Test 1.0, generated 2026-10-19\n"
+                      "       2 vouchers: 2 new\n"
+                      "(1 other file left out)\n";
+  auto const output = run("2sie\nx-\n3y");
+  EXPECT_NE(output.find("path> " + folder.string() + "\n" + listed +
+                        "sie?> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
+                        "sie?> -\n"
+                        "path> " + folder.string() + "\n" + listed +
+                        "sie?> 3\n"
+                        "SIE file " + (folder / "older.se").string() + "\n"),
+            std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Imported 2 vouchers into fiscal year 2024-01-01 - 2024-12-31 (0 already in the "
+                               "books).\nproject> \n"))
+      << output;
+  // A folder without SIE files stays at the path
+  auto const empty = root / "start" / "empty";
+  fs::create_directories(empty);
+  write_sie(empty / "notes.txt", "Not an SIE file\n");
+  EXPECT_NE(run("2empty\n").find("No SIE files in " + empty.string() + " (1 other file).\npath> "), std::string::npos);
 }
 
 TEST_F(WorkspaceRepl, RKeyWithoutBooks) {
@@ -1349,8 +1392,8 @@ TEST_F(WorkspaceRepl, YearKey3ImportsAnSieFileAndComesBackToTheYear) {
   // n at the question and a file already in the books stay at the year, as does the import
   auto const output = run("3older.se\nn3test.se\n3older.se\ny");
   EXPECT_NE(output.find("2025> 3\n"
-                        "Type the path of the SIE file to import. Tab completes a folder or file name, Backspace "
-                        "erases,\nEnter accepts. - or Enter on an empty path goes back.\n"),
+                        "Type the path of the SIE file to import, or of a folder to list its SIE files. Tab completes a\n"
+                        "folder or file name, Backspace erases, Enter accepts. - or Enter on an empty path goes back.\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("Import it? (y/n) n\nNothing is imported.\n2025> 3\n"), std::string::npos) << output;

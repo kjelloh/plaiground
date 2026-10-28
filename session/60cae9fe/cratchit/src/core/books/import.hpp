@@ -55,6 +55,29 @@ struct ImportPlan {
 //   account), and so is any opening balance the import changes in other years.
 ImportPlan plan_import(Books const& books, Identity const& identity, sie::Document const& document);
 
+// True when the plan (without errors) adds nothing to the books: no new voucher, account or identity, and its year
+// is already there
+bool nothing_to_import(Books const& books, ImportPlan const& plan);
+
+// An SIE file in a folder, as listed to pick one to import
+struct SieFileSummary {
+  std::filesystem::path file;
+  sie::Document document;      // as parsed (only what the list shows is used)
+  bool other_company = false;  // the project has an orgnr and the file another one
+  std::size_t errors = 0;      // the plan's errors (the file's own included)
+  bool nothing_new = false;    // see nothing_to_import
+  std::size_t vouchers_added = 0;
+};
+
+// The SIE files in a folder: the files (not hidden) that read and parse as SIE (have #SIETYP), each planned against
+// the books, newest fiscal year first, then the newest #GEN, then by name. `others` counts the files left out.
+// Does not log.
+struct SieFolder {
+  std::vector<SieFileSummary> files;
+  std::size_t others = 0;
+};
+SieFolder sie_files_in(std::filesystem::path const& folder, Books const& books, Identity const& identity);
+
 // Where an imported file came from, for the record kept with its stashed copy
 struct ImportSource {
   std::filesystem::path file; // as given, in full

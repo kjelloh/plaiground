@@ -1226,7 +1226,37 @@ import them in any order.
 
 Press `2` at the `project>` prompt, or `3` at a fiscal year's prompt, and type
 the path of the file (see Typing a folder path). Either way the file may be of
-any fiscal year, and you come back to the prompt you started from. cratchit reads and checks the file and shows what importing it
+any fiscal year, and you come back to the prompt you started from.
+
+The path of a folder lists its SIE files at `sie?>`, each read and checked
+against the books, so you can pick by fiscal year and export date:
+
+```
+SIE files in /Users/me/Downloads:
+  1  ITfied20261019.se
+       The ITfied AB, 556782-8172; year 2025-05-01 - 2026-04-30; Fortnox 3.62.17, generated 2026-10-19
+       116 vouchers: 4 new
+  2  ITfied20260601.se
+       The ITfied AB, 556782-8172; year 2025-05-01 - 2026-04-30; Fortnox 3.62.17, generated 2026-06-01
+       98 vouchers: all in the books
+  3  Other AB 2025.se
+       Other AB, 556111-2222; year 2025-01-01 - 2025-12-31; Fortnox 3.62.17, generated 2026-10-19
+       131 vouchers: not this project's company
+(2 other files left out)
+sie?> 
+```
+
+The newest fiscal year comes first, and within a year the newest export
+(`#GEN`); files alike in both are ordered by name. The last line of a file says
+what importing it would do: `4 new` (vouchers), `all in the books`, `no new
+vouchers, other data new` (accounts or company details), `2 errors`, or `not
+this project's company` (another organisation number). Files that are not SIE
+files are only counted. A number shows that file as below. With more than nine
+files, keys 1-8 show eight at a time, `0` the ones before and `9` the ones
+after. `-` goes back to the path; Enter lists the files again. A folder with no
+SIE file says `No SIE files in <folder> (2 other files).` and stays at the path.
+
+cratchit reads and checks the file and shows what importing it
 would do, without changing anything:
 
 ```

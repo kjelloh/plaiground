@@ -688,6 +688,18 @@ Task 72: SIE import at year key 3 (`Import an SIE file`), the same flow as `2` a
 Not REPL-tested: `-` on the path at the year, the books re-read. Manual: year table (3; free 4, 6), Importing an SIE
 file. 477 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 73: SIE file picker. The path of a folder at the SIE `path>` lists its SIE files at `sie?>` (new `Mode::SieFiles`,
+`ItemList`, `-` back to the path, Enter lists again; a number goes to the usual check). `books::sie_files_in(folder,
+books, identity)` (import.hpp, no logging): files (not hidden) that lex (`lex_bytes`) and parse with a #SIETYP, each
+planned with `plan_import` (books read once), newest year 0 first, then newest #GEN, then by name; others counted.
+Each shows company, orgnr; year; program, version, #GEN; `<n> vouchers: <status>`: `not this project's company`
+(project has an orgnr, the file another), `<n> errors`, `all in the books` (new `books::nothing_to_import`, also used
+by `check_import`), `<n> new`, `no new vouchers, other data new`. `(n other files left out)`; none: `No SIE files in
+<folder> (n other files).` at the path. Separators are `;` (ASCII), not the `·` of the proposal. A path that is
+neither file nor folder: `No file or folder ...`. Intro line names the folder listing. Manual: Importing an SIE file.
+478 tests pass, no warnings (Debug, trace DEBUG). Checked with piped input on the 11 Fortnox samples + a text file
+(listed newest year first, 9 ...down, 1 other left out). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
