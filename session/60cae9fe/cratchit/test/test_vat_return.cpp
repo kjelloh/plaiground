@@ -63,6 +63,7 @@ TEST(VatReturn, BoxOfAnAccount) {
   EXPECT_EQ(box_of("2611"), "10");
   EXPECT_EQ(box_of("2641"), "48");
   EXPECT_EQ(box_of("3305"), "40");
+  EXPECT_EQ(box_of("2650"), "49");
   EXPECT_EQ(box_of("1930"), std::nullopt);
   EXPECT_EQ(box_of(""), std::nullopt);
 }
@@ -71,6 +72,12 @@ TEST(VatReturn, AccountBoxesText) {
   auto const boxes = account_boxes("\xEF\xBB\xBF" "3001;05;MP1\r\n\r\n2611;10\n2641;48;I");
   ASSERT_TRUE(boxes.has_value()) << boxes.error();
   EXPECT_EQ(*boxes, (std::map<std::string, Box>{{"2611", "10"}, {"2641", "48"}, {"3001", "05"}}));
+}
+
+TEST(VatReturn, AccountBoxesTextWithHeadingAndOutColumn) {
+  auto const boxes = account_boxes("in;vat;out;hint\r\n3001;05;;MP1\r\n;49;2650;R2\r\n");
+  ASSERT_TRUE(boxes.has_value()) << boxes.error();
+  EXPECT_EQ(*boxes, (std::map<std::string, Box>{{"2650", "49"}, {"3001", "05"}}));
 }
 
 TEST(VatReturn, AccountBoxesErrorsNameTheLine) {

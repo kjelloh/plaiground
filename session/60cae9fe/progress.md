@@ -531,6 +531,11 @@ Saved: `D 5 reverses D 4.` and back to the year prompt. Manual: Correcting a vou
 (Debug, trace DEBUG). Open: adding rows beyond the reversal cannot be saved yet (debit and credit must each equal the
 voucher amount). In review.
 
+Task 58: `bas_to_momsrapport.csv` has a heading line (`in;vat;out;hint`) and an `out` column; box 49's accounts
+(2650, 1650) are now in `out` (`;49;2650;R2`). `account_boxes` skips a first line starting with `in;` and takes the
+account from `out` when `in` is empty, so `box_of` gives the same boxes as before (2650/1650 -> 49). No manual change.
+444 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings

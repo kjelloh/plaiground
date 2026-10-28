@@ -2,6 +2,24 @@
 
 ```#60cae9fe```
 
+## 20261028
+
+* [Beräkning av mervärdesskatt vid öresavrundning](https://www4.skatteverket.se/rattsligvagledning/edition/2026.14/381778.html?utm_source=chatgpt.com)
+    * The VAT amount reported to SKV shall be truncated (not rounded)
+    * The truncated amount shall be booked on BAS Account 'öresavrundning' (3740)
+
+DARN!! WE ARE STUCK!
+
+* I totally fail to tell Claude how to generate a VAT Returns report from bas_to_momsrapport!
+* I gets confused and when it analyses the existing books it conflates information all over the place?
+* Now, It may be the case that the code Claude would generate could actually work?
+    * But I am simply NOT SURE?
+
+I AM SOOO TIRED!!
+
+* Anyhow, I changed the format of bas_to_momsrapport to have anm out column and made box 49 map to out 1650, 2650.
+* And Claude could make the changes to applu and parse this new file format ok.
+
 ## 20261027
 
 So now then we are ready to start generating the VAT Returns form document?

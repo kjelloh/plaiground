@@ -50,7 +50,13 @@ std::expected<std::map<std::string, Box>, std::string> account_boxes(std::string
     if (line.empty()) {
       continue;
     }
-    auto const cells = cells_of(line);
+    auto cells = cells_of(line);
+    if (number == 1 && cells[0] == "in") {
+      continue;
+    }
+    if (cells.size() >= 3 && cells[0].empty()) {
+      cells[0] = cells[2];
+    }
     if (cells.size() < 2 || !is_digits(cells[0], 4)) {
       return std::unexpected(std::format("Line {}: the account is not four digits: {}", number, line));
     }
