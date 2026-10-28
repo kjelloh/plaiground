@@ -546,6 +546,11 @@ calculated yet."). Not in a period with no boxes ("No postings ..."). Fix after 
 negated to the books' sign, so with only box 48 both showed positive; new report test). Manual: "The VAT return". 446 tests pass, no
 warnings (Debug, trace DEBUG). In review.
 
+Task 60: VAT return boxes in whole kronor. `document_of` truncates each box's amount towards zero to whole kronor
+(`/ 100 * 100` on öre); the accounts and voucher postings under it keep their öre, so box 49 (`vat_to_pay`) adds up
+the truncated boxes. Steps unchanged (not rounded). Test `AQuarterAcrossTwoFiscalYears` expects boxes 10 -17.00 and
+48 2.00. Manual: "The VAT return". 446 tests pass, no warnings (Debug, trace DEBUG). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings

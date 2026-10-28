@@ -1509,6 +1509,11 @@ of every series, including clearing and charge vouchers. Removed rows do not
 count. The amounts are not yet turned into the figures you type into SKV's
 form: they keep the sign they have in the books.
 
+A box's amount is in whole kronor, as on the form: the öre are dropped (rounded
+towards zero, so -17.50 becomes -17.00 and 2.50 becomes 2.00). The accounts and
+vouchers under it keep their öre, so they may add up to up to 0.99 more than the
+box. The steps (Period, Cleared, Charged) are not rounded.
+
 Box 49 (Moms att betala eller få tillbaka) is added up as the form does it:
 10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48. The form takes output VAT
 (credit in the books) and input VAT in box 48 (debit in the books) as positive

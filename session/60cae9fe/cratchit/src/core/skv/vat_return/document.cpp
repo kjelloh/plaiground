@@ -63,6 +63,7 @@ Document document_of(books::Books const& books, Period period) {
       box_amount.amount += account_amount.amount;
       box_amount.accounts.push_back(std::move(account_amount));
     }
+    box_amount.amount = box_amount.amount / 100 * 100; // the form takes whole kronor, öre dropped
     document.boxes.push_back(std::move(box_amount));
   }
   return document;
