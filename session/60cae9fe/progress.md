@@ -586,6 +586,24 @@ momsrapport.csv (no signs; box 48 has its own choice for the negative case), SKV
 moms_202603.eskd. Also added `resources/momsrapport/momsrapport_box_to_eskd.csv` (`box;tag`, 29 boxes in SKV's file
 order; not read by code yet). Manual: "The VAT return". 453 tests pass, no warnings (Debug, trace DEBUG). In review.
 
+Task 64: eSKD seed, in memory only, no UI. `momsrapport_box_to_eskd.csv` is built into the binary like
+bas_to_momsrapport (`box_tags.cpp.in` -> `generated/box_tags.cpp`; `box_tags_text()`, internal header `box_tags.hpp`;
+`box_tags(text)` -> `BoxTag`s (box, tag) in file order; BOM, heading `box;tag`, CR, blank lines skipped; error names
+the line: box not two digits, tag not ASCII letters/digits, box or tag listed before). `core/skv/vat_return/eskd`
+(namespace `skv::vat_return::eskd`): `Field` (tag, amount), `Document` (orgnr, period `YYYYMM` of the period's last
+month, fields in file order); `document_of(form, orgnr)`: each box with postings, its amount as it is (form figure,
+whole kronor), then `MomsBetala` = `vat_to_pay` always; a box without a tag is left out and logged (design
+insufficiency), as is a broken built-in table. Which tags to write is postponed (seed: boxes with postings + 49).
+Checked against the filed `moms_202603.eskd` (20: 124, 30: 31, 48: 2051, 49: -2020). No manual change. 460 tests
+pass, no warnings (Debug, trace DEBUG). Next: the XML text (ISO-8859-1, `-` straight before the amount, öre dropped),
+then the file and the UI. In review.
+Checked (scratch program, not in the repo) against the 18 filed eSKD files in `_resources/_eskd_irl` (2020-06 to
+2026-06), the books from the 11 SIE files, each period from its M voucher's heading, that M voucher left out: org
+number and period right in all 18; values the same in 16. 2025 Q2: I 6 (registered after filing) and 879.10 filed as
+879. 2026 Q1: A 48 posts 2645 against 2650 instead of 2614, so box 30 (31) is missing and box 49 is -2051, not -2020.
+Tag order as SKV's current page in all but 2021 Q3 and 2022 Q3, which used the old order (purchases first). Older
+files list every tag with 0; the seed writes boxes with postings + MomsBetala, as most files since 2021.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings

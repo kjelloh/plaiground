@@ -6,6 +6,7 @@ add_executable(cratchit_tests
   test_columns.cpp
   test_cp437.cpp
   test_csv.cpp
+  test_eskd.cpp
   test_data_folder.cpp
   test_date.cpp
   test_entry.cpp

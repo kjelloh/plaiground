@@ -43,6 +43,12 @@ In the chat with Claude I now discovered the VAT Returns boxes for income and sa
 
 * So I made Claude flip the sign of boxes that aggregates from 'credit' accounts (accounts where '-' is the 'normal').
 
+Now I asked Claude to implement a mechanism to create an eskd-Document from a VAT Returnd form document.
+
+* I asked Claude to also apply the mechanism to historic data and compare with historic eskd-files.
+* Claude reported they comply well (they differ only because the books contained errors)
+
+
 ## 20261027
 
 So now then we are ready to start generating the VAT Returns form document?
