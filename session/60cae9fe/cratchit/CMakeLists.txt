@@ -39,6 +39,7 @@ add_library(cratchit_core
   src/core/books/books.cpp
   src/core/books/columns.cpp
   src/core/books/entry.cpp
+  src/core/books/export.cpp
   src/core/books/hint.cpp
   src/core/books/import.cpp
   src/core/books/match.cpp
@@ -66,6 +67,7 @@ add_library(cratchit_core
   src/core/sie/document.cpp
   src/core/sie/file.cpp
   src/core/sie/lexer.cpp
+  src/core/sie/writer.cpp
   src/core/skv/vat_return/box.cpp
   src/core/skv/vat_return/clearing.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/account_boxes.cpp

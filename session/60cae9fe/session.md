@@ -54,6 +54,14 @@ And now I asked Claude to generate the actual XML-file + UI
 * Output to project folder.
 * I tested to upload it to live SKV web service and it accepted the file and content looked ok.
 
+Now, as a good way to end this day I want Claude to implement SIE export.
+
+* In this way I can enter and exit this vibe coded cratchit as I may need in the future.
+* And I can round-trip through an external tool (e.g., Fortnox) to apply tools cratchit 'vibe' can't provide.
+
+Claude now implemented an SIE file export mechanism.
+
+* Claude tested it against all 11 years of SIE files I provided as templates (evidence) ok
 
 ## 20261027
 

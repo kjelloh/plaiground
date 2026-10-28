@@ -633,6 +633,23 @@ Task 67: A DOCTYPE line was added to `eskd::xml_of` after a refused test upload 
 reverted: the real e-service accepted the file without it (2026-10-28). The file stays as in Task 65 (no DOCTYPE).
 465 tests pass, no warnings (Debug, trace DEBUG).
 
+Task 68: SIE export seed, in memory only, no UI or file. `core/sie/writer`: `text_of(sie::Document)` (UTF-8, CRLF,
+records in SIE 4B order, sections apart by a blank line as Fortnox; texts quoted with `\"`; amounts with a point and no
+trailing zeros; dates YYYYMMDD; #IB then #UB per account a year at a time, then #RES; an #RTRANS followed by its like
+#TRANS without signature; #VER regdate/sign and #TRANS date/text/quantity/sign positional with `""` placeholders; no
+#KSUMMA (agreed: left out for now), no unknown labels) and `cp437_of(text)` (UTF-8 -> CP437 via the push buffers; a
+character CP437 lacks becomes `?`, counted in `Encoded::unmapped`). `core/books/export`: `export_document(books,
+identity, index, generated)`: year 0 = books.years[index], -1 = the year before in the books (agreed: as Fortnox);
+#PROGRAM "cratchit" <version>, #GEN, #FNR/#ADRESS/#KPTYP from the books, #FNAMN/#ORGNR from the project, #OMFATTN = year
+end; every account (newest data), dimension, object; #IB/#UB from cratchit's own `balances()` (agreed) for balance
+accounts where either is not zero, #RES for the other accounts (incl. 9xxx memo accounts, as Fortnox) not at zero;
+year 0's vouchers. Not exported: waiting events, #OIB/#OUB/#PSALDO/#PBUDGET (not kept). Tests: the writer's records,
+CP437, balances of two years, round trip (exported years import back into the same books with nothing new, and into
+empty books with the same vouchers and accounts). 471 tests pass, no warnings (Debug, trace DEBUG). Checked with all 11
+Fortnox years (scratch program): every voucher (1379) the same as Fortnox's; identification the same; #RES the same;
+#IB/#UB the same except 2026/27 1650/2641 (cratchit's carried opening, known); accounts: ours are the books' 506 with
+the newest names and SRU (Fortnox: that year's 493-501, older names); #PSALDO not written. No manual change. In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
