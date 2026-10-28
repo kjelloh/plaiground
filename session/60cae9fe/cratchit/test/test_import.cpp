@@ -132,8 +132,101 @@ TEST(Import, AChangedVoucherIsAnError) {
   changed.replace(changed.find("\"Bank cost\""), 11, "\"Bank fee\"");
   auto const plan = plan_import(books, known, parse_sie(changed));
   EXPECT_TRUE(has(plan.errors, "Voucher A 2 in the file differs from the one in the books (text \"Bank cost\" in the "
-                               "books, \"Bank fee\" in the file). The books never change a voucher"))
+                               "books, \"Bank fee\" in the file). A voucher in the books may only change by struck "
+                               "(#BTRANS) and added (#RTRANS) rows"))
       << all(plan.errors);
+}
+
+// The 2025 file with the given rows (CRLF lines) in voucher A 2 instead of 6570 10 and 1930 -10
+std::string with_a2_rows(std::string_view rows) {
+  auto file = file_2025();
+  std::string_view const original = "#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n";
+  file.replace(file.find(original), original.size(), rows);
+  return file;
+}
+
+// A 2 with both rows struck and new ones added for 12, as Fortnox writes a changed voucher
+std::string const struck_and_added = "#BTRANS 6570 {} 10 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                     "#BTRANS 1930 {} -10 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                     "#RTRANS 6570 {} 12 \"\" \"\" \"\" \"Kjell\"\r\n#TRANS 6570 {} 12\r\n"
+                                     "#RTRANS 1930 {} -12 \"\" \"\" \"\" \"Kjell\"\r\n#TRANS 1930 {} -12\r\n";
+
+TEST(Import, StruckAndAddedRowsChangeAVoucher) {
+  auto const books = imported({file_2025()});
+  auto const plan = plan_import(books, known, parse_sie(with_a2_rows(struck_and_added)));
+  EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+  EXPECT_TRUE(has(plan.notes, "Voucher A 2 changes: 2 rows struck, 2 added (signed Kjell)")) << all(plan.notes);
+  EXPECT_EQ(plan.vouchers_changed, 1u);
+  EXPECT_EQ(plan.vouchers_known, 1u);
+  auto const& a2 = plan.books.years[0].vouchers[1];
+  ASSERT_EQ(a2.postings.size(), 4u);
+  EXPECT_EQ(a2.postings[0].kind, cratchit::books::Posting::Kind::removed);
+  EXPECT_EQ(a2.postings[2].kind, cratchit::books::Posting::Kind::added);
+  EXPECT_EQ(a2.event.amount, 1200);
+  // The same file again: nothing to import
+  auto const again = plan_import(plan.books, known, parse_sie(with_a2_rows(struck_and_added)));
+  EXPECT_TRUE(again.errors.empty()) << all(again.errors);
+  EXPECT_EQ(again.vouchers_changed, 0u);
+  EXPECT_TRUE(cratchit::books::nothing_to_import(plan.books, again));
+}
+
+TEST(Import, AnAddedRowMayBeStruckLater) {
+  auto const books = imported({file_2025(), with_a2_rows(struck_and_added)});
+  auto const plan = plan_import(books, known,
+                                parse_sie(with_a2_rows("#BTRANS 6570 {} 10 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                                       "#BTRANS 1930 {} -10 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                                       "#BTRANS 6570 {} 12 \"\" \"\" \"\" \"Anna\"\r\n"
+                                                       "#BTRANS 1930 {} -12 \"\" \"\" \"\" \"Anna\"\r\n"
+                                                       "#RTRANS 6570 {} 11 \"\" \"\" \"\" \"Anna\"\r\n"
+                                                       "#TRANS 6570 {} 11\r\n"
+                                                       "#RTRANS 1930 {} -11 \"\" \"\" \"\" \"Anna\"\r\n"
+                                                       "#TRANS 1930 {} -11\r\n")));
+  EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+  EXPECT_TRUE(has(plan.notes, "Voucher A 2 changes: 2 rows struck, 2 added (signed Anna)")) << all(plan.notes);
+  EXPECT_EQ(plan.books.years[0].vouchers[1].event.amount, 1100);
+}
+
+TEST(Import, OtherChangesToAVoucherAreErrors) {
+  auto const books = imported({file_2025()});
+  auto const prefix = std::string{"Voucher A 2 in the file differs from the one in the books ("};
+  auto const suffix =
+      std::string{"). A voucher in the books may only change by struck (#BTRANS) and added (#RTRANS) rows"};
+  auto const changed_row = plan_import(books, known, parse_sie(with_a2_rows("#TRANS 6570 {} 12\r\n#TRANS 1930 {} -12\r\n")));
+  EXPECT_TRUE(has(changed_row.errors, prefix + "row 1 is row 6570 10.00 in the books, row 6570 12.00 in the file; a "
+                                               "row may only be struck" + suffix))
+      << all(changed_row.errors);
+  auto const new_row = plan_import(books, known,
+                                   parse_sie(with_a2_rows("#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n"
+                                                          "#TRANS 6570 {} 1\r\n#TRANS 1930 {} -1\r\n")));
+  EXPECT_TRUE(has(new_row.errors, prefix + "row 3 (row 6570 1.00) is new in the file but not added (#RTRANS)" + suffix))
+      << all(new_row.errors);
+  // A struck row may not come back
+  auto const changed = imported({file_2025(), with_a2_rows(struck_and_added)});
+  auto const unstruck = plan_import(changed, known,
+                                    parse_sie(with_a2_rows("#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n"
+                                                           "#RTRANS 6570 {} 12 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                                           "#TRANS 6570 {} 12\r\n"
+                                                           "#RTRANS 1930 {} -12 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                                           "#TRANS 1930 {} -12\r\n")));
+  EXPECT_TRUE(has(unstruck.errors, prefix + "row 1 is struck in the books (removed row 6570 10.00), the file has row "
+                                            "6570 10.00" + suffix))
+      << all(unstruck.errors);
+  // Nor a row be left out
+  auto const fewer = plan_import(changed, known, parse_sie(file_2025()));
+  EXPECT_TRUE(has(fewer.errors, prefix + "4 rows in the books, 2 in the file; a row may be struck, not left out" + suffix))
+      << all(fewer.errors);
+  EXPECT_EQ(changed_row.vouchers_changed, 0u);
+}
+
+TEST(Import, AChangeInAClosedYearIsAnError) {
+  auto books = imported({file_2025()});
+  books.years[0].closed = true;
+  auto const plan = plan_import(books, known, parse_sie(with_a2_rows(struck_and_added)));
+  EXPECT_TRUE(has(plan.errors, "Voucher A 2 in the file changes the one in the books (2 rows struck, 2 added (signed "
+                               "Kjell)), but fiscal year 2025-01-01 - 2025-12-31 is closed. Open the year to import "
+                               "the change"))
+      << all(plan.errors);
+  EXPECT_EQ(plan.vouchers_changed, 0u);
 }
 
 TEST(Import, VouchersMissingFromTheFileAreNoted) {
@@ -275,7 +368,7 @@ TEST_F(SaveImport, WritesBooksStashesTheFileAndRecordsTheImport) {
                                                        "\nencoding = CP437\nprogram = Test 1.0\ngenerated = 2026-10-19\n"
                                                        "company = Test AB\norgnr = 556000-0001\n"
                                                        "year = 2025-01-01 - 2025-12-31\nvouchers_added = 2\n"
-                                                       "vouchers_known = 0\nnotes = 2\n");
+                                                       "vouchers_changed = 0\nvouchers_known = 0\nnotes = 2\n");
   auto const books = cratchit::books::read_books(root / "project");
   ASSERT_TRUE(books.has_value()) << books.error();
   EXPECT_EQ(books->years.size(), 1u);

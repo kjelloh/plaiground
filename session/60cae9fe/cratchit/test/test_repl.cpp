@@ -714,6 +714,29 @@ TEST_F(WorkspaceRepl, NoImportsNothing) {
   EXPECT_FALSE(fs::exists(root / "start" / "Test" / ".cratchit" / "books"));
 }
 
+TEST_F(WorkspaceRepl, AVoucherChangedByStruckAndAddedRowsImports) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny");
+  auto changed = good_sie();
+  std::string_view const rows = "#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n";
+  changed.replace(changed.find(rows), rows.size(),
+                  "#BTRANS 6570 {} 10 \"\" \"\" \"\" \"Kjell\"\r\n#BTRANS 1930 {} -10 \"\" \"\" \"\" \"Kjell\"\r\n"
+                  "#RTRANS 6570 {} 12 \"\" \"\" \"\" \"Kjell\"\r\n#TRANS 6570 {} 12\r\n"
+                  "#RTRANS 1930 {} -12 \"\" \"\" \"\" \"Kjell\"\r\n#TRANS 1930 {} -12\r\n");
+  write_sie(root / "start" / "changed.se", changed);
+  auto const output = run("2changed.se\ny");
+  EXPECT_NE(output.find("  Vouchers     2: 0 new, 1 changed, 1 already in the books\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("  - Voucher A 2 changes: 2 rows struck, 2 added (signed Kjell)\n"), std::string::npos)
+      << output;
+  EXPECT_TRUE(output.ends_with("Imported 0 vouchers and changed 1 into fiscal year 2025-01-01 - 2025-12-31 (1 already "
+                               "in the books).\nproject> \n"))
+      << output;
+  auto const books = cratchit::books::read_books(root / "start" / "Test");
+  ASSERT_TRUE(books.has_value()) << books.error();
+  EXPECT_EQ(books->years[0].vouchers[1].postings.size(), 4u);
+}
+
 TEST_F(WorkspaceRepl, FileWithErrorsIsNotImported) {
   run("112Test\n1");
   write_sie(root / "start" / "bad.se",

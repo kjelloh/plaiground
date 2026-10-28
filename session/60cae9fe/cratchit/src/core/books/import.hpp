@@ -29,7 +29,8 @@ struct ImportPlan {
   Date year_start;
   Date year_end;
   std::size_t vouchers_added = 0;
-  std::size_t vouchers_known = 0; // already in the books, identical
+  std::size_t vouchers_changed = 0; // in the books, with rows struck or added in the file
+  std::size_t vouchers_known = 0;   // already in the books, identical
   std::size_t accounts_added = 0;
   std::size_t accounts_changed = 0;
 };
@@ -42,9 +43,12 @@ struct ImportPlan {
 // - Fiscal year: a new year must not overlap a year in the books; a year with
 //   the same start must have the same end.
 // - Vouchers: new ones are added. One already in the books (same series and
-//   number) is skipped when identical, and is an error when it differs: the
-//   books never change a financial event. Vouchers in the books but not in the
-//   file are noted.
+//   number) is skipped when identical. It is taken from the file (and noted)
+//   when only history is added: the same date, text, registration and
+//   signature, each row of the books in its place unchanged or struck
+//   (#BTRANS), a struck row still struck, and any further rows added (#RTRANS).
+//   Any other difference is an error, and so is a change in a closed year.
+//   Vouchers in the books but not in the file are noted.
 // - Accounts, dimensions, objects and company details: new ones are added;
 //   changes are taken (and noted) only from a file whose year is the latest in
 //   the books, so an older file does not undo newer names.
@@ -67,6 +71,7 @@ struct SieFileSummary {
   std::size_t errors = 0;      // the plan's errors (the file's own included)
   bool nothing_new = false;    // see nothing_to_import
   std::size_t vouchers_added = 0;
+  std::size_t vouchers_changed = 0;
 };
 
 // The SIE files in a folder: the files (not hidden) that read and parse as SIE (have #SIETYP), each planned against
@@ -97,8 +102,8 @@ struct Saved {
 // Writes the planned books, then stashes an unchanged copy of the imported file
 // as .cratchit/imports/<today>_<n>_<file name> (n from 1, the first free) with a
 // record <copy>.txt of `path = value` lines: imported, source, encoding,
-// program, generated, company, orgnr, year, vouchers_added, vouchers_known,
-// notes. Must not be called for a plan with errors.
+// program, generated, company, orgnr, year, vouchers_added, vouchers_changed,
+// vouchers_known, notes. Must not be called for a plan with errors.
 std::expected<Saved, std::string> save_import(std::filesystem::path const& project_folder, ImportPlan const& plan,
                                               ImportSource const& source);
 

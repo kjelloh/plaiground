@@ -702,6 +702,23 @@ neither file nor folder: `No file or folder ...`. Intro line names the folder li
 Task 73 change (after review): each file on three lines: `<n>  <year start> - <end>, generated <#GEN>, <company>`,
 then the file name, then `<n> vouchers: <status>; <orgnr>; <program> <version>` (no year: `no fiscal year`, no #GEN:
 `no #GEN`). Manual example and text. 478 tests pass, no warnings (Debug, trace DEBUG). In review.
+Task 73 change 2: the file name line comes first under the numbered line, then the status line.
+
+Task 74: SIE import may change a voucher in the books by history only (agreed: the file is the truth; only changes
+to history are blocked). `not_extended(books, file)` (import.cpp): same date, text, registered, signature; each books
+row in its place in the file, unchanged or struck (#BTRANS, `same_row`: all but kind and signature), a struck row still
+struck; rows after them added (#RTRANS, possibly struck since). Then the voucher is replaced from the file, noted
+`Voucher E 25 changes: 2 rows struck, 2 added (signed ...)` (`change_text`), counted in `ImportPlan::vouchers_changed`
+(record line `vouchers_changed`; `nothing_to_import` counts it). Else an error naming the reason ("... A voucher in
+the books may only change by struck (#BTRANS) and added (#RTRANS) rows"). A change in a closed year is an error
+("... Open the year to import the change"). Each refusal reason is logged (business, `Import refused: ...`). Summary
+`Vouchers 116: 0 new, 1 changed, 115 already in the books` (changed only when any), `Imported 0 vouchers and changed
+1 ...`, picker status `1 changed` / `4 new, 1 changed`. No VAT-period or report checks (agreed: separate task; the
+user attends to them). Manual: What the import does, SIE picker statuses, log kinds. 483 tests pass, no warnings
+(Debug, trace DEBUG). All 11 Fortnox files import and re-import as before; a 2025/26 file made "old" (struck rows
+back as plain rows, added rows left out) followed by Fortnox's real file: 3 changed (E 25: 2 struck, 2 added; A 36,
+A 56: 2 added), no errors. Not REPL-tested: the closed-year refusal and the log line (unit-tested / by reading). In
+review.
 
 ## Next
 
@@ -904,6 +921,10 @@ into a waiting event without making a voucher, several entries chosen at once.
   entr(y/ies))`, both counts always (they count the waiting lists, not all there is to book). Inside, `booking>`: enter,
   note, waiting events, statement entries, view vouchers. The other year keys keep their numbers (2, 3, 4, 6 free).
 
+- 2026-10-28: An SIE import is the truth, but may change a voucher in the books only by history: rows struck
+  (#BTRANS) in place and rows added (#RTRANS) after. Anything else, or a change in a closed year, stops the import
+  with the reason shown and logged (business). Checks of reports over changed periods are a separate task.
+
 - 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted
   cratchit's file without it.
 
@@ -915,7 +936,8 @@ into a waiting event without making a voucher, several entries chosen at once.
 
 - Should a template's rounding row (e.g. 3740 Öres- och kronutjämning) be scaled like the others? Today it takes the
   scaling remainder, so VAT ends up slightly off (Telia 1245.00: 2641 248.97, 3740 0.14).
-- Should an SIE import into a closed fiscal year be refused (it is allowed now)?
+- Should an SIE import into a closed fiscal year be refused (new vouchers are allowed now; changes to vouchers are
+  refused since Task 74)?
 - Should differing account data (name, SRU) from an older year's file be noted even when not taken?
 - Should `#` start a comment line in `path = value` files? Currently not (such a line is an error unless it has `=`).
 - Should the terminal encoding be saved (e.g. in runtime.txt) or only detected each start, as now?

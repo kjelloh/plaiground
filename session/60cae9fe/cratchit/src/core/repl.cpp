@@ -1418,8 +1418,11 @@ void Repl::show_sie_files(std::ostream& out) const {
     auto const status = summary.other_company ? std::string{"not this project's company"}
                         : summary.errors > 0  ? counted(summary.errors, "error", "errors")
                         : summary.nothing_new ? std::string{"all in the books"}
-                        : summary.vouchers_added > 0 ? std::format("{} new", summary.vouchers_added)
-                                                     : std::string{"no new vouchers, other data new"};
+                        : summary.vouchers_added > 0 && summary.vouchers_changed > 0
+                            ? std::format("{} new, {} changed", summary.vouchers_added, summary.vouchers_changed)
+                        : summary.vouchers_added > 0   ? std::format("{} new", summary.vouchers_added)
+                        : summary.vouchers_changed > 0 ? std::format("{} changed", summary.vouchers_changed)
+                                                       : std::string{"no new vouchers, other data new"};
     std::println(out, "       {}", summary.file.filename().string());
     std::println(out, "       {}: {}; {}; {} {}", counted(document.vouchers.size(), "voucher", "vouchers"), status,
                  document.orgnr, document.program, document.program_version);
@@ -1475,7 +1478,9 @@ void Repl::check_import(fs::path const& file, std::ostream& out) {
   }
   std::println(out, "  Accounts     {}: {} new, {} changed", document.accounts.size(), plan.accounts_added,
                plan.accounts_changed);
-  std::println(out, "  Vouchers     {}: {} new, {} already in the books", document.vouchers.size(), plan.vouchers_added,
+  std::println(out, "  Vouchers     {}: {} new, {}{} already in the books", document.vouchers.size(),
+               plan.vouchers_added,
+               plan.vouchers_changed > 0 ? std::format("{} changed, ", plan.vouchers_changed) : std::string{},
                plan.vouchers_known);
   if (!plan.notes.empty()) {
     std::println(out, "Notes:");
@@ -1493,6 +1498,9 @@ void Repl::check_import(fs::path const& file, std::ostream& out) {
     }
     if (plan.errors.size() > max_errors) {
       std::println(out, "  - and {} more", plan.errors.size() - max_errors);
+    }
+    for (auto const& error : plan.errors) {
+      LOG_BUSINESS("Import refused: {}", error);
     }
     std::println(out, "Nothing is imported.");
     return;
@@ -1548,13 +1556,14 @@ void Repl::import(std::ostream& out) {
     }
   }
   std::println(out, "Stashed the file as {} in {}", saved->stashed.generic_string(), project_->folder.string());
-  std::println(out, "Imported {} voucher{} into fiscal year {} - {} ({} already in the books).", plan.vouchers_added,
-               plan.vouchers_added == 1 ? "" : "s", format_iso_date(plan.year_start), format_iso_date(plan.year_end),
-               plan.vouchers_known);
-  LOG_BUSINESS("Imported SIE file {} into project {} ({}): fiscal year {} - {}, {} vouchers added, {} already in the "
-               "books, stashed as {}",
+  std::println(out, "Imported {} voucher{}{} into fiscal year {} - {} ({} already in the books).", plan.vouchers_added,
+               plan.vouchers_added == 1 ? "" : "s",
+               plan.vouchers_changed > 0 ? std::format(" and changed {}", plan.vouchers_changed) : std::string{},
+               format_iso_date(plan.year_start), format_iso_date(plan.year_end), plan.vouchers_known);
+  LOG_BUSINESS("Imported SIE file {} into project {} ({}): fiscal year {} - {}, {} vouchers added, {} changed, {} "
+               "already in the books, stashed as {}",
                import_source_.file.string(), project_->name, project_->uuid, format_iso_date(plan.year_start),
-               format_iso_date(plan.year_end), plan.vouchers_added, plan.vouchers_known,
+               format_iso_date(plan.year_end), plan.vouchers_added, plan.vouchers_changed, plan.vouchers_known,
                saved->stashed.generic_string());
   for (auto const& note : plan.notes) {
     LOG_BUSINESS("Import note: {}", note);

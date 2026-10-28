@@ -89,6 +89,72 @@ std::string difference(Voucher const& books, Voucher const& file) {
   return std::format("{} rows in the books, {} in the file", books.postings.size(), file.postings.size());
 }
 
+// The same row but for its kind and signature, e.g. a row and the same row struck
+bool same_row(Posting const& a, Posting const& b) {
+  return a.account == b.account && a.objects == b.objects && a.amount == b.amount && a.date == b.date &&
+         a.text == b.text && a.quantity == b.quantity;
+}
+
+// Why the file's voucher is not the one in the books with history added, or nothing when it is: the same date, text,
+// registration and signature; each row of the books in its place, unchanged or struck (#BTRANS), a struck row still
+// struck; any rows after them added (#RTRANS, possibly struck since)
+std::optional<std::string> not_extended(Voucher const& books, Voucher const& file) {
+  if (books.event.date != file.event.date || books.event.heading != file.event.heading ||
+      books.registered != file.registered || books.signature != file.signature) {
+    return difference(books, file);
+  }
+  if (file.postings.size() < books.postings.size()) {
+    return std::format("{} rows in the books, {} in the file; a row may be struck, not left out",
+                       books.postings.size(), file.postings.size());
+  }
+  for (std::size_t i = 0; i < books.postings.size(); ++i) {
+    auto const& b = books.postings[i];
+    auto const& f = file.postings[i];
+    if (f == b || (b.kind != Posting::Kind::removed && f.kind == Posting::Kind::removed && same_row(b, f))) {
+      continue;
+    }
+    if (b.kind == Posting::Kind::removed) {
+      return std::format("row {} is struck in the books ({}), the file has {}", i + 1, posting_text(b), posting_text(f));
+    }
+    return std::format("row {} is {} in the books, {} in the file; a row may only be struck", i + 1, posting_text(b),
+                       posting_text(f));
+  }
+  for (std::size_t i = books.postings.size(); i < file.postings.size(); ++i) {
+    if (file.postings[i].kind == Posting::Kind::normal) {
+      return std::format("row {} ({}) is new in the file but not added (#RTRANS)", i + 1, posting_text(file.postings[i]));
+    }
+  }
+  return std::nullopt;
+}
+
+// What a change to a voucher did, e.g. "2 rows struck, 2 added (signed Kjell-Olov Högdahl)"
+std::string change_text(Voucher const& books, Voucher const& file) {
+  std::size_t struck = 0;
+  std::vector<std::string> signatures;
+  auto const sign = [&](Posting const& p) {
+    if (!p.signature.empty() && std::ranges::find(signatures, p.signature) == signatures.end()) {
+      signatures.push_back(p.signature);
+    }
+  };
+  for (std::size_t i = 0; i < file.postings.size(); ++i) {
+    auto const& f = file.postings[i];
+    auto const is_new = i >= books.postings.size();
+    if (f.kind == Posting::Kind::removed && (is_new || books.postings[i].kind != Posting::Kind::removed)) {
+      ++struck;
+      sign(f);
+    } else if (is_new) {
+      sign(f);
+    }
+  }
+  auto const added = file.postings.size() - books.postings.size();
+  std::string signed_by;
+  for (auto const& signature : signatures) {
+    signed_by += (signed_by.empty() ? " (signed " : ", ") + signature;
+  }
+  return std::format("{} row{} struck, {} added{}", struck, struck == 1 ? "" : "s", added,
+                     signed_by.empty() ? "" : signed_by + ")");
+}
+
 std::map<std::string, Amount> by_account(std::vector<sie::Balance> const& balances, int year) {
   std::map<std::string, Amount> result;
   for (auto const& balance : balances) {
@@ -254,10 +320,19 @@ std::size_t merge_vouchers(ImportPlan& plan, sie::Document const& document, Fisc
       added.push_back(std::move(voucher));
     } else if (*it == voucher) {
       ++plan.vouchers_known;
+    } else if (auto const reason = not_extended(*it, voucher)) {
+      plan.errors.push_back(std::format("Voucher {} in the file differs from the one in the books ({}). A voucher in "
+                                        "the books may only change by struck (#BTRANS) and added (#RTRANS) rows",
+                                        voucher_name(voucher), *reason));
+    } else if (year.closed) {
+      plan.errors.push_back(std::format("Voucher {} in the file changes the one in the books ({}), but fiscal year {} "
+                                        "is closed. Open the year to import the change",
+                                        voucher_name(voucher), change_text(*it, voucher), year_text(year)));
     } else {
-      plan.errors.push_back(std::format("Voucher {} in the file differs from the one in the books ({}). The books "
-                                        "never change a voucher",
-                                        voucher_name(voucher), difference(*it, voucher)));
+      plan.notes.push_back(
+          std::format("Voucher {} changes: {}", voucher_name(voucher), change_text(*it, voucher)));
+      *it = std::move(voucher);
+      ++plan.vouchers_changed;
     }
   }
   std::vector<std::string> missing;
@@ -498,6 +573,7 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
         {"orgnr", plan.identity.orgnr},
         {"year", std::format("{} - {}", format_iso_date(plan.year_start), format_iso_date(plan.year_end))},
         {"vouchers_added", std::to_string(plan.vouchers_added)},
+        {"vouchers_changed", std::to_string(plan.vouchers_changed)},
         {"vouchers_known", std::to_string(plan.vouchers_known)},
         {"notes", std::to_string(plan.notes.size())},
     };
@@ -511,7 +587,7 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
 }
 
 bool nothing_to_import(Books const& books, ImportPlan const& plan) {
-  return plan.vouchers_added == 0 && plan.accounts_added == 0 && plan.accounts_changed == 0 &&
+  return plan.vouchers_added == 0 && plan.vouchers_changed == 0 && plan.accounts_added == 0 && plan.accounts_changed == 0 &&
          !plan.identity_changed && books.year_starting(plan.year_start);
 }
 
@@ -533,7 +609,7 @@ SieFolder sie_files_in(std::filesystem::path const& folder, Books const& books, 
     }
     auto const plan = plan_import(books, identity, parsed.document);
     SieFileSummary summary{entry.path(), std::move(parsed.document), false, plan.errors.size() + parsed.errors.size(),
-                           false, plan.vouchers_added};
+                           false, plan.vouchers_added, plan.vouchers_changed};
     summary.other_company = !identity.orgnr.empty() && summary.document.orgnr != identity.orgnr;
     summary.nothing_new = summary.errors == 0 && nothing_to_import(books, plan);
     result.files.push_back(std::move(summary));

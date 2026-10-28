@@ -63,6 +63,20 @@ Claude now implemented an SIE file export mechanism.
 
 * Claude tested it against all 11 years of SIE files I provided as templates (evidence) ok
 
+I have now worked on SIE file import some more.
+
+* I vibe coded SIE File import in year-mode (No check against current year yet)
+* I vibe coded an SIE-file-pick-helper for Enter at a folder with SIE files in it
+    * A numbered list with meta data makes it easier to pick the correct file to import
+* I vibe coded import protection rules
+    * Importing an existing voucher is accepted as long as its history has not changed.
+    * A struck posting is accepted
+    * An added posting is accepted.
+    * Otherwise the whole import fails for a voucher with damaged history.
+
+I now also discovered that Fortnox allows the text and date of an existing voucher to be changed.
+
+
 ## 20261027
 
 So now then we are ready to start generating the VAT Returns form document?

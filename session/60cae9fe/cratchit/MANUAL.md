@@ -1250,7 +1250,7 @@ The newest fiscal year comes first, and within a year the newest export
 (`#GEN`); files alike in both are ordered by name. Each file shows its fiscal
 year, export date and company on the numbered line; under it the file name;
 last the number of vouchers, what importing it would do, the organisation
-number and the program. What importing it would do is `4 new` (vouchers), `all in the books`, `no new
+number and the program. What importing it would do is `4 new` (vouchers), `1 changed` or `4 new, 1 changed` (see What the import does), `all in the books`, `no new
 vouchers, other data new` (accounts or company details), `2 errors`, or `not
 this project's company` (another organisation number). Files that are not SIE
 files are only counted. A number shows that file as below. With more than nine
@@ -1302,10 +1302,21 @@ and nothing is imported.
   another organisation number or company name is an error.
 - The file's fiscal year is added to the books. A year that overlaps a year in
   the books, or starts the same day but ends another, is an error.
-- Vouchers (financial events) are never changed once in the books. A voucher
-  already in the books (same series and number) is skipped when it is
-  identical, and is an error when it differs. New vouchers are added. Vouchers
-  in the books that the file lacks are noted and kept.
+- New vouchers are added. A voucher already in the books (same series and
+  number) is skipped when it is identical. The file is the truth, but history
+  may only be added to: a voucher that differs is taken from the file only when
+  its date, text, registration date and signature are the same, each of its
+  rows in the books is in the file in the same place, unchanged or struck
+  (`#BTRANS`), a struck row is still struck, and any further rows are added
+  (`#RTRANS`, possibly struck since). It is then noted, e.g.
+  `Voucher E 25 changes: 2 rows struck, 2 added (signed Kjell-Olov Högdahl)`,
+  and the summary says `Vouchers 116: 0 new, 1 changed, 115 already in the
+  books`. Any other difference is an error that names the voucher and what
+  differs, for example `row 1 is row 6570 10.00 in the books, row 6570 12.00
+  in the file; a row may only be struck`, and nothing is imported. So is a
+  change to a voucher of a closed fiscal year: open the year (8 at the year
+  prompt) and import again. Vouchers in the books that the file lacks are
+  noted and kept.
 - Rows added or struck in a voucher after it was registered (`#RTRANS`,
   `#BTRANS`) are kept with the voucher and marked. Struck rows do not count.
 - New accounts, dimensions and objects are added. Changed names, types, SRU
@@ -1820,7 +1831,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, an eSKD or SIE file it could not write, or an SIE export with characters CP437 does not have. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 
