@@ -1411,17 +1411,18 @@ void Repl::show_sie_files(std::ostream& out) const {
     auto const& summary = sie_folder_.files[index];
     auto const& document = summary.document;
     auto const year = document.year(0);
-    std::println(out, "  {}  {}", key, summary.file.filename().string());
-    std::println(out, "       {}, {}; year {}; {} {}{}", document.company_name, document.orgnr,
-                 year ? format_iso_date(year->start) + " - " + format_iso_date(year->end) : "none",
-                 document.program, document.program_version,
-                 document.generated ? ", generated " + format_iso_date(*document.generated) : std::string{});
+    std::println(out, "  {}  {}, {}, {}", key,
+                 year ? format_iso_date(year->start) + " - " + format_iso_date(year->end) : "no fiscal year",
+                 document.generated ? "generated " + format_iso_date(*document.generated) : "no #GEN",
+                 document.company_name);
     auto const status = summary.other_company ? std::string{"not this project's company"}
                         : summary.errors > 0  ? counted(summary.errors, "error", "errors")
                         : summary.nothing_new ? std::string{"all in the books"}
                         : summary.vouchers_added > 0 ? std::format("{} new", summary.vouchers_added)
                                                      : std::string{"no new vouchers, other data new"};
-    std::println(out, "       {}: {}", counted(document.vouchers.size(), "voucher", "vouchers"), status);
+    std::println(out, "       {}", summary.file.filename().string());
+    std::println(out, "       {}: {}; {}; {} {}", counted(document.vouchers.size(), "voucher", "vouchers"), status,
+                 document.orgnr, document.program, document.program_version);
   });
   if (sie_folder_.others > 0) {
     std::println(out, "({} other file{} left out)", sie_folder_.others, sie_folder_.others == 1 ? "" : "s");

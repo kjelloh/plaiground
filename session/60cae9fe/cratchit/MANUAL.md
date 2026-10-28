@@ -1233,22 +1233,24 @@ against the books, so you can pick by fiscal year and export date:
 
 ```
 SIE files in /Users/me/Downloads:
-  1  ITfied20261019.se
-       The ITfied AB, 556782-8172; year 2025-05-01 - 2026-04-30; Fortnox 3.62.17, generated 2026-10-19
-       116 vouchers: 4 new
-  2  ITfied20260601.se
-       The ITfied AB, 556782-8172; year 2025-05-01 - 2026-04-30; Fortnox 3.62.17, generated 2026-06-01
-       98 vouchers: all in the books
-  3  Other AB 2025.se
-       Other AB, 556111-2222; year 2025-01-01 - 2025-12-31; Fortnox 3.62.17, generated 2026-10-19
-       131 vouchers: not this project's company
+  1  2025-05-01 - 2026-04-30, generated 2026-10-19, The ITfied AB
+       ITfied20261019.se
+       116 vouchers: 4 new; 556782-8172; Fortnox 3.62.17
+  2  2025-05-01 - 2026-04-30, generated 2026-06-01, The ITfied AB
+       ITfied20260601.se
+       98 vouchers: all in the books; 556782-8172; Fortnox 3.62.17
+  3  2025-01-01 - 2025-12-31, generated 2026-10-19, Other AB
+       Other AB 2025.se
+       131 vouchers: not this project's company; 556111-2222; Fortnox 3.62.17
 (2 other files left out)
 sie?> 
 ```
 
 The newest fiscal year comes first, and within a year the newest export
-(`#GEN`); files alike in both are ordered by name. The last line of a file says
-what importing it would do: `4 new` (vouchers), `all in the books`, `no new
+(`#GEN`); files alike in both are ordered by name. Each file shows its fiscal
+year, export date and company on the numbered line; under it the file name;
+last the number of vouchers, what importing it would do, the organisation
+number and the program. What importing it would do is `4 new` (vouchers), `all in the books`, `no new
 vouchers, other data new` (accounts or company details), `2 errors`, or `not
 this project's company` (another organisation number). Files that are not SIE
 files are only counted. A number shows that file as below. With more than nine

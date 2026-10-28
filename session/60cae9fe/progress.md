@@ -699,6 +699,9 @@ by `check_import`), `<n> new`, `no new vouchers, other data new`. `(n other file
 neither file nor folder: `No file or folder ...`. Intro line names the folder listing. Manual: Importing an SIE file.
 478 tests pass, no warnings (Debug, trace DEBUG). Checked with piped input on the 11 Fortnox samples + a text file
 (listed newest year first, 9 ...down, 1 other left out). In review.
+Task 73 change (after review): each file on three lines: `<n>  <year start> - <end>, generated <#GEN>, <company>`,
+then the file name, then `<n> vouchers: <status>; <orgnr>; <program> <version>` (no year: `no fiscal year`, no #GEN:
+`no #GEN`). Manual example and text. 478 tests pass, no warnings (Debug, trace DEBUG). In review.
 
 ## Next
 

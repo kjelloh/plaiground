@@ -747,15 +747,15 @@ TEST_F(WorkspaceRepl, AFolderListsItsSieFilesNewestYearFirst) {
   write_sie(folder / "notes.txt", "Not an SIE file\n");
   // A year and export date in common are ordered by name; - goes back to the path, Enter lists again
   auto const listed = "SIE files in " + folder.string() + ":\n"
-                      "  1  other.se\n"
-                      "       Other AB, 556111-2222; year 2025-01-01 - 2025-12-31; Test 1.0, generated 2026-10-19\n"
-                      "       2 vouchers: not this project's company\n"
-                      "  2  test.se\n"
-                      "       Test AB, 556000-0001; year 2025-01-01 - 2025-12-31; Test 1.0, generated 2026-10-19\n"
-                      "       2 vouchers: all in the books\n"
-                      "  3  older.se\n"
-                      "       Test AB, 556000-0001; year 2024-01-01 - 2024-12-31; Test 1.0, generated 2026-10-19\n"
-                      "       2 vouchers: 2 new\n"
+                      "  1  2025-01-01 - 2025-12-31, generated 2026-10-19, Other AB\n"
+                      "       other.se\n"
+                      "       2 vouchers: not this project's company; 556111-2222; Test 1.0\n"
+                      "  2  2025-01-01 - 2025-12-31, generated 2026-10-19, Test AB\n"
+                      "       test.se\n"
+                      "       2 vouchers: all in the books; 556000-0001; Test 1.0\n"
+                      "  3  2024-01-01 - 2024-12-31, generated 2026-10-19, Test AB\n"
+                      "       older.se\n"
+                      "       2 vouchers: 2 new; 556000-0001; Test 1.0\n"
                       "(1 other file left out)\n";
   auto const output = run("2sie\nx-\n3y");
   EXPECT_NE(output.find("path> " + folder.string() + "\n" + listed +
