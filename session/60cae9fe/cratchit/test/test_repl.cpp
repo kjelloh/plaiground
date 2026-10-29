@@ -959,11 +959,13 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "Box amounts are as on the form; accounts and vouchers as in the books: debit positive, credit "
                         "negative.\n"
                         "Box 49 on the form: 0.00, nothing to pay or get back.\n"
+                        "Checks of 2025 Q1: nothing found.\n"
+                        "\n"
                         "Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q1.\n"
                         "\n"
                         "  2  Show the report again\n"
                         "2025 Q1> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
-                        "2025 Q1> \nNothing to clear: the VAT accounts add up to 0.00 in 2025 Q1.\n"
+                        "2025 Q1> \nChecks of 2025 Q1: nothing found.\n\nNothing to clear: the VAT accounts add up to 0.00 in 2025 Q1.\n"
                         "\n"
                         "  2  Show the report again\n"
                         "2025 Q1> -\n" +
@@ -977,6 +979,8 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "  Period               0.00\n"
                         "  Cleared              0.00\n"
                         "  Charged              0.00\n"
+                        "Checks of 2025 Q2: nothing found.\n"
+                        "\n"
                         "Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q2.\n"
                         "\n"
                         "  2  Show the report again\n"
@@ -991,7 +995,7 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
   write_sie(root / "start" / "vat.se", vat_sie());
   run("2vat.se\ny");
   auto const output = run("5140210");
-  std::string const proposed = "VAT clearing voucher for 2025 Q4 (proposed):\n"
+  std::string const proposed = "Checks of 2025 Q4: nothing found.\n\nVAT clearing voucher for 2025 Q4 (proposed):\n"
                                "Voucher M 2 2025-12-31 \"Momsrapport 2025-10-01 - 2025-12-31\"\n"
                                "  Account        Debit       Credit\n"
                                "  2611          500.00               Output VAT 25%\n"
@@ -1031,7 +1035,7 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
       << output;
 
   // Cleared now: nothing more to clear
-  EXPECT_TRUE(output.ends_with("Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q4.\n\n"
+  EXPECT_TRUE(output.ends_with("Checks of 2025 Q4: nothing found.\n\nNothing to clear: the VAT accounts add up to 0.00 in 2025 Q4.\n\n"
                               "  2  Show the report again\n2025 Q4> \n"))
       << output;
   auto const books = cratchit::books::read_books(folder);

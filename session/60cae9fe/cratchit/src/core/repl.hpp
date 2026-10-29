@@ -215,6 +215,7 @@ private:
   std::optional<skv::vat_return::Period> vat_current_; // the period running today, when it ends in the report year
   std::optional<skv::vat_return::Period> vat_next_;    // the last period ended before today: the one to report next
   skv::vat_return::Steps vat_steps_;    // the steps of every quarter of the books
+  std::vector<books::OpenEntry> vat_open_entries_; // the statement entries not yet booked, for the checks
   ItemList vat_period_page_{ItemList::Start::Zero}; // the page of the VAT return periods, key 0 the newest ended
   skv::vat_return::Period vat_quarter_;  // the ended period chosen, shown with its clearing voucher
   skv::vat_return::Document vat_form_;  // its VAT return, as shown: the clearing voucher and the eSKD file come from it

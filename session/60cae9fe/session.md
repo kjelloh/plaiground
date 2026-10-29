@@ -186,9 +186,25 @@ Everything in the file is already in the books. Nothing to import.
 2026/27> 
 ```
 
-So it seems I can now truts a round trip for my VAT Returns report compare with Fortnox?
+So it seems I can now trust a round trip for my VAT Returns report compare with Fortnox?
 
+So I began with A11 and A12 and got some additional ideas to adress now after all.
 
+* I have always struggled to get the VAT return repors correct!
+    * So if we can add some checks applied by cratchit now already I will save a LOT of time I think.
+* Also, when I start to think about it, maybe it is time to seed the bas_account_plan.csv?
+    * One VAT reprot check is that the VAT clearing account should only have VAT accounts as counter.
+    * I have so far failed to find any free resource from where to get such mappings.
+    * The bas.se offers a json-file (4000 SEK) that seems to provide such mapping.
+    * But that is border line 'unethical' I feel?
+    * So why not seed one ourselves?
+    * Question is if we need to version control it to the different year defined BAS account plans?
+    * How much do they differ in practice?
+    * And how do we allow for edited account plans by each company and each year?
+    * I mean, the SIE file kind-of defines the account plan and its mapping to SRU.
+    * Maybe we can reverse engineer something by going over SRU cross dependence on SKV forms?
+
+ANyhow. I asked claude for suggestions and let it add 5 types of checks on a VAT period when a VAT report to view is selected. 
 
 ## 20261028
 

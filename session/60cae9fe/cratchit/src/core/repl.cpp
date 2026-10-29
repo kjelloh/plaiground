@@ -8,6 +8,7 @@
 #include "core/log.hpp"
 #include "core/sie/file.hpp"
 #include "core/sie/writer.hpp"
+#include "core/skv/vat_return/checks.hpp"
 #include "core/skv/vat_return/report.hpp"
 
 #include <algorithm>
@@ -2021,6 +2022,9 @@ void Repl::open_vat_periods(std::ostream& out) {
   // Every quarter of the books, so that a charge dated in this year can go to a quarter of the year before
   vat_steps_ = skv::vat_return::steps_of(books_,
                                          skv::vat_return::quarters_ending_in(books_.years.front().start, last));
+  // For the checks: the statement entries not yet booked (none when the statements cannot be read)
+  auto const imports = books::read_statement_imports(project_->folder);
+  vat_open_entries_ = imports ? books::open_entries(books_, *imports, nullptr) : std::vector<books::OpenEntry>{};
   vat_period_page_.reset();
   mode_ = Mode::VatPeriods;
   show_vat_periods(out);
@@ -2039,15 +2043,21 @@ void Repl::show_vat_periods(std::ostream& out) const {
   std::println(out, "VAT return quarters ending in {} - {} (today {}):", format_iso_date(year.start),
                format_iso_date(year.end), places_.today);
   std::println(out, "{:<12}{}", "", skv::vat_return::steps_heading());
+  // "  2 checks" after a quarter whose checks found anything
+  auto const checks = [&](skv::vat_return::Period const& period) {
+    auto const found = skv::vat_return::checks_of(books_, period, vat_open_entries_).size();
+    return found == 0 ? std::string{} : std::format("  {} check{}", found, found == 1 ? "" : "s");
+  };
   if (vat_current_) {
-    std::println(out, "     {}{}  so far (+ to view)", skv::vat_return::quarter_name(*vat_current_),
-                 skv::vat_return::steps_row(steps_of_period(*vat_current_)));
+    std::println(out, "     {}{}  so far (+ to view){}", skv::vat_return::quarter_name(*vat_current_),
+                 skv::vat_return::steps_row(steps_of_period(*vat_current_)), checks(*vat_current_));
   }
   auto const n = vat_periods_.size();
   vat_period_page_.show(n, out, [&](std::size_t index, std::size_t key) {
     auto const& period = vat_periods_[n - 1 - index];
-    std::println(out, "  {}  {}{}{}", key, skv::vat_return::quarter_name(period),
-                 skv::vat_return::steps_row(steps_of_period(period)), period == vat_next_ ? "  to report next" : "");
+    std::println(out, "  {}  {}{}{}{}", key, skv::vat_return::quarter_name(period),
+                 skv::vat_return::steps_row(steps_of_period(period)), period == vat_next_ ? "  to report next" : "",
+                 checks(period));
   });
   for (auto const& charge : vat_steps_.unmatched_charges) {
     if (year.holds(charge.date)) {
@@ -2094,6 +2104,16 @@ void Repl::show_vat_report(std::ostream& out) {
 void Repl::show_vat_quarter(std::ostream& out) const {
   auto const name = skv::vat_return::quarter_name(vat_quarter_);
   auto const& year = books_.years[year_];
+  auto const findings = skv::vat_return::checks_of(books_, vat_quarter_, vat_open_entries_);
+  if (findings.empty()) {
+    std::println(out, "Checks of {}: nothing found.", name);
+  } else {
+    std::println(out, "Checks of {} (they only warn):", name);
+    for (auto const& finding : findings) {
+      std::println(out, "  ! {}", finding);
+    }
+  }
+  std::println(out, "");
   if (!vat_clearing_) {
     std::println(out, "Nothing to clear: the VAT accounts add up to 0.00 in {}.", name);
   } else {

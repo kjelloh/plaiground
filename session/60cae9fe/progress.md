@@ -828,6 +828,21 @@ the file's own date, an edited voucher date, renamed). Manual: What the import d
 (Debug, trace DEBUG). Checked on a scratch copy of The ITfied AB: sie_2026-27_all_2.se (cratchit's A 11 with row dates)
 and TheITfiedAB20261029_131150.se (Fortnox, no row dates, quantity 0) both give "Nothing to import". In review.
 
+Task 83: Checks of a VAT quarter (`core/skv/vat_return/checks`, warn only). `checks_of(books, period, open_entries)`,
+from every fiscal year, counted postings: 1) waiting events and unbooked statement entries dated in the period; 2) 2650
+or 1650 in a voucher with rows on other accounts than VAT accounts, 1630, 3740 and 9000-9999 (stricter than steps_of's
+clearing rule, which A 48 passes); 3) reverse charge (bases 20-24 / output VAT 30-32) and import (50 / 60-62) in pairs
+per voucher, with one output VAT box its VAT = base x rate towards zero to whole öre (`rate_of`: 10/30/60 25 %, 11/31/61
+12 %, 12/32/62 6 %, by box number, which the hint column agrees with), and box 48 deducting that output VAT in full;
+4) a voucher on a box account registered after the period's clearing voucher (2650/1650 + VAT accounts and nothing
+else); 5) rows on 2600-2699 that report in no box (2650 aside). REPL: `period?>` rows end `  2 checks`; the quarter
+screen starts `Checks of 2026 Q3 (they only warn):` + `  ! ...` lines, or `... nothing found.`; statement entries
+read once when the periods open (`vat_open_entries_`). Tests `VatReturnChecks.*` (7), two REPL VAT tests take the new
+line. Manual: The VAT return (marker), new "Checks of a quarter", Clearing the VAT of a quarter. 505 tests pass, no
+warnings (Debug, trace DEBUG). Checked on a scratch copy of The ITfied AB: 2026 Q3: 13 waiting events; 2026 Q4: 1;
+2026 Q1: A 48 (2650 with 1920, 6110); 2025 Q2: I 6 and D 23-25 (registered 2026-07-14) after M 1; 2024/25 and other
+2025/26 quarters: nothing found. In review.
+
 ## Next
 
 Agreed next (2026-10-29): when an import drops vouchers that leave the books (revert), one identical in date and rows to
@@ -1058,6 +1073,9 @@ into a waiting event without making a voucher, several entries chosen at once.
 - 2026-10-29: An SIE import compares vouchers by meaning (a row dated as its voucher has no date; a zero quantity is
   none). The file is the truth for what it states; a row date it is silent about is kept from the books when it is
   the row's own date (e.g. a bank date), so statement entries stay booked.
+
+- 2026-10-29: VAT quarter checks only warn. Rates 25, 12 and 6 %; output VAT on a purchase equals base x rate rounded
+  towards zero; box 48 is all deductible; the VAT range is 2600-2699 for now.
 
 - 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted
   cratchit's file without it.

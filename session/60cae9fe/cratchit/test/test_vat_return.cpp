@@ -1,5 +1,6 @@
 #include "core/skv/vat_return/account_boxes.hpp"
 #include "core/skv/vat_return/box.hpp"
+#include "core/skv/vat_return/checks.hpp"
 #include "core/skv/vat_return/clearing.hpp"
 #include "core/skv/vat_return/document.hpp"
 #include "core/skv/vat_return/report.hpp"
@@ -310,4 +311,113 @@ TEST(VatReturn, ClearingOfTheBooksBalances) {
   EXPECT_EQ(clearing->postings, (books::Postings{posting("2611", 1750), posting("2641", -250), posting("2650", -1500)}));
   EXPECT_EQ(books::debit(clearing->postings), books::credit(clearing->postings));
   EXPECT_EQ(clearing->event.amount, 1750);
+}
+
+namespace {
+
+Period const q3_2026{2026y / July / 1, 2026y / September / 30};
+
+// The second fiscal year of two_years with one voucher added; its registration day given
+books::Books with(books::Voucher added, std::optional<Date> registered = std::nullopt) {
+  auto books = two_years();
+  added.registered = registered;
+  books.years[1].vouchers.push_back(std::move(added));
+  return books;
+}
+
+std::string all_of(std::vector<std::string> const& texts) {
+  std::string result;
+  for (auto const& text : texts) {
+    result += text + "\n";
+  }
+  return result;
+}
+
+} // namespace
+
+TEST(VatReturnChecks, RatesOfTheOutputVatBoxes) {
+  EXPECT_EQ(rate_of("10"), 25);
+  EXPECT_EQ(rate_of("31"), 12);
+  EXPECT_EQ(rate_of("62"), 6);
+  EXPECT_EQ(rate_of("48"), std::nullopt);
+}
+
+TEST(VatReturnChecks, NothingFoundInBooksThatAreRight) {
+  EXPECT_TRUE(checks_of(two_years(), q3_2026, {}).empty());
+  // A reverse charge purchase booked in full: base 9021 in box 20, 25 % output VAT in box 30, deducted in box 48
+  auto const right = with(voucher("A", "1", 2026y / September / 10,
+                                  {posting("1920", -12400), posting("6110", 12400), posting("2614", -3100),
+                                   posting("2645", 3100), posting("9021", 12400), posting("9099", -12400)}));
+  EXPECT_TRUE(checks_of(right, q3_2026, {}).empty()) << all_of(checks_of(right, q3_2026, {}));
+}
+
+TEST(VatReturnChecks, AnUnbookedPeriod) {
+  auto books = two_years();
+  books.years[1].place_waiting({{"Loopia", 31125, 2026y / August / 31}, 2026y / October / 25});
+  books.years[1].place_waiting({{"Fortnox", 92300, 2026y / August / 7}, 2026y / October / 25});
+  books.years[1].place_waiting({{"Later", 100, 2026y / October / 3}, 2026y / October / 25});
+  books::OpenEntry entry{"1920", {2026y / September / 3, -185, std::nullopt, "AVGIFTER", 4}, "s.csv:4"};
+  auto const findings = checks_of(books, q3_2026, {entry});
+  EXPECT_EQ(findings, (std::vector<std::string>{
+                          "2 waiting events dated in the period, not yet in the books (the first 2026-08-07 \"Fortnox\")",
+                          "1 statement entry dated in the period, not yet booked"}));
+}
+
+TEST(VatReturnChecks, VatClearingAccountsInAPurchase) {
+  // As A 48 2026: the reverse charge VAT against 2650 instead of 2614
+  auto const books = with(voucher("A", "48", 2026y / September / 10,
+                                  {posting("1920", -15700), posting("6110", 15700), posting("2650", -3100),
+                                   posting("2645", 3100), posting("9021", 12400), posting("9099", -12400)}));
+  auto const findings = checks_of(books, q3_2026, {});
+  EXPECT_EQ(findings, (std::vector<std::string>{
+                          "A 48 2026-09-10 \"Event\": posts 2650 or 1650 together with 1920, 6110; only a VAT clearing "
+                          "or a charge voucher posts them"}));
+}
+
+TEST(VatReturnChecks, ReverseChargeInPairs) {
+  auto const findings_of = [](books::Postings postings) {
+    return checks_of(with(voucher("A", "13", 2026y / September / 10, std::move(postings))), q3_2026, {});
+  };
+  // The base without output VAT (the VAT left out)
+  EXPECT_EQ(findings_of({posting("1920", -20468), posting("6540", 20468), posting("9022", 20468),
+                         posting("9099", -20468)}),
+            (std::vector<std::string>{"A 13 2026-09-10 \"Event\": purchase base 204.68 in box 50, but no output VAT in "
+                                      "boxes 60-62"}));
+  // Output VAT without a base, and not deducted
+  EXPECT_EQ(findings_of({posting("1920", -5117), posting("6540", 10234), posting("2614", -5117)}),
+            (std::vector<std::string>{"A 13 2026-09-10 \"Event\": output VAT 51.17 in box 30, but no purchase base in "
+                                      "boxes 20-24",
+                                      "A 13 2026-09-10 \"Event\": box 48 deducts 0.00, but its output VAT on purchases "
+                                      "is 51.17; it is deducted in full"}));
+  // The wrong rate: 25 % of 204.68 is 51.17 (towards zero)
+  EXPECT_EQ(findings_of({posting("1920", -20468), posting("6540", 20468), posting("2614", -5100), posting("2645", 5100),
+                         posting("9021", 20468), posting("9099", -20468)}),
+            (std::vector<std::string>{"A 13 2026-09-10 \"Event\": box 30 has 51.00, but 25 % of the purchase base 204.68 "
+                                      "is 51.17"}));
+  // 12 % rounds towards zero: 12 % of 100.05 is 12.006, so 12.00
+  EXPECT_TRUE(findings_of({posting("1920", -10005), posting("6540", 10005), posting("2624", -1200),
+                           posting("2645", 1200), posting("9021", 10005), posting("9099", -10005)})
+                  .empty());
+}
+
+TEST(VatReturnChecks, RegisteredAfterTheClearing) {
+  auto books = with(voucher("M", "2", 2026y / September / 30, {posting("2641", -250), posting("2650", 250)}),
+                    2026y / October / 12);
+  auto late = voucher("I", "6", 2026y / September / 20, {posting("2440", -1250), posting("6540", 1000),
+                                                         posting("2641", 250)});
+  late.registered = 2026y / October / 20;
+  books.years[1].vouchers.push_back(late);
+  auto early = late;
+  early.number = "5";
+  early.registered = 2026y / October / 1;
+  books.years[1].vouchers.push_back(early);
+  EXPECT_EQ(checks_of(books, q3_2026, {}),
+            (std::vector<std::string>{"I 6 2026-09-20 \"Event\": registered 2026-10-20, after the clearing voucher M 2 "
+                                      "(registered 2026-10-12); the VAT return made then lacks it"}));
+}
+
+TEST(VatReturnChecks, VatAccountsOutsideTheReturn) {
+  auto const books = with(voucher("A", "2", 2026y / August / 3, {posting("1920", -100), posting("2655", 100)}));
+  EXPECT_EQ(checks_of(books, q3_2026, {}),
+            (std::vector<std::string>{"2655 has postings in the period (A 2), but reports in no box of the return"}));
 }

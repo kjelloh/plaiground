@@ -1765,11 +1765,14 @@ press `+` to see its VAT return so far. Each quarter shows its VAT in three step
 VAT return quarters ending in 2026-01-01 - 2026-12-31 (today 2026-10-27):
                   Period     Cleared     Charged
      2026 Q4      -25.00        0.00        0.00  so far (+ to view)
-  0  2026 Q3     -250.00        0.00        0.00  to report next
+  0  2026 Q3     -250.00        0.00        0.00  to report next  2 checks
   1  2026 Q2     1120.00     1120.00     1120.00  cleared by M 2, charged by A 3
   2  2026 Q1     -250.08     -250.00     -250.00  cleared by M 1, charged by A 1
 Charged, not matched to a quarter: A 4  2026-08-13  -9.99
 ```
+
+`2 checks` says the checks of the quarter (see Checks of a quarter) found two
+things to look at; a quarter where they find nothing has no mark.
 
 With more than ten ended quarters, keys 0-8 show the newest and `9 ...down`
 the older ones, as in the year list. A fiscal year none of whose quarters has
@@ -1858,12 +1861,38 @@ negative VAT to get back (with only input VAT, box 49 is minus box 48). The
 last line says it in words. A period without postings in any box shows no box 49.
 After the VAT return of the quarter running today (`+`) the periods are shown again.
 
-#### Clearing the VAT of a quarter
+#### Checks of a quarter
 
-After the VAT return of an ended quarter, cratchit proposes the voucher that
-clears it, at a prompt named after the quarter (e.g. `2025 Q4>`):
+The quarter's screen (below) starts with checks of the books behind its VAT
+return: what could make the return wrong. They only warn; nothing is stopped.
 
 ```
+Checks of 2026 Q3 (they only warn):
+  ! 13 waiting events dated in the period, not yet in the books (the first 2026-07-18 "Momsbeslut Q2")
+  ! A 48 2026-03-31 "Kortköp ... LAMYSHOP": posts 2650 or 1650 together with 1920, 6110; only a VAT clearing or a charge voucher posts them
+```
+
+When they find nothing: `Checks of 2026 Q3: nothing found.` The vouchers and
+events are those dated in the quarter, from every fiscal year; struck rows do
+not count.
+
+| Check | What it finds |
+|-------|---------------|
+| Not fully booked | Waiting events and statement entries not yet booked (see Statement entries) dated in the quarter. |
+| 2650 and 1650 | A voucher posting 2650 (Redovisningskonto för moms) or 1650 (Momsfordran) with rows on other accounts than VAT accounts (boxes 10-12, 30-32, 60-62, 48), 1630 (Skattekonto), 3740 (Öres- och kronutjämning) and memo accounts (9000-9999). Only a clearing or a charge voucher posts them; a purchase with its VAT against 2650 leaves the VAT out of the boxes. |
+| Reverse charge and import | Per voucher: a purchase base (boxes 20-24, or 50) without output VAT (boxes 30-32, or 60-62), or output VAT without a base; with one output VAT box, its VAT must be the base times the box's rate (25 % for 30 and 60, 12 % for 31 and 61, 6 % for 32 and 62), rounded towards zero to whole öre; and box 48 must deduct that output VAT in full. |
+| Registered after the clearing | A voucher on an account of a box, dated in the quarter, registered after the quarter's clearing voucher: the VAT return made then lacks it. |
+| VAT accounts outside the return | Rows on accounts 2600-2699 (2650 aside) that report in no box. |
+
+#### Clearing the VAT of a quarter
+
+After the VAT return of an ended quarter, cratchit shows its checks (above) and
+proposes the voucher that clears it, at a prompt named after the quarter (e.g.
+`2025 Q4>`):
+
+```
+Checks of 2025 Q4: nothing found.
+
 VAT clearing voucher for 2025 Q4 (proposed):
 Voucher M 2 2025-12-31 "Momsrapport 2025-10-01 - 2025-12-31"
   Account        Debit       Credit
