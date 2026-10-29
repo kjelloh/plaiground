@@ -210,6 +210,24 @@ I now decide to at least take some time and study what I know about counter acco
 
 * I have purchased the ebook 'svensk_redovisning_bokforing.pdf' for 2016.
 
+So now I did what I quite often do and go down a rabbit hole as the day draws to its end!
+
+* I started to define bas accounts and counter accounts in a table.
+* And I chatted with Claude about reverse engineer such a table from historic vouchers.
+
+But in the end I feel this is a dea end?
+
+* It is not super clear what 'counter accounts' actually is semantically?
+* And I am yet to understand if we have any use of a mapping account vs counter account?
+* It may b e the case that this is context sensitive (and hard to turn into any service provided by cratchit)?
+    * I mean, sure - we could present the counter accounts to the user.
+    * But then it is up to the user to read the accounting rules to understand how and when to use the counter accounts?
+    * It may be the case that cratchit can't apply these rules from such a table alone?
+
+I have to sleep on this!
+
+In any case. I DO now have a cratchit I can use to finalize the next VAT Return report to SKV!
+
 ## 20261028
 
 * [Beräkning av mervärdesskatt vid öresavrundning](https://www4.skatteverket.se/rattsligvagledning/edition/2026.14/381778.html?utm_source=chatgpt.com)
