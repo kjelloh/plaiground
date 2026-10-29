@@ -153,6 +153,8 @@ Fortnox har inget inbyggt filter som automatiskt hoppar över verifikationer som
 
 THIS IS NOT GOOD!!
 
+Anyhow, I asked Claude to implement an 'all' or 'diff' option for the export SIE file.
+
 ## 20261028
 
 * [Beräkning av mervärdesskatt vid öresavrundning](https://www4.skatteverket.se/rattsligvagledning/edition/2026.14/381778.html?utm_source=chatgpt.com)

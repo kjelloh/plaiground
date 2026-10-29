@@ -30,16 +30,6 @@ Posting::Kind kind_of(sie::Transaction::Kind kind) {
   }
 }
 
-// The voucher of a #VER; SIE gives no amount, so it is the debit total
-Voucher voucher_of(sie::Voucher const& voucher) {
-  Voucher result{voucher.series, voucher.number, {voucher.text, 0, voucher.date}, voucher.registered, voucher.signature,
-                 {}};
-  for (auto const& t : voucher.transactions) {
-    result.postings.push_back({kind_of(t.kind), t.account, t.objects, t.amount, t.date, t.text, t.quantity, t.signature});
-  }
-  result.event.amount = debit(result.postings);
-  return result;
-}
 
 std::string voucher_name(Voucher const& voucher) {
   return std::format("{} {}", voucher.series, voucher.number);
@@ -293,18 +283,6 @@ void merge_master_data(ImportPlan& plan, sie::Document const& document, bool is_
   }
 }
 
-// The counted postings (not removed) as account and amount, sorted, turned when negated: with the date, what makes
-// two vouchers the same
-std::vector<std::pair<std::string, Amount>> counted_rows(Voucher const& voucher, bool negated = false) {
-  std::vector<std::pair<std::string, Amount>> rows;
-  for (auto const& posting : voucher.postings) {
-    if (posting.kind != Posting::Kind::removed) {
-      rows.emplace_back(posting.account, negated ? -posting.amount : posting.amount);
-    }
-  }
-  std::ranges::sort(rows);
-  return rows;
-}
 
 // A voucher in the books leaving it as a waiting event: its event, noted on its registration day, its counted
 // postings each with its date
@@ -623,6 +601,27 @@ void check_balances(ImportPlan& plan, Books const& before_books, sie::Document c
 
 } // namespace
 
+Voucher voucher_of(sie::Voucher const& voucher) {
+  Voucher result{voucher.series, voucher.number, {voucher.text, 0, voucher.date}, voucher.registered, voucher.signature,
+                 {}};
+  for (auto const& t : voucher.transactions) {
+    result.postings.push_back({kind_of(t.kind), t.account, t.objects, t.amount, t.date, t.text, t.quantity, t.signature});
+  }
+  result.event.amount = debit(result.postings);
+  return result;
+}
+
+std::vector<std::pair<std::string, Amount>> counted_rows(Voucher const& voucher, bool negated) {
+  std::vector<std::pair<std::string, Amount>> rows;
+  for (auto const& posting : voucher.postings) {
+    if (posting.kind != Posting::Kind::removed) {
+      rows.emplace_back(posting.account, negated ? -posting.amount : posting.amount);
+    }
+  }
+  std::ranges::sort(rows);
+  return rows;
+}
+
 ImportPlan plan_import(Books const& books, Identity const& identity, sie::Document const& document,
                        Forcing const& forcing) {
   ImportPlan plan;
@@ -820,6 +819,52 @@ SieFolder sie_files_in(std::filesystem::path const& folder, Books const& books, 
     return ka != kb ? ka > kb : a.file < b.file;
   });
   return result;
+}
+
+std::expected<std::optional<std::filesystem::path>, std::string> last_import_of(std::filesystem::path const& project_folder,
+                                                                               Date year_start) {
+  namespace fs = std::filesystem;
+  auto const imports = project_folder / ".cratchit" / "imports";
+  std::error_code ec;
+  if (!fs::is_directory(imports, ec)) {
+    return std::nullopt;
+  }
+  // The stash's date and number, from <date>_<n>_<file>
+  auto const order = [](fs::path const& path) {
+    auto const name = path.filename().string();
+    auto const first = name.find('_');
+    auto const second = first == std::string::npos ? std::string::npos : name.find('_', first + 1);
+    std::size_t n = 0;
+    if (second != std::string::npos) {
+      for (auto const c : name.substr(first + 1, second - first - 1)) {
+        n = c >= '0' && c <= '9' ? n * 10 + static_cast<std::size_t>(c - '0') : n;
+      }
+    }
+    return std::tuple{name.substr(0, first), n, name};
+  };
+  std::optional<fs::path> last;
+  for (auto const& entry : fs::directory_iterator(imports, ec)) {
+    if (!entry.is_regular_file(ec) || entry.path().extension() == ".txt") {
+      continue;
+    }
+    std::ifstream in(entry.path(), std::ios::binary);
+    if (!in) {
+      return std::unexpected(std::format("Cannot read {}", entry.path().string()));
+    }
+    std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    auto const lexed = sie::lex_bytes(bytes);
+    if (!lexed) {
+      return std::unexpected(std::format("{}: {}", entry.path().string(), lexed.error()));
+    }
+    auto const year = sie::parse_document(lexed->lines).document.year(0);
+    if (year && year->start == year_start && (!last || order(*last) < order(entry.path()))) {
+      last = entry.path();
+    }
+  }
+  if (ec) {
+    return std::unexpected(std::format("Cannot list {}: {}", imports.string(), ec.message()));
+  }
+  return last;
 }
 
 std::expected<std::set<VoucherKey>, std::string> imported_vouchers(std::filesystem::path const& project_folder) {

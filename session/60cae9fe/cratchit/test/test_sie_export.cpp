@@ -219,7 +219,52 @@ TEST(SieExport, ImportsBackAsTheSameBooks) {
 TEST(SieExport, FileNamedAsTheYearsPrompt) {
   books::FiscalYear broken{.start = 2026y / May / 1, .end = 2027y / April / 30};
   books::FiscalYear calendar{.start = 2025y / January / 1, .end = 2025y / December / 31};
-  EXPECT_EQ(books::export_file_name(broken), "sie_2026-27.se");
-  EXPECT_EQ(books::export_file_name(calendar), "sie_2025.se");
-  EXPECT_EQ(books::export_file_name(broken, 2), "sie_2026-27_2.se");
+  EXPECT_EQ(books::export_file_name(broken, books::ExportKind::all), "sie_2026-27_all.se");
+  EXPECT_EQ(books::export_file_name(calendar, books::ExportKind::all), "sie_2025_all.se");
+  EXPECT_EQ(books::export_file_name(broken, books::ExportKind::all, 2), "sie_2026-27_all_2.se");
+  EXPECT_EQ(books::export_file_name(calendar, books::ExportKind::diff), "sie_2025_diff.se");
+  EXPECT_EQ(books::export_file_name(calendar, books::ExportKind::diff, 3), "sie_2025_diff_3.se");
+}
+
+TEST(SieExport, APartOfTheYearHasNoBalances) {
+  auto const plan = two_years();
+  auto const document = books::export_document(plan.books, plan.identity, 1, 2026y / October / 28,
+                                               std::vector<std::size_t>{1});
+  ASSERT_EQ(document.vouchers.size(), 1u);
+  EXPECT_EQ(document.vouchers[0].number, "2");
+  EXPECT_TRUE(document.opening.empty());
+  EXPECT_TRUE(document.closing.empty());
+  EXPECT_TRUE(document.results.empty());
+  EXPECT_EQ(document.years.size(), 2u);
+  EXPECT_FALSE(document.accounts.empty());
+}
+
+TEST(SieExport, DiffWithAFileByDateAndRows) {
+  auto plan = two_years();
+  auto& books = plan.books;
+  books.years[1].vouchers.push_back({"D", "1", {"Lunch", 2000, 2025y / June / 1}, 2025y / June / 1, "", {
+      {books::Posting::Kind::normal, "6570", {}, 2000, {}, "", "", ""},
+      {books::Posting::Kind::normal, "1930", {}, -2000, {}, "", "", ""}}});
+  // The file numbered A 1 as A 7: still the same voucher
+  auto renumbered = sale_and_cost(2025);
+  renumbered.replace(renumbered.find("#VER A 1 "), 9, "#VER A 7 ");
+  auto const diff = books::diff_with(books, 1, plan.identity, parse_sie(sie_file(2025, balanced_balances(), renumbered)));
+  ASSERT_TRUE(diff.has_value()) << diff.error();
+  EXPECT_EQ(diff->books_only, std::vector<std::size_t>{2});
+  EXPECT_TRUE(diff->file_only.empty());
+  // A voucher the books lack
+  auto const ahead = books::diff_with(
+      books, 1, plan.identity,
+      parse_sie(sie_file(2025, balanced_balances(),
+                         sale_and_cost(2025) + "#VER A 3 20250701 \"Fee\"\r\n{\r\n#TRANS 6570 {} 5\r\n"
+                                               "#TRANS 1930 {} -5\r\n}\r\n")));
+  ASSERT_TRUE(ahead.has_value()) << ahead.error();
+  ASSERT_EQ(ahead->file_only.size(), 1u);
+  EXPECT_EQ(ahead->file_only[0].number, "3");
+  // Another year or company
+  auto const year = books::diff_with(books, 0, plan.identity, parse_sie(sie_file(2025, "", "")));
+  EXPECT_EQ(year.error(), "The file's fiscal year 0 is 2025-01-01 - 2025-12-31, not 2024-01-01 - 2024-12-31");
+  auto const other = books::diff_with(books, 1, plan.identity,
+                                      parse_sie(sie_file(2025, "", "", "\"Other AB\"", "556111-2222")));
+  EXPECT_EQ(other.error(), "The file is for organisation number 556111-2222, but the project Test AB has 556000-0001");
 }

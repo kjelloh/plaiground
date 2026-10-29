@@ -66,7 +66,8 @@ void add_balances(Books const& books, YearBalances const& year, int index, sie::
 
 } // namespace
 
-sie::Document export_document(Books const& books, Identity const& identity, std::size_t index, Date generated) {
+sie::Document export_document(Books const& books, Identity const& identity, std::size_t index, Date generated,
+                              std::optional<std::vector<std::size_t>> const& only) {
   sie::Document document;
   auto const& year = books.years[index];
   document.flag = "0";
@@ -94,6 +95,12 @@ sie::Document export_document(Books const& books, Identity const& identity, std:
   for (auto const& object : books.objects) {
     document.objects.push_back({object.dimension, object.number, object.name});
   }
+  if (only) {
+    for (auto const i : *only) {
+      document.vouchers.push_back(voucher_of(year.vouchers[i]));
+    }
+    return document;
+  }
   auto const all = balances(books);
   add_balances(books, all[index], 0, document);
   if (index > 0) {
@@ -105,16 +112,18 @@ sie::Document export_document(Books const& books, Identity const& identity, std:
   return document;
 }
 
-std::string export_file_name(FiscalYear const& year, int index) {
+std::string export_file_name(FiscalYear const& year, ExportKind kind, int index) {
   auto const start = static_cast<int>(year.start.year());
   auto const end = static_cast<int>(year.end.year());
-  auto const name = start == end ? std::format("sie_{}", start) : std::format("sie_{}-{:02}", start, end % 100);
+  auto const name = std::format("{}_{}",
+                                start == end ? std::format("sie_{}", start) : std::format("sie_{}-{:02}", start, end % 100),
+                                kind == ExportKind::all ? "all" : "diff");
   return index < 2 ? name + ".se" : std::format("{}_{}.se", name, index);
 }
 
-std::filesystem::path free_export_file(std::filesystem::path const& folder, FiscalYear const& year) {
+std::filesystem::path free_export_file(std::filesystem::path const& folder, FiscalYear const& year, ExportKind kind) {
   for (int index = 1;; ++index) {
-    auto path = folder / export_file_name(year, index);
+    auto path = folder / export_file_name(year, kind, index);
     std::error_code error;
     if (!std::filesystem::exists(path, error)) {
       return path;
@@ -123,9 +132,9 @@ std::filesystem::path free_export_file(std::filesystem::path const& folder, Fisc
 }
 
 std::expected<std::filesystem::path, std::string> write_export(std::filesystem::path const& folder,
-                                                               FiscalYear const& year,
+                                                               FiscalYear const& year, ExportKind kind,
                                                                std::span<std::uint8_t const> bytes) {
-  auto const path = free_export_file(folder, year);
+  auto const path = free_export_file(folder, year, kind);
   std::ofstream out(path, std::ios::binary);
   out.write(reinterpret_cast<char const*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   out.close();
@@ -133,6 +142,45 @@ std::expected<std::filesystem::path, std::string> write_export(std::filesystem::
     return std::unexpected(std::format("Could not write {}", path.string()));
   }
   return path;
+}
+
+std::expected<ExportDiff, std::string> diff_with(Books const& books, std::size_t index, Identity const& identity,
+                                                 sie::Document const& document) {
+  auto const& year = books.years[index];
+  if (!identity.orgnr.empty() && document.orgnr != identity.orgnr) {
+    return std::unexpected(std::format("The file is for organisation number {}, but the project {} has {}",
+                                       document.orgnr, identity.name, identity.orgnr));
+  }
+  auto const file_year = document.year(0);
+  if (!file_year || file_year->start != year.start || file_year->end != year.end) {
+    return std::unexpected(std::format("The file's fiscal year 0 is {}, not {} - {}",
+                                       file_year ? std::format("{} - {}", format_iso_date(file_year->start),
+                                                               format_iso_date(file_year->end))
+                                                 : std::string{"missing"},
+                                       format_iso_date(year.start), format_iso_date(year.end)));
+  }
+  ExportDiff diff;
+  std::vector<bool> matched(year.vouchers.size(), false);
+  for (auto const& record : document.vouchers) {
+    auto const voucher = books::voucher_of(record);
+    auto const rows = counted_rows(voucher);
+    auto found = false;
+    for (std::size_t i = 0; i < year.vouchers.size() && !found; ++i) {
+      if (!matched[i] && year.vouchers[i].event.date == voucher.event.date && counted_rows(year.vouchers[i]) == rows) {
+        matched[i] = true;
+        found = true;
+      }
+    }
+    if (!found) {
+      diff.file_only.push_back(voucher);
+    }
+  }
+  for (std::size_t i = 0; i < year.vouchers.size(); ++i) {
+    if (!matched[i]) {
+      diff.books_only.push_back(i);
+    }
+  }
+  return diff;
 }
 
 } // namespace cratchit::books

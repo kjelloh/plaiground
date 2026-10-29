@@ -8,7 +8,9 @@
 #include <compare>
 #include <filesystem>
 #include <set>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace cratchit::books {
@@ -134,6 +136,13 @@ struct SieFolder {
 };
 SieFolder sie_files_in(std::filesystem::path const& folder, Books const& books, Identity const& identity);
 
+// The voucher of an SIE #VER; SIE gives no amount, so it is the debit total
+Voucher voucher_of(sie::Voucher const& voucher);
+
+// The counted postings (not removed) as account and amount, sorted, turned when negated: with the date, what makes
+// two vouchers the same
+std::vector<std::pair<std::string, Amount>> counted_rows(Voucher const& voucher, bool negated = false);
+
 // A voucher in full for the log, e.g. `2026-04-20 "Loopia" registered 2026-07-15: row 1920 -323.75, row 2440 323.75`
 std::string voucher_text(Voucher const& voucher);
 
@@ -167,5 +176,11 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
 // .cratchit/imports (every file there but the .txt records). No such folder
 // gives none. Error text names a stashed file that cannot be read. Does not log.
 std::expected<std::set<VoucherKey>, std::string> imported_vouchers(std::filesystem::path const& project_folder);
+
+// The stashed copy of the last SIE import of the fiscal year starting on year_start (its year 0): the latest by
+// the stash's date and then its number; nothing when the year has no import. Error text names a stashed file that
+// cannot be read. Does not log.
+std::expected<std::optional<std::filesystem::path>, std::string> last_import_of(std::filesystem::path const& project_folder,
+                                                                               Date year_start);
 
 } // namespace cratchit::books

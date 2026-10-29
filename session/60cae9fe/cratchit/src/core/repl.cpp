@@ -159,6 +159,9 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::ConfirmImport:
     on_confirm_import_key(key, out);
     return Step::Continue;
+  case Mode::ConfirmExport:
+    on_confirm_export_key(key, out);
+    return Step::Continue;
   case Mode::Paging:
     if (pager_.on_key(key, out) == Pager::Result::Leave) {
       mode_ = before_paging_;
@@ -267,6 +270,12 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::SieFiles:
     on_sie_files_key(key, out);
     break;
+  case Mode::ExportMenu:
+    on_export_menu_key(key, out);
+    break;
+  case Mode::DiffSource:
+    on_diff_source_key(key, out);
+    break;
   case Mode::StatementFiles:
     on_statement_files_key(key, out);
     break;
@@ -352,6 +361,8 @@ bool Repl::shows_on_enter() const {
   case Mode::VoucherList:
   case Mode::VoucherView:
   case Mode::SieFiles:
+  case Mode::ExportMenu:
+  case Mode::DiffSource:
   case Mode::StatementFiles:
   case Mode::EntryList:
   case Mode::EntryChoice:
@@ -429,6 +440,12 @@ void Repl::show_screen(std::ostream& out) {
     break;
   case Mode::SieFiles:
     show_sie_files(out);
+    break;
+  case Mode::ExportMenu:
+    show_export_menu(out);
+    break;
+  case Mode::DiffSource:
+    show_diff_source(out);
     break;
   case Mode::StatementFiles:
     show_statement_files(out);
@@ -509,6 +526,28 @@ Operations<Repl::Op> Repl::operations() const {
     break;
   case Mode::WaitingEvent:
     operations.add(1, "Post it: enter its voucher", Op::PostEvent);
+    break;
+  case Mode::ExportMenu:
+    operations
+        .add(1,
+             export_year_ < books_.years.size()
+                 ? std::format("All: every voucher ({}), with balances, as {}",
+                               books_.years[export_year_].vouchers.size(),
+                               books::free_export_file(project_->folder, books_.years[export_year_],
+                                                       books::ExportKind::all)
+                                   .filename()
+                                   .string())
+                 : std::string{},
+             Op::ExportAll)
+        .add(2, "Diff: the vouchers not in an SIE file you choose, without balances", Op::ExportDiff);
+    break;
+  case Mode::DiffSource:
+    operations
+        .add(1,
+             std::format("The last import of the year: {}",
+                         last_import_ ? last_import_->filename().string() : std::string{}),
+             Op::DiffLastImport, last_import_.has_value())
+        .add(2, "Choose an SIE file", Op::DiffChoose);
     break;
   case Mode::MatchChoice:
     operations.add(1, "Make them one event", Op::MakeOneEvent,
@@ -680,6 +719,33 @@ void Repl::on_operation(Op op, std::ostream& out) {
     break;
   case Op::ExportSie:
     export_sie(out);
+    break;
+  case Op::ExportAll:
+    mode_ = Mode::Year;
+    write_year_sie(books_, export_year_, out);
+    break;
+  case Op::ExportDiff: {
+    auto last = books::last_import_of(project_->folder, books_.years[export_year_].start);
+    if (!last) {
+      std::println(out, "Error: {}", last.error());
+      return;
+    }
+    last_import_ = *last;
+    mode_ = Mode::DiffSource;
+    show_diff_source(out);
+    break;
+  }
+  case Op::DiffLastImport:
+    diff_export(*last_import_, out);
+    break;
+  case Op::DiffChoose:
+    purpose_ = Purpose::DiffFile;
+    editor_.start((places_.start_folder / "").string(), PathEditor::Kind::File);
+    mode_ = Mode::Typing;
+    std::println(out, "Type the path of the SIE file to compare with, or of a folder to list its SIE files. Tab");
+    std::println(out, "completes a folder or file name, Backspace erases, Enter accepts. - or Enter on an empty path");
+    std::println(out, "goes back.");
+    out << editor_.prompt();
     break;
   case Op::CloseYear:
     set_closed(true, out);
@@ -889,6 +955,15 @@ std::string Repl::prompt() const {
   }
   case Mode::SieFiles:
     return "sie?> ";
+  case Mode::ExportMenu:
+    return "export?> ";
+  case Mode::DiffSource:
+    return "diff?> ";
+  case Mode::ConfirmExport:
+    return std::format("Write {}? (y/n) ",
+                       books::free_export_file(project_->folder, books_.years[export_year_], books::ExportKind::diff)
+                           .filename()
+                           .string());
   case Mode::StatementFiles:
     return "statement?> ";
   case Mode::ConfirmStatement:
@@ -1033,6 +1108,27 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
     mode_ = before_import_;
     return;
   }
+  if (purpose_ == Purpose::DiffFile) {
+    if (result == PathEditor::Result::Cancelled) {
+      mode_ = Mode::DiffSource;
+      show_diff_source(out);
+      return;
+    }
+    auto const file = typed_folder(places_.start_folder);
+    std::error_code ec;
+    if (fs::is_directory(file, ec)) {
+      sie_for_diff_ = true;
+      list_sie_files(file, out);
+      return;
+    }
+    if (!fs::is_regular_file(file, ec)) {
+      std::println(out, "No file or folder {}.", file.string());
+      out << editor_.prompt();
+      return;
+    }
+    diff_export(file, out);
+    return;
+  }
   if (purpose_ == Purpose::SieFile) {
     if (result == PathEditor::Result::Cancelled) {
       mode_ = before_import_;
@@ -1041,6 +1137,7 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
     auto const file = typed_folder(places_.start_folder);
     std::error_code ec;
     if (fs::is_directory(file, ec)) {
+      sie_for_diff_ = false;
       list_sie_files(file, out);
       return;
     }
@@ -1526,6 +1623,8 @@ void Repl::on_sie_files_key(charset::unicode::CodePoint key, std::ostream& out) 
   auto const pick = sie_page_.on_key(key, sie_folder_.files.size());
   if (pick.kind == ItemList::Pick::Kind::Scrolled) {
     show_sie_files(out);
+  } else if (pick.kind == ItemList::Pick::Kind::Item && sie_for_diff_) {
+    diff_export(sie_folder_.files[pick.index].file, out);
   } else if (pick.kind == ItemList::Pick::Kind::Item) {
     check_import(sie_folder_.files[pick.index].file, out);
   } else {
@@ -1666,7 +1765,7 @@ void Repl::show_reverting(books::ImportPlan const& plan, books::Books const& boo
   }
   if (auto const* year = books.year_starting(plan.year_start)) {
     std::println(out, "  Before: the year is exported as {} in the project folder.",
-                 books::free_export_file(project_->folder, *year).filename().string());
+                 books::free_export_file(project_->folder, *year, books::ExportKind::all).filename().string());
   }
   std::println(out, "Type revert and Enter to make the file the truth of this year, or Enter alone to import nothing.");
 }
@@ -2216,21 +2315,125 @@ void Repl::set_closed(bool closed, std::ostream& out) {
 }
 
 // Writes the open year as an SIE 4E file in the project folder, the year before as -1 (see books::export_document)
+// The export menu of the open year: all, or the vouchers not in an SIE file (diff)
 void Repl::export_sie(std::ostream& out) {
   auto const index = read_open_year(out);
   if (!index) {
     return;
   }
-  write_year_sie(books_, *index, out);
+  export_year_ = *index;
+  mode_ = Mode::ExportMenu;
+  show_export_menu(out);
+}
+
+void Repl::show_export_menu(std::ostream& out) const {
+  auto const& year = books_.years[export_year_];
+  std::println(out, "Export fiscal year {} - {} as an SIE file:", format_iso_date(year.start), format_iso_date(year.end));
+  show_operations(out);
+}
+
+void Repl::on_export_menu_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::Year;
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
+  } else {
+    unknown_key(out);
+  }
+}
+
+void Repl::show_diff_source(std::ostream& out) const {
+  std::println(out, "Export the vouchers of the books that are not in an SIE file of the same fiscal year, e.g. the");
+  std::println(out, "other program's latest export. Compare with:");
+  show_operations(out);
+}
+
+void Repl::on_diff_source_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::ExportMenu;
+    show_export_menu(out);
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
+  } else {
+    unknown_key(out);
+  }
+}
+
+// Compares the year with an SIE file and offers to write the vouchers the file lacks; refused when the file has
+// vouchers the books lack (the books are behind the file: import it first)
+void Repl::diff_export(fs::path const& file, std::ostream& out) {
+  mode_ = Mode::Year;
+  auto const lexed = sie::lex_file(file);
+  if (!lexed) {
+    std::println(out, "Error: {}", lexed.error());
+    return;
+  }
+  auto const parsed = sie::parse_document(lexed->lines);
+  if (!parsed.errors.empty()) {
+    std::println(out, "Error: {} has errors, e.g. {}", file.filename().string(), parsed.errors.front());
+    return;
+  }
+  auto const& year = books_.years[export_year_];
+  auto const diff = books::diff_with(books_, export_year_, {project_->name, project_->orgnr}, parsed.document);
+  if (!diff) {
+    std::println(out, "Error: {}", diff.error());
+    return;
+  }
+  auto const& document = parsed.document;
+  std::println(out, "Compared with {} ({} {}{}):", file.filename().string(), document.program,
+               document.program_version,
+               document.generated ? ", generated " + format_iso_date(*document.generated) : std::string{});
+  auto const show = [&](books::Voucher const& voucher) {
+    std::println(out, "    {} {:<4}  {}  {:>12}  {}", voucher.series, voucher.number, format_iso_date(voucher.event.date),
+                 format_amount(voucher.event.amount), voucher.event.heading);
+  };
+  std::println(out, "  In the books, not in the file ({}):", diff->books_only.size());
+  for (auto const i : diff->books_only) {
+    show(year.vouchers[i]);
+  }
+  std::println(out, "  In the file, not in the books ({}):", diff->file_only.size());
+  for (auto const& voucher : diff->file_only) {
+    show(voucher);
+  }
+  if (!diff->file_only.empty()) {
+    std::println(out, "Nothing is exported: the file has vouchers the books lack, so the books are behind it. Import");
+    std::println(out, "the file first (3 at the year prompt), then export again.");
+    LOG_BUSINESS("Export of fiscal year {} - {} of project {} ({}) refused: {} has {} vouchers the books lack",
+                 format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid,
+                 file.string(), diff->file_only.size());
+    return;
+  }
+  if (diff->books_only.empty()) {
+    std::println(out, "Every voucher of fiscal year {} - {} is in the file. Nothing to export.",
+                 format_iso_date(year.start), format_iso_date(year.end));
+    return;
+  }
+  diff_file_ = file;
+  diff_vouchers_ = diff->books_only;
+  mode_ = Mode::ConfirmExport;
+}
+
+void Repl::on_confirm_export_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'y') {
+    mode_ = Mode::Year;
+    write_year_sie(books_, export_year_, out, books::ExportKind::diff, diff_vouchers_, diff_file_);
+  } else if (key == U'n' || key == U'-') {
+    std::println(out, "Nothing is exported.");
+    mode_ = Mode::Year;
+  } else {
+    std::println(out, "Press y to write the file, n not to.");
+  }
 }
 
 // Writes the fiscal year at index as an SIE 4E file in the project folder; the file, or nothing (shown and logged)
-std::optional<fs::path> Repl::write_year_sie(books::Books const& books, std::size_t index, std::ostream& out) {
+std::optional<fs::path> Repl::write_year_sie(books::Books const& books, std::size_t index, std::ostream& out,
+                                             books::ExportKind kind, std::optional<std::vector<std::size_t>> const& only,
+                                             fs::path const& compared_with) {
   auto const& year = books.years[index];
   auto const today = parse_iso_date(places_.today).value_or(year.end);
-  auto const document = books::export_document(books, {project_->name, project_->orgnr}, index, today);
+  auto const document = books::export_document(books, {project_->name, project_->orgnr}, index, today, only);
   auto const encoded = sie::cp437_of(sie::text_of(document));
-  auto const written = books::write_export(project_->folder, year, encoded.bytes);
+  auto const written = books::write_export(project_->folder, year, kind, encoded.bytes);
   if (!written) {
     std::println(out, "Error: {}", written.error());
     LOG_DESIGN_INSUFFICIENCY("SIE file of fiscal year {} - {} of project {} ({}) not written: {}",
@@ -2238,12 +2441,15 @@ std::optional<fs::path> Repl::write_year_sie(books::Books const& books, std::siz
                              written.error());
     return std::nullopt;
   }
-  std::println(out, "Wrote {} in {}: fiscal year {} - {}, {} voucher{} (SIE 4E).", written->filename().string(),
+  std::println(out, "Wrote {} in {}: fiscal year {} - {}, {} voucher{}{} (SIE 4E).", written->filename().string(),
                project_->folder.string(), format_iso_date(year.start), format_iso_date(year.end),
-               document.vouchers.size(), document.vouchers.size() == 1 ? "" : "s");
-  LOG_BUSINESS("Exported fiscal year {} - {} of project {} ({}) as SIE file {} ({} vouchers)",
+               document.vouchers.size(), document.vouchers.size() == 1 ? "" : "s",
+               only ? ", no balances" : "");
+  LOG_BUSINESS("Exported fiscal year {} - {} of project {} ({}) as SIE file {} ({} vouchers{})",
                format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid,
-               written->string(), document.vouchers.size());
+               written->string(), document.vouchers.size(),
+               compared_with.empty() ? std::string{", all"}
+                                     : ", the ones not in " + compared_with.string() + ", no balances");
   if (encoded.unmapped > 0) {
     std::println(out, "{} character{} SIE (CP437) does not have {} written as its code point, e.g. <U+20AC>. Search the",
                  encoded.unmapped, encoded.unmapped == 1 ? "" : "s", encoded.unmapped == 1 ? "is" : "are");

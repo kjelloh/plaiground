@@ -2,6 +2,7 @@
 
 #include "core/books/books.hpp"
 #include "core/books/entry.hpp"
+#include "core/books/export.hpp"
 #include "core/books/hint.hpp"
 #include "core/books/import.hpp"
 #include "core/books/match.hpp"
@@ -107,6 +108,9 @@ private:
     VoucherList,
     VoucherView,
     SieFiles,
+    ExportMenu,
+    DiffSource,
+    ConfirmExport,
     StatementFiles,
     ConfirmStatement,
     EntryList,
@@ -131,6 +135,10 @@ private:
     WaitingEvents,
     ViewVouchers,
     ExportSie,
+    ExportAll,
+    ExportDiff,
+    DiffLastImport,
+    DiffChoose,
     CloseYear,
     OpenYear,
     FindMatches,
@@ -167,6 +175,7 @@ private:
     EventHeading,
     Force,
     Revert,
+    DiffFile,
   };
 
   WorkspacePlaces places_;
@@ -191,6 +200,11 @@ private:
   Mode before_import_ = Mode::Project;   // where an SIE import started (project or year prompt)
   std::filesystem::path refused_file_;   // the SIE file whose import was refused, to force at force>
   books::SieFolder sie_folder_;          // the SIE files listed in a folder
+  bool sie_for_diff_ = false;            // the SIE files are listed to diff the export with, not to import
+  std::size_t export_year_ = 0;          // the fiscal year to export, an index into books_.years
+  std::optional<std::filesystem::path> last_import_; // the last SIE import of that year, to diff with
+  std::filesystem::path diff_file_;      // the SIE file the export is diffed with
+  std::vector<std::size_t> diff_vouchers_; // the year's vouchers not in it, to export
   ItemList sie_page_;                    // the page of the SIE files
   books::Books books_;                  // the books the reports are about
   ItemList year_page_;                  // the page of the report years
@@ -309,7 +323,16 @@ private:
   std::optional<std::size_t> read_open_year(std::ostream& out);
   void set_closed(bool closed, std::ostream& out);
   void export_sie(std::ostream& out);
-  std::optional<std::filesystem::path> write_year_sie(books::Books const& books, std::size_t index, std::ostream& out);
+  void show_export_menu(std::ostream& out) const;
+  void on_export_menu_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_diff_source(std::ostream& out) const;
+  void on_diff_source_key(charset::unicode::CodePoint key, std::ostream& out);
+  void diff_export(std::filesystem::path const& file, std::ostream& out);
+  void on_confirm_export_key(charset::unicode::CodePoint key, std::ostream& out);
+  std::optional<std::filesystem::path> write_year_sie(books::Books const& books, std::size_t index, std::ostream& out,
+                                                      books::ExportKind kind = books::ExportKind::all,
+                                                      std::optional<std::vector<std::size_t>> const& only = {},
+                                                      std::filesystem::path const& compared_with = {});
   void show_reverting(books::ImportPlan const& plan, books::Books const& books, std::ostream& out) const;
   void revert(std::ostream& out);
   bool start_entry(bool noting, std::ostream& out, std::string const& line = "");

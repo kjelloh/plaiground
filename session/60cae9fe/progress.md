@@ -801,7 +801,26 @@ back), log kinds. 493 tests pass, no warnings (Debug, trace DEBUG). Checked on a
 to the Fortnox file, then import sie_2026-27_3.se back: 20 new, 18 waiting events taken off, none left; vouchers.csv and
 postings.csv equal the real books (opening.csv differs only by the reported 1650/2641 opening, known). In review.
 
+Task 81: Export all or diff. Year key 2 opens `export?>` (`Mode::ExportMenu`): 1 All (every voucher with balances, as
+today, now named `sie_2026-27_all.se`), 2 Diff. Diff asks at `diff?>` (`Mode::DiffSource`): 1 the year's last SIE import
+(`books::last_import_of`: newest stash with that year 0, by the stash's date then number; left out when none), 2 a typed
+path (`Purpose::DiffFile`, a folder lists the SIE picker with `sie_for_diff_`). `books::diff_with`: refuses another orgnr
+or fiscal year 0; matches each file voucher to one books voucher with the same date and counted postings, any series and
+number (`books_only`, `file_only`). Shown as two lists; file vouchers the books lack stop the export ("Import the file
+first", logged); none to export: "Nothing to export."; else `Write sie_2026-27_diff.se? (y/n)` (`Mode::ConfirmExport`).
+`export_document(..., only)`: just those vouchers, no #IB/#UB/#RES. File names `export_file_name(year, ExportKind,
+index)`: `sie_<year>_all.se` / `sie_<year>_diff.se`, `_all_2` etc.; the revert's export is an `all`. `voucher_of(sie)`
+and `counted_rows` now public in import.hpp. Logged (business): export all / diff (with the file), a refused diff.
+Manual: files, year table, revert examples, "Exporting a fiscal year as an SIE file" (menu, Fortnox warning), new
+"Exporting the diff", log kinds. 496 tests pass, no warnings (Debug, trace DEBUG). Checked on a scratch copy of The
+ITfied AB (with the 17 copies from the Fortnox round trip): diff with the last import (Fortnox, 34 vouchers): nothing to
+export; with TheITfiedAB20261019_105108.se: exactly the 17 copies. In review.
+
 ## Next
+
+Agreed next (2026-10-29): when an import drops vouchers that leave the books (revert), one identical in date and rows to
+a voucher that stays is dropped as a copy, not demoted; and a duplicate check on import (a new voucher in the file with
+the same date and rows as one in the books, or another in the file) before the user answers.
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
 into a waiting event without making a voucher, several entries chosen at once.
@@ -1017,6 +1036,12 @@ into a waiting event without making a voucher, several entries chosen at once.
   when `revert` is typed, after an automatic SIE export of the year. A closed year is refused. A voucher from an SIE
   file is always imported, cratchit's own files included (the file may come from another cratchit user). Force is
   kept in code until a real round trip has been done, then removed.
+
+- 2026-10-29: SIE export offers `all` (the year with balances) and `diff` (the vouchers of the books not in an SIE
+  file the user chooses, by date and counted postings, without balances); files `sie_<year>_all.se` /
+  `sie_<year>_diff.se`. A diff is refused when the file has vouchers the books lack (the books are behind it: import
+  first). No "not imported" export (the origin is not what the other program lacks). Fortnox imports every voucher of a
+  file, so Fortnox gets a diff, never all of a year it has.
 
 - 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted
   cratchit's file without it.

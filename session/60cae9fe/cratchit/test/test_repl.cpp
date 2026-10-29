@@ -751,16 +751,16 @@ TEST_F(WorkspaceRepl, AnOlderFileBecomesTheTruthWithRevert) {
       "  Out of the books, now waiting events (1):\n"
       "    D 1\n"
       "  The file was made 2026-10-19; 3 vouchers leaving the books were registered after that.\n"
-      "  Before: the year is exported as sie_2025.se in the project folder.\n"
+      "  Before: the year is exported as sie_2025_all.se in the project folder.\n"
       "Type revert and Enter to make the file the truth of this year, or Enter alone to import nothing.\n"
       "revert> "};
   // Anything but revert imports nothing
   auto const declined = run("3test.se\nno\n");
   EXPECT_NE(declined.find("  Vouchers     2: 0 new, 2 already in the books\n"), std::string::npos) << declined;
   EXPECT_NE(declined.find(preview + "no\nNothing is imported.\n2025> "), std::string::npos) << declined;
-  EXPECT_FALSE(fs::exists(root / "start" / "Test" / "sie_2025.se"));
+  EXPECT_FALSE(fs::exists(root / "start" / "Test" / "sie_2025_all.se"));
   auto const output = run("3test.se\nrevert\n");
-  EXPECT_NE(output.find(preview + "revert\nWrote sie_2025.se in "), std::string::npos) << output;
+  EXPECT_NE(output.find(preview + "revert\nWrote sie_2025_all.se in "), std::string::npos) << output;
   EXPECT_NE(output.find("Imported 0 vouchers into fiscal year 2025-01-01 - 2025-12-31 (2 already in the books).\n"
                         "Out of the books: 2 dropped, 1 now a waiting event.\n"),
             std::string::npos)
@@ -771,16 +771,16 @@ TEST_F(WorkspaceRepl, AnOlderFileBecomesTheTruthWithRevert) {
   ASSERT_EQ(books->years[0].waiting.size(), 1u);
   EXPECT_EQ(books->years[0].waiting[0].event.heading, "Lunch");
   // The export before holds the books as they were
-  auto const exported = read_file(root / "start" / "Test" / "sie_2025.se");
+  auto const exported = read_file(root / "start" / "Test" / "sie_2025_all.se");
   EXPECT_NE(exported.find("#VER D 1 "), std::string::npos);
   EXPECT_NE(exported.find("#VER A 4 "), std::string::npos);
   auto const record = read_file(root / "start" / "Test" / ".cratchit" / "imports" / "2026-10-20_2_test.se.txt");
-  EXPECT_NE(record.find("dropped = A 3, A 4\ndemoted = D 1\nexported_before = sie_2025.se\n"), std::string::npos)
+  EXPECT_NE(record.find("dropped = A 3, A 4\ndemoted = D 1\nexported_before = sie_2025_all.se\n"), std::string::npos)
       << record;
   // The same file again: all in the books
   EXPECT_NE(run("3test.se\n").find("Nothing to import."), std::string::npos);
   // The export back: its vouchers return and take the waiting event they made off the list
-  auto const back = run("3Test/sie_2025.se\ny");
+  auto const back = run("3Test/sie_2025_all.se\ny");
   EXPECT_NE(back.find("  Vouchers     5: 3 new, 2 already in the books\n"
                       "  Waiting      1 event in the file as vouchers: taken off the waiting list\n"),
             std::string::npos)
@@ -1439,16 +1439,22 @@ TEST_F(WorkspaceRepl, YearKey2ExportsTheYearAsAnSieFile) {
   write_sie(root / "start" / "test.se", good_sie());
   run("2test.se\ny10");
   auto const folder = root / "start" / "Test";
-  auto const output = run("22");
-  EXPECT_NE(output.find("2025> 2\nWrote sie_2025.se in " + folder.string() +
+  auto const output = run("2121");
+  EXPECT_NE(output.find("2025> 2\n"
+                        "Export fiscal year 2025-01-01 - 2025-12-31 as an SIE file:\n"
+                        "  1  All: every voucher (2), with balances, as sie_2025_all.se\n"
+                        "  2  Diff: the vouchers not in an SIE file you choose, without balances\n"
+                        "export?> 1\nWrote sie_2025_all.se in " + folder.string() +
                         ": fiscal year 2025-01-01 - 2025-12-31, 2 vouchers (SIE 4E).\n"
-                        "2025> 2\nWrote sie_2025_2.se in " + folder.string() +
-                        ": fiscal year 2025-01-01 - 2025-12-31, 2 vouchers (SIE 4E).\n"
-                        "2025> \n"),
+                        "2025> 2\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("export?> 1\nWrote sie_2025_all_2.se in " + folder.string() +
+                        ": fiscal year 2025-01-01 - 2025-12-31, 2 vouchers (SIE 4E).\n2025> \n"),
             std::string::npos)
       << output;
   // The file reads back through the import's own path, with the vouchers of the books
-  auto const text = read_file(folder / "sie_2025.se");
+  auto const text = read_file(folder / "sie_2025_all.se");
   EXPECT_TRUE(text.starts_with("#FLAGGA 0\r\n#FORMAT PC8\r\n#SIETYP 4\r\n#PROGRAM \"cratchit\" ")) << text;
   auto const lexed = cratchit::sie::lex_bytes(std::vector<std::uint8_t>(text.begin(), text.end()));
   ASSERT_TRUE(lexed.has_value()) << lexed.error();
@@ -1459,7 +1465,56 @@ TEST_F(WorkspaceRepl, YearKey2ExportsTheYearAsAnSieFile) {
   auto const plan = cratchit::books::plan_import(*books, {"Test AB", "556000-0001"}, parsed.document);
   EXPECT_TRUE(plan.errors.empty());
   EXPECT_EQ(plan.vouchers_added, 0u);
-  EXPECT_EQ(read_file(folder / "sie_2025_2.se"), text);
+  EXPECT_EQ(read_file(folder / "sie_2025_all_2.se"), text);
+}
+
+TEST_F(WorkspaceRepl, YearKey2DiffExportsTheVouchersNotInAnSieFile) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny10");
+  auto const folder = root / "start" / "Test";
+  // Compared with the last import: nothing new yet
+  auto const same = run("221");
+  EXPECT_NE(same.find("export?> 2\n"
+                      "Export the vouchers of the books that are not in an SIE file of the same fiscal year, e.g. the\n"
+                      "other program's latest export. Compare with:\n"
+                      "  1  The last import of the year: 2026-10-20_1_test.se\n"
+                      "  2  Choose an SIE file\n"
+                      "diff?> 1\n"
+                      "Compared with 2026-10-20_1_test.se (Test 1.0, generated 2026-10-19):\n"
+                      "  In the books, not in the file (0):\n"
+                      "  In the file, not in the books (0):\n"
+                      "Every voucher of fiscal year 2025-01-01 - 2025-12-31 is in the file. Nothing to export.\n"
+                      "2025> "),
+            std::string::npos)
+      << same;
+  run("11Lunch 20 2025-04-04\nyd6570 20\n1930\n\n1");
+  auto const output = run("221y");
+  EXPECT_NE(output.find("  In the books, not in the file (1):\n"
+                        "    D 1     2025-04-04         20.00  Lunch\n"
+                        "  In the file, not in the books (0):\n"
+                        "Write sie_2025_diff.se? (y/n) y\n"
+                        "Wrote sie_2025_diff.se in " + folder.string() +
+                        ": fiscal year 2025-01-01 - 2025-12-31, 1 voucher, no balances (SIE 4E).\n"),
+            std::string::npos)
+      << output;
+  auto const text = read_file(folder / "sie_2025_diff.se");
+  EXPECT_NE(text.find("#VER D 1 20250404 \"Lunch\""), std::string::npos) << text;
+  EXPECT_EQ(text.find("#VER A "), std::string::npos) << text;
+  EXPECT_EQ(text.find("#IB "), std::string::npos) << text;
+  // A file with vouchers the books lack stops the export
+  write_sie(root / "start" / "ahead.se",
+            sie_test::sie_file(2025, sie_test::balanced_balances(),
+                               sie_test::sale_and_cost(2025) + "#VER A 3 20250701 \"Fee\"\r\n{\r\n"
+                                                               "#TRANS 6570 {} 5\r\n#TRANS 1930 {} -5\r\n}\r\n"));
+  auto const ahead = run("222ahead.se\n");
+  EXPECT_NE(ahead.find("  In the file, not in the books (1):\n"
+                       "    A 3     2025-07-01          5.00  Fee\n"
+                       "Nothing is exported: the file has vouchers the books lack, so the books are behind it. Import\n"
+                       "the file first (3 at the year prompt), then export again.\n2025> "),
+            std::string::npos)
+      << ahead;
+  EXPECT_FALSE(fs::exists(folder / "sie_2025_diff_2.se"));
 }
 
 TEST_F(WorkspaceRepl, YearKey3ImportsAnSieFileAndComesBackToTheYear) {

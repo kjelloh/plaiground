@@ -157,9 +157,10 @@ quarter). cratchit never overwrites one: when the name is taken it writes
 `moms_202512_2.eskd`, then `_3` and so on. cratchit does not read these files.
 
 Exporting a fiscal year (`2` at its prompt, see Exporting a fiscal year as an SIE
-file) writes `sie_2026-27.se` (or `sie_2025.se` for a calendar year) in the
+file) writes `sie_2026-27_all.se` or `sie_2026-27_diff.se` (`sie_2025_all.se`
+for a calendar year), named by what it holds, in the
 project folder in the same way, never overwriting an earlier export
-(`sie_2026-27_2.se`, ...). An SIE import that makes the file the truth of a
+(`sie_2026-27_all_2.se`, ...). An SIE import that makes the file the truth of a
 year writes such an export of the year first (see Making the file the truth).
 
 The project's books are in `.cratchit/books` in the project folder:
@@ -193,7 +194,7 @@ imported file, named `<date>_<n>_<file name>`, and next to it a record
 when the import made the file the truth of its year (see Making the file the
 truth), the vouchers `renamed` (e.g. `D 5 as D 7`), `replaced`, `dropped` and
 `demoted` (e.g. `A 12, D 4`) and `exported_before` (the export written just
-before, e.g. `sie_2026-27_3.se`).
+before, e.g. `sie_2026-27_all.se`).
 
 `.cratchit/statements` in the project folder keeps an unchanged copy of every
 imported account statement file, named `<date>_<n>_<file name>`, and next to
@@ -526,7 +527,7 @@ The prompt is the fiscal year: `2026/27>` for a year from 2026 into 2027, or
 | Key    | What it does                                        |
 |--------|-----------------------------------------------------|
 | 1      | Booking: entering and noting, the two waiting lists and the vouchers (see Booking, below). The key list shows how many waiting events and statement entries not yet booked the year has, both always, e.g. `Booking (waiting: 1 event, 7 statement entries)`. |
-| 2      | Exports the year as an SIE 4E file in the project folder (see Exporting a fiscal year as an SIE file). Also for a closed year. |
+| 2      | Exports the year as an SIE 4E file in the project folder: all of it, or the vouchers not in an SIE file you choose (see Exporting a fiscal year as an SIE file). Also for a closed year. |
 | 3      | Imports an SIE file, as `2` at `project>` (see Importing an SIE file). Any fiscal year's file, not only this one's. You come back here. |
 | 5      | Imports an account statement, only its entries in this year (see Importing an account statement). |
 | 7      | Shows the reports of this year (see Reports). `-` there comes back here. |
@@ -1437,7 +1438,7 @@ The file becomes the truth of fiscal year 2026-05-01 - 2027-04-30:
     D 4, D 5, D 6, D 7, D 8, A 12, A 13, A 14, A 15, A 16
     E 4, E 5, A 17, A 18, A 19, E 6, D 9, D 10
   The file was made 2026-10-19; 20 vouchers leaving the books were registered after that.
-  Before: the year is exported as sie_2026-27_3.se in the project folder.
+  Before: the year is exported as sie_2026-27_all.se in the project folder.
 Type revert and Enter to make the file the truth of this year, or Enter alone to import nothing.
 revert> 
 ```
@@ -1451,7 +1452,7 @@ Exporting a fiscal year as an SIE file), so nothing is lost, then imports the
 file and says what left the books:
 
 ```
-Wrote sie_2026-27_3.se in /Users/me/Documents/cratchit/The ITfied AB: fiscal year 2026-05-01 - 2027-04-30, 37 vouchers (SIE 4E).
+Wrote sie_2026-27_all.se in /Users/me/Documents/cratchit/The ITfied AB: fiscal year 2026-05-01 - 2027-04-30, 37 vouchers (SIE 4E).
 ...
 Imported 0 vouchers into fiscal year 2026-05-01 - 2027-04-30 (17 already in the books).
 Out of the books: 2 dropped, 18 now waiting events.
@@ -1498,13 +1499,27 @@ Unknown records in the file are ignored and noted, as SIE requires.
 
 ### Exporting a fiscal year as an SIE file
 
-`2` at a fiscal year's prompt writes the year as an SIE 4E file (the format
-Fortnox and other programs import) in the project folder:
+`2` at a fiscal year's prompt exports the year as an SIE 4E file (the format
+Fortnox and other programs import) in the project folder. It asks what to
+export (the prompt is `export?>`; `-` goes back to the year):
 
 ```
 2026/27> 2
-Wrote sie_2026-27.se in /Users/me/Documents/cratchit/The ITfied AB: fiscal year 2026-05-01 - 2027-04-30, 17 vouchers (SIE 4E).
+Export fiscal year 2026-05-01 - 2027-04-30 as an SIE file:
+  1  All: every voucher (17), with balances, as sie_2026-27_all.se
+  2  Diff: the vouchers not in an SIE file you choose, without balances
+export?> 1
+Wrote sie_2026-27_all.se in /Users/me/Documents/cratchit/The ITfied AB: fiscal year 2026-05-01 - 2027-04-30, 17 vouchers (SIE 4E).
 ```
+
+| Key | What it does |
+|-----|--------------|
+| 1   | All: the whole year with balances, as `sie_2026-27_all.se` (below). For a backup, or for a program that does not have the year yet. |
+| 2   | Diff: only the vouchers the books have and an SIE file of the same year lacks, as `sie_2026-27_diff.se` (see Exporting the diff). For a program that already has the year, such as Fortnox. |
+
+Fortnox imports every voucher in an SIE file, also those it already has. So
+send Fortnox a diff, never all of a year it has: that books every voucher
+twice.
 
 The file has, as Fortnox's own export does:
 
@@ -1528,8 +1543,56 @@ file for <U+ to find them, and correct the texts in the books.
 ```
 
 A second export of the same year is written next to the first
-(`sie_2026-27_2.se`); cratchit never overwrites a file. cratchit can import its
+(`sie_2026-27_all_2.se`); cratchit never overwrites a file. cratchit can import its
 own export again: it finds nothing new.
+
+#### Exporting the diff
+
+`2` at `export?>` asks what to compare with (the prompt is `diff?>`; `-` goes
+back to `export?>`):
+
+```
+Export the vouchers of the books that are not in an SIE file of the same fiscal year, e.g. the
+other program's latest export. Compare with:
+  1  The last import of the year: 2026-10-29_1_TheITfiedAB20261029_111636.se
+  2  Choose an SIE file
+diff?>
+```
+
+`1` takes the copy of the year's last SIE import (see The files); it is left
+out when the year has none. `2` asks for the path of an SIE file, typed from
+the start folder as for an import; a folder lists its SIE files to pick one.
+The file must be for the project's organisation number and the same fiscal
+year (year 0).
+
+A voucher of the books is in the file when the file has a voucher with the same
+date and the same rows (account and amount, struck rows not counted), whatever
+its series and number: the other program may have numbered it again. cratchit
+lists both differences:
+
+```
+Compared with TheITfiedAB20261029_111636.se (Fortnox 3.62.17, generated 2026-10-29):
+  In the books, not in the file (1):
+    D 4     2026-08-07        923.00  Fortnox Faktura
+  In the file, not in the books (0):
+Write sie_2026-27_diff.se? (y/n) y
+Wrote sie_2026-27_diff.se in /Users/me/Documents/cratchit/The ITfied AB: fiscal year 2026-05-01 - 2027-04-30, 1 voucher, no balances (SIE 4E).
+```
+
+The diff file has the identification, the accounts and those vouchers, but no
+balances (`#IB`, `#UB`, `#RES`), so the other program cannot take balances from
+a part of the year. When every voucher is in the file: `Every voucher of fiscal
+year ... is in the file. Nothing to export.`
+
+When the file has vouchers the books lack, the books are behind the other
+program, and a diff from them would be stale. Nothing is exported:
+`Nothing is exported: the file has vouchers the books lack, so the books are
+behind it. Import the file first (3 at the year prompt), then export again.`
+
+A round trip with Fortnox: export the diff against Fortnox's latest export (or
+the last import, when nothing was booked in Fortnox since), import it in
+Fortnox, then export the year from Fortnox and import that into cratchit. The
+vouchers come back under Fortnox's numbers (see Making the file the truth).
 
 ### Importing an account statement
 
@@ -1964,7 +2027,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, an import that made the file the truth of a year (and each voucher it renamed, replaced, dropped or made a waiting event, in full), each waiting event an import took off the waiting list, a deleted voucher (in full), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, an import that made the file the truth of a year (and each voucher it renamed, replaced, dropped or made a waiting event, in full), each waiting event an import took off the waiting list, a deleted voucher (in full), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file (all, or the diff with a file), a diff export refused as the file has vouchers the books lack, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, an eSKD or SIE file it could not write, or an SIE export with characters CP437 does not have. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 
