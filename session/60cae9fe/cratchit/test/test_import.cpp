@@ -108,6 +108,82 @@ TEST(Import, IdenticalVouchersAreSkipped) {
   EXPECT_EQ(plan.books.years[0].vouchers, books.years[0].vouchers);
 }
 
+namespace {
+
+// A 1 as cratchit writes it (each row dated, the bank row on its own day when given) and as Fortnox does (no row
+// dates, quantity 0)
+std::string sale_as_cratchit(std::string_view bank_date = "20250201") {
+  return sie_file(2025, "",
+                  std::format("#VER A 1 20250201 \"Sale\" 20250205\r\n{{\r\n#TRANS 1930 {{}} 500.00 {} \"Sale\"\r\n"
+                              "#TRANS 3010 {{}} -500.00 20250201 \"\"\r\n}}\r\n",
+                              bank_date));
+}
+
+std::string sale_as_fortnox(std::string_view voucher_date = "20250201") {
+  return sie_file(2025, "",
+                  std::format("#VER A 1 {} \"Sale\" 20250205\r\n{{\r\n#TRANS 1930 {{}} 500.00 \"\" \"Sale\" 0\r\n"
+                              "#TRANS 3010 {{}} -500.00 \"\" \"\" 0\r\n}}\r\n",
+                              voucher_date));
+}
+
+} // namespace
+
+TEST(Import, AVoucherWrittenAnotherWayIsTheSame) {
+  auto const books = imported({sale_as_cratchit()});
+  auto const plan = plan_import(books, known, parse_sie(sale_as_fortnox()));
+  EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+  EXPECT_FALSE(plan.reverts());
+  EXPECT_EQ(plan.vouchers_known, 1u);
+  EXPECT_TRUE(cratchit::books::nothing_to_import(books, plan));
+  EXPECT_EQ(plan.books.years[0].vouchers, books.years[0].vouchers); // the books keep their own way
+  EXPECT_TRUE(std::ranges::none_of(plan.notes, [](std::string const& note) { return note.starts_with("Voucher"); }))
+      << all(plan.notes);
+  // The other way round too
+  auto const theirs = imported({sale_as_fortnox()});
+  EXPECT_TRUE(cratchit::books::nothing_to_import(theirs, plan_import(theirs, known, parse_sie(sale_as_cratchit()))));
+  // A quantity is a difference
+  auto quantity = sale_as_fortnox();
+  quantity.replace(quantity.find("\"Sale\" 0"), 8, "\"Sale\" 2");
+  EXPECT_TRUE(plan_import(books, known, parse_sie(quantity)).reverts());
+}
+
+TEST(Import, ARowDateTheFileLacksIsKept) {
+  // The bank row on 2025-02-03, the day the money came; the voucher on 2025-02-01
+  auto const books = imported({sale_as_cratchit("20250203")});
+  auto const plan = plan_import(books, known, parse_sie(sale_as_fortnox()));
+  EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+  EXPECT_FALSE(plan.reverts());
+  EXPECT_TRUE(cratchit::books::nothing_to_import(books, plan));
+  EXPECT_TRUE(has(plan.notes, "Voucher A 1: kept 1 row date the file lacks")) << all(plan.notes);
+  EXPECT_EQ(plan.books.years[0].vouchers, books.years[0].vouchers);
+  // With history added in the file, the changed voucher keeps the date
+  auto added = sale_as_fortnox();
+  added.replace(added.find("}\r\n", added.find("#VER")), 3,
+                "#RTRANS 6570 {} 1 \"\" \"\" 0 \"KO\"\r\n#TRANS 6570 {} 1 \"\" \"\" 0\r\n"
+                "#RTRANS 1930 {} -1 \"\" \"\" 0 \"KO\"\r\n#TRANS 1930 {} -1 \"\" \"\" 0\r\n}\r\n");
+  auto const changed = plan_import(books, known, parse_sie(added));
+  EXPECT_TRUE(changed.errors.empty()) << all(changed.errors);
+  EXPECT_EQ(changed.vouchers_changed, 1u);
+  EXPECT_EQ(changed.books.years[0].vouchers[0].postings[0].date, 2025y / February / 3);
+  // A date the file gives wins
+  auto other = sale_as_fortnox();
+  other.replace(other.find("500.00 \"\" \"Sale\""), 16, "500.00 20250204 \"Sale\"");
+  EXPECT_TRUE(plan_import(books, known, parse_sie(other)).reverts());
+  // The voucher date edited in the file: the bank row keeps its own day, the row dated as the voucher follows
+  auto const edited = plan_import(books, known, parse_sie(sale_as_fortnox("20250202")));
+  EXPECT_TRUE(edited.errors.empty()) << all(edited.errors);
+  EXPECT_EQ(edited.vouchers_changed, 1u);
+  auto const& rows = edited.books.years[0].vouchers[0].postings;
+  EXPECT_EQ(rows[0].date, 2025y / February / 3);
+  EXPECT_FALSE(rows[1].date.has_value());
+  // Renamed: the file numbered it A 7, the bank row keeps its day
+  auto renamed = sale_as_fortnox();
+  renamed.replace(renamed.find("#VER A 1 "), 9, "#VER A 7 ");
+  auto const moved = plan_import(books, known, parse_sie(renamed));
+  EXPECT_EQ(moved.renamed, std::vector<std::string>{"A 1 as A 7"});
+  EXPECT_EQ(moved.books.years[0].vouchers[0].postings[0].date, 2025y / February / 3);
+}
+
 TEST(Import, AnImportedVoucherCarriesItsDebitTotalAsAmount) {
   auto const books = imported({sie_file(2025, "", "#VER A 1 20250201 \"Sale\" 20250205\n{\n#TRANS 1930 {} 500.00\n"
                                                   "#TRANS 3010 {} -400.00\n#TRANS 2099 {} -100.00\n}\n")});

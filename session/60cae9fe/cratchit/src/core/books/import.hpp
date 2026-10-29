@@ -80,7 +80,9 @@ struct Forcing {
 // - Fiscal year: a new year must not overlap a year in the books; a year with
 //   the same start must have the same end.
 // - Vouchers: the file is the truth of its year 0. One already in the books (same
-//   series and number) is skipped when identical. It is taken from the file (and
+//   series and number) is skipped when it means the same: a row dated as its
+//   voucher counts as having no date, a zero quantity as none (Fortnox writes
+//   them so). It is taken from the file (and
 //   noted) when only history is added: the same registration and signature (the
 //   date and text may be edited), each row of the books in its place unchanged or
 //   struck (#BTRANS), a struck row still struck, and any further rows added
@@ -99,6 +101,11 @@ struct Forcing {
 //   closed year is an error. Each voucher the file puts in place (added,
 //   renamed or replaced) takes one waiting event with the same date and
 //   counted postings off the year's waiting list (waiting_booked).
+//   Row dates the file is silent about are kept: a row of a voucher the file
+//   puts in place (or leaves as it is) that has no date in the file takes the
+//   date of a row of the books' voucher with the same account and amount, when
+//   that date is the row's own (not its voucher's date), e.g. a bank's date from
+//   a statement entry. A date the file gives wins. Each kept date is noted.
 // - Accounts, dimensions, objects and company details: new ones are added;
 //   changes are taken (and noted) only from a file whose year is the latest in
 //   the books, so an older file does not undo newer names.

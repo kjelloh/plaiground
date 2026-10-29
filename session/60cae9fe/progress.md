@@ -816,6 +816,18 @@ Manual: files, year table, revert examples, "Exporting a fiscal year as an SIE f
 ITfied AB (with the 17 copies from the Fortnox round trip): diff with the last import (Fortnox, 34 vouchers): nothing to
 export; with TheITfiedAB20261019_105108.se: exactly the 17 copies. In review.
 
+Task 82: SIE import compares vouchers by meaning and keeps row dates the file lacks (redone from commit a19c396 after an
+interrupted attempt left stale code). `meaning_of(voucher)`: a row dated as its voucher has no date, a zero quantity
+(`no_quantity`, Fortnox writes 0) is none; used for "already in the books" (the books keep their own spelling, nothing
+written) and the history rule (`not_extended`, `change_text`). `with_kept_dates(books, file)`: a file row without a date
+takes the date of a books row with the same account and amount whose date is its own (not the books' voucher date), each
+books row once; applied to the same series and number (known, changed, forced) and to renamed and replaced vouchers;
+noted `Voucher A 11: kept 1 row date the file lacks`. A date in the file wins; a row dated as its voucher follows the
+file's voucher date. Tests `AVoucherWrittenAnotherWayIsTheSame`, `ARowDateTheFileLacksIsKept` (known, history added,
+the file's own date, an edited voucher date, renamed). Manual: What the import does. 498 tests pass, no warnings
+(Debug, trace DEBUG). Checked on a scratch copy of The ITfied AB: sie_2026-27_all_2.se (cratchit's A 11 with row dates)
+and TheITfiedAB20261029_131150.se (Fortnox, no row dates, quantity 0) both give "Nothing to import". In review.
+
 ## Next
 
 Agreed next (2026-10-29): when an import drops vouchers that leave the books (revert), one identical in date and rows to
@@ -1042,6 +1054,10 @@ into a waiting event without making a voucher, several entries chosen at once.
   `sie_<year>_diff.se`. A diff is refused when the file has vouchers the books lack (the books are behind it: import
   first). No "not imported" export (the origin is not what the other program lacks). Fortnox imports every voucher of a
   file, so Fortnox gets a diff, never all of a year it has.
+
+- 2026-10-29: An SIE import compares vouchers by meaning (a row dated as its voucher has no date; a zero quantity is
+  none). The file is the truth for what it states; a row date it is silent about is kept from the books when it is
+  the row's own date (e.g. a bank date), so statement entries stay booked.
 
 - 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted
   cratchit's file without it.

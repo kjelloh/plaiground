@@ -51,6 +51,52 @@ std::string posting_text(Posting const& t) {
                      t.text.empty() ? "" : std::format(" \"{}\"", t.text));
 }
 
+// True when a quantity says nothing: empty, or zero however written (Fortnox writes 0)
+bool no_quantity(std::string const& quantity) {
+  return std::ranges::all_of(quantity, [](char c) { return c == '0' || c == '-' || c == '+' || c == '.' || c == ','; });
+}
+
+// The voucher as it means: a row dated as its voucher has no date of its own, and a zero quantity is none, so two
+// programs' ways of writing the same voucher compare equal
+Voucher meaning_of(Voucher voucher) {
+  for (auto& posting : voucher.postings) {
+    if (posting.date == voucher.event.date) {
+      posting.date.reset();
+    }
+    if (no_quantity(posting.quantity)) {
+      posting.quantity.clear();
+    }
+  }
+  return voucher;
+}
+
+// The file's voucher with the row dates of the books' voucher that the file is silent about: a row of the file
+// without a date takes the date of a row of the books with the same account and amount whose date is its own (not
+// the books' voucher date), e.g. the bank's date from a statement entry; each row of the books gives one date.
+// The number of dates kept, too.
+std::pair<Voucher, std::size_t> with_kept_dates(Voucher const& books, Voucher file) {
+  std::vector<bool> used(books.postings.size(), false);
+  std::size_t kept = 0;
+  for (auto& row : file.postings) {
+    if (row.date) {
+      continue;
+    }
+    for (std::size_t i = 0; i < books.postings.size(); ++i) {
+      auto const& own = books.postings[i];
+      if (!used[i] && own.account == row.account && own.amount == row.amount && own.date &&
+          *own.date != books.event.date) {
+        used[i] = true;
+        if (*own.date != file.event.date) {
+          row.date = own.date;
+          ++kept;
+        }
+        break;
+      }
+    }
+  }
+  return {std::move(file), kept};
+}
+
 // The same row but for its kind and signature, e.g. a row and the same row struck
 bool same_row(Posting const& a, Posting const& b) {
   return a.account == b.account && a.objects == b.objects && a.amount == b.amount && a.date == b.date &&
@@ -323,7 +369,14 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
     }
   };
 
-  // The same series and number: identical, history added, or forced
+  auto const note_kept = [&](Voucher const& voucher, std::size_t kept) {
+    if (kept > 0) {
+      plan.notes.push_back(std::format("Voucher {}: kept {} row date{} the file lacks", voucher_name(voucher), kept,
+                                       kept == 1 ? "" : "s"));
+    }
+  };
+
+  // The same series and number: the same meaning, history added, or forced
   for (std::size_t f = 0; f < file.size(); ++f) {
     auto& voucher = file[f];
     auto const it = std::ranges::find_if(year.vouchers, [&](Voucher const& v) {
@@ -334,9 +387,13 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
     }
     auto const b = static_cast<std::size_t>(it - year.vouchers.begin());
     same_key[f] = b;
-    if (*it == voucher) {
-      ++plan.vouchers_known;
-    } else if (auto const reason = not_extended(*it, voucher)) {
+    auto [kept_voucher, kept] = with_kept_dates(*it, voucher);
+    auto const books_meaning = meaning_of(*it);
+    auto const file_meaning = meaning_of(kept_voucher);
+    if (books_meaning == file_meaning) {
+      ++plan.vouchers_known; // the books keep their own way of writing it
+      note_kept(voucher, kept);
+    } else if (auto const reason = not_extended(books_meaning, file_meaning)) {
       if (!(forcing.force && !year.closed && forcing.imported.contains({year.start, voucher.series, voucher.number}))) {
         continue; // see below
       }
@@ -344,15 +401,19 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
                                        voucher_name(voucher), *reason));
       plan.forced.push_back(std::format("{} in fiscal year {}: in the books {}; in the file {}", voucher_name(voucher),
                                         year_text(year), voucher_text(*it), voucher_text(voucher)));
-      *it = voucher;
+      *it = std::move(kept_voucher);
+      note_kept(voucher, kept);
       ++plan.vouchers_forced;
     } else if (year.closed) {
       plan.errors.push_back(std::format("Voucher {} in the file changes the one in the books ({}), but fiscal year {} "
                                         "is closed. Open the year to import the change",
-                                        voucher_name(voucher), change_text(*it, voucher), year_text(year)));
+                                        voucher_name(voucher), change_text(books_meaning, file_meaning),
+                                        year_text(year)));
     } else {
-      plan.notes.push_back(std::format("Voucher {} changes: {}", voucher_name(voucher), change_text(*it, voucher)));
-      *it = voucher;
+      plan.notes.push_back(
+          std::format("Voucher {} changes: {}", voucher_name(voucher), change_text(books_meaning, file_meaning)));
+      *it = std::move(kept_voucher);
+      note_kept(voucher, kept);
       ++plan.vouchers_changed;
     }
     fate[b] = Fate::stays;
@@ -448,10 +509,13 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
       vouchers.push_back(std::move(year.vouchers[b]));
       break;
     case Fate::renamed:
-    case Fate::replaced:
+    case Fate::replaced: {
       from_file.push_back(&file[*taken_by[b]]);
-      vouchers.push_back(file[*taken_by[b]]);
+      auto [kept_voucher, kept] = with_kept_dates(year.vouchers[b], file[*taken_by[b]]);
+      note_kept(kept_voucher, kept);
+      vouchers.push_back(std::move(kept_voucher));
       break;
+    }
     case Fate::demoted:
       demoted.push_back(waiting_of(year.vouchers[b]));
       break;

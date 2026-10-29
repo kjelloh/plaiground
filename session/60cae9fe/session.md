@@ -168,7 +168,23 @@ So now the round trip test is to add one voucher to the books and do a 'diff' SI
     * Although Fortnox is BUGGY (hangs on import and exported once the OLD books!)
     * A refresh web page and new export from Fortnox made SIE file actually contain new A11 *SIGH*
 
+I now discovered cratchit cared about posting date in the imported SIE file.
 
+* I asked Claude to loosen up 'sameness' to now care when the 'meaning' is the same.
+* I did a new round trip with the changed Cratchit - and is seems it now comes bask 'the same'
+
+```text
+sie?> 5
+SIE file /Users/kjell-olovhogdahl/Downloads/TheITfiedAB20261029_133623.se
+  Read as      CP437
+  Program      Fortnox 3.62.17, generated 2026-10-29
+  Company      The ITfied AB, 556782-8172
+  Fiscal year  2026-05-01 - 2027-04-30
+  Accounts     500: 0 new, 0 changed
+  Vouchers     19: 0 new, 19 already in the books
+Everything in the file is already in the books. Nothing to import.
+2026/27> 
+```
 
 ## 20261028
 

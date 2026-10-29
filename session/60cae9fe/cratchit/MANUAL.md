@@ -1363,7 +1363,9 @@ and nothing is imported.
   the books, or starts the same day but ends another, is an error.
 - The file is the truth of its fiscal year (year 0). New vouchers are added.
   A voucher already in the books (same series and number) is skipped when it
-  is identical. It is taken from the file when only history was added to it:
+  means the same: programs write a voucher differently, so a row dated as its
+  voucher counts as a row without a date, and a quantity of `0` as none
+  (Fortnox writes no row dates and quantity `0`). It is taken from the file when only history was added to it:
   its registration date and signature are the same (its date and text may have
   been edited), each of its rows in the books is in the file in the same place,
   unchanged or struck (`#BTRANS`), a struck row is still struck, and any
@@ -1374,6 +1376,13 @@ and nothing is imported.
   and the summary says `Vouchers 116: 0 new, 1 changed, 115 already in the
   books`. A change to a voucher of a closed fiscal year is an error: open the
   year (8 at the year prompt) and import again.
+- A row date the file is silent about is kept. When a row in the books has a
+  date of its own (another day than its voucher, e.g. the bank's day from a
+  statement entry) and the file's row with the same account and amount has no
+  date, the voucher keeps the books' date, noted as `Voucher A 11: kept 1 row
+  date the file lacks`. So statement entries stay booked after a round trip. A
+  date the file gives wins, and a row dated as its voucher follows the
+  voucher's date in the file.
 - Any other difference between the year's vouchers in the books and in the
   file (a voucher that differs otherwise, or one the file lacks) makes the file
   the truth only when you type `revert` (see Making the file the truth).
