@@ -29,14 +29,14 @@ std::expected<std::vector<BoxText>, std::string> box_texts(std::string_view text
     if (row.size() < 3 || row[1].empty() || row[2].empty()) {
       return std::unexpected(std::format("Row {}: box {} has no section or title", i + 1, box));
     }
-    texts.push_back({box, row[1], row[2]});
+    std::string description = row.size() > 3 ? row[3] : std::string{};
+    std::erase(description, '\r');
+    texts.push_back({box, row[1], row[2], std::move(description)});
   }
   return texts;
 }
 
-namespace {
-
-std::vector<BoxText> const& built_in() {
+std::vector<BoxText> const& built_in_box_texts() {
   static auto const texts = [] {
     auto parsed = box_texts(box_texts_text());
     if (!parsed) {
@@ -48,16 +48,14 @@ std::vector<BoxText> const& built_in() {
   return texts;
 }
 
-} // namespace
-
 std::size_t form_position(Box const& box) {
-  auto const& texts = built_in();
+  auto const& texts = built_in_box_texts();
   auto const it = std::ranges::find(texts, box, &BoxText::box);
   return it == texts.end() ? texts.size() : static_cast<std::size_t>(it - texts.begin());
 }
 
 std::optional<BoxText> text_of(Box const& box, Amount amount) {
-  auto const& texts = built_in();
+  auto const& texts = built_in_box_texts();
   std::vector<BoxText const*> found;
   for (auto const& text : texts) {
     if (text.box == box) {

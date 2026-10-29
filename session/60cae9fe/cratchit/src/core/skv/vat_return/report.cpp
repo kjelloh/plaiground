@@ -1,6 +1,7 @@
 #include "core/skv/vat_return/report.hpp"
 
 #include "core/skv/vat_return/box_texts.hpp"
+#include "core/skv/vat_return/review.hpp"
 
 #include <algorithm>
 #include <format>
@@ -22,22 +23,6 @@ std::string row(std::string_view box, std::string_view account, std::string_view
 
 // A box title longer than this many characters is cut, so the report's lines stay readable in a terminal
 constexpr std::size_t max_title = 45;
-
-// The text cut to at most max characters (code points), ending with ... when cut
-std::string cut(std::string_view text, std::size_t max) {
-  auto const starts = [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; };
-  if (static_cast<std::size_t>(std::ranges::count_if(text, starts)) <= max) {
-    return std::string(text);
-  }
-  std::size_t characters = 0;
-  std::size_t end = 0;
-  for (; end < text.size(); ++end) {
-    if (starts(text[end]) && characters++ == max - 3) {
-      break;
-    }
-  }
-  return std::string(text.substr(0, end)) + "...";
-}
 
 // The text of the voucher a posting is in, if the books have it
 std::string heading_of(books::Books const& books, VoucherPosting const& posting) {
@@ -132,7 +117,7 @@ std::vector<std::string> report_of(books::Books const& books, Document const& do
     lines.push_back("");
     head(box.box);
     auto const text = text_of(box.box, box.amount);
-    lines.push_back(row(box.box, "", "", "", format_amount(box.amount), text ? cut(text->title, max_title) : ""));
+    lines.push_back(row(box.box, "", "", "", format_amount(box.amount), text ? cut_text(text->title, max_title) : ""));
     for (auto const& account : box.accounts) {
       auto const* known = books.account(account.account);
       lines.push_back(row("", account.account, "", "", format_amount(account.amount), known ? known->name : ""));

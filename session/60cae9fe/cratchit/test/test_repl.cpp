@@ -966,10 +966,12 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "Nothing to clear: the VAT accounts add up to 0.00 in 2025 Q1.\n"
                         "\n"
                         "  2  Show the report again\n"
+                        "  4  Review the boxes against SKV's descriptions\n"
                         "2025 Q1> x\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"
                         "2025 Q1> \nChecks of 2025 Q1: nothing found.\n\nNothing to clear: the VAT accounts add up to 0.00 in 2025 Q1.\n"
                         "\n"
                         "  2  Show the report again\n"
+                        "  4  Review the boxes against SKV's descriptions\n"
                         "2025 Q1> -\n" +
                         quarters + "period?> 2\n"),
             std::string::npos)
@@ -1011,7 +1013,8 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
                                "\n"
                                "  1  Book it as M 2\n"
                                "  2  Show the report again\n"
-                               "  3  Write the eSKD file only (no voucher, e.g. to test it)\n";
+                               "  3  Write the eSKD file only (no voucher, e.g. to test it)\n"
+                               "  4  Review the boxes against SKV's descriptions\n";
   // Box amounts as on the form (credit positive), accounts and vouchers as in the books
   EXPECT_NE(output.find("05                                         2000.00  Momspliktig försäljning som inte ingår i r...\n"
                         "     3001                                 -2000.00  Sales 25%\n"
@@ -1038,7 +1041,7 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
 
   // Cleared now: nothing more to clear
   EXPECT_TRUE(output.ends_with("Checks of 2025 Q4: nothing found.\n\nNothing to clear: the VAT accounts add up to 0.00 in 2025 Q4.\n\n"
-                              "  2  Show the report again\n2025 Q4> \n"))
+                              "  2  Show the report again\n  4  Review the boxes against SKV's descriptions\n2025 Q4> \n"))
       << output;
   auto const books = cratchit::books::read_books(folder);
   ASSERT_TRUE(books) << books.error();
@@ -1086,6 +1089,49 @@ TEST_F(WorkspaceRepl, VatReturnWritesTheEskdFileWithoutAVoucher) {
   EXPECT_EQ(books->years[0].vouchers.back().series, "A"); // no M 2
 }
 
+TEST_F(WorkspaceRepl, VatReturnBoxesAreReviewedAgainstSkvsDescriptions) {
+  run("112Test\n1");
+  write_sie(root / "start" / "vat.se", vat_sie());
+  run("2vat.se\ny");
+  auto const output = run("514041><<x\n--");
+  auto const list = std::string{
+      "Boxes of 2025 Q4 to review against SKV's descriptions (every box of a section with postings):\n"
+      "  1  05  Momspliktig försäljning som inte ingår i r...     1 posting\n"
+      "  2  06  Momspliktiga uttag                              no postings\n"
+      "  3  07  Beskattningsunderlag vid vinstmarginalbesk...   no postings\n"
+      "  4  08  Hyresinkomster vid frivillig beskattning        no postings\n"
+      "  5  10  Utgående moms 25%                                 1 posting\n"
+      "  6  11  Utgående moms 12%                               no postings\n"
+      "  7  12  Utgående moms 6%                                no postings\n"};
+  EXPECT_NE(output.find("  4  Review the boxes against SKV's descriptions\n2025 Q4> 4\n" + list +
+                        "review?> 1\n"
+                        "Box 05  Momspliktig försäljning som inte ingår i ruta 06, 07 eller 08\n"
+                        "Section: Momspliktig försäljning eller uttag\n"
+                        "On the form: 2000.00\n"
+                        "Accounts and vouchers as in the books (debit positive, credit negative):\n"
+                        "  3001         -2000.00  Sales 25%\n"
+                        "        B 2     2025-11-05       -2000.00  Sale\n"
+                        "Other accounts that report in box 05, without postings:\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("SKV's description of box 05:\nMomspliktig försäljning som inte ingår i ruta 06, 07 eller 08\n"),
+            std::string::npos)
+      << output;
+  // > and < step through the list; at its ends cratchit says so
+  EXPECT_NE(output.find("  1  Show box 05 again\nbox 05> >\nBox 06  Momspliktiga uttag\n"
+                        "Section: Momspliktig försäljning eller uttag\nNo postings in 2025-10-01 - 2025-12-31.\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("box 06> <\nBox 05  "), std::string::npos) << output;
+  EXPECT_NE(output.find("box 05> <\nThis is the first box in the list.\n"
+                        "box 05> x\nUnknown key. Other keys: Enter list, < previous box, > next box, - back, h help, "
+                        "q quit.\n"
+                        "box 05> \n  1  Show box 05 again\n"
+                        "box 05> -\n" + list + "review?> -\nChecks of 2025 Q4: nothing found.\n"),
+            std::string::npos)
+      << output;
+}
+
 TEST_F(WorkspaceRepl, VatReturnWithoutOrgnrIsNotBooked) {
   run("112Test\n1");
   write_sie(root / "start" / "vat.se", vat_sie());
@@ -1107,6 +1153,7 @@ TEST_F(WorkspaceRepl, VatReturnWithoutOrgnrIsNotBooked) {
                         "booked or written. An SIE import sets it.\n"
                         "\n"
                         "  2  Show the report again\n"
+                        "  4  Review the boxes against SKV's descriptions\n"
                         "2025 Q4> 1\nUnknown key."),
             std::string::npos)
       << output;
@@ -1128,6 +1175,7 @@ TEST_F(WorkspaceRepl, VatReturnOfAClosedYearIsNotBooked) {
                         "\n"
                         "  2  Show the report again\n"
                         "  3  Write the eSKD file only (no voucher, e.g. to test it)\n"
+                        "  4  Review the boxes against SKV's descriptions\n"
                         "2025 Q4> 1\nUnknown key. Other keys: Enter list, - back, h help, q quit.\n"),
             std::string::npos)
       << output;

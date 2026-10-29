@@ -84,6 +84,7 @@ add_library(cratchit_core
   ${CMAKE_CURRENT_BINARY_DIR}/generated/box_texts.cpp
   src/core/skv/vat_return/box_texts.cpp
   src/core/skv/vat_return/report.cpp
+  src/core/skv/vat_return/review.cpp
   src/core/skv/vat_return/steps.cpp
   src/core/statement/statement.cpp
   src/core/terminal.cpp

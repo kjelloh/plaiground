@@ -5,6 +5,7 @@
 #include "core/skv/vat_return/clearing.hpp"
 #include "core/skv/vat_return/document.hpp"
 #include "core/skv/vat_return/report.hpp"
+#include "core/skv/vat_return/review.hpp"
 #include "core/skv/vat_return/steps.hpp"
 
 #include <gtest/gtest.h>
@@ -428,8 +429,12 @@ TEST(VatReturnChecks, VatAccountsOutsideTheReturn) {
 TEST(VatReturnBoxTexts, TheBuiltInTextsRead) {
   auto const texts = box_texts(box_texts_text());
   ASSERT_TRUE(texts.has_value()) << texts.error();
-  EXPECT_EQ(texts->front(), (BoxText{"05", "Momspliktig försäljning eller uttag",
-                                     "Momspliktig försäljning som inte ingår i ruta 06, 07 eller 08"}));
+  EXPECT_EQ(texts->front().box, "05");
+  EXPECT_EQ(texts->front().section, "Momspliktig försäljning eller uttag");
+  EXPECT_EQ(texts->front().title, "Momspliktig försäljning som inte ingår i ruta 06, 07 eller 08");
+  EXPECT_TRUE(texts->front().description.starts_with("Momspliktig försäljning som inte ingår i ruta 06, 07 eller 08\nHär "))
+      << texts->front().description;
+  EXPECT_EQ(texts->front().description.find('\r'), std::string::npos);
   EXPECT_EQ(text_of("30")->title, "Utgående moms 25%");
   EXPECT_EQ(text_of("30")->section, "Momspliktiga inköp vid omvänd betalningsskyldighet");
   EXPECT_EQ(text_of("48")->title, "Ingående moms att dra av");
@@ -447,7 +452,7 @@ TEST(VatReturnBoxTexts, TextsOfAFile) {
                                "10;Sales;Output 25%;\"Long\r\ntext; with a separator\"\r\n"
                                ";;;\r\n");
   ASSERT_TRUE(texts.has_value()) << texts.error();
-  EXPECT_EQ(*texts, (std::vector<BoxText>{{"10", "Sales", "Output 25%"}}));
+  EXPECT_EQ(*texts, (std::vector<BoxText>{{"10", "Sales", "Output 25%", "Long\ntext; with a separator"}}));
   EXPECT_EQ(box_texts("1;Sales;Output\n").error(), "Row 1: the box is not two digits: 1");
   EXPECT_EQ(box_texts("Box;Section\n10;Sales;\n").error(), "Row 2: box 10 has no section or title");
 }
@@ -458,4 +463,79 @@ TEST(VatReturnBoxTexts, ALongTitleIsCutInTheReport) {
   // Övriga inköp av tjänster i Sverige som köparen är betalningsskyldig för: 45 characters with ..., å and ö as one
   EXPECT_NE(std::ranges::find(lines, "24                                          100.00  Övriga inköp av tjänster i Sverige som köp..."),
             lines.end());
+}
+
+TEST(VatReturnReview, WrapAndCut) {
+  EXPECT_EQ(wrap_text("aa bb cc", 5), (std::vector<std::string>{"aa bb", "cc"}));
+  EXPECT_EQ(wrap_text("x\n\ny", 5), (std::vector<std::string>{"x", "", "y"}));
+  EXPECT_EQ(wrap_text("a verylongword b", 4), (std::vector<std::string>{"a", "verylongword", "b"}));
+  EXPECT_EQ(wrap_text("åäö åäö", 7), (std::vector<std::string>{"åäö åäö"})); // characters, not bytes
+  EXPECT_EQ(cut_text("åäöåäö", 6), "åäöåäö");
+  EXPECT_EQ(cut_text("åäöåäöx", 6), "åäö...");
+}
+
+namespace {
+
+// Box 20 (base) and 48 (input VAT) of a reverse charge purchase booked without its output VAT, as A 48 2026
+Document a48_like() {
+  VoucherPosting const a48{2025y / May / 1, "A", "48", 2026y / March / 31, 0};
+  auto base = a48;
+  base.amount = 12400;
+  auto vat = a48;
+  vat.amount = 3100;
+  return {*quarter_of(2026y, 1),
+          {{"20", 12400, {{"9021", 12400, {base}}}}, {"48", 3100, {{"2645", 3100, {vat}}}}}};
+}
+
+} // namespace
+
+TEST(VatReturnReview, EveryBoxOfTheSectionsWithPostings) {
+  auto const boxes = review_boxes(a48_like());
+  std::vector<std::string> numbers;
+  for (auto const& box : boxes) {
+    numbers.push_back(box.box);
+  }
+  // Reverse charge (20-24, 30-32) and the VAT (48); box 49 is added up, not reviewed
+  EXPECT_EQ(numbers, (std::vector<std::string>{"20", "21", "22", "23", "24", "30", "31", "32", "48"}));
+  EXPECT_EQ(boxes[0], (ReviewBox{"20", "Inköp av varor från annat EU-land", 1}));
+  EXPECT_EQ(boxes[5], (ReviewBox{"30", "Utgående moms 25%", 0})); // the missing output VAT shows
+  EXPECT_EQ(boxes[8].title, "Ingående moms att dra av");
+}
+
+TEST(VatReturnReview, ABoxWithItsPostingsAndDescription) {
+  books::Books books;
+  books.accounts.push_back({"4515", "Inköp av varor från annat EU-land, 25 %", "", "", ""});
+  books.accounts.push_back({"9021", "Varuvärde Inköp annat EG-land", "", "", ""});
+  books.years.push_back({.start = 2025y / May / 1, .end = 2026y / April / 30});
+  books.years[0].vouchers.push_back(voucher("A", "48", 2026y / March / 31, {}));
+  books.years[0].vouchers[0].event.heading = "Kortköp LAMYSHOP";
+  auto const lines = review_of(books, a48_like(), "20");
+  ASSERT_GT(lines.size(), 11u);
+  EXPECT_EQ(std::vector<std::string>(lines.begin(), lines.begin() + 11),
+            (std::vector<std::string>{"Box 20  Inköp av varor från annat EU-land",
+                                      "Section: Momspliktiga inköp vid omvänd betalningsskyldighet",
+                                      "On the form: 124.00",
+                                      "Accounts and vouchers as in the books (debit positive, credit negative):",
+                                      "  9021           124.00  Varuvärde Inköp annat EG-land",
+                                      "        A 48    2026-03-31         124.00  Kortköp LAMYSHOP",
+                                      "Other accounts that report in box 20, without postings:",
+                                      "  4515  Inköp av varor från annat EU-land, 25 %",
+                                      "  4516  (not in the chart of accounts)",
+                                      "  4517  (not in the chart of accounts)",
+                                      ""}));
+  EXPECT_EQ(lines[11], "SKV's description of box 20:");
+  EXPECT_EQ(lines.back(), "");
+  EXPECT_TRUE(std::ranges::all_of(lines, [](std::string const& line) {
+    return std::ranges::count_if(line, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }) <= 80;
+  }));
+  // A box without postings: its accounts and description
+  auto const empty = review_of(books, a48_like(), "30");
+  EXPECT_EQ(empty[2], "No postings in 2026-01-01 - 2026-03-31.");
+  EXPECT_EQ(empty[3], "Accounts that report in box 30:");
+  EXPECT_EQ(empty[4], "  2614  (not in the chart of accounts)");
+  // One account a line
+  auto const sales = review_of(books, a48_like(), "05");
+  EXPECT_EQ(sales[3], "Accounts that report in box 05:");
+  EXPECT_EQ(sales[4], "  3001  (not in the chart of accounts)");
+  EXPECT_EQ(sales[5], "  3002  (not in the chart of accounts)");
 }

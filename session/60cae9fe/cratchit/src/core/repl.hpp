@@ -16,6 +16,7 @@
 #include "core/pager.hpp"
 #include "core/path_editor.hpp"
 #include "core/project.hpp"
+#include "core/skv/vat_return/review.hpp"
 #include "core/skv/vat_return/clearing.hpp"
 #include "core/skv/vat_return/document.hpp"
 #include "core/skv/vat_return/eskd.hpp"
@@ -91,6 +92,8 @@ private:
     Reports,
     VatPeriods,
     VatQuarter,
+    VatReview,
+    VatReviewBox,
     Paging,
     YearMenu,
     Year,
@@ -158,6 +161,8 @@ private:
     FlipTemplate,
     BookVatClearing,
     ShowVatReport,
+    ReviewVat,
+    ShowReviewBox,
     WriteVatEskd,
   };
   // What the text typed in the editor is for
@@ -216,6 +221,9 @@ private:
   std::optional<skv::vat_return::Period> vat_next_;    // the last period ended before today: the one to report next
   skv::vat_return::Steps vat_steps_;    // the steps of every quarter of the books
   std::vector<books::OpenEntry> vat_open_entries_; // the statement entries not yet booked, for the checks
+  std::vector<skv::vat_return::ReviewBox> review_boxes_; // the boxes of the quarter to review against SKV's text
+  ItemList review_page_;                // the page of their list
+  std::size_t review_box_ = 0;          // the box shown, an index into review_boxes_
   ItemList vat_period_page_{ItemList::Start::Zero}; // the page of the VAT return periods, key 0 the newest ended
   skv::vat_return::Period vat_quarter_;  // the ended period chosen, shown with its clearing voucher
   skv::vat_return::Document vat_form_;  // its VAT return, as shown: the clearing voucher and the eSKD file come from it
@@ -312,6 +320,11 @@ private:
   void on_vat_periods_key(charset::unicode::CodePoint key, std::ostream& out);
   void show_vat_report(std::ostream& out);
   void show_vat_quarter(std::ostream& out) const;
+  void open_vat_review(std::ostream& out);
+  void show_vat_review(std::ostream& out) const;
+  void on_vat_review_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_review_box(std::ostream& out);
+  void on_vat_review_box_key(charset::unicode::CodePoint key, std::ostream& out);
   void on_vat_quarter_key(charset::unicode::CodePoint key, std::ostream& out);
   void book_vat_clearing(std::ostream& out);
   void write_vat_eskd(bool booked, std::ostream& out);

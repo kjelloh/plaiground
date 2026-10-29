@@ -70,7 +70,9 @@ std::expected<std::map<std::string, Box>, std::string> account_boxes(std::string
   return boxes;
 }
 
-std::optional<Box> box_of(std::string_view account) {
+namespace {
+
+std::map<std::string, Box> const& built_in_boxes() {
   static auto const boxes = [] {
     auto parsed = account_boxes(account_boxes_text());
     if (!parsed) {
@@ -79,6 +81,23 @@ std::optional<Box> box_of(std::string_view account) {
     }
     return *std::move(parsed);
   }();
+  return boxes;
+}
+
+} // namespace
+
+std::vector<std::string> accounts_of(Box const& box) {
+  std::vector<std::string> accounts;
+  for (auto const& [account, of] : built_in_boxes()) {
+    if (of == box) {
+      accounts.push_back(account);
+    }
+  }
+  return accounts;
+}
+
+std::optional<Box> box_of(std::string_view account) {
+  auto const& boxes = built_in_boxes();
   if (auto const found = boxes.find(std::string(account)); found != boxes.end()) {
     return found->second;
   }

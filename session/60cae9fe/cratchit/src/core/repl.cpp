@@ -244,6 +244,12 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::VatQuarter:
     on_vat_quarter_key(key, out);
     break;
+  case Mode::VatReview:
+    on_vat_review_key(key, out);
+    break;
+  case Mode::VatReviewBox:
+    on_vat_review_box_key(key, out);
+    break;
   case Mode::ChooseAmount:
     on_choose_amount_key(key, out);
     break;
@@ -354,6 +360,8 @@ bool Repl::shows_on_enter() const {
   case Mode::Reports:
   case Mode::VatPeriods:
   case Mode::VatQuarter:
+  case Mode::VatReview:
+  case Mode::VatReviewBox:
   case Mode::YearMenu:
   case Mode::ChooseAmount:
   case Mode::Postings:
@@ -412,6 +420,12 @@ void Repl::show_screen(std::ostream& out) {
     break;
   case Mode::VatQuarter:
     show_vat_quarter(out);
+    break;
+  case Mode::VatReview:
+    show_vat_review(out);
+    break;
+  case Mode::VatReviewBox:
+    show_operations(out);
     break;
   case Mode::ChooseAmount:
     show_readings(out);
@@ -582,7 +596,13 @@ Operations<Repl::Op> Repl::operations() const {
                Op::BookVatClearing, vat_clearing_.has_value() && !year.closed && !project_->orgnr.empty())
           .add(2, "Show the report again", Op::ShowVatReport)
           .add(3, "Write the eSKD file only (no voucher, e.g. to test it)", Op::WriteVatEskd,
-               vat_clearing_.has_value() && !project_->orgnr.empty());
+               vat_clearing_.has_value() && !project_->orgnr.empty())
+          .add(4, "Review the boxes against SKV's descriptions", Op::ReviewVat, !vat_form_.boxes.empty());
+    }
+    break;
+  case Mode::VatReviewBox:
+    if (review_box_ < review_boxes_.size()) {
+      operations.add(1, std::format("Show box {} again", review_boxes_[review_box_].box), Op::ShowReviewBox);
     }
     break;
   case Mode::Menu:
@@ -630,6 +650,14 @@ Operations<Repl::Op> Repl::operations() const {
     operations.other("Enter", "list")
         .other("<", "newer voucher")
         .other(">", "older voucher")
+        .other("-", "back")
+        .other("h", "help")
+        .other("q", "quit");
+    break;
+  case Mode::VatReviewBox:
+    operations.other("Enter", "list")
+        .other("<", "previous box")
+        .other(">", "next box")
         .other("-", "back")
         .other("h", "help")
         .other("q", "quit");
@@ -865,6 +893,12 @@ void Repl::on_operation(Op op, std::ostream& out) {
   case Op::ShowVatReport:
     show_vat_report(out);
     break;
+  case Op::ReviewVat:
+    open_vat_review(out);
+    break;
+  case Op::ShowReviewBox:
+    show_review_box(out);
+    break;
   case Op::FlipTemplate:
     draft_->flip_guide();
     apply_guide(out);
@@ -907,6 +941,10 @@ std::string Repl::prompt() const {
     return "period?> ";
   case Mode::VatQuarter:
     return skv::vat_return::quarter_name(vat_quarter_) + "> ";
+  case Mode::VatReview:
+    return "review?> ";
+  case Mode::VatReviewBox:
+    return review_box_ < review_boxes_.size() ? std::format("box {}> ", review_boxes_[review_box_].box) : "box> ";
   case Mode::Paging:
     return pager_.prompt();
   case Mode::YearMenu:
@@ -2145,6 +2183,72 @@ void Repl::show_vat_quarter(std::ostream& out) const {
   }
   std::println(out, "");
   show_operations(out);
+}
+
+// The boxes of the quarter's VAT return to review against SKV's descriptions
+void Repl::open_vat_review(std::ostream& out) {
+  review_boxes_ = skv::vat_return::review_boxes(vat_form_);
+  review_page_.reset();
+  mode_ = Mode::VatReview;
+  show_vat_review(out);
+}
+
+// Numbered from 1, each box with its title (cut) and its amount on the form, or that it has no postings
+void Repl::show_vat_review(std::ostream& out) const {
+  std::println(out, "Boxes of {} to review against SKV's descriptions (every box of a section with postings):",
+               skv::vat_return::quarter_name(vat_quarter_));
+  review_page_.show(review_boxes_.size(), out, [&](std::size_t index, std::size_t key) {
+    auto const& box = review_boxes_[index];
+    auto const title = skv::vat_return::cut_text(box.title, 45);
+    auto const padding = 45 - std::min<std::size_t>(45, static_cast<std::size_t>(std::ranges::count_if(
+                                                             title, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; })));
+    std::println(out, "  {}  {}  {}{}{:>14}", key, box.box, title, std::string(padding, ' '),
+                 box.postings == 0 ? std::string{"no postings"}
+                                   : std::format("{} posting{}", box.postings, box.postings == 1 ? "" : "s"));
+  });
+}
+
+void Repl::on_vat_review_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::VatQuarter;
+    show_vat_quarter(out);
+    return;
+  }
+  auto const pick = review_page_.on_key(key, review_boxes_.size());
+  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
+    show_vat_review(out);
+  } else if (pick.kind == ItemList::Pick::Kind::Item) {
+    review_box_ = pick.index;
+    mode_ = Mode::VatReviewBox;
+    show_review_box(out);
+  } else {
+    unknown_key(out);
+  }
+}
+
+// The box with its postings and SKV's description, paged; then its operations
+void Repl::show_review_box(std::ostream& out) {
+  mode_ = Mode::VatReviewBox;
+  show_report(skv::vat_return::review_of(books_, vat_form_, review_boxes_[review_box_].box), out);
+}
+
+void Repl::on_vat_review_box_key(charset::unicode::CodePoint key, std::ostream& out) {
+  if (key == U'-') {
+    mode_ = Mode::VatReview;
+    show_vat_review(out);
+  } else if (key == U'<' || key == U'>') {
+    auto const next = key == U'>';
+    if (next ? review_box_ + 1 >= review_boxes_.size() : review_box_ == 0) {
+      std::println(out, "This is the {} box in the list.", next ? "last" : "first");
+      return;
+    }
+    review_box_ = next ? review_box_ + 1 : review_box_ - 1;
+    show_review_box(out);
+  } else if (auto const op = operations().on_key(key)) {
+    on_operation(*op, out);
+  } else {
+    unknown_key(out);
+  }
 }
 
 void Repl::on_vat_quarter_key(charset::unicode::CodePoint key, std::ostream& out) {

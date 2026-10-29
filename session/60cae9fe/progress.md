@@ -855,9 +855,27 @@ Manual: The VAT return (example, texts, order). 508 tests pass, no warnings (Deb
 The ITfied AB: 2026 Q1 lists box 20 under "Momspliktiga inköp vid omvänd betalningsskyldighet" with no box 30 (A 48).
 In review.
 
-## Next
+Task 85: Review a quarter's boxes against SKV's descriptions (`core/skv/vat_return/review`). `BoxText::description`
+kept (CR dropped), `built_in_box_texts()`, `accounts_of(box)` (box.hpp, from the built-in mapping). `review_boxes(document)`:
+every box of the form's sections that have a box with postings, in the form's order, box 49 aside, each with its title
+(48 by sign) and its form amount or none. `review_of(books, document, box, width = 80)`: title, section, amount or "No
+postings in ...", accounts with sums and names and their vouchers with texts, the other accounts of the box without
+postings (numbers, wrapped), SKV's description wrapped (`wrap_text`, by code points), an empty line. `cut_text` moved
+from report.cpp to review (shared). REPL: quarter screen key 4 "Review the boxes against SKV's descriptions" (offered
+when the quarter has boxes); `review?>` (`Mode::VatReview`, ItemList, title cut to 45, amount or `no postings`); a box
+at `box 20>` (`Mode::VatReviewBox`), paged by the report pager, then `1  Show box 20 again`; `<` / `>` step, "This is the
+first/last box in the list."; `-` back to the list, then to the quarter. Read only, not logged. Tests
+`VatReturnReview.*` (3), `VatReturnBoxesAreReviewedAgainstSkvsDescriptions`, five REPL VAT tests take key 4. Manual:
+quarter screen (4), new "Reviewing the boxes against SKV's descriptions". 512 tests pass, no warnings (Debug, trace
+DEBUG). Checked on a copy of The ITfied AB: 2026 Q1 lists box 20 and 48 with amounts and box 30 `no postings`. In review.
+Task 85 change (after review): the list shows each box's number of postings (`1 posting`, `3 postings`, `no postings`),
+not its amount, which is 0.00 in a cleared quarter (`ReviewBox::postings`, was `amount`). The box view keeps "On the
+form: ...". Tests and manual example updated. 512 tests pass, no warnings.
+Task 85 change 2: the accounts of a box without postings are listed one a line with their name in the books' chart of
+accounts (`  4415  Inköpta varor i Sverige, ...`), `(not in the chart of accounts)` when the books lack the account (was
+numbers wrapped). Tests and manual updated. 512 tests pass, no warnings.
 
-Idea (2026-10-29): "review against specification": show a box's full description from momsrapport.csv on request.
+## Next
 
 Agreed next (2026-10-29): when an import drops vouchers that leave the books (revert), one identical in date and rows to
 a voucher that stays is dropped as a copy, not demoted; and a duplicate check on import (a new voucher in the file with

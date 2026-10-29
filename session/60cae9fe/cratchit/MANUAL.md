@@ -1920,6 +1920,7 @@ eSKD file moms_202512.eskd:
   1  Book it as M 2
   2  Show the report again
   3  Write the eSKD file only (no voucher, e.g. to test it)
+  4  Review the boxes against SKV's descriptions
 ```
 
 The voucher is made from the VAT return:
@@ -1964,12 +1965,13 @@ credit notes take it below zero).
 | 1     | Book the voucher as it is shown (it cannot be changed here) and write the eSKD file in the project folder: `Wrote moms_202512.eskd in <folder>. Upload it in Skatteverket's e-service Lämna momsdeklaration.` Then the quarters are listed again, the quarter now with its Cleared amount. If the file cannot be written, the voucher is still saved and cratchit says so. |
 | 2     | Show the quarter's VAT return again, then this screen.                 |
 | 3     | Write the eSKD file only, without booking the voucher: `Wrote moms_202512.eskd in <folder>. No voucher is booked: the VAT of 2025 Q4 is not cleared in the books.` You stay at the quarter. Use it to try the file in Skatteverket's e-service before you book. Each press writes a new file (`_2`, `_3`, ...); the name on the screen is the next one free (Enter shows it again). Also in a closed year, as the books do not change. |
+| 4     | Review the boxes against SKV's descriptions (see Reviewing the boxes against SKV's descriptions). Offered when the quarter has postings in any box. |
 | Enter | Show this screen again.                                              |
 | -     | Back to the quarters (`period?>`).                                   |
 
 When the VAT accounts already add up to zero in the quarter, for example
 because it is cleared, cratchit says `Nothing to clear: the VAT accounts add up
-to 0.00 in 2025 Q4.` and only 2 is offered. In a fiscal year closed for new
+to 0.00 in 2025 Q4.` and only 2 (and 4) is offered. In a fiscal year closed for new
 vouchers the voucher is shown, with a line saying it cannot be booked, and 1 is
 left out (3 is still offered). A project without an organisation number (`orgnr`,
 set by the first SIE import) gets neither 1 nor 3, as the eSKD file needs it.
@@ -1977,6 +1979,73 @@ set by the first SIE import) gets neither 1 nor 3, as the eSKD file needs it.
 Once booked, the quarter adds up to zero, so cratchit cannot write its eSKD file
 again from the books. Keep the file you uploaded; to try the file first, use 3
 before you book.
+
+#### Reviewing the boxes against SKV's descriptions
+
+`4` at the quarter lists the boxes to review (the prompt is `review?>`): every
+box of each section of the form that has a box with postings, in the form's
+order, with its title (cut to 45 characters) and how many postings it has, or
+`no postings`. The count, not the amount, as a cleared quarter adds up to 0.00 in
+its VAT boxes. So a box that should have postings but has none shows next to the
+ones that do: here box 30 (output VAT on the purchase) is missing next to box 20:
+
+```
+Boxes of 2026 Q1 to review against SKV's descriptions (every box of a section with postings):
+  1  20  Inköp av varor från annat EU-land                 1 posting
+  2  21  Inköp av tjänster från annat EU-land enlig...   no postings
+  ...
+  6  30  Utgående moms 25%                               no postings
+  ...
+  9  48  Ingående moms att dra av                         2 postings
+review?>
+```
+
+Box 49 is not listed: the form adds it up. With more than nine boxes, keys 1-8
+show eight at a time, `0` the ones before and `9` the ones after. `-` goes back
+to the quarter.
+
+A number shows the box (the prompt is the box, e.g. `box 20>`): its full title
+and section; its amount on the form, or that it has no postings; its accounts
+with their sums and names and the vouchers behind them with their texts (as in
+the books: debit positive, credit negative); the other accounts that report in
+the box (from `bas_to_momsrapport.csv`), without postings, one a line with its
+name in the books' chart of accounts (`(not in the chart of accounts)` when the
+books lack it); then SKV's description
+of the box (from `momsrapport.csv`), wrapped to 80 characters. A long box is
+paged with `--More--`.
+
+```
+Box 20  Inköp av varor från annat EU-land
+Section: Momspliktiga inköp vid omvänd betalningsskyldighet
+On the form: 124.00
+Accounts and vouchers as in the books (debit positive, credit negative):
+  9021           124.00  Varuvärde Inlöp annat EG-land (Momsrapport ruta 20)
+        A 48    2026-03-31         124.00  Kortköp 260330 SP LAMYSHOP
+Other accounts that report in box 20, without postings:
+  4515  Inköp av varor från annat EU-land, 25 %
+  4516  (not in the chart of accounts)
+  4517  (not in the chart of accounts)
+
+SKV's description of box 20:
+Inköp av varor från annat EU-land
+Fyll i det här fältet om du har köpt varor från ett annat EU-land som du själv
+ska redovisa den utgående momsen för.  ...
+
+  1  Show box 20 again
+box 20>
+```
+
+| Key   | What it does                                       |
+|-------|----------------------------------------------------|
+| 1     | Show the box again.                                |
+| >     | The next box in the list.                          |
+| <     | The box before in the list.                        |
+| Enter | Show the numbered choice again.                    |
+| -     | Back to the list of boxes.                         |
+
+At either end of the list cratchit says `This is the first box in the list.` or
+`This is the last box in the list.`. Nothing is changed or logged: the review is
+for reading.
 
 ## Using the prompt
 

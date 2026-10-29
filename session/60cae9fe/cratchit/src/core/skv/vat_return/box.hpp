@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 // SKV's VAT return (momsdeklaration): the boxes (rutor) of the form and the
 // amounts the books report in them for a period
@@ -32,6 +33,9 @@ inline constexpr std::string_view vat_to_pay_box = "49";
 inline constexpr std::array<std::string_view, 9> vat_to_pay_added{"10", "11", "12", "30", "31", "32", "60", "61", "62"};
 inline constexpr std::array<std::string_view, 1> vat_to_pay_subtracted{"48"};
 inline constexpr std::string_view vat_to_pay_expression = "10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48";
+
+// The accounts that report in a box (see box_of), by number
+std::vector<std::string> accounts_of(Box const& box);
 
 // True for an account that reports in one of vat_boxes
 bool is_vat_account(std::string_view account);
