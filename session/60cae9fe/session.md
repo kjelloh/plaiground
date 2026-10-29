@@ -155,6 +155,21 @@ THIS IS NOT GOOD!!
 
 Anyhow, I asked Claude to implement an 'all' or 'diff' option for the export SIE file.
 
+So now the round trip test is to add one voucher to the books and do a 'diff' SIE File roundtrip to Fortnox and back.
+
+* I used cratchit '9  Find matches among the waiting events' to find the duplicates now as events in cratchit.
+    * I manually removed the duplicates one-by-one
+    * We could use a cratchit batch-variant of this?
+    * On the other hand, this should not occur too often?
+* I booked A11 from the waiting events (demoted from previous revert to original SIE file)
+* I exported from cratchit and imported OK in Fortnox
+    * Fortnox discovered A11 in the file
+* I Exported and imported into cratchit again ok.
+    * Although Fortnox is BUGGY (hangs on import and exported once the OLD books!)
+    * A refresh web page and new export from Fortnox made SIE file actually contain new A11 *SIGH*
+
+
+
 ## 20261028
 
 * [Beräkning av mervärdesskatt vid öresavrundning](https://www4.skatteverket.se/rattsligvagledning/edition/2026.14/381778.html?utm_source=chatgpt.com)
