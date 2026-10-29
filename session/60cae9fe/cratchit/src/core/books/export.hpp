@@ -33,6 +33,9 @@ sie::Document export_document(Books const& books, Identity const& identity, std:
 // more sie_2026-27_2.se
 std::string export_file_name(FiscalYear const& year, int index = 1);
 
+// The first export_file_name of the year in the folder that is not taken
+std::filesystem::path free_export_file(std::filesystem::path const& folder, FiscalYear const& year);
+
 // Writes the bytes to the first export_file_name of the year in the folder that
 // is not taken, so an earlier export is never overwritten; the file written, or error text
 std::expected<std::filesystem::path, std::string> write_export(std::filesystem::path const& folder,

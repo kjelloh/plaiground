@@ -159,7 +159,8 @@ quarter). cratchit never overwrites one: when the name is taken it writes
 Exporting a fiscal year (`2` at its prompt, see Exporting a fiscal year as an SIE
 file) writes `sie_2026-27.se` (or `sie_2025.se` for a calendar year) in the
 project folder in the same way, never overwriting an earlier export
-(`sie_2026-27_2.se`, ...).
+(`sie_2026-27_2.se`, ...). An SIE import that makes the file the truth of a
+year writes such an export of the year first (see Making the file the truth).
 
 The project's books are in `.cratchit/books` in the project folder:
 
@@ -189,7 +190,10 @@ imported file, named `<date>_<n>_<file name>`, and next to it a record
 `<date>_<n>_<file name>.txt` of the import: `imported`, `source`, `encoding`,
 `program`, `generated`, `company`, `orgnr`, `year`, `vouchers_added`,
 `vouchers_changed`, `vouchers_known`, `notes` (the number of notes shown) and,
-after a forced import, `forced` (the forced vouchers, e.g. `A 1, E 25`).
+when the import made the file the truth of its year (see Making the file the
+truth), the vouchers `renamed` (e.g. `D 5 as D 7`), `replaced`, `dropped` and
+`demoted` (e.g. `A 12, D 4`) and `exported_before` (the export written just
+before, e.g. `sie_2026-27_3.se`).
 
 `.cratchit/statements` in the project folder keeps an unchanged copy of every
 imported account statement file, named `<date>_<n>_<file name>`, and next to
@@ -907,11 +911,10 @@ was flipped). A saved
 voucher is never changed or deleted. A wrong one is corrected with a new
 voucher (see Viewing and correcting vouchers).
 
-The vouchers you enter are the truth of the books. A later SIE import keeps
-them: a voucher in the books that the file lacks is noted, and a voucher in
-the file with the same series and number but other content is an error, so
-nothing is imported. Keep booking a fiscal year in one program only, cratchit
-or the other, until cratchit can sync them.
+The vouchers you enter are the truth of the books until the next SIE import
+of their fiscal year: the imported file is then the truth of that year. A
+voucher you entered that the file lacks leaves the books and waits as a waiting
+event, after you type `revert` (see Making the file the truth).
 
 ### Viewing and correcting vouchers
 
@@ -1302,7 +1305,7 @@ The newest fiscal year comes first, and within a year the newest export
 (`#GEN`); files alike in both are ordered by name. Each file shows its fiscal
 year, export date and company on the numbered line; under it the file name;
 last the number of vouchers, what importing it would do, the organisation
-number and the program. What importing it would do is `4 new` (vouchers), `1 changed` or `4 new, 1 changed` (see What the import does), `all in the books`, `no new
+number and the program. What importing it would do is `4 new` (vouchers), `1 changed`, `2 renamed`, `20 out of the books (revert)`, or several of them, e.g. `4 new, 1 changed` (see What the import does), `all in the books`, `no new
 vouchers, other data new` (accounts or company details), `2 errors`, or `not
 this project's company` (another organisation number). Files that are not SIE
 files are only counted. A number shows that file as below. With more than nine
@@ -1326,7 +1329,10 @@ Notes:
 Import it? (y/n)
 ```
 
-Press `y` to import, `n` or `-` not to. When the file has errors, cratchit lists
+Press `y` to import, `n` or `-` not to. After any import, when a waiting event
+may now be in the books (see Finding matches), cratchit adds `3 possible
+matches of a waiting event and a voucher: press 9 at the year prompt to find
+them.` When the file has errors, cratchit lists
 them, says `Nothing is imported.` and asks nothing. When everything in the file
 is already in the books, it says so.
 
@@ -1354,9 +1360,9 @@ and nothing is imported.
   another organisation number or company name is an error.
 - The file's fiscal year is added to the books. A year that overlaps a year in
   the books, or starts the same day but ends another, is an error.
-- New vouchers are added. A voucher already in the books (same series and
-  number) is skipped when it is identical. The file is the truth, but history
-  may only be added to: a voucher that differs is taken from the file only when
+- The file is the truth of its fiscal year (year 0). New vouchers are added.
+  A voucher already in the books (same series and number) is skipped when it
+  is identical. It is taken from the file when only history was added to it:
   its registration date and signature are the same (its date and text may have
   been edited), each of its rows in the books is in the file in the same place,
   unchanged or struck (`#BTRANS`), a struck row is still struck, and any
@@ -1365,13 +1371,11 @@ and nothing is imported.
   added (signed Kjell-Olov Högdahl)` or `Voucher A 2 changes: text "Bank cost"
   to "Bank fee"`,
   and the summary says `Vouchers 116: 0 new, 1 changed, 115 already in the
-  books`. Any other difference is an error that names the voucher and what
-  differs, for example `row 1 is row 6570 10.00 in the books, row 6570 12.00
-  in the file; a row may only be struck` or `the registration date differs`,
-  and nothing is imported. So is a
-  change to a voucher of a closed fiscal year: open the year (8 at the year
-  prompt) and import again. Vouchers in the books that the file lacks are
-  noted and kept.
+  books`. A change to a voucher of a closed fiscal year is an error: open the
+  year (8 at the year prompt) and import again.
+- Any other difference between the year's vouchers in the books and in the
+  file (a voucher that differs otherwise, or one the file lacks) makes the file
+  the truth only when you type `revert` (see Making the file the truth).
 - Rows added or struck in a voucher after it was registered (`#RTRANS`,
   `#BTRANS`) are kept with the voucher and marked. Struck rows do not count.
 - New accounts, dimensions and objects are added. Changed names, types, SRU
@@ -1391,38 +1395,73 @@ Nothing is imported when the file:
 - has a checksum (`#KSUMMA`) that does not match its content
 - does not match the project or the books, as above
 
-#### Forcing an import
+#### Making the file the truth
 
-When the only errors are vouchers that differ from the ones in the books
-against the rule above (`Voucher A 1 in the file differs from the one in the
-books (...)`), the import can be forced as a last resort, for example when the
-other program changed a voucher in a way the rule does not allow:
+When the year's vouchers in the books differ from the file's other than by
+added history, the file is the truth, and cratchit shows what that does to the
+vouchers in the books before anything is changed. Each voucher of the year in
+the books, in this order:
+
+1. **The same voucher under another name.** It has the same date and the same
+   rows (account and amount, struck rows not counted) as a voucher of the file
+   with another series or number, for example after the other program
+   numbered it again. The file's voucher takes its place. When several match,
+   the one with the same text comes first, then the lowest series and number.
+2. **Replaced.** The file has a voucher with its series and number that
+   differs otherwise (for example another registration date or other rows).
+   The file's voucher takes its place.
+3. **Dropped.** Two vouchers left, with the same date, where the rows of one
+   are the rows of the other turned (debit for credit): a correction and the
+   voucher it corrects. Both leave the books; together they added up to
+   nothing. A credit note on another day than its invoice is not dropped.
+4. **Out of the books, now a waiting event.** Any other voucher the file
+   lacks. It becomes a waiting event of the year (see The waiting list) with
+   its heading, amount, date and rows, noted on the day it was registered. Its
+   rows balance, so posting it again takes only a template choice (`0`), the
+   series and Enter. Statement entries it booked stay booked.
+
+The file's other vouchers are added. For example, a file exported from Fortnox
+before vouchers were entered in cratchit:
 
 ```
-Nothing is imported.
-As a last resort the import can be forced: the file's 1 voucher then replaces the one in the books, against the history rule.
-Type force and Enter to see the forced import before it is done, or Enter alone not to.
-force> 
+The file becomes the truth of fiscal year 2026-05-01 - 2027-04-30:
+  Dropped, a correction and what it corrects (2):
+    A 11, A 20
+  Out of the books, now waiting events (18):
+    D 4, D 5, D 6, D 7, D 8, A 12, A 13, A 14, A 15, A 16
+    E 4, E 5, A 17, A 18, A 19, E 6, D 9, D 10
+  The file was made 2026-10-19; 20 vouchers leaving the books were registered after that.
+  Before: the year is exported as sie_2026-27_3.se in the project folder.
+Type revert and Enter to make the file the truth of this year, or Enter alone to import nothing.
+revert> 
 ```
 
-Type `force` and Enter: cratchit checks the file again with those vouchers
-taken from the file, and shows it as usual, with `1 forced` on the Vouchers
-line and a note per voucher (`Voucher A 1 is forced: the file's replaces the one
-in the books (the registration date differs)`), then asks `Import it? (y/n)`.
-Anything else, Enter alone or `-` imports nothing.
+The line on when the file was made shows when vouchers that leave the books
+(replaced, dropped or now waiting) were registered after the file's export
+date (`#GEN`): the file may be older than the books.
 
-Force is offered only when every error is such a voucher, and only for a
-voucher that came from an SIE import, in an open fiscal year. Never for:
+Type `revert` and Enter: cratchit first exports the year as it is (see
+Exporting a fiscal year as an SIE file), so nothing is lost, then imports the
+file and says what left the books:
 
-- another organisation number or company name, a year that overlaps or ends
-  otherwise, or any error in the file itself (see Errors)
-- a voucher of a closed year (open the year first)
-- a voucher entered in cratchit: a voucher in the file with its series and
-  number is another event, not a change
+```
+Wrote sie_2026-27_3.se in /Users/me/Documents/cratchit/The ITfied AB: fiscal year 2026-05-01 - 2027-04-30, 37 vouchers (SIE 4E).
+...
+Imported 0 vouchers into fiscal year 2026-05-01 - 2027-04-30 (17 already in the books).
+Out of the books: 2 dropped, 18 now waiting events.
+```
 
-A forced import logs each forced voucher with its version in the books and in
-the file (see The log), and its record lists them as `forced`. The earlier
-file stays stashed in `.cratchit/imports`, so the old version can still be read.
+Anything else than `revert`, Enter alone or `-` imports nothing.
+If the export cannot be written, nothing is imported.
+
+In a closed fiscal year this is an error (`The file would change 20 vouchers in
+the books against the history rule, but fiscal year ... is closed. Open the
+year to make the file the truth`).
+
+The import's record lists the vouchers (see The files), and the log has each
+one in full (see The log). To go back, import the export written before: its
+vouchers come back (as imported), but the waiting events made from them stay.
+Delete those with Finding matches (9 at the year prompt).
 
 #### Balances and notes
 
@@ -1919,7 +1958,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, each voucher forced by an import (its old and new version), a deleted voucher (in full), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, an import that made the file the truth of a year (and each voucher it renamed, replaced, dropped or made a waiting event, in full), a deleted voucher (in full), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, an eSKD or SIE file it could not write, or an SIE export with characters CP437 does not have. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

@@ -293,74 +293,200 @@ void merge_master_data(ImportPlan& plan, sie::Document const& document, bool is_
   }
 }
 
-// Adds the file's new vouchers to the year; the number of vouchers in the books missing from the file
-std::size_t merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear& year, Forcing const& forcing) {
-  std::set<std::pair<std::string, std::string>> in_file;
-  std::vector<Voucher> added;
-  for (auto const& record : document.vouchers) {
-    if (record.series.empty() || record.number.empty()) {
-      continue; // an error already
+// The counted postings (not removed) as account and amount, sorted, turned when negated: with the date, what makes
+// two vouchers the same
+std::vector<std::pair<std::string, Amount>> counted_rows(Voucher const& voucher, bool negated = false) {
+  std::vector<std::pair<std::string, Amount>> rows;
+  for (auto const& posting : voucher.postings) {
+    if (posting.kind != Posting::Kind::removed) {
+      rows.emplace_back(posting.account, negated ? -posting.amount : posting.amount);
     }
-    auto voucher = voucher_of(record);
-    in_file.insert({voucher.series, voucher.number});
+  }
+  std::ranges::sort(rows);
+  return rows;
+}
+
+// A voucher in the books leaving it as a waiting event: its event, noted on its registration day, its counted
+// postings each with its date
+WaitingEvent waiting_of(Voucher const& voucher) {
+  WaitingEvent waiting{voucher.event, voucher.registered.value_or(voucher.event.date)};
+  for (auto const& posting : voucher.postings) {
+    if (posting.kind == Posting::Kind::removed) {
+      continue;
+    }
+    auto row = posting;
+    row.kind = Posting::Kind::normal;
+    row.date = posting.date.value_or(voucher.event.date);
+    row.signature.clear();
+    waiting.postings.push_back(std::move(row));
+  }
+  return waiting;
+}
+
+// Makes the year's vouchers the file's (see plan_import)
+void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear& year, Forcing const& forcing) {
+  std::vector<Voucher> file;
+  for (auto const& record : document.vouchers) {
+    if (!record.series.empty() && !record.number.empty()) { // else an error already
+      file.push_back(voucher_of(record));
+    }
+  }
+  enum class Fate { open, stays, renamed, replaced, dropped, demoted };
+  std::vector<Fate> fate(year.vouchers.size(), Fate::open);
+  std::vector<std::optional<std::size_t>> taken_by(year.vouchers.size()); // the file's voucher taking its place
+  std::vector<bool> file_done(file.size(), false);
+  std::vector<std::optional<std::size_t>> same_key(file.size()); // the voucher in the books with its series and number
+  auto const leaving = [&](std::size_t b, std::string_view what) {
+    auto const& voucher = year.vouchers[b];
+    plan.reverted.push_back(std::format("{} {} in fiscal year {}: {}", what, voucher_name(voucher), year_text(year),
+                                        voucher_text(voucher)));
+    if (voucher.registered && document.generated && *voucher.registered > *document.generated) {
+      ++plan.registered_after_file;
+    }
+  };
+
+  // The same series and number: identical, history added, or forced
+  for (std::size_t f = 0; f < file.size(); ++f) {
+    auto& voucher = file[f];
     auto const it = std::ranges::find_if(year.vouchers, [&](Voucher const& v) {
       return v.series == voucher.series && v.number == voucher.number;
     });
     if (it == year.vouchers.end()) {
-      added.push_back(std::move(voucher));
-    } else if (*it == voucher) {
+      continue;
+    }
+    auto const b = static_cast<std::size_t>(it - year.vouchers.begin());
+    same_key[f] = b;
+    if (*it == voucher) {
       ++plan.vouchers_known;
     } else if (auto const reason = not_extended(*it, voucher)) {
-      auto const forceable = !year.closed && forcing.imported.contains({year.start, voucher.series, voucher.number});
-      if (forceable && forcing.force) {
-        plan.notes.push_back(std::format("Voucher {} is forced: the file's replaces the one in the books ({})",
-                                         voucher_name(voucher), *reason));
-        plan.forced.push_back(std::format("{} in fiscal year {}: in the books {}; in the file {}", voucher_name(voucher),
-                                          year_text(year), voucher_text(*it), voucher_text(voucher)));
-        *it = std::move(voucher);
-        ++plan.vouchers_forced;
-        continue;
+      if (!(forcing.force && !year.closed && forcing.imported.contains({year.start, voucher.series, voucher.number}))) {
+        continue; // see below
       }
-      plan.errors.push_back(std::format("Voucher {} in the file differs from the one in the books ({}). A voucher in "
-                                        "the books may only change by struck (#BTRANS) and added (#RTRANS) rows",
-                                        voucher_name(voucher), *reason));
-      if (forceable) {
-        ++plan.forceable;
-      }
+      plan.notes.push_back(std::format("Voucher {} is forced: the file's replaces the one in the books ({})",
+                                       voucher_name(voucher), *reason));
+      plan.forced.push_back(std::format("{} in fiscal year {}: in the books {}; in the file {}", voucher_name(voucher),
+                                        year_text(year), voucher_text(*it), voucher_text(voucher)));
+      *it = voucher;
+      ++plan.vouchers_forced;
     } else if (year.closed) {
       plan.errors.push_back(std::format("Voucher {} in the file changes the one in the books ({}), but fiscal year {} "
                                         "is closed. Open the year to import the change",
                                         voucher_name(voucher), change_text(*it, voucher), year_text(year)));
     } else {
-      plan.notes.push_back(
-          std::format("Voucher {} changes: {}", voucher_name(voucher), change_text(*it, voucher)));
-      *it = std::move(voucher);
+      plan.notes.push_back(std::format("Voucher {} changes: {}", voucher_name(voucher), change_text(*it, voucher)));
+      *it = voucher;
       ++plan.vouchers_changed;
     }
+    fate[b] = Fate::stays;
+    file_done[f] = true;
   }
-  std::vector<std::string> missing;
-  for (auto const& voucher : year.vouchers) {
-    if (!in_file.contains({voucher.series, voucher.number})) {
-      missing.push_back(voucher_name(voucher));
+
+  // The same voucher under another name: the same date and counted postings
+  for (std::size_t b = 0; b < year.vouchers.size(); ++b) {
+    if (fate[b] != Fate::open) {
+      continue;
+    }
+    auto const& voucher = year.vouchers[b];
+    auto const rows = counted_rows(voucher);
+    std::optional<std::size_t> best;
+    for (std::size_t f = 0; f < file.size(); ++f) {
+      if (file_done[f] || same_key[f] == b || file[f].event.date != voucher.event.date ||
+          counted_rows(file[f]) != rows) { // the same series and number is replaced, below
+        continue;
+      }
+      // The same text first, then the lowest number (by value when digits)
+      auto const rank = [&](std::size_t i) {
+        return std::tuple{file[i].event.heading != voucher.event.heading, file[i].series, file[i].number.size(),
+                          file[i].number};
+      };
+      if (!best || rank(f) < rank(*best)) {
+        best = f;
+      }
+    }
+    if (!best || rows.empty()) {
+      continue;
+    }
+    fate[b] = Fate::renamed;
+    taken_by[b] = *best;
+    file_done[*best] = true;
+    plan.renamed.push_back(std::format("{} as {}", voucher_name(voucher), voucher_name(file[*best])));
+    plan.reverted.push_back(std::format("Renamed {} in fiscal year {}: in the books {}; in the file {} {}",
+                                        voucher_name(voucher), year_text(year), voucher_text(voucher),
+                                        voucher_name(file[*best]), voucher_text(file[*best])));
+  }
+
+  // The same series and number, otherwise different: the file's replaces it
+  for (std::size_t f = 0; f < file.size(); ++f) {
+    if (file_done[f] || !same_key[f] || fate[*same_key[f]] != Fate::open) {
+      continue;
+    }
+    auto const b = *same_key[f];
+    fate[b] = Fate::replaced;
+    taken_by[b] = f;
+    file_done[f] = true;
+    plan.replaced.push_back(voucher_name(year.vouchers[b]));
+    leaving(b, "Replaced");
+  }
+
+  // Left in the books: a correction and what it corrects (the same date, rows turned) are dropped, the others wait
+  for (std::size_t b = 0; b < year.vouchers.size(); ++b) {
+    if (fate[b] != Fate::open) {
+      continue;
+    }
+    auto const turned = counted_rows(year.vouchers[b], true);
+    for (std::size_t other = b + 1; other < year.vouchers.size() && !turned.empty(); ++other) {
+      if (fate[other] == Fate::open && year.vouchers[other].event.date == year.vouchers[b].event.date &&
+          counted_rows(year.vouchers[other]) == turned) {
+        fate[b] = Fate::dropped;
+        fate[other] = Fate::dropped;
+        plan.dropped.push_back(voucher_name(year.vouchers[b]));
+        plan.dropped.push_back(voucher_name(year.vouchers[other]));
+        leaving(b, "Dropped");
+        leaving(other, "Dropped");
+        break;
+      }
+    }
+    if (fate[b] == Fate::open) {
+      fate[b] = Fate::demoted;
+      plan.demoted.push_back(voucher_name(year.vouchers[b]));
+      leaving(b, "Demoted to a waiting event");
     }
   }
-  if (!missing.empty()) {
-    std::string list;
-    for (std::size_t i = 0; i < std::min(missing.size(), max_listed); ++i) {
-      list += (i > 0 ? ", " : "") + missing[i];
-    }
-    if (missing.size() > max_listed) {
-      list += std::format(" and {} more", missing.size() - max_listed);
-    }
-    plan.notes.push_back(std::format("{} voucher{} of {} in the books {} not in the file: {}", missing.size(),
-                                     missing.size() == 1 ? "" : "s", year_text(year),
-                                     missing.size() == 1 ? "is" : "are", list));
+
+  if (year.closed && plan.reverts()) {
+    auto const count = plan.renamed.size() + plan.replaced.size() + plan.dropped.size() + plan.demoted.size();
+    plan.errors.push_back(std::format("The file would change {} voucher{} in the books against the history rule, but "
+                                      "fiscal year {} is closed. Open the year to make the file the truth",
+                                      count, count == 1 ? "" : "s", year_text(year)));
+    return;
   }
-  plan.vouchers_added = added.size();
-  for (auto& voucher : added) {
-    year.vouchers.push_back(std::move(voucher));
+
+  std::vector<Voucher> vouchers;
+  for (std::size_t b = 0; b < year.vouchers.size(); ++b) {
+    switch (fate[b]) {
+    case Fate::stays:
+      vouchers.push_back(std::move(year.vouchers[b]));
+      break;
+    case Fate::renamed:
+      vouchers.push_back(file[*taken_by[b]]);
+      break;
+    case Fate::replaced:
+      vouchers.push_back(file[*taken_by[b]]);
+      break;
+    case Fate::demoted:
+      year.place_waiting(waiting_of(year.vouchers[b]));
+      break;
+    default:
+      break;
+    }
   }
-  return missing.size();
+  for (std::size_t f = 0; f < file.size(); ++f) {
+    if (!file_done[f]) {
+      vouchers.push_back(std::move(file[f]));
+      ++plan.vouchers_added;
+    }
+  }
+  year.vouchers = std::move(vouchers);
 }
 
 // Compares cratchit's closing balances and results of a year with what the file says
@@ -399,8 +525,7 @@ void check_year_end(ImportPlan& plan, sie::Document const& document, int index, 
   }
 }
 
-void check_balances(ImportPlan& plan, Books const& before_books, sie::Document const& document,
-                    std::size_t vouchers_missing) {
+void check_balances(ImportPlan& plan, Books const& before_books, sie::Document const& document) {
   auto const& books = plan.books;
   auto const before = balances(before_books);
   auto const after = balances(books);
@@ -428,11 +553,8 @@ void check_balances(ImportPlan& plan, Books const& before_books, sie::Document c
       }
     }
   }
-  // The file's own year end is checked against its own balances (sie::check_document); the books
-  // differ from it beyond the carried opening balances only when they hold vouchers the file lacks
-  if (vouchers_missing > 0) {
-    check_year_end(plan, document, 0, current, after[current], explained);
-  }
+  // The file's own year end is checked against its own balances (sie::check_document); after the import the
+  // year's vouchers are the file's, so the books differ from it only by the carried opening balances
 
   // Earlier years in the file that are in the books
   for (auto const& year : document.years) {
@@ -535,8 +657,8 @@ ImportPlan plan_import(Books const& books, Identity const& identity, sie::Docume
 
   auto& target = years[index_of(plan.books, year->start)];
   target.reported_opening = by_account(document.opening, 0);
-  auto const vouchers_missing = merge_vouchers(plan, document, target, forcing);
-  check_balances(plan, books, document, vouchers_missing);
+  merge_vouchers(plan, document, target, forcing);
+  check_balances(plan, books, document);
   return plan;
 }
 
@@ -588,6 +710,19 @@ std::expected<Saved, std::string> save_import(std::filesystem::path const& proje
       }
       entries.push_back({"forced", names});
     }
+    for (auto const& [path, names] : {std::pair{"renamed", &plan.renamed}, std::pair{"replaced", &plan.replaced},
+                                      std::pair{"dropped", &plan.dropped}, std::pair{"demoted", &plan.demoted}}) {
+      if (!names->empty()) {
+        std::string list;
+        for (auto const& name : *names) {
+          list += (list.empty() ? "" : ", ") + name;
+        }
+        entries.push_back({path, list});
+      }
+    }
+    if (!source.exported_before.empty()) {
+      entries.push_back({"exported_before", source.exported_before});
+    }
     if (auto const result = write_path_values(project_folder / record, entries); !result) {
       return std::unexpected(result.error());
     }
@@ -612,7 +747,7 @@ std::string voucher_text(Voucher const& voucher) {
 }
 
 bool nothing_to_import(Books const& books, ImportPlan const& plan) {
-  return plan.vouchers_added == 0 && plan.vouchers_changed == 0 && plan.vouchers_forced == 0 &&
+  return plan.vouchers_added == 0 && plan.vouchers_changed == 0 && plan.vouchers_forced == 0 && !plan.reverts() &&
          plan.accounts_added == 0 && plan.accounts_changed == 0 &&
          !plan.identity_changed && books.year_starting(plan.year_start);
 }
@@ -634,8 +769,15 @@ SieFolder sie_files_in(std::filesystem::path const& folder, Books const& books, 
       continue;
     }
     auto const plan = plan_import(books, identity, parsed.document);
-    SieFileSummary summary{entry.path(), std::move(parsed.document), false, plan.errors.size() + parsed.errors.size(),
-                           false, plan.vouchers_added, plan.vouchers_changed};
+    SieFileSummary summary{entry.path(),
+                           std::move(parsed.document),
+                           false,
+                           plan.errors.size() + parsed.errors.size(),
+                           false,
+                           plan.vouchers_added,
+                           plan.vouchers_changed,
+                           plan.renamed.size(),
+                           plan.replaced.size() + plan.dropped.size() + plan.demoted.size()};
     summary.other_company = !identity.orgnr.empty() && summary.document.orgnr != identity.orgnr;
     summary.nothing_new = summary.errors == 0 && nothing_to_import(books, plan);
     result.files.push_back(std::move(summary));

@@ -112,17 +112,20 @@ std::string export_file_name(FiscalYear const& year, int index) {
   return index < 2 ? name + ".se" : std::format("{}_{}.se", name, index);
 }
 
+std::filesystem::path free_export_file(std::filesystem::path const& folder, FiscalYear const& year) {
+  for (int index = 1;; ++index) {
+    auto path = folder / export_file_name(year, index);
+    std::error_code error;
+    if (!std::filesystem::exists(path, error)) {
+      return path;
+    }
+  }
+}
+
 std::expected<std::filesystem::path, std::string> write_export(std::filesystem::path const& folder,
                                                                FiscalYear const& year,
                                                                std::span<std::uint8_t const> bytes) {
-  std::filesystem::path path;
-  for (int index = 1;; ++index) {
-    path = folder / export_file_name(year, index);
-    std::error_code error;
-    if (!std::filesystem::exists(path, error)) {
-      break;
-    }
-  }
+  auto const path = free_export_file(folder, year);
   std::ofstream out(path, std::ios::binary);
   out.write(reinterpret_cast<char const*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   out.close();

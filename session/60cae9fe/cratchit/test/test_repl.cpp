@@ -737,37 +737,48 @@ TEST_F(WorkspaceRepl, AVoucherChangedByStruckAndAddedRowsImports) {
   EXPECT_EQ(books->years[0].vouchers[1].postings.size(), 4u);
 }
 
-TEST_F(WorkspaceRepl, ARefusedImportCanBeForced) {
+TEST_F(WorkspaceRepl, AnOlderFileBecomesTheTruthWithRevert) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
-  run("2test.se\ny");
-  auto later = good_sie();
-  later.replace(later.find("\"Sale\" 20250205"), 15, "\"Sale\" 20250206");
-  write_sie(root / "start" / "later.se", later);
-  auto const force_offer = std::string{
-      "Errors:\n"
-      "  - Voucher A 1 in the file differs from the one in the books (the registration date differs). A voucher in the "
-      "books may only change by struck (#BTRANS) and added (#RTRANS) rows\n"
-      "Nothing is imported.\n"
-      "As a last resort the import can be forced: the file's 1 voucher then replaces the one in the books, against the "
-      "history rule.\n"
-      "Type force and Enter to see the forced import before it is done, or Enter alone not to.\n"
-      "force> "};
-  // Anything but force imports nothing
-  auto const declined = run("2later.se\nno\n");
-  EXPECT_TRUE(declined.ends_with(force_offer + "no\nNothing is imported.\nproject> \n")) << declined;
-  auto const output = run("2later.se\nforce\ny");
-  EXPECT_NE(output.find(force_offer + "force\n"), std::string::npos) << output;
-  EXPECT_NE(output.find("  Vouchers     2: 0 new, 1 forced, 1 already in the books\n"), std::string::npos) << output;
-  EXPECT_NE(output.find("  - Voucher A 1 is forced: the file's replaces the one in the books (the registration date "
-                        "differs)\n"),
+  run("2test.se\ny10");
+  run("11Lunch 20 2025-04-04\nyd6570 20\n1930\n\n1");
+  run("11Payback 35 2025-04-01\ny\n1930 35\n6570\n\n1");
+  run("11Reversal 35 2025-04-01\ny\n6570 35\n1930\n\n1");
+  auto const preview = std::string{
+      "The file becomes the truth of fiscal year 2025-01-01 - 2025-12-31:\n"
+      "  Dropped, a correction and what it corrects (2):\n"
+      "    A 3, A 4\n"
+      "  Out of the books, now waiting events (1):\n"
+      "    D 1\n"
+      "  The file was made 2026-10-19; 3 vouchers leaving the books were registered after that.\n"
+      "  Before: the year is exported as sie_2025.se in the project folder.\n"
+      "Type revert and Enter to make the file the truth of this year, or Enter alone to import nothing.\n"
+      "revert> "};
+  // Anything but revert imports nothing
+  auto const declined = run("3test.se\nno\n");
+  EXPECT_NE(declined.find("  Vouchers     2: 0 new, 2 already in the books\n"), std::string::npos) << declined;
+  EXPECT_NE(declined.find(preview + "no\nNothing is imported.\n2025> "), std::string::npos) << declined;
+  EXPECT_FALSE(fs::exists(root / "start" / "Test" / "sie_2025.se"));
+  auto const output = run("3test.se\nrevert\n");
+  EXPECT_NE(output.find(preview + "revert\nWrote sie_2025.se in "), std::string::npos) << output;
+  EXPECT_NE(output.find("Imported 0 vouchers into fiscal year 2025-01-01 - 2025-12-31 (2 already in the books).\n"
+                        "Out of the books: 2 dropped, 1 now a waiting event.\n"),
             std::string::npos)
       << output;
-  EXPECT_TRUE(output.ends_with("Imported 0 vouchers and forced 1 into fiscal year 2025-01-01 - 2025-12-31 (1 already "
-                               "in the books).\nproject> \n"))
-      << output;
-  auto const record = read_file(root / "start" / "Test" / ".cratchit" / "imports" / "2026-10-20_1_later.se.txt");
-  EXPECT_NE(record.find("forced = A 1\n"), std::string::npos) << record;
+  auto const books = cratchit::books::read_books(root / "start" / "Test");
+  ASSERT_TRUE(books.has_value()) << books.error();
+  EXPECT_EQ(books->years[0].vouchers.size(), 2u);
+  ASSERT_EQ(books->years[0].waiting.size(), 1u);
+  EXPECT_EQ(books->years[0].waiting[0].event.heading, "Lunch");
+  // The export before holds the books as they were
+  auto const exported = read_file(root / "start" / "Test" / "sie_2025.se");
+  EXPECT_NE(exported.find("#VER D 1 "), std::string::npos);
+  EXPECT_NE(exported.find("#VER A 4 "), std::string::npos);
+  auto const record = read_file(root / "start" / "Test" / ".cratchit" / "imports" / "2026-10-20_2_test.se.txt");
+  EXPECT_NE(record.find("dropped = A 3, A 4\ndemoted = D 1\nexported_before = sie_2025.se\n"), std::string::npos)
+      << record;
+  // The same file again: all in the books
+  EXPECT_NE(run("3test.se\n").find("Nothing to import."), std::string::npos);
 }
 
 TEST_F(WorkspaceRepl, FileWithErrorsIsNotImported) {

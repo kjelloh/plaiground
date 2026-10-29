@@ -98,6 +98,8 @@ std::string PathEditor::prompt() const {
     return "heading> " + text_;
   case Kind::Force:
     return "force> " + text_;
+  case Kind::Revert:
+    return "revert> " + text_;
   default:
     return "path> " + text_;
   }

@@ -765,6 +765,31 @@ series and number from the highest (`all_vouchers` in repl.cpp). At the voucher 
 newest/oldest voucher in the list."; named in the unknown-key line. Deleting from the all-series list goes back to it.
 The list's page is not moved along with the stepping. Manual: Viewing and correcting vouchers. New REPL test
 `AllSeriesListsVouchersByDateAndStepsWithAngleBrackets`. 491 tests pass, no warnings (Debug, trace DEBUG). In review.
+Task 79: An SIE import makes the file the truth of its year 0 (`books::plan_import`, `merge_vouchers` rewritten). Same
+series and number: identical, history added (changed) or forced as before. The rest of the year's vouchers in the books,
+in order: renamed (same date and counted postings as an unmatched file voucher with another series/number; the same text
+first, then the lowest number; the same series and number is never "renamed as itself"), replaced (same series and
+number, differs beyond the history rule), dropped (two left with the same date and counted postings turned: a correction
+pair), demoted (`waiting_of`: a waiting event with heading, amount, date, counted postings each dated, noted on the
+registration day, via `place_waiting`). File vouchers left are added. Any of these in a closed year is an error.
+`ImportPlan`: `renamed`, `replaced`, `dropped`, `demoted`, `reverted` (full log lines), `registered_after_file`,
+`reverts()`; `nothing_to_import` counts them; `SieFileSummary::vouchers_renamed` / `vouchers_leaving` (picker status
+`2 renamed`, `20 out of the books (revert)`). The "not in the file" note and the year-0 year-end check are gone (the
+year's vouchers are the file's after the import). REPL: a plan that reverts shows the preview (`The file becomes the
+truth ...`, lists of names 10 per line, the #GEN warning, the export file name from new `books::free_export_file`),
+then `revert>` (new `PathEditor::Kind::Revert`, `Purpose::Revert`); `revert` + Enter re-reads the books, writes the
+year's SIE export (`Repl::write_year_sie`, shared with key 2), then imports; anything else: `Nothing is imported.`
+After any import: `<n> possible matches of a waiting event and a voucher: press 9 ...` when Task 42 finds some. Logged
+(business): the revert and each renamed/replaced/dropped/demoted voucher in full. Record lines `renamed`, `replaced`,
+`dropped`, `demoted`, `exported_before`. Force (Task 76) can no longer be reached from the REPL (the file replaces
+such vouchers); its code and unit test are kept (`Forcing` still works through `plan_import`), the REPL force test is
+replaced by `AnOlderFileBecomesTheTruthWithRevert`. Manual: files (record, export), Saving, SIE picker statuses,
+What the import does, new "Making the file the truth" (replaces "Forcing an import"), log kinds. 493 tests pass, no
+warnings (Debug, trace DEBUG). Checked on a scratch copy of The ITfied AB with TheITfiedAB20261019_105108.se: 17 the
+same, A 11 + A 20 dropped, 18 demoted (first run, before the same-date rule, also dropped D 6 Loopia Faktura with
+D 8 Loopia Kreditfaktura); the export before equals sie_2026-27.se (37 vouchers); 0 statement entries unbooked after;
+a demoted event posts again (template `0`, series, Enter); importing the export back adds the 20 again and reports 22
+possible matches (the 18 waiting events stay). In review.
 
 ## Next
 
@@ -858,7 +883,7 @@ into a waiting event without making a voucher, several entries chosen at once.
   Entry starts with heading, amount and date; then the series is chosen, with one guessed from the input as
   default. A date outside the open fiscal year is refused with a reason. No source-document reference
   and no correction help yet. Entered vouchers go into the same books as imported ones. Local vouchers are the
-  truth (better sync rules with Fortnox later).
+  truth (better sync rules with Fortnox later). (2026-10-29: until the next SIE import of that year, see below.)
 
 - 2026-10-22: Vouchers are entered in an opened fiscal year (`y` at `project>`). Years are numbered as SIE: 0 is the
   newest. The last opened year is remembered and reopened; `-` leaves it. Each year has an open/closed setting; new
@@ -976,10 +1001,21 @@ into a waiting event without making a voucher, several entries chosen at once.
   closed year, or with other errors. Each forced voucher is logged with its old and new version. Anything else, or a change in a closed year, stops the import
   with the reason shown and logged (business). Checks of reports over changed periods are a separate task.
 
+- 2026-10-29: An SIE import is the truth of its year 0. Vouchers in the books that differ beyond the history rule
+  or that the file lacks are renamed (same date and counted postings: the same voucher), replaced (same series and
+  number), dropped (a correction pair: same date, rows turned) or demoted to waiting events, shown first and done only
+  when `revert` is typed, after an automatic SIE export of the year. A closed year is refused. A voucher from an SIE
+  file is always imported, cratchit's own files included (the file may come from another cratchit user). Force is
+  kept in code until a real round trip has been done, then removed.
+
 - 2026-10-28: The eSKD file has no DOCTYPE line: Skatteverket's real e-service (Lämna momsdeklaration) accepted
   cratchit's file without it.
 
 ## Open questions
+
+- Is "same date and same counted postings" good enough for voucher sameness on import (Task 79)? Try and see.
+- Should an import that brings a voucher identical to a waiting event (same date and postings) delete the waiting event
+  by itself? Today importing the export back after a revert leaves the demoted events to Finding matches.
 
 - Should the clearing voucher also clear the 9xxx memo accounts (base of boxes 20-22) against 9099, as Fortnox does?
 - Should steps_of tell corrections and purchases posted against 2650 from clearing vouchers (today they count as

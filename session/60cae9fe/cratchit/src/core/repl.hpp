@@ -166,6 +166,7 @@ private:
     StatementAccount,
     EventHeading,
     Force,
+    Revert,
   };
 
   WorkspacePlaces places_;
@@ -308,6 +309,9 @@ private:
   std::optional<std::size_t> read_open_year(std::ostream& out);
   void set_closed(bool closed, std::ostream& out);
   void export_sie(std::ostream& out);
+  std::optional<std::filesystem::path> write_year_sie(books::Books const& books, std::size_t index, std::ostream& out);
+  void show_reverting(books::ImportPlan const& plan, books::Books const& books, std::ostream& out) const;
+  void revert(std::ostream& out);
   bool start_entry(bool noting, std::ostream& out, std::string const& line = "");
   books::Voucher const* voucher_of(books::VoucherKey const& key) const;
   books::VoucherKey key_of(books::Voucher const& voucher) const; // in the open year

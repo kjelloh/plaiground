@@ -126,15 +126,15 @@ TEST(Import, NewVouchersOfAKnownYearAreAdded) {
   EXPECT_EQ(plan.books.years[0].vouchers.size(), 2u);
 }
 
-TEST(Import, AnotherRegistrationDateIsAnError) {
+TEST(Import, AnotherRegistrationDateReplacesTheVoucher) {
   auto const books = imported({file_2025()});
   auto changed = file_2025();
   changed.replace(changed.find("\"Sale\" 20250205"), 15, "\"Sale\" 20250206");
   auto const plan = plan_import(books, known, parse_sie(changed));
-  EXPECT_TRUE(has(plan.errors, "Voucher A 1 in the file differs from the one in the books (the registration date "
-                               "differs). A voucher in the books may only change by struck (#BTRANS) and added "
-                               "(#RTRANS) rows"))
-      << all(plan.errors);
+  EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+  EXPECT_EQ(plan.replaced, std::vector<std::string>{"A 1"}); // not renamed as itself
+  EXPECT_TRUE(plan.renamed.empty());
+  EXPECT_EQ(plan.books.years[0].vouchers[0].registered, 2025y / February / 6);
 }
 
 // The 2025 file with voucher A 1 registered a day later, which the history rule refuses
@@ -148,13 +148,16 @@ cratchit::books::VoucherKey const a1{2025y / January / 1, "A", "1"};
 
 TEST(Import, AnImportedVoucherThatDiffersCanBeForced) {
   auto const books = imported({file_2025()});
-  auto const refused = plan_import(books, known, parse_sie(registered_later()), {{a1}, false});
-  EXPECT_EQ(refused.errors.size(), 1u) << all(refused.errors);
-  EXPECT_EQ(refused.forceable, 1u);
-  EXPECT_TRUE(refused.can_force());
+  // Without force the file replaces it, no error to force
+  auto const replaced = plan_import(books, known, parse_sie(registered_later()), {{a1}, false});
+  EXPECT_TRUE(replaced.errors.empty()) << all(replaced.errors);
+  EXPECT_EQ(replaced.replaced, std::vector<std::string>{"A 1"});
+  EXPECT_EQ(replaced.forceable, 0u);
+  EXPECT_FALSE(replaced.can_force());
   auto const forced = plan_import(books, known, parse_sie(registered_later()), {{a1}, true});
   EXPECT_TRUE(forced.errors.empty()) << all(forced.errors);
   EXPECT_EQ(forced.vouchers_forced, 1u);
+  EXPECT_FALSE(forced.reverts());
   EXPECT_TRUE(has(forced.notes, "Voucher A 1 is forced: the file's replaces the one in the books (the registration "
                                 "date differs)"))
       << all(forced.notes);
@@ -168,14 +171,16 @@ TEST(Import, AnImportedVoucherThatDiffersCanBeForced) {
 
 TEST(Import, NotForcedInAClosedYearOrOverAnEnteredVoucher) {
   auto books = imported({file_2025()});
-  // Not imported: entered in cratchit, another event with the same number
+  // Entered in cratchit: not forced, but replaced as the file is the truth
   auto const entered = plan_import(books, known, parse_sie(registered_later()), {{}, true});
-  EXPECT_EQ(entered.errors.size(), 1u);
-  EXPECT_EQ(entered.forceable, 0u);
-  EXPECT_FALSE(entered.can_force());
+  EXPECT_TRUE(entered.errors.empty()) << all(entered.errors);
+  EXPECT_EQ(entered.vouchers_forced, 0u);
+  EXPECT_EQ(entered.replaced, std::vector<std::string>{"A 1"});
   books.years[0].closed = true;
   auto const closed = plan_import(books, known, parse_sie(registered_later()), {{a1}, true});
-  EXPECT_EQ(closed.errors.size(), 1u);
+  EXPECT_EQ(closed.errors, std::vector<std::string>{"The file would change 1 voucher in the books against the history "
+                                                    "rule, but fiscal year 2025-01-01 - 2025-12-31 is closed. Open the "
+                                                    "year to make the file the truth"});
   EXPECT_EQ(closed.vouchers_forced, 0u);
   EXPECT_FALSE(closed.can_force());
 }
@@ -184,9 +189,81 @@ TEST(Import, NoForceWithOtherErrors) {
   auto const books = imported({file_2025()});
   auto const file = registered_later() + "#VER A 3 20250401 \"Odd\"\r\n{\r\n#TRANS 1930 {} 1\r\n}\r\n";
   auto const plan = plan_import(books, known, parse_sie(file), {{a1}, false});
-  EXPECT_EQ(plan.forceable, 1u);
-  EXPECT_GT(plan.errors.size(), 1u);
+  EXPECT_EQ(plan.forceable, 0u);
+  EXPECT_FALSE(plan.errors.empty());
   EXPECT_FALSE(plan.can_force());
+}
+
+namespace {
+
+// A voucher entered in cratchit, registered on the given day
+cratchit::books::Voucher entered(std::string series, std::string number, year_month_day date, std::string heading,
+                                 std::vector<std::pair<std::string, cratchit::Amount>> const& rows,
+                                 year_month_day registered) {
+  cratchit::books::Voucher voucher{std::move(series), std::move(number), {std::move(heading), 0, date}, registered,
+                                   "", {}};
+  for (auto const& [account, amount] : rows) {
+    voucher.postings.push_back({cratchit::books::Posting::Kind::normal, account, {}, amount, {}, "", "", "", ""});
+    voucher.event.amount += amount > 0 ? amount : 0;
+  }
+  return voucher;
+}
+
+std::string const lunch_a3 = "#VER A 3 20250401 \"Lunch at work\" 20261030\r\n{\r\n#TRANS 6570 {} 20\r\n"
+                             "#TRANS 1930 {} -20\r\n}\r\n";
+
+} // namespace
+
+TEST(Import, TheSameVoucherUnderAnotherNameIsRenamed) {
+  auto books = imported({file_2025()});
+  books.years[0].vouchers.push_back(
+      entered("D", "1", 2025y / April / 1, "Lunch", {{"6570", 2000}, {"1930", -2000}}, 2026y / October / 25));
+  auto const plan = plan_import(books, known, parse_sie(sie_file(2025, balanced_balances(), sale_and_cost(2025) + lunch_a3)));
+  EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+  EXPECT_EQ(plan.renamed, std::vector<std::string>{"D 1 as A 3"});
+  EXPECT_TRUE(plan.demoted.empty());
+  EXPECT_EQ(plan.vouchers_added, 0u);
+  EXPECT_EQ(plan.vouchers_known, 2u);
+  auto const& vouchers = plan.books.years[0].vouchers;
+  ASSERT_EQ(vouchers.size(), 3u);
+  EXPECT_EQ(vouchers[2].series + vouchers[2].number, "A3");
+  EXPECT_EQ(vouchers[2].event.heading, "Lunch at work");
+  // The same text first
+  auto const two = plan_import(
+      books, known,
+      parse_sie(sie_file(2025, balanced_balances(),
+                         sale_and_cost(2025) + lunch_a3 +
+                             "#VER A 4 20250401 \"Lunch\"\r\n{\r\n#TRANS 1930 {} -20\r\n#TRANS 6570 {} 20\r\n}\r\n")));
+  EXPECT_EQ(two.renamed, std::vector<std::string>{"D 1 as A 4"});
+  EXPECT_EQ(two.vouchers_added, 1u);
+}
+
+TEST(Import, ACorrectionAndWhatItCorrectsAreDroppedTheRestWaits) {
+  auto books = imported({file_2025()});
+  auto& vouchers = books.years[0].vouchers;
+  vouchers.push_back(entered("A", "3", 2025y / April / 1, "Refund", {{"1930", 3500}, {"6570", -3500}},
+                             2026y / October / 25));
+  vouchers.push_back(entered("D", "1", 2025y / April / 2, "Lunch", {{"6570", 2000}, {"1930", -2000}},
+                             2026y / October / 1));
+  vouchers.push_back(entered("A", "4", 2025y / April / 1, "Rättelse av A 3: Refund", {{"1930", -3500}, {"6570", 3500}},
+                             2026y / October / 27));
+  auto const plan = plan_import(books, known, parse_sie(file_2025())); // #GEN 2026-10-19
+  EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+  EXPECT_EQ(plan.dropped, (std::vector<std::string>{"A 3", "A 4"}));
+  EXPECT_EQ(plan.demoted, std::vector<std::string>{"D 1"});
+  // A credit note on another day is no correction: both wait
+  auto credited = books;
+  credited.years[0].vouchers[4].event.date = 2025y / April / 9;
+  EXPECT_TRUE(plan_import(credited, known, parse_sie(file_2025())).dropped.empty());
+  EXPECT_EQ(plan.registered_after_file, 2u); // D 1 was registered before the file was made
+  EXPECT_EQ(plan.reverted.size(), 3u);
+  EXPECT_EQ(plan.books.years[0].vouchers.size(), 2u);
+  ASSERT_EQ(plan.books.years[0].waiting.size(), 1u);
+  EXPECT_EQ(plan.books.years[0].waiting[0].noted, 2026y / October / 1);
+  // Not in a closed year
+  books.years[0].closed = true;
+  auto const closed = plan_import(books, known, parse_sie(file_2025()));
+  EXPECT_EQ(closed.errors.size(), 1u) << all(closed.errors);
 }
 
 TEST(Import, AnEditedTextOrDateChangesAVoucher) {
@@ -266,36 +343,30 @@ TEST(Import, AnAddedRowMayBeStruckLater) {
   EXPECT_EQ(plan.books.years[0].vouchers[1].event.amount, 1100);
 }
 
-TEST(Import, OtherChangesToAVoucherAreErrors) {
+TEST(Import, OtherChangesToAVoucherReplaceIt) {
   auto const books = imported({file_2025()});
-  auto const prefix = std::string{"Voucher A 2 in the file differs from the one in the books ("};
-  auto const suffix =
-      std::string{"). A voucher in the books may only change by struck (#BTRANS) and added (#RTRANS) rows"};
+  auto const replaces = [](ImportPlan const& plan) {
+    EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
+    EXPECT_EQ(plan.replaced, std::vector<std::string>{"A 2"});
+    EXPECT_EQ(plan.vouchers_changed, 0u);
+    EXPECT_EQ(plan.vouchers_added, 0u);
+    EXPECT_EQ(plan.books.years[0].vouchers.size(), 2u);
+  };
   auto const changed_row = plan_import(books, known, parse_sie(with_a2_rows("#TRANS 6570 {} 12\r\n#TRANS 1930 {} -12\r\n")));
-  EXPECT_TRUE(has(changed_row.errors, prefix + "row 1 is row 6570 10.00 in the books, row 6570 12.00 in the file; a "
-                                               "row may only be struck" + suffix))
-      << all(changed_row.errors);
-  auto const new_row = plan_import(books, known,
-                                   parse_sie(with_a2_rows("#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n"
-                                                          "#TRANS 6570 {} 1\r\n#TRANS 1930 {} -1\r\n")));
-  EXPECT_TRUE(has(new_row.errors, prefix + "row 3 (row 6570 1.00) is new in the file but not added (#RTRANS)" + suffix))
-      << all(new_row.errors);
-  // A struck row may not come back
+  replaces(changed_row);
+  EXPECT_EQ(changed_row.books.years[0].vouchers[1].postings[0].amount, 1200);
+  replaces(plan_import(books, known,
+                       parse_sie(with_a2_rows("#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n"
+                                              "#TRANS 6570 {} 1\r\n#TRANS 1930 {} -1\r\n"))));
+  // A struck row that comes back, or a row left out
   auto const changed = imported({file_2025(), with_a2_rows(struck_and_added)});
-  auto const unstruck = plan_import(changed, known,
-                                    parse_sie(with_a2_rows("#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n"
-                                                           "#RTRANS 6570 {} 12 \"\" \"\" \"\" \"Kjell\"\r\n"
-                                                           "#TRANS 6570 {} 12\r\n"
-                                                           "#RTRANS 1930 {} -12 \"\" \"\" \"\" \"Kjell\"\r\n"
-                                                           "#TRANS 1930 {} -12\r\n")));
-  EXPECT_TRUE(has(unstruck.errors, prefix + "row 1 is struck in the books (removed row 6570 10.00), the file has row "
-                                            "6570 10.00" + suffix))
-      << all(unstruck.errors);
-  // Nor a row be left out
-  auto const fewer = plan_import(changed, known, parse_sie(file_2025()));
-  EXPECT_TRUE(has(fewer.errors, prefix + "4 rows in the books, 2 in the file; a row may be struck, not left out" + suffix))
-      << all(fewer.errors);
-  EXPECT_EQ(changed_row.vouchers_changed, 0u);
+  replaces(plan_import(changed, known,
+                       parse_sie(with_a2_rows("#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n"
+                                              "#RTRANS 6570 {} 12 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                              "#TRANS 6570 {} 12\r\n"
+                                              "#RTRANS 1930 {} -12 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                              "#TRANS 1930 {} -12\r\n"))));
+  replaces(plan_import(changed, known, parse_sie(file_2025())));
 }
 
 TEST(Import, AChangeInAClosedYearIsAnError) {
@@ -317,14 +388,28 @@ TEST(Import, AChangeInAClosedYearIsAnError) {
       << all(by_text.errors);
 }
 
-TEST(Import, VouchersMissingFromTheFileAreNoted) {
+TEST(Import, AVoucherMissingFromTheFileWaits) {
   auto const books = imported({file_2025()});
   auto const plan = plan_import(books, known,
                                 parse_sie(sie_file(2025, "", "#VER A 1 20250201 \"Sale\" 20250205\n{\n#TRANS 1930 {} "
                                                              "500.00\n#TRANS 3010 {} -500.00\n}\n")));
   EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
-  EXPECT_TRUE(has(plan.notes, "1 voucher of 2025-01-01 - 2025-12-31 in the books is not in the file: A 2")) << all(plan.notes);
-  EXPECT_EQ(plan.books.years[0].vouchers.size(), 2u); // nothing is removed
+  EXPECT_TRUE(plan.reverts());
+  EXPECT_EQ(plan.demoted, std::vector<std::string>{"A 2"});
+  EXPECT_EQ(plan.reverted, std::vector<std::string>{"Demoted to a waiting event A 2 in fiscal year 2025-01-01 - "
+                                                    "2025-12-31: 2025-03-01 \"Bank cost\": row 6570 10.00, row 1930 "
+                                                    "-10.00"});
+  auto const& year = plan.books.years[0];
+  ASSERT_EQ(year.vouchers.size(), 1u);
+  EXPECT_EQ(year.vouchers[0].series + year.vouchers[0].number, "A1");
+  ASSERT_EQ(year.waiting.size(), 1u);
+  EXPECT_EQ(year.waiting[0].event.heading, "Bank cost");
+  EXPECT_EQ(year.waiting[0].event.amount, 1000);
+  EXPECT_EQ(year.waiting[0].noted, 2025y / March / 1); // no registration date: the voucher's date
+  ASSERT_EQ(year.waiting[0].postings.size(), 2u);
+  EXPECT_EQ(year.waiting[0].postings[0].account, "6570");
+  EXPECT_EQ(year.waiting[0].postings[0].date, 2025y / March / 1);
+  EXPECT_FALSE(cratchit::books::nothing_to_import(books, plan));
 }
 
 TEST(Import, OverlappingOrDifferentlyEndingYearIsAnError) {

@@ -1014,6 +1014,16 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
     on_row(result, out);
     return;
   }
+  if (purpose_ == Purpose::Revert) {
+    if (result == PathEditor::Result::Accepted && editor_.text() == "revert") {
+      revert(out);
+      return;
+    }
+    std::println(out, "Nothing is imported.");
+    plan_.reset();
+    mode_ = before_import_;
+    return;
+  }
   if (purpose_ == Purpose::Force) {
     if (result == PathEditor::Result::Accepted && editor_.text() == "force") {
       check_import(refused_file_, out, true);
@@ -1478,14 +1488,26 @@ void Repl::show_sie_files(std::ostream& out) const {
                  year ? format_iso_date(year->start) + " - " + format_iso_date(year->end) : "no fiscal year",
                  document.generated ? "generated " + format_iso_date(*document.generated) : "no #GEN",
                  document.company_name);
-    auto const status = summary.other_company ? std::string{"not this project's company"}
-                        : summary.errors > 0  ? counted(summary.errors, "error", "errors")
-                        : summary.nothing_new ? std::string{"all in the books"}
-                        : summary.vouchers_added > 0 && summary.vouchers_changed > 0
-                            ? std::format("{} new, {} changed", summary.vouchers_added, summary.vouchers_changed)
-                        : summary.vouchers_added > 0   ? std::format("{} new", summary.vouchers_added)
-                        : summary.vouchers_changed > 0 ? std::format("{} changed", summary.vouchers_changed)
-                                                       : std::string{"no new vouchers, other data new"};
+    std::string status;
+    if (summary.other_company) {
+      status = "not this project's company";
+    } else if (summary.errors > 0) {
+      status = counted(summary.errors, "error", "errors");
+    } else if (summary.nothing_new) {
+      status = "all in the books";
+    } else {
+      for (auto const& [count, word] : {std::pair{summary.vouchers_added, "new"},
+                                        std::pair{summary.vouchers_changed, "changed"},
+                                        std::pair{summary.vouchers_renamed, "renamed"},
+                                        std::pair{summary.vouchers_leaving, "out of the books (revert)"}}) {
+        if (count > 0) {
+          status += std::format("{}{} {}", status.empty() ? "" : ", ", count, word);
+        }
+      }
+      if (status.empty()) {
+        status = "no new vouchers, other data new";
+      }
+    }
     std::println(out, "       {}", summary.file.filename().string());
     std::println(out, "       {}: {}; {}; {} {}", counted(document.vouchers.size(), "voucher", "vouchers"), status,
                  document.orgnr, document.program, document.program_version);
@@ -1548,10 +1570,12 @@ void Repl::check_import(fs::path const& file, std::ostream& out, bool force) {
   }
   std::println(out, "  Accounts     {}: {} new, {} changed", document.accounts.size(), plan.accounts_added,
                plan.accounts_changed);
-  std::println(out, "  Vouchers     {}: {} new, {}{}{} already in the books", document.vouchers.size(),
+  std::println(out, "  Vouchers     {}: {} new, {}{}{}{}{} already in the books", document.vouchers.size(),
                plan.vouchers_added,
                plan.vouchers_changed > 0 ? std::format("{} changed, ", plan.vouchers_changed) : std::string{},
                plan.vouchers_forced > 0 ? std::format("{} forced, ", plan.vouchers_forced) : std::string{},
+               plan.renamed.empty() ? std::string{} : std::format("{} renamed, ", plan.renamed.size()),
+               plan.replaced.empty() ? std::string{} : std::format("{} replaced, ", plan.replaced.size()),
                plan.vouchers_known);
   if (!plan.notes.empty()) {
     std::println(out, "Notes:");
@@ -1595,8 +1619,76 @@ void Repl::check_import(fs::path const& file, std::ostream& out, bool force) {
   import_source_ = {file, std::string(charset_name(lexed->charset)),
                     std::format("{} {}", document.program, document.program_version), document.generated,
                     places_.today};
+  if (plan.reverts()) {
+    show_reverting(plan, *books, out);
+    plan_ = std::move(plan);
+    purpose_ = Purpose::Revert;
+    editor_.start("", PathEditor::Kind::Revert);
+    mode_ = Mode::Typing;
+    out << editor_.prompt();
+    return;
+  }
   plan_ = std::move(plan);
   mode_ = Mode::ConfirmImport;
+}
+
+// What making the file the truth of its year does to the vouchers in the books, before revert>
+void Repl::show_reverting(books::ImportPlan const& plan, books::Books const& books, std::ostream& out) const {
+  auto const& document_generated = import_source_.generated;
+  std::println(out, "The file becomes the truth of fiscal year {} - {}:", format_iso_date(plan.year_start),
+               format_iso_date(plan.year_end));
+  auto const list = [&](std::string_view heading, std::vector<std::string> const& names) {
+    if (names.empty()) {
+      return;
+    }
+    std::println(out, "  {} ({}):", heading, names.size());
+    constexpr std::size_t per_line = 10;
+    for (std::size_t i = 0; i < names.size(); i += per_line) {
+      std::string line;
+      for (std::size_t j = i; j < std::min(names.size(), i + per_line); ++j) {
+        line += (j == i ? "" : ", ") + names[j];
+      }
+      std::println(out, "    {}", line);
+    }
+  };
+  list("The same voucher in the file under another name", plan.renamed);
+  list("Replaced by the file's voucher with the same number", plan.replaced);
+  list("Dropped, a correction and what it corrects", plan.dropped);
+  list("Out of the books, now waiting events", plan.demoted);
+  if (plan.registered_after_file > 0 && document_generated) {
+    std::println(out, "  The file was made {}; {} leaving the books {} registered after that.",
+                 format_iso_date(*document_generated), counted(plan.registered_after_file, "voucher", "vouchers"),
+                 plan.registered_after_file == 1 ? "was" : "were");
+  }
+  if (auto const* year = books.year_starting(plan.year_start)) {
+    std::println(out, "  Before: the year is exported as {} in the project folder.",
+                 books::free_export_file(project_->folder, *year).filename().string());
+  }
+  std::println(out, "Type revert and Enter to make the file the truth of this year, or Enter alone to import nothing.");
+}
+
+// Exports the year as it is, then imports the file as its truth
+void Repl::revert(std::ostream& out) {
+  mode_ = before_import_;
+  auto const books = books::read_books(project_->folder);
+  if (!books) {
+    std::println(out, "Error: {}", books.error());
+    std::println(out, "Nothing is imported.");
+    plan_.reset();
+    return;
+  }
+  auto const year = std::ranges::find(books->years, plan_->year_start, &books::FiscalYear::start);
+  if (year != books->years.end()) {
+    auto const written =
+        write_year_sie(*books, static_cast<std::size_t>(year - books->years.begin()), out);
+    if (!written) {
+      std::println(out, "Nothing is imported.");
+      plan_.reset();
+      return;
+    }
+    import_source_.exported_before = written->filename().string();
+  }
+  import(out);
 }
 
 void Repl::on_confirm_import_key(charset::unicode::CodePoint key, std::ostream& out) {
@@ -1651,6 +1743,36 @@ void Repl::import(std::ostream& out) {
                plan.vouchers_known, saved->stashed.generic_string());
   for (auto const& forced : plan.forced) {
     LOG_BUSINESS("Forced voucher {}", forced);
+  }
+  if (plan.reverts()) {
+    LOG_BUSINESS("Made SIE file {} the truth of fiscal year {} - {} of project {} ({}): {} renamed, {} replaced, {} "
+                 "dropped, {} demoted to waiting events{}",
+                 import_source_.file.string(), format_iso_date(plan.year_start), format_iso_date(plan.year_end),
+                 project_->name, project_->uuid, plan.renamed.size(), plan.replaced.size(), plan.dropped.size(),
+                 plan.demoted.size(),
+                 import_source_.exported_before.empty() ? std::string{}
+                                                        : ", the year before exported as " +
+                                                              import_source_.exported_before);
+    for (auto const& reverted : plan.reverted) {
+      LOG_BUSINESS("{}", reverted);
+    }
+    if (!plan.renamed.empty() || !plan.replaced.empty()) {
+      std::println(out, "Took {} renamed and {} replaced voucher{} from the file.", plan.renamed.size(),
+                   plan.replaced.size(), plan.replaced.size() == 1 ? "" : "s");
+    }
+    if (!plan.dropped.empty() || !plan.demoted.empty()) {
+      std::println(out, "Out of the books: {} dropped, {}.", plan.dropped.size(),
+                   counted(plan.demoted.size(), "now a waiting event", "now waiting events"));
+    }
+  }
+  if (auto const* year = plan.books.year_starting(plan.year_start)) {
+    auto const in_books = std::ranges::count_if(books::find_matches(*year), [](books::Match const& match) {
+      return match.kind == books::Match::Kind::books;
+    });
+    if (in_books > 0) {
+      std::println(out, "{} of a waiting event and a voucher: press 9 at the year prompt to find them.",
+                   counted(static_cast<std::size_t>(in_books), "possible match", "possible matches"));
+    }
   }
   for (auto const& note : plan.notes) {
     LOG_BUSINESS("Import note: {}", note);
@@ -2085,9 +2207,14 @@ void Repl::export_sie(std::ostream& out) {
   if (!index) {
     return;
   }
-  auto const& year = books_.years[*index];
+  write_year_sie(books_, *index, out);
+}
+
+// Writes the fiscal year at index as an SIE 4E file in the project folder; the file, or nothing (shown and logged)
+std::optional<fs::path> Repl::write_year_sie(books::Books const& books, std::size_t index, std::ostream& out) {
+  auto const& year = books.years[index];
   auto const today = parse_iso_date(places_.today).value_or(year.end);
-  auto const document = books::export_document(books_, {project_->name, project_->orgnr}, *index, today);
+  auto const document = books::export_document(books, {project_->name, project_->orgnr}, index, today);
   auto const encoded = sie::cp437_of(sie::text_of(document));
   auto const written = books::write_export(project_->folder, year, encoded.bytes);
   if (!written) {
@@ -2095,7 +2222,7 @@ void Repl::export_sie(std::ostream& out) {
     LOG_DESIGN_INSUFFICIENCY("SIE file of fiscal year {} - {} of project {} ({}) not written: {}",
                              format_iso_date(year.start), format_iso_date(year.end), project_->name, project_->uuid,
                              written.error());
-    return;
+    return std::nullopt;
   }
   std::println(out, "Wrote {} in {}: fiscal year {} - {}, {} voucher{} (SIE 4E).", written->filename().string(),
                project_->folder.string(), format_iso_date(year.start), format_iso_date(year.end),
@@ -2110,6 +2237,7 @@ void Repl::export_sie(std::ostream& out) {
     LOG_DESIGN_INSUFFICIENCY("SIE file {} has {} characters CP437 does not have, written as <U+XXXX>",
                              written->string(), encoded.unmapped);
   }
+  return *written;
 }
 
 // The voucher line of a new voucher, or of an event to note when noting, starting with line; false when refused

@@ -45,9 +45,18 @@ struct ImportPlan {
   std::size_t vouchers_known = 0;   // already in the books, identical
   std::size_t accounts_added = 0;
   std::size_t accounts_changed = 0;
+  // Making the file the truth of its year: what leaves the books or changes against the history rule
+  std::vector<std::string> renamed;  // the same voucher under another name, e.g. "D 5 as D 7"
+  std::vector<std::string> replaced; // in the books, replaced by the file's voucher with the same series and number
+  std::vector<std::string> dropped;  // in the books, a correction and the voucher it corrects, both left out
+  std::vector<std::string> demoted;  // in the books, now waiting events
+  std::vector<std::string> reverted; // each of them in full, for the log
+  std::size_t registered_after_file = 0; // replaced, dropped and demoted ones registered after the file's #GEN
 
   // True when there are errors and a forced import would take every one of them
   bool can_force() const { return !errors.empty() && forceable == errors.size(); }
+  // True when the import makes the file the truth: a voucher in the books is renamed, replaced, dropped or demoted
+  bool reverts() const { return !renamed.empty() || !replaced.empty() || !dropped.empty() || !demoted.empty(); }
 };
 
 // The vouchers that came with SIE imports (see imported_vouchers), and whether to force: a voucher of an open year
@@ -65,15 +74,24 @@ struct Forcing {
 //   name from #ORGNR and #FNAMN. Later, a different orgnr or name is an error.
 // - Fiscal year: a new year must not overlap a year in the books; a year with
 //   the same start must have the same end.
-// - Vouchers: new ones are added. One already in the books (same series and
-//   number) is skipped when identical. It is taken from the file (and noted)
-//   when only history is added: the same registration and signature (the
-//   date and text may be edited), each row of the books in its place unchanged or struck
-//   (#BTRANS), a struck row still struck, and any further rows added (#RTRANS).
-//   Any other difference is an error, and so is a change in a closed year.
-//   With forcing, a differing voucher that was imported, in an open year, is
-//   taken from the file anyway; without, its error counts as forceable.
-//   Vouchers in the books but not in the file are noted.
+// - Vouchers: the file is the truth of its year 0. One already in the books (same
+//   series and number) is skipped when identical. It is taken from the file (and
+//   noted) when only history is added: the same registration and signature (the
+//   date and text may be edited), each row of the books in its place unchanged or
+//   struck (#BTRANS), a struck row still struck, and any further rows added
+//   (#RTRANS). With forcing, a voucher that differs otherwise and was imported, in
+//   an open year, is taken from the file (see Forcing). The rest of the year's
+//   vouchers make the file the truth (see ImportPlan::reverts), in this order:
+//   a voucher in the books with the same date and counted postings (account and
+//   amount) as a voucher of the file is the same voucher under another name, the
+//   file's replaces it (renamed; the same text first, then the lowest number);
+//   one with the same series and number as a voucher of the file is replaced by
+//   it; of those left, a voucher with the same date as another and its counted
+//   postings turned (a correction and what it corrects; not a credit note on
+//   another day) is dropped with it; the others become
+//   waiting events with their counted postings (demoted), noted on their
+//   registration day. The file's other vouchers are added. Any change in a
+//   closed year is an error.
 // - Accounts, dimensions, objects and company details: new ones are added;
 //   changes are taken (and noted) only from a file whose year is the latest in
 //   the books, so an older file does not undo newer names.
@@ -98,6 +116,8 @@ struct SieFileSummary {
   bool nothing_new = false;    // see nothing_to_import
   std::size_t vouchers_added = 0;
   std::size_t vouchers_changed = 0;
+  std::size_t vouchers_renamed = 0;
+  std::size_t vouchers_leaving = 0; // replaced, dropped and demoted (see ImportPlan::reverts)
 };
 
 // The SIE files in a folder: the files (not hidden) that read and parse as SIE (have #SIETYP), each planned against
@@ -119,6 +139,7 @@ struct ImportSource {
   std::string program;        // #PROGRAM name and version
   std::optional<Date> generated;
   std::string today; // YYYY-MM-DD
+  std::string exported_before{}; // the export of the year written before the import made the file the truth, if any
 };
 
 // What save_import wrote
@@ -132,7 +153,8 @@ struct Saved {
 // as .cratchit/imports/<today>_<n>_<file name> (n from 1, the first free) with a
 // record <copy>.txt of `path = value` lines: imported, source, encoding,
 // program, generated, company, orgnr, year, vouchers_added, vouchers_changed,
-// vouchers_known, notes, and `forced` (the vouchers, comma separated) when any. Must not be called for a plan with errors.
+// vouchers_known, notes, and when any (the vouchers, comma separated) `forced`, `renamed`, `replaced`, `dropped`,
+// `demoted`, and `exported_before` (the file name). Must not be called for a plan with errors.
 std::expected<Saved, std::string> save_import(std::filesystem::path const& project_folder, ImportPlan const& plan,
                                               ImportSource const& source);
 

@@ -25,6 +25,51 @@ Is there anything else I would like to have to feel safe when and if I round tri
 
 I started by vibe coding an option to view and navigate a list of all vouchers ok.
 
+I then chatted with Claude about 'safe round trip' through Fortnox with SIE File and got some good feed back.
+
+* Try one round trip with one new voucher entered in Cratchit.
+    * Does Fortnox accept the open and close balances cratchit provides?
+    * That is, given that Fortnox for now have different close balance for last year an open balance this year, the correction applied by cratchit may break the import into Fortnox?
+    * Does the voucher come back with say a new registration date and/or signature?
+    * Does Fortnox violate the history in some other import-breaking way?
+
+I chatted with Claude and agreed to an updated 'import SIE file' guard rail.
+
+* The SIE File shall be regarded as 'the new truth'
+* If the imported SIE file is created before bookings are made, then the import is a 'revert' offered to the user to select.
+
+Claude made a good job (it seems) to implement a good and trust-worthy import behavior?
+
+* I tried it by imported the original exported SIE file form Fortnox.
+
+```text
+sie?> 1
+SIE file /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/_resources/_sie_in/TheITfiedAB20261019_105108.se
+  Read as      CP437
+  Program      Fortnox 3.62.17, generated 2026-10-19
+  Company      The ITfied AB, 556782-8172
+  Fiscal year  2026-05-01 - 2027-04-30
+  Accounts     500: 0 new, 0 changed
+  Vouchers     17: 0 new, 17 already in the books
+Notes:
+  - In the file, 1650 Momsfordran: opening balance 0.00 differs from the year before's closing balance 89.00 (difference -89.00)
+  - In the file, 2641 Debiterad ingående moms: opening balance 90.08 differs from the year before's closing balance 0.10 (difference 89.98)
+  - Opening balance 2026-05-01, 1650 Momsfordran: the file says 0.00, cratchit carries 89.00 from its closing balance 2026-04-30 (difference 89.00) and uses its own. Possibly from voucher M 5 2026-04-30 "Momsrapport_2026-04-01-2026-04-30"
+  - Opening balance 2026-05-01, 2641 Debiterad ingående moms: the file says 90.08, cratchit carries 0.10 from its closing balance 2026-04-30 (difference -89.98) and uses its own. Possibly from vouchers A 49 2026-04-10 "Utlägg Privat - Kjell&Co", M 5 2026-04-30 "Momsrapport_2026-04-01-2026-04-30"
+The file becomes the truth of fiscal year 2026-05-01 - 2027-04-30:
+  Dropped, a correction and what it corrects (2):
+    A 11, A 20
+  Out of the books, now waiting events (18):
+    D 4, D 5, D 6, D 7, D 8, A 12, A 13, A 14, A 15, A 16
+    E 4, E 5, A 17, A 18, A 19, E 6, D 9, D 10
+  The file was made 2026-10-19; 20 vouchers leaving the books were registered after that.
+  Before: the year is exported as sie_2026-27_3.se in the project folder.
+Type revert and Enter to make the file the truth of this year, or Enter alone to import nothing.
+revert> -
+Nothing is imported.
+2026/27> q
+```
+
 ## 20261028
 
 * [Beräkning av mervärdesskatt vid öresavrundning](https://www4.skatteverket.se/rattsligvagledning/edition/2026.14/381778.html?utm_source=chatgpt.com)
