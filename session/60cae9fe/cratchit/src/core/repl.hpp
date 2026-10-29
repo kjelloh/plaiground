@@ -218,7 +218,7 @@ private:
   ItemList waiting_page_;               // the page of the waiting events
   std::size_t chosen_waiting_ = 0;      // the waiting event shown, to post or delete
   std::set<books::VoucherKey> imported_; // the vouchers that came with an SIE import, when viewing vouchers
-  std::string view_series_;             // the series whose vouchers are listed
+  std::string view_series_;             // the series whose vouchers are listed, empty for all series
   std::vector<std::size_t> listed_vouchers_; // the vouchers listed, newest first, indexes into the open year's vouchers
   ItemList voucher_page_;               // the page of the voucher list
   std::size_t viewed_ = 0;              // the voucher shown, an index into the open year's vouchers
@@ -378,6 +378,7 @@ private:
   void post_waiting(std::size_t index, std::ostream& out);
   void on_confirm_delete_key(charset::unicode::CodePoint key, std::ostream& out);
   bool viewed_is_last() const;
+  void step_voucher(bool newer, std::ostream& out);
   void on_confirm_delete_voucher_key(charset::unicode::CodePoint key, std::ostream& out);
   void open_matches(std::ostream& out);
   void back_to_matches(std::ostream& out);

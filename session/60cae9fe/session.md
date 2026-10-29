@@ -2,6 +2,29 @@
 
 ```#60cae9fe```
 
+## 20261029
+
+Let's see if we can get to a point where I dare to actually use this 'cratchit vibe' to do my upcoming VAT Returns report?
+
+* I need to feel safe I can round trip my books through Fortnox
+    * Export SIE File from cratchit and import in Fortnox
+    * View and possibly edit in Fortnox
+    * Generate VAT Returns report in Fortnox (trial run)
+    * Undo the VAT Returns report (Save as reference)
+    * Export SIE File from Fortnox and import in cratchit
+    * View and possibly edit in cratchit
+    * Generate VAT Returns report (to compare with Fortnox one)
+* I feel I kind-of have the safe guards in place for this?
+    * I have the SIE File export and import for the round trip.
+    * I have the 'delete voucher' to revert books in cratchit just as in Fortnox
+    * This enables me to manually 'sync up' history-violating state differences between cratchit and Fortnox books from the round-trip?
+    * I have cratchit import SIE-file guard rales to protect me from screwing up?
+    * Or at least alert me for situations where I need to either force an import or manually delete vouchers until cratchit shares the history with Fortnox?
+
+Is there anything else I would like to have to feel safe when and if I round trip through an external tool?
+
+I started by vibe coding an option to view and navigate a list of all vouchers ok.
+
 ## 20261028
 
 * [Beräkning av mervärdesskatt vid öresavrundning](https://www4.skatteverket.se/rattsligvagledning/edition/2026.14/381778.html?utm_source=chatgpt.com)

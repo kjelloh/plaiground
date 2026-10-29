@@ -758,6 +758,13 @@ Deleting it here changes only cratchit's books. Delete it in / the program it ca
 file that still has it adds it again.` (the line after deleting is gone). Test and manual updated. 490 tests pass.
 Task 77 change 2: `booking>` key 5 is now `View vouchers (correct one, use it as a template, or delete the last of a
 series)` (repl, the `booking_keys` test helper, manual). 490 tests pass.
+Task 78: All series in one voucher list, and stepping. `series?>` (5 at `booking>`) starts with `0  All series` (count,
+last by date); `0` lists every series' vouchers (`view_series_` empty), newest date first, then later registered, then
+series and number from the highest (`all_vouchers` in repl.cpp). At the voucher view (`D 4>`) `<` shows the newer and
+`>` the older voucher of the list it was picked from (series or all; `Repl::step_voucher`); at either end "This is the
+newest/oldest voucher in the list."; named in the unknown-key line. Deleting from the all-series list goes back to it.
+The list's page is not moved along with the stepping. Manual: Viewing and correcting vouchers. New REPL test
+`AllSeriesListsVouchersByDateAndStepsWithAngleBrackets`. 491 tests pass, no warnings (Debug, trace DEBUG). In review.
 
 ## Next
 

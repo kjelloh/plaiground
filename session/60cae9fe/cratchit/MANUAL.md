@@ -916,15 +916,17 @@ or the other, until cratchit can sync them.
 ### Viewing and correcting vouchers
 
 Press `5` at `booking>` (see Booking). cratchit lists the series used in
-the year; press a letter to list that series (the prompt is `series?>`; here
-`h` is series H, so help is not offered; `-` goes back to `booking>`):
+the year; press `0` to list the vouchers of all series, or a letter to list
+that series (the prompt is `series?>`; here `h` is series H, so help is not
+offered; `-` goes back to `booking>`):
 
 ```
 Series in fiscal year 2026-05-01 - 2027-04-30:
+  0  All series                         16 vouchers, last D 4 2026-10-24
   A  Redovisning                        12 vouchers, last A 12 2026-10-02
   D  Leverantörsfakturor                 4 vouchers, last D 4 2026-10-24
 
-Press a letter to list that series, - to go back, q to quit.
+Press 0 to list all series, a letter to list that series, - to go back, q to quit.
 series?> d
 Vouchers D in fiscal year 2026-05-01 - 2027-04-30, newest first:
   1  D 4     2026-10-24       1245.00  Faktura Telia november  (entered)
@@ -933,7 +935,20 @@ Vouchers D in fiscal year 2026-05-01 - 2027-04-30, newest first:
 voucher?> 
 ```
 
-Newest first means the highest number first. With more than nine, keys 1-8
+In a series, newest first means the highest number first. `0` lists the
+vouchers of every series in one list, the latest date first (on the same
+date, the later registered first, then series and number from the highest):
+
+```
+series?> 0
+Vouchers in fiscal year 2026-05-01 - 2027-04-30, all series, newest first:
+  1  D 4     2026-10-24       1245.00  Faktura Telia november  (entered)
+  2  A 12    2026-10-02         85.00  Bankavgift  (imported)
+  ...
+voucher?> 
+```
+
+With more than nine, keys 1-8
 show eight at a time, `0` shows the ones before and `9` the ones after.
 A voucher is *imported* when it is in one of the SIE files the project has
 imported (the copies in `.cratchit/imports`, see The files); else it was
@@ -964,9 +979,15 @@ D 4>
 | 1      | Corrects the voucher with a new one (below). Only for an entered voucher, in an open year. |
 | 2      | Enters a new voucher with this one as the template: the voucher line, then the series and the rows, as in Entering a voucher, without the list of templates. Only in an open year. |
 | 3      | Deletes the voucher (see Deleting the last voucher of a series, below). Shown only for the last voucher of its series (the highest number in the year), in an open year. |
+| <      | Shows the voucher above this one in the list it was picked from (newer). |
+| >      | Shows the voucher below this one in the list it was picked from (older). |
 | -      | Goes back to the list. |
 | h      | Opens this manual. |
 | q      | Quits cratchit. |
+
+`<` and `>` step through the list the voucher was picked from: a series, or
+all series. At either end cratchit says `This is the newest voucher in the
+list.` or `This is the oldest voucher in the list.`.
 
 #### Correcting a voucher
 

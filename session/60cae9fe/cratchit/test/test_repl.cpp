@@ -1733,6 +1733,45 @@ std::string erased(std::size_t n) {
 }
 } // namespace
 
+TEST_F(WorkspaceRepl, AllSeriesListsVouchersByDateAndStepsWithAngleBrackets) {
+  run("112Test\n1");
+  write_sie(root / "start" / "test.se", good_sie());
+  run("2test.se\ny10");
+  run("11Lunch 20 2025-03-15\nyd6570 20\n1930\n\n1");
+  auto output = run("150");
+  EXPECT_NE(output.find("  0  All series                          3 vouchers, last D 1 2025-03-15\n"
+                        "  A  Redovisning                         2 vouchers, last A 2 2025-03-01\n"
+                        "  D  Leverantörsfakturor                 1 voucher, last D 1 2025-03-15\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("series?> 0\n"
+                        "Vouchers in fiscal year 2025-01-01 - 2025-12-31, all series, newest first:\n"
+                        "  1  D 1     2025-03-15         20.00  Lunch  (entered)\n"
+                        "  2  A 2     2025-03-01         10.00  Bank cost  (imported)\n"
+                        "  3  A 1     2025-02-01        500.00  Sale  (imported)\n"
+                        "voucher?> "),
+            std::string::npos)
+      << output;
+  // < and > step through the list it came from; - goes back to it
+  output = run("1502<<>>>x-");
+  EXPECT_NE(output.find("voucher?> 2\nVoucher A 2 2025-03-01"), std::string::npos) << output;
+  EXPECT_NE(output.find("A 2> <\nVoucher D 1 2025-03-15 \"Lunch\" 20.00\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("D 1> <\nThis is the newest voucher in the list.\nD 1> >\nVoucher A 2"), std::string::npos)
+      << output;
+  EXPECT_NE(output.find("A 2> >\nVoucher A 1 2025-02-01"), std::string::npos) << output;
+  EXPECT_NE(output.find("A 1> >\nThis is the oldest voucher in the list.\n"), std::string::npos) << output;
+  EXPECT_NE(output.find("A 1> x\nUnknown key. Other keys: Enter list, < newer voucher, > older voucher, - back, h help, "
+                        "q quit.\n"),
+            std::string::npos)
+      << output;
+  EXPECT_NE(output.find("A 1> -\nVouchers in fiscal year 2025-01-01 - 2025-12-31, all series, newest first:\n"),
+            std::string::npos)
+      << output;
+  // In a series list, stepping stays in the series
+  output = run("15a1>");
+  EXPECT_NE(output.find("A 2> >\nVoucher A 1 2025-02-01"), std::string::npos) << output;
+}
+
 TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
   run("112Test\n1");
   write_sie(root / "start" / "test.se", good_sie());
@@ -1741,11 +1780,12 @@ TEST_F(WorkspaceRepl, VKeyViewsVouchersAndCorrectsAnEnteredOne) {
   auto output = run("15xa1");
   EXPECT_NE(output.find("booking> 5\n"
                         "Series in fiscal year 2025-01-01 - 2025-12-31:\n"
+                        "  0  All series                          3 vouchers, last A 3 2025-03-31\n"
                         "  A  Redovisning                         3 vouchers, last A 3 2025-03-31\n"
                         "\n"
-                        "Press a letter to list that series, - to go back, q to quit.\n"
+                        "Press 0 to list all series, a letter to list that series, - to go back, q to quit.\n"
                         "series?> x\n"
-                        "Press a letter to list that series, - to go back, q to quit.\n"
+                        "Press 0 to list all series, a letter to list that series, - to go back, q to quit.\n"
                         "series?> a\n"
                         "Vouchers A in fiscal year 2025-01-01 - 2025-12-31, newest first:\n"
                         "  1  A 3     2025-03-31         35.00  Bank cost march  (entered)\n"

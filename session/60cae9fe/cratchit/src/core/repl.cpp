@@ -14,6 +14,7 @@
 #include <format>
 #include <fstream>
 #include <iterator>
+#include <numeric>
 #include <print>
 #include <string>
 #include <utility>
@@ -47,6 +48,28 @@ bool number_less(std::string const& a, std::string const& b) {
     return a.size() < b.size();
   }
   return a < b;
+}
+
+// The vouchers of a fiscal year, indexes into its vouchers: newest date first, then the later registered,
+// then series and number from the highest
+std::vector<std::size_t> all_vouchers(books::FiscalYear const& year) {
+  std::vector<std::size_t> indexes(year.vouchers.size());
+  std::iota(indexes.begin(), indexes.end(), std::size_t{0});
+  std::ranges::sort(indexes, [&](std::size_t a, std::size_t b) {
+    auto const& x = year.vouchers[a];
+    auto const& y = year.vouchers[b];
+    if (x.event.date != y.event.date) {
+      return y.event.date < x.event.date;
+    }
+    if (x.registered != y.registered) {
+      return y.registered < x.registered;
+    }
+    if (x.series != y.series) {
+      return y.series < x.series;
+    }
+    return number_less(y.number, x.number);
+  });
+  return indexes;
 }
 
 bool is_whitespace(charset::unicode::CodePoint key) {
@@ -562,6 +585,14 @@ Operations<Repl::Op> Repl::operations() const {
     break;
   case Mode::WaitingEvent:
     operations.other("Enter", "list").other("d", "delete").other("-", "back").other("h", "help").other("q", "quit");
+    break;
+  case Mode::VoucherView:
+    operations.other("Enter", "list")
+        .other("<", "newer voucher")
+        .other(">", "older voucher")
+        .other("-", "back")
+        .other("h", "help")
+        .other("q", "quit");
     break;
   case Mode::MatchChoice:
     operations.other("Enter", "list");
@@ -3044,6 +3075,10 @@ void Repl::show_voucher_series(std::ostream& out) const {
     series.insert(voucher.series);
   }
   std::println(out, "Series in fiscal year {} - {}:", format_iso_date(year.start), format_iso_date(year.end));
+  auto const& latest = year.vouchers[all_vouchers(year).front()];
+  std::println(out, "  0  {:<32} {:>4} voucher{}, last {} {} {}", "All series", year.vouchers.size(),
+               year.vouchers.size() == 1 ? "" : "s", latest.series, latest.number,
+               format_iso_date(latest.event.date));
   for (auto const& letter : series) {
     std::size_t count = 0;
     books::Voucher const* last = nullptr;
@@ -3060,7 +3095,7 @@ void Repl::show_voucher_series(std::ostream& out) const {
                  count == 1 ? "" : "s", last->series, last->number, format_iso_date(last->event.date));
   }
   std::println(out, "");
-  std::println(out, "Press a letter to list that series, - to go back, q to quit.");
+  std::println(out, "Press 0 to list all series, a letter to list that series, - to go back, q to quit.");
 }
 
 void Repl::on_voucher_series_key(charset::unicode::CodePoint key, std::ostream& out) {
@@ -3075,27 +3110,36 @@ void Repl::on_voucher_series_key(charset::unicode::CodePoint key, std::ostream& 
     letter = static_cast<char>(key);
   }
   auto const& year = *books_.year_starting(open_year_);
+  if (key == U'0') {
+    view_series_.clear();
+    list_vouchers(out);
+    return;
+  }
   if (letter.empty() ||
       std::ranges::none_of(year.vouchers, [&](books::Voucher const& voucher) { return voucher.series == letter; })) {
-    std::println(out, "Press a letter to list that series, - to go back, q to quit.");
+    std::println(out, "Press 0 to list all series, a letter to list that series, - to go back, q to quit.");
     return;
   }
   view_series_ = letter;
   list_vouchers(out);
 }
 
-// The vouchers of the series, newest (highest number) first
+// The vouchers of the series, newest (highest number) first; of all series (no series), newest date first
 void Repl::list_vouchers(std::ostream& out) {
   auto const& year = *books_.year_starting(open_year_);
-  listed_vouchers_.clear();
-  for (std::size_t i = 0; i < year.vouchers.size(); ++i) {
-    if (year.vouchers[i].series == view_series_) {
-      listed_vouchers_.push_back(i);
+  if (view_series_.empty()) {
+    listed_vouchers_ = all_vouchers(year);
+  } else {
+    listed_vouchers_.clear();
+    for (std::size_t i = 0; i < year.vouchers.size(); ++i) {
+      if (year.vouchers[i].series == view_series_) {
+        listed_vouchers_.push_back(i);
+      }
     }
+    std::ranges::sort(listed_vouchers_, [&](std::size_t a, std::size_t b) {
+      return number_less(year.vouchers[b].number, year.vouchers[a].number);
+    });
   }
-  std::ranges::sort(listed_vouchers_, [&](std::size_t a, std::size_t b) {
-    return number_less(year.vouchers[b].number, year.vouchers[a].number);
-  });
   voucher_page_.reset();
   mode_ = Mode::VoucherList;
   show_vouchers(out);
@@ -3104,8 +3148,13 @@ void Repl::list_vouchers(std::ostream& out) {
 // Numbered from 1, newest first; over 9, keys 1-8 with 0 up and 9 down
 void Repl::show_vouchers(std::ostream& out) const {
   auto const& year = *books_.year_starting(open_year_);
-  std::println(out, "Vouchers {} in fiscal year {} - {}, newest first:", view_series_, format_iso_date(year.start),
-               format_iso_date(year.end));
+  if (view_series_.empty()) {
+    std::println(out, "Vouchers in fiscal year {} - {}, all series, newest first:", format_iso_date(year.start),
+                 format_iso_date(year.end));
+  } else {
+    std::println(out, "Vouchers {} in fiscal year {} - {}, newest first:", view_series_, format_iso_date(year.start),
+                 format_iso_date(year.end));
+  }
   voucher_page_.show(listed_vouchers_.size(), out, [&](std::size_t index, std::size_t key) {
     auto const& voucher = year.vouchers[listed_vouchers_[index]];
     std::println(out, "  {}  {} {:<4}  {}  {:>12}  {}  ({})", key, voucher.series, voucher.number,
@@ -3158,6 +3207,21 @@ void Repl::show_voucher(std::ostream& out) const {
   show_operations(out);
 }
 
+// The voucher before (newer) or after (older) the viewed one in the list it was picked from
+void Repl::step_voucher(bool newer, std::ostream& out) {
+  auto const it = std::ranges::find(listed_vouchers_, viewed_);
+  if (it == listed_vouchers_.end()) {
+    unknown_key(out);
+    return;
+  }
+  if (newer ? it == listed_vouchers_.begin() : std::next(it) == listed_vouchers_.end()) {
+    std::println(out, "This is the {} voucher in the list.", newer ? "newest" : "oldest");
+    return;
+  }
+  viewed_ = newer ? *std::prev(it) : *std::next(it);
+  show_voucher(out);
+}
+
 // True when the viewed voucher has the highest number of its series in the open year
 bool Repl::viewed_is_last() const {
   auto const* year = books_.year_starting(open_year_);
@@ -3198,7 +3262,8 @@ void Repl::on_confirm_delete_voucher_key(charset::unicode::CodePoint key, std::o
   if (year.vouchers.empty()) {
     std::println(out, "No vouchers in fiscal year {} - {} now.", format_iso_date(year.start), format_iso_date(year.end));
     mode_ = Mode::Booking;
-  } else if (std::ranges::any_of(year.vouchers,
+  } else if (view_series_.empty() ||
+             std::ranges::any_of(year.vouchers,
                                  [&](books::Voucher const& voucher) { return voucher.series == view_series_; })) {
     list_vouchers(out);
   } else {
@@ -3211,6 +3276,8 @@ void Repl::on_voucher_view_key(charset::unicode::CodePoint key, std::ostream& ou
   if (key == U'-') {
     mode_ = Mode::VoucherList;
     show_vouchers(out);
+  } else if (key == U'<' || key == U'>') {
+    step_voucher(key == U'<', out);
   } else if (auto const op = operations().on_key(key)) {
     on_operation(*op, out);
   } else {
