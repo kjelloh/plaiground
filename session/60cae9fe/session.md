@@ -70,6 +70,89 @@ Nothing is imported.
 2026/27> q
 ```
 
+So now I can actually dare to try a round trip to Fortnox and back to see how it all turns out?
+
+1. One round trip with the 'same' books.
+    * I can revert back to the original SIE file from Fortnox.
+
+```sh
+revert> revert
+Wrote sie_2026-27_3.se in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB: fiscal year 2026-05-01 - 2027-04-30, 37 vouchers (SIE 4E).
+Updated .cratchit/books/2026-05-01/vouchers.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Updated .cratchit/books/2026-05-01/postings.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Initiated .cratchit/books/2026-05-01/events.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Initiated .cratchit/books/2026-05-01/event_postings.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Stashed the file as .cratchit/imports/2026-10-29_1_TheITfiedAB20261019_105108.se in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Imported 0 vouchers into fiscal year 2026-05-01 - 2027-04-30 (17 already in the books).
+Out of the books: 2 dropped, 18 now waiting events.
+2026/27> 
+```
+    * I can export as SIE from cratchit.
+    * I can import as SIE into Fortnox
+
+    ![alt text](image.png)
+
+        * OK. So Fortnox now FAILED (reports anonymous error or faulty internet connection)
+        * After a while it recovers and re-import shows (already imported)
+        * SHAKY!!
+
+    * I can export as SIE from fortnox.
+    * Then Import it to Cratchit.
+
+```sh
+sie?> 1
+SIE file /Users/kjell-olovhogdahl/Downloads/TheITfiedAB20261029_111636.se
+  Read as      CP437
+  Program      Fortnox 3.62.17, generated 2026-10-29
+  Company      The ITfied AB, 556782-8172
+  Fiscal year  2026-05-01 - 2027-04-30
+  Accounts     500: 0 new, 0 changed
+  Vouchers     34: 17 new, 17 already in the books
+Import it? (y/n) y
+Updated .cratchit/books/2026-05-01/opening.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Updated .cratchit/books/2026-05-01/vouchers.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Updated .cratchit/books/2026-05-01/postings.csv in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Stashed the file as .cratchit/imports/2026-10-29_1_TheITfiedAB20261029_111636.se in /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/60cae9fe/The ITfied AB
+Imported 17 vouchers into fiscal year 2026-05-01 - 2027-04-30 (17 already in the books).
+2026/27> 
+```    
+    * This should go without errors and without anything changing anywhere?
+
+YES. That worked.
+
+* Although cratchit could maybe have detected that the books actually did not change at all?
+
+THEN NO, It DID NOT Work!
+
+* Fortnox actually duplicated all vouchers!
+
+    * It seems Fortnox always imports as if all in the SIE file are NEW vouchers!
+    * I asked in the Fortnox help-chat with a bot.
+
+```text
+Det går inte att välja bort “redan befintliga verifikationer” vid själva SIE-importen – alla verifikationer som ingår i filen importeras enligt de val du gör i blocket Transaktioner.
+
+Det du kan göra i Fortnox Bokföring är:
+
+Ångra hela SIE-importen
+Gå till ditt företagsnamn uppe till höger och välj Import.
+Klicka på verktyget Ångra SIE längst till höger.
+I listan som visas klickar du på soptunnan på den aktuella importen och bekräftar att du vill ta bort alla verifikationer från den SIE-importen.
+Obs: Detta fungerar bara om du inte bokfört nya verifikationer i samma verifikationsserier efter importen.
+Förbered ny SIE-fil utan dubbletter
+För att undvika duplicering vid nästa import behöver du i det andra programmet ta fram en SIE-fil där:
+Endast de verifikationer som inte redan finns i Fortnox ingår, eller
+Du begränsar perioden/verifikationsserier så att filen inte innehåller de verifikationer som är bokförda i Fortnox.
+Importera den ”rensade” SIE-filen på nytt
+Gå åter till företagsnamn → Import.
+Läs in din nya SIE-fil via Läs in fil eller dra in filen.
+Kontrollera blocken (Räkenskapsår, Konton, Transaktioner osv.) så att allt har grön bock.
+Klicka Importera.
+Fortnox har inget inbyggt filter som automatiskt hoppar över verifikationer som redan finns, så nyckeln är att ångra felaktig import och sedan importera en SIE-fil som du i förväg begränsat till verifikationer som saknas i Fortnox.
+```
+
+THIS IS NOT GOOD!!
+
 ## 20261028
 
 * [Beräkning av mervärdesskatt vid öresavrundning](https://www4.skatteverket.se/rattsligvagledning/edition/2026.14/381778.html?utm_source=chatgpt.com)
