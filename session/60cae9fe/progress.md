@@ -791,6 +791,16 @@ D 8 Loopia Kreditfaktura); the export before equals sie_2026-27.se (37 vouchers)
 a demoted event posts again (template `0`, series, Enter); importing the export back adds the 20 again and reports 22
 possible matches (the 18 waiting events stay). In review.
 
+Task 80: An import takes the waiting events it brings as vouchers off the waiting list. Each voucher the file puts in
+place (added, renamed, replaced) takes at most one waiting event with the same date and counted postings
+(`ImportPlan::waiting_booked`, e.g. `2025-04-02 "Lunch" as D 1`); the events the same import demotes are placed after
+and never taken. Summary line `Waiting      18 events in the file as vouchers: taken off the waiting list`, after the
+import `Took 18 waiting events off the waiting list: in the file as vouchers.`, each logged (business). Also in a
+closed year (deleting waiting events is allowed there). Manual: What the import does, Making the file the truth (going
+back), log kinds. 493 tests pass, no warnings (Debug, trace DEBUG). Checked on a scratch copy of The ITfied AB: revert
+to the Fortnox file, then import sie_2026-27_3.se back: 20 new, 18 waiting events taken off, none left; vouchers.csv and
+postings.csv equal the real books (opening.csv differs only by the reported 1650/2641 opening, known). In review.
+
 ## Next
 
 Later: removing a single posting from a waiting event, the source reference in the saved voucher, typing postings
@@ -1014,8 +1024,6 @@ into a waiting event without making a voucher, several entries chosen at once.
 ## Open questions
 
 - Is "same date and same counted postings" good enough for voucher sameness on import (Task 79)? Try and see.
-- Should an import that brings a voucher identical to a waiting event (same date and postings) delete the waiting event
-  by itself? Today importing the export back after a revert leaves the demoted events to Finding matches.
 
 - Should the clearing voucher also clear the 9xxx memo accounts (base of boxes 20-22) against 9099, as Fortnox does?
 - Should steps_of tell corrections and purchases posted against 2650 from clearing vouchers (today they count as

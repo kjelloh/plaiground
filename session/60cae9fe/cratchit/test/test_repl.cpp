@@ -779,6 +779,18 @@ TEST_F(WorkspaceRepl, AnOlderFileBecomesTheTruthWithRevert) {
       << record;
   // The same file again: all in the books
   EXPECT_NE(run("3test.se\n").find("Nothing to import."), std::string::npos);
+  // The export back: its vouchers return and take the waiting event they made off the list
+  auto const back = run("3Test/sie_2025.se\ny");
+  EXPECT_NE(back.find("  Vouchers     5: 3 new, 2 already in the books\n"
+                      "  Waiting      1 event in the file as vouchers: taken off the waiting list\n"),
+            std::string::npos)
+      << back;
+  EXPECT_NE(back.find("Took 1 waiting event off the waiting list: in the file as vouchers.\n"), std::string::npos)
+      << back;
+  auto const after = cratchit::books::read_books(root / "start" / "Test");
+  ASSERT_TRUE(after.has_value()) << after.error();
+  EXPECT_EQ(after->years[0].vouchers.size(), 5u);
+  EXPECT_TRUE(after->years[0].waiting.empty());
 }
 
 TEST_F(WorkspaceRepl, FileWithErrorsIsNotImported) {

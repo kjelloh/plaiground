@@ -462,19 +462,20 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
   }
 
   std::vector<Voucher> vouchers;
+  std::vector<Voucher const*> from_file; // put in place by the file: renamed, replaced, added
+  std::vector<WaitingEvent> demoted; // placed after the waiting events the file brings are taken off
   for (std::size_t b = 0; b < year.vouchers.size(); ++b) {
     switch (fate[b]) {
     case Fate::stays:
       vouchers.push_back(std::move(year.vouchers[b]));
       break;
     case Fate::renamed:
-      vouchers.push_back(file[*taken_by[b]]);
-      break;
     case Fate::replaced:
+      from_file.push_back(&file[*taken_by[b]]);
       vouchers.push_back(file[*taken_by[b]]);
       break;
     case Fate::demoted:
-      year.place_waiting(waiting_of(year.vouchers[b]));
+      demoted.push_back(waiting_of(year.vouchers[b]));
       break;
     default:
       break;
@@ -482,11 +483,38 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
   }
   for (std::size_t f = 0; f < file.size(); ++f) {
     if (!file_done[f]) {
-      vouchers.push_back(std::move(file[f]));
+      from_file.push_back(&file[f]);
+      vouchers.push_back(file[f]);
       ++plan.vouchers_added;
     }
   }
   year.vouchers = std::move(vouchers);
+
+  // Waiting events the file brings as vouchers
+  auto const as_voucher = [](WaitingEvent const& waiting) {
+    return Voucher{"", "", waiting.event, std::nullopt, "", waiting.postings};
+  };
+  std::vector<bool> booked(year.waiting.size(), false);
+  for (auto const* voucher : from_file) {
+    auto const rows = counted_rows(*voucher);
+    for (std::size_t w = 0; w < year.waiting.size() && !rows.empty(); ++w) {
+      auto const& waiting = year.waiting[w];
+      if (!booked[w] && waiting.event.date == voucher->event.date && counted_rows(as_voucher(waiting)) == rows) {
+        booked[w] = true;
+        plan.waiting_booked.push_back(std::format("{} \"{}\" as {}", format_iso_date(waiting.event.date),
+                                                  waiting.event.heading, voucher_name(*voucher)));
+        break;
+      }
+    }
+  }
+  for (std::size_t w = year.waiting.size(); w-- > 0;) {
+    if (booked[w]) {
+      year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(w));
+    }
+  }
+  for (auto& waiting : demoted) {
+    year.place_waiting(std::move(waiting));
+  }
 }
 
 // Compares cratchit's closing balances and results of a year with what the file says

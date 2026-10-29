@@ -1376,6 +1376,12 @@ and nothing is imported.
 - Any other difference between the year's vouchers in the books and in the
   file (a voucher that differs otherwise, or one the file lacks) makes the file
   the truth only when you type `revert` (see Making the file the truth).
+- A waiting event the file brings as a voucher (the same date, and the same
+  rows: account and amount) is taken off the waiting list. Each voucher the
+  file puts into the books takes at most one. The summary says so before you
+  answer, `Waiting      18 events in the file as vouchers: taken off the
+  waiting list`, and after the import `Took 18 waiting events off the waiting
+  list: in the file as vouchers.`
 - Rows added or struck in a voucher after it was registered (`#RTRANS`,
   `#BTRANS`) are kept with the voucher and marked. Struck rows do not count.
 - New accounts, dimensions and objects are added. Changed names, types, SRU
@@ -1460,8 +1466,8 @@ year to make the file the truth`).
 
 The import's record lists the vouchers (see The files), and the log has each
 one in full (see The log). To go back, import the export written before: its
-vouchers come back (as imported), but the waiting events made from them stay.
-Delete those with Finding matches (9 at the year prompt).
+vouchers come back (as imported), and take the waiting events made from them
+off the waiting list.
 
 #### Balances and notes
 
@@ -1958,7 +1964,7 @@ cratchit's code it was logged, and what happened:
 
 | Kind                 | What it means                                          |
 |----------------------|--------------------------------------------------------|
-| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, an import that made the file the truth of a year (and each voucher it renamed, replaced, dropped or made a waiting event, in full), a deleted voucher (in full), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
+| BUSINESS             | Something cratchit did, such as opening a workspace, setting a project's missing `vat_period` to the default, reading, checking or importing an SIE file, a note of an import, each reason an import was refused, an import that made the file the truth of a year (and each voucher it renamed, replaced, dropped or made a waiting event, in full), each waiting event an import took off the waiting list, a deleted voucher (in full), opening, closing or reopening a fiscal year, saving an entered voucher (naming its template, or the voucher it corrects, and whether it was flipped), booking the VAT clearing voucher of a quarter, writing its eSKD file, exporting a fiscal year as an SIE file, noting or deleting a waiting event, making one waiting event of two, deleting a waiting event as already in the books, making a waiting event of a statement entry or adding one to it, or reading, choosing the account of and importing an account statement. |
 | DESIGN_INSUFFICIENCY | Something cratchit is not designed for yet, such as a terminal encoding it can't handle, an SIE file in an unknown encoding, an account statement it cannot read, an eSKD or SIE file it could not write, or an SIE export with characters CP437 does not have. |
 | DEVELOPMENT_TRACE    | Details for developing cratchit. Only Debug builds log these (see README.md). |
 

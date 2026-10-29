@@ -260,6 +260,21 @@ TEST(Import, ACorrectionAndWhatItCorrectsAreDroppedTheRestWaits) {
   EXPECT_EQ(plan.books.years[0].vouchers.size(), 2u);
   ASSERT_EQ(plan.books.years[0].waiting.size(), 1u);
   EXPECT_EQ(plan.books.years[0].waiting[0].noted, 2026y / October / 1);
+  // Brought back by a file, D 1 takes its waiting event off the list; another waiting event stays
+  auto reverted = plan.books;
+  reverted.years[0].place_waiting({{"Coffee", 2000, 2025y / April / 2}, 2025y / April / 2,
+                                   {{cratchit::books::Posting::Kind::normal, "6570", {}, 2000, 2025y / April / 2, "",
+                                     "", "", ""}}});
+  auto const back = plan_import(
+      reverted, known,
+      parse_sie(sie_file(2025, balanced_balances(),
+                         sale_and_cost(2025) + "#VER D 1 20250402 \"Lunch\"\r\n{\r\n#TRANS 6570 {} 20\r\n"
+                                               "#TRANS 1930 {} -20\r\n}\r\n")));
+  EXPECT_TRUE(back.errors.empty()) << all(back.errors);
+  EXPECT_FALSE(back.reverts());
+  EXPECT_EQ(back.waiting_booked, std::vector<std::string>{"2025-04-02 \"Lunch\" as D 1"});
+  ASSERT_EQ(back.books.years[0].waiting.size(), 1u);
+  EXPECT_EQ(back.books.years[0].waiting[0].event.heading, "Coffee");
   // Not in a closed year
   books.years[0].closed = true;
   auto const closed = plan_import(books, known, parse_sie(file_2025()));

@@ -52,6 +52,9 @@ struct ImportPlan {
   std::vector<std::string> demoted;  // in the books, now waiting events
   std::vector<std::string> reverted; // each of them in full, for the log
   std::size_t registered_after_file = 0; // replaced, dropped and demoted ones registered after the file's #GEN
+  // Waiting events the file brings as vouchers (the same date and counted postings), taken off the waiting list,
+  // e.g. `2026-07-03 "AVGIFTER NORDEA" as A 12`
+  std::vector<std::string> waiting_booked;
 
   // True when there are errors and a forced import would take every one of them
   bool can_force() const { return !errors.empty() && forceable == errors.size(); }
@@ -91,7 +94,9 @@ struct Forcing {
 //   another day) is dropped with it; the others become
 //   waiting events with their counted postings (demoted), noted on their
 //   registration day. The file's other vouchers are added. Any change in a
-//   closed year is an error.
+//   closed year is an error. Each voucher the file puts in place (added,
+//   renamed or replaced) takes one waiting event with the same date and
+//   counted postings off the year's waiting list (waiting_booked).
 // - Accounts, dimensions, objects and company details: new ones are added;
 //   changes are taken (and noted) only from a file whose year is the latest in
 //   the books, so an older file does not undo newer names.

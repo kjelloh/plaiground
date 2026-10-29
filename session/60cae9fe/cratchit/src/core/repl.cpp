@@ -1577,6 +1577,10 @@ void Repl::check_import(fs::path const& file, std::ostream& out, bool force) {
                plan.renamed.empty() ? std::string{} : std::format("{} renamed, ", plan.renamed.size()),
                plan.replaced.empty() ? std::string{} : std::format("{} replaced, ", plan.replaced.size()),
                plan.vouchers_known);
+  if (!plan.waiting_booked.empty()) {
+    std::println(out, "  Waiting      {} in the file as vouchers: taken off the waiting list",
+                 counted(plan.waiting_booked.size(), "event", "events"));
+  }
   if (!plan.notes.empty()) {
     std::println(out, "Notes:");
     for (auto const& note : plan.notes) {
@@ -1763,6 +1767,16 @@ void Repl::import(std::ostream& out) {
     if (!plan.dropped.empty() || !plan.demoted.empty()) {
       std::println(out, "Out of the books: {} dropped, {}.", plan.dropped.size(),
                    counted(plan.demoted.size(), "now a waiting event", "now waiting events"));
+    }
+  }
+  if (!plan.waiting_booked.empty()) {
+    std::println(out, "Took {} off the waiting list: in the file as vouchers.",
+                 counted(plan.waiting_booked.size(), "waiting event", "waiting events"));
+    for (auto const& booked : plan.waiting_booked) {
+      LOG_BUSINESS("Took waiting event {} off the waiting list of fiscal year {} - {} of project {} ({}): in SIE file "
+                   "{} as a voucher",
+                   booked, format_iso_date(plan.year_start), format_iso_date(plan.year_end), project_->name,
+                   project_->uuid, import_source_.file.string());
     }
   }
   if (auto const* year = plan.books.year_starting(plan.year_start)) {
