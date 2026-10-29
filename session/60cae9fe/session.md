@@ -186,6 +186,10 @@ Everything in the file is already in the books. Nothing to import.
 2026/27> 
 ```
 
+So it seems I can now truts a round trip for my VAT Returns report compare with Fortnox?
+
+
+
 ## 20261028
 
 * [Beräkning av mervärdesskatt vid öresavrundning](https://www4.skatteverket.se/rattsligvagledning/edition/2026.14/381778.html?utm_source=chatgpt.com)
