@@ -35,28 +35,19 @@ std::string account_name(books::Books const& books, std::string const& account) 
 } // namespace
 
 std::vector<ReviewBox> review_boxes(Document const& document) {
-  std::set<std::string> sections;
-  for (auto const& box : document.boxes) {
-    if (auto const text = text_of(box.box)) {
-      sections.insert(text->section);
-    }
-  }
   std::vector<ReviewBox> boxes;
   for (auto const& text : built_in_box_texts()) {
-    if (!sections.contains(text.section) || text.box == vat_to_pay_box ||
-        std::ranges::find(boxes, text.box, &ReviewBox::box) != boxes.end()) {
+    if (text.box == vat_to_pay_box || std::ranges::find(boxes, text.box, &ReviewBox::box) != boxes.end()) {
       continue;
     }
-    auto const posted = std::ranges::find(document.boxes, text.box, &BoxAmount::box);
-    Amount amount = 0;
     std::size_t postings = 0;
-    if (posted != document.boxes.end()) {
-      amount = posted->amount;
+    if (auto const posted = std::ranges::find(document.boxes, text.box, &BoxAmount::box);
+        posted != document.boxes.end()) {
       for (auto const& account : posted->accounts) {
         postings += account.postings.size();
       }
     }
-    boxes.push_back({text.box, text_of(text.box, amount)->title, postings});
+    boxes.push_back({text.box, text.section, text.title, postings});
   }
   return boxes;
 }
@@ -64,12 +55,19 @@ std::vector<ReviewBox> review_boxes(Document const& document) {
 std::vector<std::string> review_of(books::Books const& books, Document const& document, Box const& box,
                                    std::size_t width) {
   auto const posted = std::ranges::find(document.boxes, box, &BoxAmount::box);
-  auto const amount = posted == document.boxes.end() ? Amount{0} : posted->amount;
-  auto const text = text_of(box, amount);
+  std::vector<BoxText const*> texts; // the box's titles, the main one first
+  for (auto const& text : built_in_box_texts()) {
+    if (text.box == box) {
+      texts.push_back(&text);
+    }
+  }
   std::vector<std::string> lines;
-  lines.push_back(std::format("Box {}  {}", box, text ? text->title : std::string{}));
-  if (text) {
-    lines.push_back(std::format("Section: {}", text->section));
+  lines.push_back(std::format("Box {}  {}", box, texts.empty() ? std::string{} : texts.front()->title));
+  for (std::size_t i = 1; i < texts.size(); ++i) {
+    lines.push_back(std::format("Also titled: {}", texts[i]->title));
+  }
+  if (!texts.empty()) {
+    lines.push_back(std::format("Section: {}", texts.front()->section));
   }
   std::set<std::string> with_postings;
   if (posted == document.boxes.end()) {
@@ -103,8 +101,11 @@ std::vector<std::string> review_of(books::Books const& books, Document const& do
   }
   lines.push_back("");
   lines.push_back(std::format("SKV's description of box {}:", box));
-  if (text) {
-    for (auto& line : wrap_text(text->description, width)) {
+  for (std::size_t i = 0; i < texts.size(); ++i) {
+    if (i > 0) {
+      lines.push_back("");
+    }
+    for (auto& line : wrap_text(texts[i]->description, width)) {
       lines.push_back(std::move(line));
     }
   }

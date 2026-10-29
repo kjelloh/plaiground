@@ -1982,30 +1982,39 @@ before you book.
 
 #### Reviewing the boxes against SKV's descriptions
 
-`4` at the quarter lists the boxes to review (the prompt is `review?>`): every
-box of each section of the form that has a box with postings, in the form's
-order, with its title (cut to 45 characters) and how many postings it has, or
-`no postings`. The count, not the amount, as a cleared quarter adds up to 0.00 in
-its VAT boxes. So a box that should have postings but has none shows next to the
-ones that do: here box 30 (output VAT on the purchase) is missing next to box 20:
+`4` at the quarter lists every box of the form, in the form's order under the
+heading of its section, with its title (cut to 45 characters) and how many
+postings it has, or `no postings`. The count, not the amount, as a cleared
+quarter adds up to 0.00 in its VAT boxes. Every quarter lists every box, so a
+box that should have postings but has none shows: here box 30 (output VAT on
+the purchase) is missing, while box 20 has the purchase:
 
 ```
-Boxes of 2026 Q1 to review against SKV's descriptions (every box of a section with postings):
-  1  20  Inköp av varor från annat EU-land                 1 posting
-  2  21  Inköp av tjänster från annat EU-land enlig...   no postings
+Boxes of 2026 Q1 to review against SKV's descriptions (every box of the form):
+Momspliktig försäljning eller uttag
+  05  Momspliktig försäljning som inte ingår i r...   no postings
   ...
-  6  30  Utgående moms 25%                               no postings
+Momspliktiga inköp vid omvänd betalningsskyldighet
+  20  Inköp av varor från annat EU-land                2 postings
+  21  Inköp av tjänster från annat EU-land enlig...   no postings
   ...
-  9  48  Ingående moms att dra av                         2 postings
-review?>
+  30  Utgående moms 25%                               no postings
+  ...
+Beräkning av moms
+  48  Ingående moms att dra av                        10 postings
+Type a box number and Enter to see it. - or Enter on an empty line goes back.
+box> 
 ```
 
-Box 49 is not listed: the form adds it up. With more than nine boxes, keys 1-8
-show eight at a time, `0` the ones before and `9` the ones after. `-` goes back
-to the quarter.
+Type the box's number as on the form and press Enter (`5` is box 05). A number
+that is not in the list (such as 13, or 49, which the form adds up) gets `No
+box 13 to review. Type a box number of the list, e.g. 48.` and the prompt again.
+`-` or Enter on an empty line goes back to the quarter. Box 48 is listed with
+its main title, `Ingående moms att dra av`.
 
-A number shows the box (the prompt is the box, e.g. `box 20>`): its full title
-and section; its amount on the form, or that it has no postings; its accounts
+The box is shown with its prompt, e.g. `box 20>`: its full title
+(box 48 also `Also titled: Tidigare avdragen moms att betala tillbaka`, and both
+descriptions) and section; its amount on the form, or that it has no postings; its accounts
 with their sums and names and the vouchers behind them with their texts (as in
 the books: debit positive, credit negative); the other accounts that report in
 the box (from `bas_to_momsrapport.csv`), without postings, one a line with its
@@ -2041,7 +2050,7 @@ box 20>
 | >     | The next box in the list.                          |
 | <     | The box before in the list.                        |
 | Enter | Show the numbered choice again.                    |
-| -     | Back to the list of boxes.                         |
+| -     | Back to the list of boxes and `box>`.              |
 
 At either end of the list cratchit says `This is the first box in the list.` or
 `This is the last box in the list.`. Nothing is changed or logged: the review is

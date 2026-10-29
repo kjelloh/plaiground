@@ -1093,18 +1093,27 @@ TEST_F(WorkspaceRepl, VatReturnBoxesAreReviewedAgainstSkvsDescriptions) {
   run("112Test\n1");
   write_sie(root / "start" / "vat.se", vat_sie());
   run("2vat.se\ny");
-  auto const output = run("514041><<x\n--");
-  auto const list = std::string{
-      "Boxes of 2025 Q4 to review against SKV's descriptions (every box of a section with postings):\n"
-      "  1  05  Momspliktig försäljning som inte ingår i r...     1 posting\n"
-      "  2  06  Momspliktiga uttag                              no postings\n"
-      "  3  07  Beskattningsunderlag vid vinstmarginalbesk...   no postings\n"
-      "  4  08  Hyresinkomster vid frivillig beskattning        no postings\n"
-      "  5  10  Utgående moms 25%                                 1 posting\n"
-      "  6  11  Utgående moms 12%                               no postings\n"
-      "  7  12  Utgående moms 6%                                no postings\n"};
-  EXPECT_NE(output.find("  4  Review the boxes against SKV's descriptions\n2025 Q4> 4\n" + list +
-                        "review?> 1\n"
+  auto const output = run("514045\n><<-13\n48\n>-\n");
+  auto const list_start = std::string{
+      "2025 Q4> 4\n"
+      "Boxes of 2025 Q4 to review against SKV's descriptions (every box of the form):\n"
+      "Momspliktig försäljning eller uttag\n"
+      "  05  Momspliktig försäljning som inte ingår i r...     1 posting\n"
+      "  06  Momspliktiga uttag                              no postings\n"
+      "  07  Beskattningsunderlag vid vinstmarginalbesk...   no postings\n"
+      "  08  Hyresinkomster vid frivillig beskattning        no postings\n"
+      "  10  Utgående moms 25%                                 1 posting\n"
+      "  11  Utgående moms 12%                               no postings\n"
+      "  12  Utgående moms 6%                                no postings\n"
+      "Momspliktiga inköp vid omvänd betalningsskyldighet\n"
+      "  20  Inköp av varor från annat EU-land               no postings\n"};
+  auto const list_end = std::string{
+      "Beräkning av moms\n"
+      "  48  Ingående moms att dra av                        no postings\n"
+      "Type a box number and Enter to see it. - or Enter on an empty line goes back.\n"};
+  EXPECT_NE(output.find(list_start), std::string::npos) << output;
+  // 5 is box 05
+  EXPECT_NE(output.find(list_end + "box> 5\n"
                         "Box 05  Momspliktig försäljning som inte ingår i ruta 06, 07 eller 08\n"
                         "Section: Momspliktig försäljning eller uttag\n"
                         "On the form: 2000.00\n"
@@ -1117,19 +1126,22 @@ TEST_F(WorkspaceRepl, VatReturnBoxesAreReviewedAgainstSkvsDescriptions) {
   EXPECT_NE(output.find("SKV's description of box 05:\nMomspliktig försäljning som inte ingår i ruta 06, 07 eller 08\n"),
             std::string::npos)
       << output;
-  // > and < step through the list; at its ends cratchit says so
+  // > and < step through the form's boxes; at its ends cratchit says so
   EXPECT_NE(output.find("  1  Show box 05 again\nbox 05> >\nBox 06  Momspliktiga uttag\n"
                         "Section: Momspliktig försäljning eller uttag\nNo postings in 2025-10-01 - 2025-12-31.\n"),
             std::string::npos)
       << output;
   EXPECT_NE(output.find("box 06> <\nBox 05  "), std::string::npos) << output;
-  EXPECT_NE(output.find("box 05> <\nThis is the first box in the list.\n"
-                        "box 05> x\nUnknown key. Other keys: Enter list, < previous box, > next box, - back, h help, "
-                        "q quit.\n"
-                        "box 05> \n  1  Show box 05 again\n"
-                        "box 05> -\n" + list + "review?> -\nChecks of 2025 Q4: nothing found.\n"),
+  EXPECT_NE(output.find("box 05> <\nThis is the first box in the list.\nbox 05> -\n" + list_start.substr(11)), std::string::npos)
+      << output;
+  // A number that is no box is asked again; - goes back to the list, Enter on an empty line to the quarter
+  EXPECT_NE(output.find(list_end + "box> 13\nNo box 13 to review. Type a box number of the list, e.g. 48.\nbox> 48\n"
+                        "Box 48  Ingående moms att dra av\nAlso titled: Tidigare avdragen moms att betala tillbaka\n"),
             std::string::npos)
       << output;
+  EXPECT_NE(output.find("box 48> >\nThis is the last box in the list.\nbox 48> -\n" + list_start.substr(11)), std::string::npos)
+      << output;
+  EXPECT_NE(output.find(list_end + "box> \nChecks of 2025 Q4: nothing found.\n"), std::string::npos) << output;
 }
 
 TEST_F(WorkspaceRepl, VatReturnWithoutOrgnrIsNotBooked) {

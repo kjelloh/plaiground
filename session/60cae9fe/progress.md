@@ -874,6 +874,17 @@ form: ...". Tests and manual example updated. 512 tests pass, no warnings.
 Task 85 change 2: the accounts of a box without postings are listed one a line with their name in the books' chart of
 accounts (`  4415  Inköpta varor i Sverige, ...`), `(not in the chart of accounts)` when the books lack the account (was
 numbers wrapped). Tests and manual updated. 512 tests pass, no warnings.
+Task 85 change 3: the review lists every box of the form (28, box 49 aside) in every quarter, not only the sections with
+postings (2025 Q2 listed only box 48). The list keeps `ItemList` paging (agreed: a), with the section heading printed
+where a section starts and on top of each page (`ReviewBox::section`). Box 48 always shows its main title in the review
+(the sign picked "Tidigare avdragen ..." in cleared quarters); its view adds `Also titled: ...` and both descriptions.
+Tests: `EveryBoxOfTheForm`, box 48 view, REPL second page and last box. Manual updated. 512 tests pass, no warnings.
+Task 85 change 4: the list is picked by typing the box number, not by keys (the user meant option b). Every box of the
+form on one screen under its section headings, no keys (`ItemList` and `Mode::VatReview` gone), then `box>` (new
+`PathEditor::Kind::Box`, `Purpose::ReviewBox`, `Repl::on_review_box_number`): a box number + Enter shows it (`5` is 05);
+another number: `No box 13 to review. Type a box number of the list, e.g. 48.` and `box>` again; `-` or Enter on an
+empty line back to the quarter. `-` at `box 48>` shows the list and `box>` again. REPL test rewritten. Manual updated.
+512 tests pass, no warnings.
 
 ## Next
 

@@ -92,7 +92,6 @@ private:
     Reports,
     VatPeriods,
     VatQuarter,
-    VatReview,
     VatReviewBox,
     Paging,
     YearMenu,
@@ -181,6 +180,7 @@ private:
     Force,
     Revert,
     DiffFile,
+    ReviewBox,
   };
 
   WorkspacePlaces places_;
@@ -222,7 +222,6 @@ private:
   skv::vat_return::Steps vat_steps_;    // the steps of every quarter of the books
   std::vector<books::OpenEntry> vat_open_entries_; // the statement entries not yet booked, for the checks
   std::vector<skv::vat_return::ReviewBox> review_boxes_; // the boxes of the quarter to review against SKV's text
-  ItemList review_page_;                // the page of their list
   std::size_t review_box_ = 0;          // the box shown, an index into review_boxes_
   ItemList vat_period_page_{ItemList::Start::Zero}; // the page of the VAT return periods, key 0 the newest ended
   skv::vat_return::Period vat_quarter_;  // the ended period chosen, shown with its clearing voucher
@@ -321,8 +320,8 @@ private:
   void show_vat_report(std::ostream& out);
   void show_vat_quarter(std::ostream& out) const;
   void open_vat_review(std::ostream& out);
-  void show_vat_review(std::ostream& out) const;
-  void on_vat_review_key(charset::unicode::CodePoint key, std::ostream& out);
+  void show_vat_review(std::ostream& out);
+  void on_review_box_number(PathEditor::Result result, std::ostream& out);
   void show_review_box(std::ostream& out);
   void on_vat_review_box_key(charset::unicode::CodePoint key, std::ostream& out);
   void on_vat_quarter_key(charset::unicode::CodePoint key, std::ostream& out);

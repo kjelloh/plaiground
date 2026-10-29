@@ -244,9 +244,6 @@ Step Repl::on_key(charset::unicode::CodePoint key, std::ostream& out) {
   case Mode::VatQuarter:
     on_vat_quarter_key(key, out);
     break;
-  case Mode::VatReview:
-    on_vat_review_key(key, out);
-    break;
   case Mode::VatReviewBox:
     on_vat_review_box_key(key, out);
     break;
@@ -360,7 +357,6 @@ bool Repl::shows_on_enter() const {
   case Mode::Reports:
   case Mode::VatPeriods:
   case Mode::VatQuarter:
-  case Mode::VatReview:
   case Mode::VatReviewBox:
   case Mode::YearMenu:
   case Mode::ChooseAmount:
@@ -420,9 +416,6 @@ void Repl::show_screen(std::ostream& out) {
     break;
   case Mode::VatQuarter:
     show_vat_quarter(out);
-    break;
-  case Mode::VatReview:
-    show_vat_review(out);
     break;
   case Mode::VatReviewBox:
     show_operations(out);
@@ -941,8 +934,6 @@ std::string Repl::prompt() const {
     return "period?> ";
   case Mode::VatQuarter:
     return skv::vat_return::quarter_name(vat_quarter_) + "> ";
-  case Mode::VatReview:
-    return "review?> ";
   case Mode::VatReviewBox:
     return review_box_ < review_boxes_.size() ? std::format("box {}> ", review_boxes_[review_box_].box) : "box> ";
   case Mode::Paging:
@@ -1126,6 +1117,10 @@ void Repl::on_typing_key(charset::unicode::CodePoint key, std::ostream& out) {
   }
   if (purpose_ == Purpose::Row) {
     on_row(result, out);
+    return;
+  }
+  if (purpose_ == Purpose::ReviewBox) {
+    on_review_box_number(result, out);
     return;
   }
   if (purpose_ == Purpose::Revert) {
@@ -2188,42 +2183,54 @@ void Repl::show_vat_quarter(std::ostream& out) const {
 // The boxes of the quarter's VAT return to review against SKV's descriptions
 void Repl::open_vat_review(std::ostream& out) {
   review_boxes_ = skv::vat_return::review_boxes(vat_form_);
-  review_page_.reset();
-  mode_ = Mode::VatReview;
   show_vat_review(out);
 }
 
-// Numbered from 1, each box with its title (cut) and its amount on the form, or that it has no postings
-void Repl::show_vat_review(std::ostream& out) const {
-  std::println(out, "Boxes of {} to review against SKV's descriptions (every box of a section with postings):",
+// Every box of the form under its section, with its title (cut) and how many postings it has; then box> to type
+// the number of the box to see
+void Repl::show_vat_review(std::ostream& out) {
+  std::println(out, "Boxes of {} to review against SKV's descriptions (every box of the form):",
                skv::vat_return::quarter_name(vat_quarter_));
-  review_page_.show(review_boxes_.size(), out, [&](std::size_t index, std::size_t key) {
-    auto const& box = review_boxes_[index];
+  std::string section;
+  for (auto const& box : review_boxes_) {
+    if (box.section != section) {
+      section = box.section;
+      std::println(out, "{}", section);
+    }
     auto const title = skv::vat_return::cut_text(box.title, 45);
-    auto const padding = 45 - std::min<std::size_t>(45, static_cast<std::size_t>(std::ranges::count_if(
-                                                             title, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; })));
-    std::println(out, "  {}  {}  {}{}{:>14}", key, box.box, title, std::string(padding, ' '),
+    auto const width = static_cast<std::size_t>(
+        std::ranges::count_if(title, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
+    std::println(out, "  {}  {}{}{:>14}", box.box, title, std::string(45 - std::min<std::size_t>(45, width), ' '),
                  box.postings == 0 ? std::string{"no postings"}
                                    : std::format("{} posting{}", box.postings, box.postings == 1 ? "" : "s"));
-  });
+  }
+  std::println(out, "Type a box number and Enter to see it. - or Enter on an empty line goes back.");
+  purpose_ = Purpose::ReviewBox;
+  editor_.start("", PathEditor::Kind::Box);
+  mode_ = Mode::Typing;
+  out << editor_.prompt();
 }
 
-void Repl::on_vat_review_key(charset::unicode::CodePoint key, std::ostream& out) {
-  if (key == U'-') {
+// The box typed at box>: shown when the form has it (5 is box 05), else said so and asked again
+void Repl::on_review_box_number(PathEditor::Result result, std::ostream& out) {
+  if (result == PathEditor::Result::Cancelled) {
     mode_ = Mode::VatQuarter;
     show_vat_quarter(out);
     return;
   }
-  auto const pick = review_page_.on_key(key, review_boxes_.size());
-  if (pick.kind == ItemList::Pick::Kind::Scrolled) {
-    show_vat_review(out);
-  } else if (pick.kind == ItemList::Pick::Kind::Item) {
-    review_box_ = pick.index;
-    mode_ = Mode::VatReviewBox;
-    show_review_box(out);
-  } else {
-    unknown_key(out);
+  auto number = trimmed(editor_.text());
+  if (number.size() == 1) {
+    number = "0" + number;
   }
+  auto const it = std::ranges::find(review_boxes_, number, &skv::vat_return::ReviewBox::box);
+  if (it == review_boxes_.end()) {
+    std::println(out, "No box {} to review. Type a box number of the list, e.g. 48.", trimmed(editor_.text()));
+    editor_.start("", PathEditor::Kind::Box);
+    out << editor_.prompt();
+    return;
+  }
+  review_box_ = static_cast<std::size_t>(it - review_boxes_.begin());
+  show_review_box(out);
 }
 
 // The box with its postings and SKV's description, paged; then its operations
@@ -2234,7 +2241,6 @@ void Repl::show_review_box(std::ostream& out) {
 
 void Repl::on_vat_review_box_key(charset::unicode::CodePoint key, std::ostream& out) {
   if (key == U'-') {
-    mode_ = Mode::VatReview;
     show_vat_review(out);
   } else if (key == U'<' || key == U'>') {
     auto const next = key == U'>';

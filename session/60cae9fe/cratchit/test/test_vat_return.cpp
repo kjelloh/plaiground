@@ -489,17 +489,23 @@ Document a48_like() {
 
 } // namespace
 
-TEST(VatReturnReview, EveryBoxOfTheSectionsWithPostings) {
+TEST(VatReturnReview, EveryBoxOfTheForm) {
   auto const boxes = review_boxes(a48_like());
   std::vector<std::string> numbers;
   for (auto const& box : boxes) {
     numbers.push_back(box.box);
   }
-  // Reverse charge (20-24, 30-32) and the VAT (48); box 49 is added up, not reviewed
-  EXPECT_EQ(numbers, (std::vector<std::string>{"20", "21", "22", "23", "24", "30", "31", "32", "48"}));
-  EXPECT_EQ(boxes[0], (ReviewBox{"20", "Inköp av varor från annat EU-land", 1}));
-  EXPECT_EQ(boxes[5], (ReviewBox{"30", "Utgående moms 25%", 0})); // the missing output VAT shows
-  EXPECT_EQ(boxes[8].title, "Ingående moms att dra av");
+  // In the form's order, box 49 aside (it is added up, not posted to)
+  EXPECT_EQ(numbers, (std::vector<std::string>{"05", "06", "07", "08", "10", "11", "12", "20", "21", "22",
+                                               "23", "24", "30", "31", "32", "50", "60", "61", "62", "35",
+                                               "36", "37", "38", "39", "40", "41", "42", "48"}));
+  auto const of = [&](std::string const& number) { return *std::ranges::find(boxes, number, &ReviewBox::box); };
+  EXPECT_EQ(of("20"), (ReviewBox{"20", "Momspliktiga inköp vid omvänd betalningsskyldighet",
+                                 "Inköp av varor från annat EU-land", 1}));
+  EXPECT_EQ(of("30").postings, 0u); // the missing output VAT shows
+  EXPECT_EQ(of("05").postings, 0u); // and so does every box of a section without postings
+  EXPECT_EQ(of("48").title, "Ingående moms att dra av"); // the main title, whatever the sign
+  EXPECT_EQ(review_boxes({}).size(), 28u); // a quarter without postings has every box too
 }
 
 TEST(VatReturnReview, ABoxWithItsPostingsAndDescription) {
@@ -529,6 +535,13 @@ TEST(VatReturnReview, ABoxWithItsPostingsAndDescription) {
     return std::ranges::count_if(line, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }) <= 80;
   }));
   // A box without postings: its accounts and description
+  // Box 48: both titles and both descriptions
+  auto const vat = review_of(books, a48_like(), "48");
+  EXPECT_EQ(vat[0], "Box 48  Ingående moms att dra av");
+  EXPECT_EQ(vat[1], "Also titled: Tidigare avdragen moms att betala tillbaka");
+  EXPECT_TRUE(std::ranges::any_of(vat, [](std::string const& line) {
+    return line.starts_with("Välj alternativet Tidigare avdragen moms att betala tillbaka");
+  })); // the second title's description follows the first
   auto const empty = review_of(books, a48_like(), "30");
   EXPECT_EQ(empty[2], "No postings in 2026-01-01 - 2026-03-31.");
   EXPECT_EQ(empty[3], "Accounts that report in box 30:");
