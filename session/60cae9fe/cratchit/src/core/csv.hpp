@@ -14,10 +14,10 @@ using CsvRow = std::vector<std::string>;
 // a comma, a quote, a CR or LF, or space at either end is quoted, with quotes doubled.
 std::string format_csv_row(CsvRow const& row);
 
-// The rows of CSV text. Quoted fields may hold commas, doubled quotes and line
-// ends. A CR before LF is dropped and blank lines are skipped. Error text for
+// The rows of CSV text, fields separated by separator (a comma unless given). Quoted fields may hold the
+// separator, doubled quotes and line ends. A CR before LF is dropped and blank lines are skipped. Error text for
 // an unclosed quote or text after a closing quote.
-std::expected<std::vector<CsvRow>, std::string> parse_csv(std::string_view text);
+std::expected<std::vector<CsvRow>, std::string> parse_csv(std::string_view text, char separator = ',');
 
 // Read and parse a file. Error text names the file.
 std::expected<std::vector<CsvRow>, std::string> read_csv(std::filesystem::path const& file);

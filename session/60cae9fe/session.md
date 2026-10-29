@@ -204,7 +204,11 @@ So I began with A11 and A12 and got some additional ideas to adress now after al
     * I mean, the SIE file kind-of defines the account plan and its mapping to SRU.
     * Maybe we can reverse engineer something by going over SRU cross dependence on SKV forms?
 
-ANyhow. I asked claude for suggestions and let it add 5 types of checks on a VAT period when a VAT report to view is selected. 
+ANyhow. I asked claude for suggestions and let it add 5 types of checks on a VAT period when a VAT report to view is selected.
+
+I now decide to at least take some time and study what I know about counter accounts for 1650 and 2650 to begin with?
+
+* I have purchased the ebook 'svensk_redovisning_bokforing.pdf' for 2016.
 
 ## 20261028
 

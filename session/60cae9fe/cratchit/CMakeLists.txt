@@ -32,6 +32,12 @@ file(READ resources/momsrapport/momsrapport_box_to_eskd.csv box_tags_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," box_tags_bytes "${box_tags_hex}")
 configure_file(src/core/skv/vat_return/box_tags.cpp.in generated/box_tags.cpp @ONLY)
 
+# Likewise the boxes' sections and titles on the form
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS resources/momsrapport/momsrapport.csv)
+file(READ resources/momsrapport/momsrapport.csv box_texts_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," box_texts_bytes "${box_texts_hex}")
+configure_file(src/core/skv/vat_return/box_texts.cpp.in generated/box_texts.cpp @ONLY)
+
 # All application logic lives in the core library
 add_library(cratchit_core
   src/core/amount.cpp
@@ -75,6 +81,8 @@ add_library(cratchit_core
   src/core/skv/vat_return/document.cpp
   src/core/skv/vat_return/eskd.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/box_tags.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/box_texts.cpp
+  src/core/skv/vat_return/box_texts.cpp
   src/core/skv/vat_return/report.cpp
   src/core/skv/vat_return/steps.cpp
   src/core/statement/statement.cpp

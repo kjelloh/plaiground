@@ -1,5 +1,6 @@
 #include "core/skv/vat_return/account_boxes.hpp"
 #include "core/skv/vat_return/box.hpp"
+#include "core/skv/vat_return/box_texts.hpp"
 #include "core/skv/vat_return/checks.hpp"
 #include "core/skv/vat_return/clearing.hpp"
 #include "core/skv/vat_return/document.hpp"
@@ -263,7 +264,9 @@ TEST(VatReturn, ReportBox49IsMinusBox48WithOnlyInputVat) {
   Document const document{*quarter_of(2026y, 2), {{"48", 12000, {}}}};
   PeriodSteps const steps{*quarter_of(2026y, 2), 12000, 0, {}, 0, {}};
   auto const lines = report_of(books::Books{}, document, steps, "Test AB", std::nullopt);
-  EXPECT_NE(std::ranges::find(lines, "48                                          120.00"), lines.end());
+  EXPECT_NE(std::ranges::find(lines, "48                                          120.00  Ingående moms att dra av"),
+            lines.end());
+  EXPECT_NE(std::ranges::find(lines, "Beräkning av moms"), lines.end());
   EXPECT_NE(std::ranges::find(lines, "49                                         -120.00  10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48"),
             lines.end());
   EXPECT_EQ(lines.back(), "Box 49 on the form: 120.00 to get back.");
@@ -420,4 +423,39 @@ TEST(VatReturnChecks, VatAccountsOutsideTheReturn) {
   auto const books = with(voucher("A", "2", 2026y / August / 3, {posting("1920", -100), posting("2655", 100)}));
   EXPECT_EQ(checks_of(books, q3_2026, {}),
             (std::vector<std::string>{"2655 has postings in the period (A 2), but reports in no box of the return"}));
+}
+
+TEST(VatReturnBoxTexts, TheBuiltInTextsRead) {
+  auto const texts = box_texts(box_texts_text());
+  ASSERT_TRUE(texts.has_value()) << texts.error();
+  EXPECT_EQ(texts->front(), (BoxText{"05", "Momspliktig försäljning eller uttag",
+                                     "Momspliktig försäljning som inte ingår i ruta 06, 07 eller 08"}));
+  EXPECT_EQ(text_of("30")->title, "Utgående moms 25%");
+  EXPECT_EQ(text_of("30")->section, "Momspliktiga inköp vid omvänd betalningsskyldighet");
+  EXPECT_EQ(text_of("48")->title, "Ingående moms att dra av");
+  EXPECT_EQ(text_of("48", -100)->title, "Tidigare avdragen moms att betala tillbaka");
+  EXPECT_EQ(text_of("99"), std::nullopt);
+  // The form's order: sales, reverse charge, import, exempt sales, then the VAT
+  EXPECT_LT(form_position("32"), form_position("50"));
+  EXPECT_LT(form_position("62"), form_position("35"));
+  EXPECT_LT(form_position("42"), form_position("48"));
+  EXPECT_EQ(form_position("99"), texts->size());
+}
+
+TEST(VatReturnBoxTexts, TextsOfAFile) {
+  auto const texts = box_texts("\xEF\xBB\xBF" "Box;Section;Section;Description\r\n"
+                               "10;Sales;Output 25%;\"Long\r\ntext; with a separator\"\r\n"
+                               ";;;\r\n");
+  ASSERT_TRUE(texts.has_value()) << texts.error();
+  EXPECT_EQ(*texts, (std::vector<BoxText>{{"10", "Sales", "Output 25%"}}));
+  EXPECT_EQ(box_texts("1;Sales;Output\n").error(), "Row 1: the box is not two digits: 1");
+  EXPECT_EQ(box_texts("Box;Section\n10;Sales;\n").error(), "Row 2: box 10 has no section or title");
+}
+
+TEST(VatReturnBoxTexts, ALongTitleIsCutInTheReport) {
+  Document const document{*quarter_of(2026y, 2), {{"24", 10000, {}}}};
+  auto const lines = report_of(books::Books{}, document, {}, "Test AB", std::nullopt);
+  // Övriga inköp av tjänster i Sverige som köparen är betalningsskyldig för: 45 characters with ..., å and ö as one
+  EXPECT_NE(std::ranges::find(lines, "24                                          100.00  Övriga inköp av tjänster i Sverige som köp..."),
+            lines.end());
 }

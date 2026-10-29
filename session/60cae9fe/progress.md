@@ -843,7 +843,21 @@ warnings (Debug, trace DEBUG). Checked on a scratch copy of The ITfied AB: 2026 
 2026 Q1: A 48 (2650 with 1920, 6110); 2025 Q2: I 6 and D 23-25 (registered 2026-07-14) after M 1; 2024/25 and other
 2025/26 quarters: nothing found. In review.
 
+Task 84: VAT return report with the form's texts. `resources/momsrapport/momsrapport.csv` is built into the binary
+(`box_texts.cpp.in`, `box_texts_text()`); `box_texts(text)` (`core/skv/vat_return/box_texts`) reads it with
+`parse_csv(text, ';')` (new optional separator, default `,`), keeps box, section and title (not the description),
+skips the heading and rows without a box; error names the row. `text_of(box, amount)` (box 48 negative takes its second
+title "Tidigare avdragen moms att betala tillbaka"), `form_position(box)` (the file's order; unknown boxes last); a broken
+built-in table logs a design insufficiency. `report_of` lists the boxes in the form's order (was by number), a section
+heading line where the section changes (also before box 49), and each box's title in the Text column, cut to 45
+characters (code points) with `...`. Tests: `VatReturnBoxTexts.*` (3), report and REPL VAT tests take the texts.
+Manual: The VAT return (example, texts, order). 508 tests pass, no warnings (Debug, trace DEBUG). Checked on a copy of
+The ITfied AB: 2026 Q1 lists box 20 under "Momspliktiga inköp vid omvänd betalningsskyldighet" with no box 30 (A 48).
+In review.
+
 ## Next
+
+Idea (2026-10-29): "review against specification": show a box's full description from momsrapport.csv on request.
 
 Agreed next (2026-10-29): when an import drops vouchers that leave the books (revert), one identical in date and rows to
 a voucher that stays is dropped as a copy, not demoted; and a duplicate check on import (a new voucher in the file with

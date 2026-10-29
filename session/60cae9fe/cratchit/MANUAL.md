@@ -1805,8 +1805,10 @@ year, open that year (see Fiscal years). With `vat_period = none` cratchit says 
 VAT returns; `monthly` and `yearly` are not supported yet.
 
 The VAT return lists each box of the form that the period's postings report in,
-with its amount, and under it each account with its sum and name and the
-vouchers behind it with their text, then box 49, then the three steps with their vouchers:
+in the form's order, under the heading of the form's section it is in, with its
+amount and its title on the form, and under it each account with its sum and
+name and the vouchers behind it with their text, then box 49, then the three
+steps with their vouchers:
 
 ```
 VAT return (momsrapport) 2025-01-01 - 2025-03-31
@@ -1814,15 +1816,17 @@ Test AB, 556000-0001
 
 Box  Account  Voucher  Date                 Amount  Text
 
-05                                         1000.00
+Momspliktig försäljning eller uttag
+05                                         1000.00  Momspliktig försäljning som inte ingår i r...
      3001                                 -1000.00  Sales 25%
               B 1      2025-02-10         -1000.00  Sale
 
-10                                            0.00
+10                                            0.00  Utgående moms 25%
      2611                                     0.00  Output VAT 25%
               B 1      2025-02-10          -250.00  Sale
               M 1      2025-03-31           250.00  Momsrapport
 
+Beräkning av moms
 49                                            0.00  10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48
 
 The VAT of the period:
@@ -1833,6 +1837,14 @@ The VAT of the period:
 Box amounts are as on the form; accounts and vouchers as in the books: debit positive, credit negative.
 Box 49 on the form: 0.00, nothing to pay or get back.
 ```
+
+The sections and titles are SKV's words on the form, from the table built into
+cratchit (`momsrapport.csv`), in Swedish as on the form; a title longer than 45
+characters is cut and ends with `...`. Box 48 has two titles: `Ingående moms att
+dra av`, or `Tidigare avdragen moms att betala tillbaka` when it is negative.
+The order is the form's: sales and output VAT (05-12), purchases with reverse
+charge (20-24, 30-32), import (50, 60-62), sales exempt from VAT (35-42), then
+the VAT (48, 49).
 
 Which box an account reports in comes from the table built into cratchit
 (`bas_to_momsrapport.csv`). Only boxes that add up postings on accounts are

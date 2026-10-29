@@ -1,5 +1,7 @@
 #include "core/skv/vat_return/report.hpp"
 
+#include "core/skv/vat_return/box_texts.hpp"
+
 #include <algorithm>
 #include <format>
 
@@ -16,6 +18,25 @@ std::string row(std::string_view box, std::string_view account, std::string_view
     line += text;
   }
   return line;
+}
+
+// A box title longer than this many characters is cut, so the report's lines stay readable in a terminal
+constexpr std::size_t max_title = 45;
+
+// The text cut to at most max characters (code points), ending with ... when cut
+std::string cut(std::string_view text, std::size_t max) {
+  auto const starts = [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; };
+  if (static_cast<std::size_t>(std::ranges::count_if(text, starts)) <= max) {
+    return std::string(text);
+  }
+  std::size_t characters = 0;
+  std::size_t end = 0;
+  for (; end < text.size(); ++end) {
+    if (starts(text[end]) && characters++ == max - 3) {
+      break;
+    }
+  }
+  return std::string(text.substr(0, end)) + "...";
 }
 
 // The text of the voucher a posting is in, if the books have it
@@ -97,9 +118,21 @@ std::vector<std::string> report_of(books::Books const& books, Document const& do
     return lines;
   }
   lines.push_back(row("Box", "Account", "Voucher", "Date", "Amount", "Text"));
-  for (auto const& box : document.boxes) {
+  // In the form's order, each section of the form headed where it starts, each box with its title
+  auto boxes = document.boxes;
+  std::ranges::stable_sort(boxes, {}, [](BoxAmount const& box) { return form_position(box.box); });
+  std::string section;
+  auto const head = [&](Box const& box) {
+    if (auto const text = text_of(box); text && text->section != section) {
+      section = text->section;
+      lines.push_back(section);
+    }
+  };
+  for (auto const& box : boxes) {
     lines.push_back("");
-    lines.push_back(row(box.box, "", "", "", format_amount(box.amount), ""));
+    head(box.box);
+    auto const text = text_of(box.box, box.amount);
+    lines.push_back(row(box.box, "", "", "", format_amount(box.amount), text ? cut(text->title, max_title) : ""));
     for (auto const& account : box.accounts) {
       auto const* known = books.account(account.account);
       lines.push_back(row("", account.account, "", "", format_amount(account.amount), known ? known->name : ""));
@@ -111,6 +144,7 @@ std::vector<std::string> report_of(books::Books const& books, Document const& do
   }
   auto const to_pay = vat_to_pay(document);
   lines.push_back("");
+  head(Box(vat_to_pay_box));
   lines.push_back(row(vat_to_pay_box, "", "", "", format_amount(to_pay), vat_to_pay_expression));
   add_steps();
   lines.push_back("");

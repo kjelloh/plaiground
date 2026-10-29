@@ -940,15 +940,17 @@ TEST_F(WorkspaceRepl, VatReturnOfAQuarter) {
                         "\n"
                         "Box  Account  Voucher  Date                 Amount  Text\n"
                         "\n"
-                        "05                                         1000.00\n"
+                        "Momspliktig försäljning eller uttag\n"
+                        "05                                         1000.00  Momspliktig försäljning som inte ingår i r...\n"
                         "     3001                                 -1000.00  Sales 25%\n"
                         "              B 1      2025-02-10         -1000.00  Sale\n"
                         "\n"
-                        "10                                            0.00\n"
+                        "10                                            0.00  Utgående moms 25%\n"
                         "     2611                                     0.00  Output VAT 25%\n"
                         "              B 1      2025-02-10          -250.00  Sale\n"
                         "              M 1      2025-03-31           250.00  Momsrapport\n"
                         "\n"
+                        "Beräkning av moms\n"
                         "49                                            0.00  10 + 11 + 12 + 30 + 31 + 32 + 60 + 61 + 62 - 48\n"
                         "\n"
                         "The VAT of the period:\n"
@@ -1011,11 +1013,11 @@ TEST_F(WorkspaceRepl, VatReturnBooksTheClearingVoucher) {
                                "  2  Show the report again\n"
                                "  3  Write the eSKD file only (no voucher, e.g. to test it)\n";
   // Box amounts as on the form (credit positive), accounts and vouchers as in the books
-  EXPECT_NE(output.find("05                                         2000.00\n"
+  EXPECT_NE(output.find("05                                         2000.00  Momspliktig försäljning som inte ingår i r...\n"
                         "     3001                                 -2000.00  Sales 25%\n"
                         "              B 2      2025-11-05         -2000.00  Sale\n"
                         "\n"
-                        "10                                          500.00\n"
+                        "10                                          500.00  Utgående moms 25%\n"
                         "     2611                                  -500.00  Output VAT 25%\n"),
             std::string::npos)
       << output;
@@ -1157,7 +1159,8 @@ TEST_F(WorkspaceRepl, VatReturnsOfTheYearRunningToday) {
                         "\n"
                         "Box  Account  Voucher  Date                 Amount  Text\n"
                         "\n"
-                        "05                                          100.00\n"),
+                        "Momspliktig försäljning eller uttag\n"
+                        "05                                          100.00  Momspliktig försäljning som inte ingår i r...\n"),
             std::string::npos)
       << output;
   EXPECT_TRUE(output.ends_with(quarters + "period?> -\nReports for 2026-01-01 - 2026-12-31:\n"

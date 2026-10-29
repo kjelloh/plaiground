@@ -32,7 +32,7 @@ std::string format_csv_row(CsvRow const& row) {
   return line;
 }
 
-std::expected<std::vector<CsvRow>, std::string> parse_csv(std::string_view text) {
+std::expected<std::vector<CsvRow>, std::string> parse_csv(std::string_view text, char separator) {
   std::vector<CsvRow> rows;
   CsvRow row;
   std::string field;
@@ -75,7 +75,7 @@ std::expected<std::vector<CsvRow>, std::string> parse_csv(std::string_view text)
       ++line;
       continue;
     }
-    if (c == ',') {
+    if (c == separator) {
       row.push_back(std::move(field));
       field.clear();
       row_has_content = true;
