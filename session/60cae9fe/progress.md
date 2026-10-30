@@ -926,6 +926,10 @@ instruction_changed = xls `*` | web; basic = xls `■` | 2026 workbook "Lämplig
 `[Ej K2]`/`#` | 2026 workbook "Inte tillåtet i K2". `new` left out (agreed). Reported: 2064 instruction only in xls
 (2025), not_k2 1217/1227/2065/7836 only in workbook (2026), 2012 web instruction ticks outside the subset.
 All 22 checked against an independent recomputation. Added/removed/renamed: via a bas_to_name diff (not built yet).
+Side task 7 (2026-10-30): SKV SRU <-> tax return form workbooks (INK2/INK3/INK4 P1 + "intervall" variants, NE K1 and
+NE ej K1; 8 .xlsx, placed by the user in `_resources/_bas_sru/`) converted with the unchanged
+`../_bas_kontoplaner/xlsx2csv.py to-csv` into `_bas_sru/csv/<name>.csv` + `.format.csv`. `verify` round-trips all 8
+OK. No interpretation yet (a later csv2sru step into `generated_sru/` is to be agreed). In review.
 
 ## Next
 
