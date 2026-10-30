@@ -886,6 +886,47 @@ another number: `No box 13 to review. Type a box number of the list, e.g. 48.` a
 empty line back to the quarter. `-` at `box 48>` shows the list and `box>` again. REPL test rewritten. Manual updated.
 512 tests pass, no warnings.
 
+Side task (2026-10-29, not cratchit code): `_resources/_bas_kontoplaner/xlsx2csv.py` turns the 22 BAS chart workbooks
+(.xls 2005-2021, .xlsx 2022-2026) into `csv/<name>.csv` (`sheet;row;col;type;value`) plus `csv/<name>.format.csv`
+(`sheet;row;col;attribute;value`: fonts, fills, borders, merges, widths, comments, rich-text runs), no interpretation.
+`to-xlsx` rebuilds a workbook from the pair; `verify` round-trips all 22 with no difference, and a separate cell-by-cell
+check of originals vs rebuilt found 0 mismatches. Needs xlrd + openpyxl (used from a scratch venv). Not kept: own styles
+of cells covered by a merge, print setup, freeze panes, theme, document properties. In review.
+Side task 2: `_resources/_bas_kontoplaner/csv2bas.py` reads only `csv/Kontoplan-BAS-2025.csv` and writes
+`generated_bas/bas_to_name_2025.csv` (`number;name;option`, 1778 rows): every number/name pair of columns 3+4 and 7+8,
+repeats kept as own rows, `option` 1,2,... in sheet order for a number occurring more than once (201, 2010, 2011, 2013,
+2017, 2018, 2019, 2087), else empty; ordered by number as digit strings. No markers (agreed). In review.
+Side task 3: `csv2bas.py <csv>... --out generated_bas` now does all 22 years (`bas_to_name_<year>.csv`, 2005-2026):
+pairs found by position (number cell + text right of it), "SRU" columns skipped, "1 Tillgångar" cells split, 2026's
+`#` (K2 marker) dropped, outer spaces trimmed. Agreed after: runs of spaces/tabs/line breaks inside names become one
+plain space, no-break spaces included (agreed: plain spaces only, e.g. 2616 "25 %"); ranges (`2020–2049`, `5–6` ...) left out (listed on stdout); 2006's
+5980 kept with an empty name; 2012 ("BAS Förenklat årsbokslut", a subset) kept as `bas_to_name_2012.csv`.
+2025 output unchanged. In review.
+Side task 4: `csv2meta.py <csv>... --out generated_bas` writes `bas_to_meta_<year>.csv` (`number;option;` + one
+column per property the year uses: changed (`|`/`❙`), instruction_changed (`*`), basic (`■`), not_k2 (`[Ej K2]`/2026
+`#`); `1` or empty; agreed names). Same rows/order as bas_to_name (checked for all 22 years). 2005-2008 and 2012 have no
+markers: scaffolding files with only `number;option` (agreed). A marker counts in the cell left of the number or right
+of the name. Left out and listed: legends, `❙` on rows without a number (removed accounts per legend, agreed), the
+`[Ej K2]` in the empty right-pair slot of row 8480 (2010-2021). A change marker in the row margins (col 1 / last col,
+2010-2021) on a row with numbers counts for every number on that row (agreed: a). In review.
+Side task 5: bas.se "Jämför kontoplaner" saved in `_resources/_bas_kontoplaner/web/` (bas-2005..2025.html,
+Kontoplansforandringar_2026.xlsx). `web2csv.py` -> `csv/web/bas-YYYY.csv` (xlsx2csv format, ticked cell = "check");
+xlsx2csv.py -> `csv/web/Kontoplansforandringar_2026.csv` (round trip: one empty text cell, Konton 2026 F126, not kept in
+the rebuilt xlsx). `csv2changed.py` -> `generated_bas/bas_changed_web_<year>.csv` (name agreed): `number;new;renamed;
+instruction_changed;removed` (2026: no instruction column; sheet "Ändr. i kontoplanen just 260114"), 1 or empty, by
+number; ranges (2005: 1920 –1940, 8820-8840) left out; unticked listed rows kept. All 22 checked equal to the HTML/xlsx.
+2021 lists 2087 twice -> option column in page order (reverse of bas_to_name_2021). Agreed: kept as is; `option` is an
+enumeration within its own file, not a key across files; cross-file matching needs another mechanism (e.g. by name,
+exact or fuzzy), not built yet.
+Side task 6 (agreed): only metadata a bas_to_name diff can't give is kept as "truth". `csv2meta.py` now writes
+`bas_to_meta_xls_<year>.csv` (content unchanged). New `merge_meta.py <year>... --workbook csv/web/Kontoplansforandringar_2026.csv`
+writes `bas_to_meta_<year>.csv` = `number;option;instruction_changed;basic;not_k2` (columns a year's sources have),
+rows as bas_to_name, value = OR of sources (xls markers per row; web / 2026 workbook ticks mark all rows of a number):
+instruction_changed = xls `*` | web; basic = xls `■` | 2026 workbook "Lämplig för basuppsättning"; not_k2 = xls
+`[Ej K2]`/`#` | 2026 workbook "Inte tillåtet i K2". `new` left out (agreed). Reported: 2064 instruction only in xls
+(2025), not_k2 1217/1227/2065/7836 only in workbook (2026), 2012 web instruction ticks outside the subset.
+All 22 checked against an independent recomputation. Added/removed/renamed: via a bas_to_name diff (not built yet).
+
 ## Next
 
 Agreed next (2026-10-29): when an import drops vouchers that leave the books (revert), one identical in date and rows to

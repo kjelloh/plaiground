@@ -2,6 +2,13 @@
 
 ```#60cae9fe```
 
+## 20261030
+
+I have now placed the derived bas_to_yyyy.csv files into the git repo.
+
+* See [generated_bas README](./cratchit/resources/generated_bas/README.md)
+
+
 ## 20261029
 
 Let's see if we can get to a point where I dare to actually use this 'cratchit vibe' to do my upcoming VAT Returns report?
