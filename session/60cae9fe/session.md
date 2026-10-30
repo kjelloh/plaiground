@@ -8,6 +8,10 @@ I have now placed the derived bas_to_yyyy.csv files into the git repo.
 
 * See [generated_bas README](./cratchit/resources/generated_bas/README.md)
 
+I also downloaded BAS SRU excel documents for INK 2,3,4,N.
+
+* I asked Claude to generate row,column,raw text format csv-files
+* These are local only (NOT in git repo)
 
 ## 20261029
 
