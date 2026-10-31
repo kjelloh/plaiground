@@ -2,6 +2,23 @@
 
 ```#60cae9fe```
 
+## 20261031
+
+It seems there is an API to report ÅR to bolagsverket?
+
+* [Teknisk dokumentation för digital inlämning av årsredovisning](https://bolagsverket.se/apierochoppnadata/lamnaforetagsinformation/apifordigitalinlamningavarsredovisningochrevisionsberattelse/tekniskdokumentationfordigitalinlamningavarsredovisning.5937.html)
+
+    * It seems to be a file upload service [Digital inlämning av årsredovisningar](https://bolagsverket.se/download/18.7e28353618c67d1aad6bcb/1711611730725/tekniskt-ramverk-digital-inlamning-arsredovisning-1.2.pdf)
+
+    ```text
+    ... digital avskrift av årsredovisningen i iXBRL-format...
+    ```
+
+    * MY GOD!!! [arsredovisning-exempel-1.xbrl](https://xbrl.taxonomier.se/se/exempel/arsredovisning/exempel-1/arsredovisning-exempel-1.xbrl)
+    * This renders as HTML [arsredovisning-exempel-1.xhtml](https://xbrl.taxonomier.se/se/exempel/arsredovisning/exempel-1/arsredovisning-exempel-1.xhtml)
+
+I wonder if these formats are just formatting and NOT any help about how to map from SRU or BAS to actually produce a valid ÅR?
+
 ## 20261030
 
 I have now placed the derived bas_to_yyyy.csv files into the git repo.
