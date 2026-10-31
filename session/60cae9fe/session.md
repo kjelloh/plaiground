@@ -19,6 +19,26 @@ It seems there is an API to report ÅR to bolagsverket?
 
 I wonder if these formats are just formatting and NOT any help about how to map from SRU or BAS to actually produce a valid ÅR?
 
+* This pdf seems to define the format of ÅR [](https://www.bfn.se/wp-content/uploads/vl16-10-k2ar-kons2025.pdf)
+
+    * Chapter 4.8 Seems to specify '4.8 En balansräkning i förkortad form'?
+
+    * All secrtions seems to be in chapter 4?
+
+    ```text
+    Kapitel 4 – Uppställningsformer för
+        årsredovisningen ............................................................ 44
+        Tillämpning ......................................................................................................................... 44
+        Uppställningsform för förvaltningsberättelsen .................................................................... 45
+        Uppställningsform för resultaträkningen ............................................................................. 45
+        Uppställningsform för balansräkningen .............................................................................. 62
+    ```
+
+Surely there is a mapping from INK 2 SRU codes to ÅR?
+
+* Or maybe I think to much as a programmer?
+* But it feels like most amounts in ÅR are already in the INK 2 for SKV?
+
 ## 20261030
 
 I have now placed the derived bas_to_yyyy.csv files into the git repo.
