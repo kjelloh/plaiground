@@ -1,4 +1,5 @@
 1. [# Consider a cratchit app that maps an SIE file to a Swedish Årsredovisning?](5b35b2b9/session.md)
+1. [Consider a cratchit app that maps an SIE file to a Swedish SKV Ink_2?](7d4475fb/session.md)
 1. [Consider a two step mail eml to domain and then some domain to domain mechanism?](0dd1a71d/session.md)
 1. [Consider a vibe coded book keeping app 'cratchit' take 2?](455abd37/session.md)
 1. [Consider a way to filter out all files that is reachable from a site with an index.md root document?](805fef21/session.md)
