@@ -173,6 +173,37 @@ I have now asked Claude to step 1.
 * I tried it on an older SIE file and the output and listed TBD notes looks GOOD!
 * I now have a good feeling about this!
 
+But now I asked Claude to default to BAS 2024 and apply BAS 2026 only if told by argument.
+
+* I now realize Claude has edited the bas_to_ar_2024 so that it is now stricter than the one årsredovisning online states on their website.
+* But I need the app to be able to run permissive enough so that the BAS accounts I use does to trip a rejection.
+
+So I need to ask Claude to somehow implement some 'permissive' (YOLO) mode to comply with Årsredovisning online (which we assume generate an acceptable ÅR?)
+
+On second though! I can wait with this change until I actually know I need it?
+
+* Maybe my books accounts are actually acceptable by the 2024 mapping?
+
+I now generated an SIE file using session cratchit for 2025-05-01 to 20206-04-30.
+
+* I could not inspect what the app says about it as it stand now.
+
+```sh
+kjell-olovhogdahl@MacBook-Pro ~/Documents/GitHub/plaiground/session/5b35b2b9 % ./cratchit/build/Debug/cratchit_ar _Resources/_sie/sie_2025-26_all.se           
+Note: mapping Resources/bas_to_ar_2024.csv (BAS 2024-2025; books following BAS 2024, the default; see --bas-year)
+Error: Year 0: Summa tillgångar and Summa eget kapital och skulder differ by -24989.49 (169022.25 against 194011.74)
+Error: Year 0: Årets resultat in resultaträkning and balansräkning differ by -24989.49 (-24989.49 against 0.00)
+Note: Moms (2610-2659) nets to a receivable 0.10 at 2026-04-30; BAS: move it to 1650 Momsfordran
+Note: Moms (2610-2659) nets to a receivable 67.60 at 2025-04-30; BAS: move it to 1650 Momsfordran
+Note: Redovisningsmedel (1990-1999) 336.00 at 2025-04-30 is not matched by Avräkning för annans räkning (2830-2839) 0.00; BAS 1990 is money held for others, not a suspense account
+Note: K2 check: 8 required items are missing (TBD in the årsredovisning), see the end of the output
+```
+
+* So I know the books are not yet closed.
+* And I have not done any booking of 'avskrivningar'
+
+I would be nice if the app made a first sanity check to detect that the books are not closed?
+
 ## 202061101
 
 Now it is time to see if we can make a C++ app like cratchit actually map an SIE file to a proper and valid Swedish 'Årsredovisning' (ÅR)?

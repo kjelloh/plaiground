@@ -1,3 +1,4 @@
+#include "core/ar/arguments.hpp"
 #include "core/ar/closing.hpp"
 #include "core/ar/disposition.hpp"
 #include "core/ar/equity.hpp"
@@ -14,23 +15,34 @@
 #include "core/sie/file.hpp"
 
 #include <filesystem>
+#include <format>
 #include <print>
 #include <string_view>
+#include <vector>
 
-// cratchit_ar [--trace] <file.se>: prints the Swedish årsredovisning of an
-// SIE 4 file, or with --trace the BAS accounts and vouchers behind each of its amounts.
+// cratchit_ar [--trace] [--bas-year <year>] <file.se>: prints the Swedish
+// årsredovisning of an SIE 4 file, or with --trace the BAS accounts and vouchers
+// behind each of its amounts, by the mapping for the BAS year of the books.
 // cratchit_ar --help or -h prints the manual.
 int main(int argc, char* argv[]) {
-  if (argc == 2 && (std::string_view(argv[1]) == "--help" || std::string_view(argv[1]) == "-h")) {
+  auto const arguments = cratchit::ar::parse_arguments(std::vector<std::string_view>(argv + 1, argv + argc));
+  if (!arguments) {
+    std::println(stderr, "Error: {}\n{}\nSee cratchit_ar --help", arguments.error(), cratchit::ar::usage);
+    return 2;
+  }
+  if (arguments->help) {
     std::print("{}", cratchit::manual_text());
     return 0;
   }
-  bool const trace = argc == 3 && std::string_view(argv[1]) == "--trace";
-  if ((argc != 2 && !trace) || std::string_view(argv[argc - 1]).starts_with('-')) {
-    std::println(stderr, "Usage: cratchit_ar [--trace] <file.se>\nSee cratchit_ar --help");
+  bool const trace = arguments->trace;
+  auto const bas_year = arguments->bas_year.value_or(cratchit::ar::default_bas_year);
+  auto const mapping = cratchit::ar::layout_for(bas_year);
+  if (!mapping) {
+    std::println(stderr, "Error: no mapping for BAS {}; the oldest is for BAS {}\n{}\nSee cratchit_ar --help", bas_year,
+                 cratchit::ar::built_in_layouts().front().year, cratchit::ar::usage);
     return 2;
   }
-  std::filesystem::path const file = argv[argc - 1];
+  auto const& file = arguments->file;
   auto const lexed = cratchit::sie::lex_file(file);
   if (!lexed) {
     std::println(stderr, "Error: {}", lexed.error());
@@ -53,7 +65,11 @@ int main(int argc, char* argv[]) {
   if (!parsed.errors.empty() || !findings.errors.empty()) {
     return 1;
   }
-  auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_text());
+  auto const mapping_text =
+      std::format("{} ({}; books following BAS {}{})", mapping->file, cratchit::ar::bas_years_of(*mapping), bas_year,
+                  arguments->bas_year ? "" : ", the default; see --bas-year");
+  std::println(stderr, "Note: mapping {}", mapping_text);
+  auto const layout = cratchit::ar::parse_layout(mapping->text);
   if (!layout) {
     std::println(stderr, "Error: {}", layout.error());
     return 1;
@@ -100,6 +116,7 @@ int main(int argc, char* argv[]) {
                check.missing.size(), check.missing.size() == 1 ? "item is" : "items are");
   int const exit_code = errors.empty() && equity.errors.empty() && notes.errors.empty() ? 0 : 1;
   if (trace) {
+    std::println("Mapping: {}", mapping_text);
     std::print("{}", cratchit::ar::format_trace(overview, disposition, equity, statement, notes, document, years));
     return exit_code;
   }
@@ -112,6 +129,6 @@ int main(int argc, char* argv[]) {
   std::println("{}", cratchit::ar::format_statements(statement, years, cratchit::ar::note_references(notes)));
   std::println("{}", cratchit::ar::format_notes(notes, years, check));
   std::println("{}", cratchit::ar::format_signatures(document, years, check));
-  std::print("{}", cratchit::ar::format_check(check));
+  std::print("{}", cratchit::ar::format_check(check, mapping_text));
   return exit_code;
 }

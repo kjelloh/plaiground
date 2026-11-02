@@ -95,15 +95,25 @@ TEST(ArLayout, Errors) {
   EXPECT_FALSE(parse_layout("Nivå;Typ;BAS Range;ÅR\n1;Utanför;8999;X\n"));
 }
 
-TEST(ArLayout, BuiltInMappingReads) {
-  auto const lines = parse_layout(cratchit::ar::layout_text());
+namespace {
+
+// Each built-in mapping, by its BAS year
+class ArBuiltInLayout : public testing::TestWithParam<int> {
+protected:
+  std::string_view text() const { return cratchit::ar::layout_for(GetParam())->text; }
+};
+
+} // namespace
+
+TEST_P(ArBuiltInLayout, Reads) {
+  auto const lines = parse_layout(text());
   ASSERT_TRUE(lines) << lines.error();
   EXPECT_GT(lines->size(), 100u);
 }
 
-TEST(ArLayout, BuiltInMappingPutsNoAccountOnTwoLines) {
+TEST_P(ArBuiltInLayout, PutsNoAccountOnTwoLines) {
   // At most one line in the resultaträkning and balansräkning, and at most one in the notes
-  auto const lines = parse_layout(cratchit::ar::layout_text());
+  auto const lines = parse_layout(text());
   ASSERT_TRUE(lines);
   for (int number = 1000; number <= 9999; ++number) {
     auto const account = std::to_string(number);
@@ -123,9 +133,9 @@ TEST(ArLayout, BuiltInMappingPutsNoAccountOnTwoLines) {
   }
 }
 
-TEST(ArLayout, BuiltInNote3SplitsItsPostExactly) {
+TEST_P(ArBuiltInLayout, Note3SplitsItsPostExactly) {
   // The sections of Not 3 hold exactly the accounts of the post Inventarier, verktyg och installationer
-  auto const lines = parse_layout(cratchit::ar::layout_text());
+  auto const lines = parse_layout(text());
   ASSERT_TRUE(lines);
   auto const post = std::ranges::find_if(*lines, [](auto const& line) {
     return line.kind == LineKind::item && line.text == "Inventarier, verktyg och installationer";
@@ -145,42 +155,107 @@ TEST(ArLayout, BuiltInNote3SplitsItsPostExactly) {
   }
 }
 
+INSTANTIATE_TEST_SUITE_P(Years, ArBuiltInLayout, testing::Values(2024, 2026));
+
+namespace {
+
+// The line of the resultaträkning or balansräkning (not the notes) that the mapping for bas_year puts account on
+std::string line_of(int bas_year, std::string_view account) {
+  auto const lines = parse_layout(cratchit::ar::layout_for(bas_year)->text);
+  EXPECT_TRUE(lines);
+  bool notes = false;
+  for (auto const& line : *lines) {
+    if (line.kind == LineKind::heading && line.level == 1) {
+      notes = line.text == "Noter";
+    }
+    bool const in_notes = notes && line.kind != LineKind::outside;
+    if (!in_notes && line.accounts.contains(account)) {
+      return line.text;
+    }
+  }
+  return {};
+}
+
+} // namespace
+
+TEST(ArLayout, BuiltInMappingsAreForBas2024And2026) {
+  auto const& layouts = cratchit::ar::built_in_layouts();
+  ASSERT_EQ(layouts.size(), 2u);
+  EXPECT_EQ(layouts[0].year, 2024);
+  EXPECT_EQ(layouts[0].file, "Resources/bas_to_ar_2024.csv");
+  EXPECT_EQ(layouts[1].year, 2026);
+  EXPECT_EQ(layouts[1].file, "Resources/bas_to_ar_2026.csv");
+  EXPECT_EQ(cratchit::ar::default_bas_year, 2024);
+  EXPECT_EQ(cratchit::ar::layout_text(), layouts[0].text);
+}
+
+TEST(ArLayout, ChosenByTheBasYearOfTheBooks) {
+  EXPECT_FALSE(cratchit::ar::layout_for(2023));
+  EXPECT_EQ(cratchit::ar::layout_for(2024)->year, 2024);
+  EXPECT_EQ(cratchit::ar::layout_for(2025)->year, 2024);
+  EXPECT_EQ(cratchit::ar::layout_for(2026)->year, 2026);
+  EXPECT_EQ(cratchit::ar::layout_for(2030)->year, 2026);
+  EXPECT_EQ(cratchit::ar::bas_years_of(*cratchit::ar::layout_for(2024)), "BAS 2024-2025");
+  EXPECT_EQ(cratchit::ar::bas_years_of(*cratchit::ar::layout_for(2026)), "BAS 2026 and later");
+}
+
+TEST(ArLayout, BuiltInMappingsDifferOnlyByBas2026) {
+  // The same headings, posts and sums in the same order, but for the BAS 2026 post Övriga immateriella
+  // anläggningstillgångar and the text of the Utanför row for 8990-8999
+  auto const shape = [](int bas_year) {
+    auto const lines = parse_layout(cratchit::ar::layout_for(bas_year)->text);
+    EXPECT_TRUE(lines);
+    std::vector<std::string> out;
+    for (auto const& line : *lines) {
+      if (line.text == "Övriga immateriella anläggningstillgångar") {
+        continue;
+      }
+      out.push_back(std::format("{} {} {}", line.level, static_cast<int>(line.kind),
+                                line.kind == LineKind::outside ? "" : line.text));
+    }
+    return out;
+  };
+  EXPECT_EQ(shape(2024), shape(2026));
+}
+
+TEST(ArLayout, BuiltInMappingFollowsBas2024) {
+  // The 2023 web mapping, BAS before 2026
+  EXPECT_EQ(line_of(2024, "4010"), "Råvaror och förnödenheter");
+  EXPECT_EQ(line_of(2024, "4960"), "Handelsvaror");
+  EXPECT_EQ(line_of(2024, "1230"), "Inventarier, verktyg och installationer");
+  EXPECT_EQ(line_of(2024, "1270"), "Inventarier, verktyg och installationer");
+  EXPECT_EQ(line_of(2024, "1260"), "");
+  EXPECT_EQ(line_of(2024, "1092"), "");
+  EXPECT_EQ(line_of(2024, "8990"), "");
+  EXPECT_EQ(line_of(2024, "8999"), "Årets resultat (bokslutspost, redan med i resultaträkningen)");
+  // The K2 post names (BFNAR 2016:10 p. 3.5, 4.7) are the same in both
+  EXPECT_EQ(line_of(2024, "1455"), "Färdiga varor");
+  EXPECT_EQ(line_of(2024, "1465"), "Handelsvaror");
+  EXPECT_EQ(line_of(2024, "2330"), "Kontokredit");
+  EXPECT_EQ(line_of(2024, "1690"), "Tecknat men ej inbetalt kapital");
+}
+
 TEST(ArLayout, BuiltInMappingFollowsBas2026) {
   // Where BAS 2026 (BAS-kontogruppen, Bokföringsboken 2026) puts accounts the 2023 web mapping placed elsewhere
-  auto const lines = parse_layout(cratchit::ar::layout_text());
-  ASSERT_TRUE(lines);
-  auto const line_of = [&lines](std::string_view account) {
-    bool notes = false;
-    for (auto const& line : *lines) {
-      if (line.kind == LineKind::heading && line.level == 1) {
-        notes = line.text == "Noter";
-      }
-      bool const in_notes = notes && line.kind != LineKind::outside;
-      if (!in_notes && line.accounts.contains(account)) {
-        return line.text;
-      }
-    }
-    return std::string{};
-  };
   // Groups 40-42 are Handelsvaror, 43-48 Råvaror och förnödenheter
-  EXPECT_EQ(line_of("4010"), "Handelsvaror");
-  EXPECT_EQ(line_of("4210"), "Handelsvaror");
-  EXPECT_EQ(line_of("4960"), "Handelsvaror");
-  EXPECT_EQ(line_of("4310"), "Råvaror och förnödenheter");
-  EXPECT_EQ(line_of("4810"), "Råvaror och förnödenheter");
-  EXPECT_EQ(line_of("4910"), "Råvaror och förnödenheter");
-  EXPECT_EQ(line_of("4940"), "Förändring av lager av produkter i arbete, färdiga varor och pågående arbete för annans räkning");
+  EXPECT_EQ(line_of(2026, "4010"), "Handelsvaror");
+  EXPECT_EQ(line_of(2026, "4210"), "Handelsvaror");
+  EXPECT_EQ(line_of(2026, "4960"), "Handelsvaror");
+  EXPECT_EQ(line_of(2026, "4310"), "Råvaror och förnödenheter");
+  EXPECT_EQ(line_of(2026, "4810"), "Råvaror och förnödenheter");
+  EXPECT_EQ(line_of(2026, "4910"), "Råvaror och förnödenheter");
+  EXPECT_EQ(line_of(2026, "4940"), "Förändring av lager av produkter i arbete, färdiga varor och pågående arbete för annans räkning");
   // Övriga immateriella anläggningstillgångar, e.g. tomträtter
-  EXPECT_EQ(line_of("1092"), "Övriga immateriella anläggningstillgångar");
+  EXPECT_EQ(line_of(2026, "1092"), "Övriga immateriella anläggningstillgångar");
   // 1230 and 1240 are free accounts for maskiner, 1250 and 1260 for inventarier; 127x is gone
-  EXPECT_EQ(line_of("1230"), "Maskiner och andra tekniska anläggningar");
-  EXPECT_EQ(line_of("1249"), "Maskiner och andra tekniska anläggningar");
-  EXPECT_EQ(line_of("1260"), "Inventarier, verktyg och installationer");
-  EXPECT_EQ(line_of("1269"), "Inventarier, verktyg och installationer");
-  EXPECT_EQ(line_of("1270"), "");
+  EXPECT_EQ(line_of(2026, "1230"), "Maskiner och andra tekniska anläggningar");
+  EXPECT_EQ(line_of(2026, "1249"), "Maskiner och andra tekniska anläggningar");
+  EXPECT_EQ(line_of(2026, "1260"), "Inventarier, verktyg och installationer");
+  EXPECT_EQ(line_of(2026, "1269"), "Inventarier, verktyg och installationer");
+  EXPECT_EQ(line_of(2026, "1270"), "");
   // The Resultat group is outside the årsredovisning
-  EXPECT_EQ(line_of("8990"), "Resultat (bokslutspost, redan med i resultaträkningen)");
+  EXPECT_EQ(line_of(2026, "8990"), "Resultat (bokslutspost, redan med i resultaträkningen)");
   // Not allowed under K2, so on no line
-  EXPECT_EQ(line_of("1010"), "");
-  EXPECT_EQ(line_of("2240"), "");
+  EXPECT_EQ(line_of(2026, "1010"), "");
+  EXPECT_EQ(line_of(2026, "2240"), "");
 }

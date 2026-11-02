@@ -4,10 +4,12 @@ Prints the Swedish årsredovisning (annual report) of a company's books, read fr
 
 ## Synopsis
 
-    cratchit_ar <file.se>
-    cratchit_ar --trace <file.se>
+    cratchit_ar [--trace] [--bas-year <year>] <file.se>
     cratchit_ar --help
     cratchit_ar -h
+
+The options may come in any order. A wrong command line prints the usage and exits
+with 2.
 
 ## What it prints
 
@@ -144,8 +146,8 @@ An example, for the fiscal year 2022-05-01 - 2023-04-30:
 
 From the SIE file alone, for fiscal year 0:
 
-1. **Columns.** The posts under the heading `Eget kapital` in the mapping
-   (`Resources/bas_to_ar_2026.csv`), e.g. Aktiekapital (2081, 2083, 2084), Balanserat
+1. **Columns.** The posts under the heading `Eget kapital` in the mapping (see
+   --bas-year), e.g. Aktiekapital (2081, 2083, 2084), Balanserat
    resultat (2090, 2091, 2093-2095, 2098) and Årets resultat (2099). A post becomes a
    column only when its accounts have an amount.
 2. **Belopp vid årets ingång** is the opening balance (`#IB 0`) of each column's
@@ -231,8 +233,8 @@ An example, for the fiscal year ending 2023-04-30:
 
 From the SIE file alone, for fiscal year 0:
 
-1. **The note and its sections are rows in the mapping**
-   (`Resources/bas_to_ar_2026.csv`), under the statement heading `Noter`:
+1. **The note and its sections are rows in the mapping** (see --bas-year), under the
+   statement heading `Noter`. In `Resources/bas_to_ar_2026.csv`:
 
        1;Rubrik;;Noter
        2;Rubrik;;Not 3 Inventarier, verktyg och installationer
@@ -240,6 +242,9 @@ From the SIE file alone, for fiscal year 0:
        3;Post;1229, 1259 eller 1269;Avskrivningar
        3;Post;1228, 1258 eller 1268;Nedskrivningar
        2;Summa;;Redovisat värde
+
+   `Resources/bas_to_ar_2024.csv` has the same rows over the accounts of its post
+   (12x0-12x7, 12x8 and 12x9 of 1220-1279, but 1260).
 
    The split follows BAS: 12x0-12x7 hold the cost, 12x8 the accumulated write-downs
    and 12x9 the accumulated depreciation. The sections together hold exactly the
@@ -322,6 +327,44 @@ so the depreciation of each item is visible:
         - 20230430
           1229 Mac Pro 2013 (5 år)                                -4986.00
 
+## --bas-year
+
+    cratchit_ar --bas-year 2026 TheITfiedAB20250817_172409.se
+
+Says which BAS chart of accounts (kontoplan) the books follow, so that the accounts
+go on the right lines of the årsredovisning. The default is **2024**. The SIE file
+cannot tell: its `#KPTYP` names the kind of chart, and a program such as Fortnox
+writes a generic `EUBAS97` whatever the year.
+
+`cratchit_ar` uses the newest built-in mapping that is not newer than the year:
+
+| --bas-year | Mapping |
+|---|---|
+| 2024, 2025 (and the default) | `Resources/bas_to_ar_2024.csv` |
+| 2026 and later | `Resources/bas_to_ar_2026.csv` |
+| before 2024 | none: an error, exit 2 |
+
+The mapping used is named in a note on stderr, in the K2 check and at the top of the
+trace, e.g. `Resources/bas_to_ar_2024.csv (BAS 2024-2025; books following BAS 2024,
+the default; see --bas-year)`.
+
+The two mappings differ only where BAS 2026 changed the chart:
+
+| Accounts | BAS 2024-2025 | BAS 2026 |
+|---|---|---|
+| 4000-4299 | Råvaror och förnödenheter | Handelsvaror (groups 40-42) |
+| 4300-4899 | 4300-4799 Råvaror och förnödenheter, 48xx on no line | Råvaror och förnödenheter (groups 43-48) |
+| 4930-4931 | Råvaror och förnödenheter | Förändring av lager ... |
+| 1090-1099 | on no line | Övriga immateriella anläggningstillgångar |
+| 1230-1249 | Inventarier, verktyg och installationer | Maskiner och andra tekniska anläggningar |
+| 1260-1269 | 1261-1269 Inventarier, verktyg och installationer | Inventarier, verktyg och installationer |
+| 1270-1279 | Inventarier, verktyg och installationer | on no line (gone from BAS) |
+| 8990-8998 | on no line | outside the årsredovisning |
+
+Books on the wrong year can put amounts on the wrong lines without any error, e.g.
+purchases of handelsvaror on 4010 as Råvaror och förnödenheter. Check the mapping
+named in the output.
+
 ## --help, -h
 
 Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
@@ -330,8 +373,9 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
 
 - **Source:** the closing balance (`#UB`) of balance accounts and the result (`#RES`)
   of result accounts, for each year.
-- **Mapping:** the file `Resources/bas_to_ar_2026.csv` (BAS 2026) is built into the
-  program. It lists every line of the årsredovisning in order, with the columns
+- **Mapping:** the files `Resources/bas_to_ar_2024.csv` (the default) and
+  `Resources/bas_to_ar_2026.csv` are built into the program; --bas-year chooses one.
+  Each lists every line of the årsredovisning in order, with the columns
   `Nivå;Typ;BAS Range;ÅR`:
   - `Nivå`: the level, 1 for the statements themselves and deeper for their parts.
   - `Typ`: one of
@@ -343,10 +387,10 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
     `1590-1619, 1630-1659 eller 1680-1689`. `(förutom ...)` excludes accounts, e.g.
     `4900-4999 (förutom 4910-4929 och 4980-4989)`.
   - `ÅR`: the text on the årsredovisning.
-- **Where the mapping comes from:** the BAS ranges of
-  [BAS-kontoplan och din årsredovisning](https://www.arsredovisning-online.se/bas-kontoplan/)
-  (unchanged since 2023-11-30, the same as `Resources/bas_to_ar_2024.csv`, which is
-  kept for comparison), corrected to the BAS 2026 chart of accounts:
+- **Where the mappings come from:** `Resources/bas_to_ar_2024.csv` has the BAS ranges
+  of [BAS-kontoplan och din årsredovisning](https://www.arsredovisning-online.se/bas-kontoplan/)
+  (unchanged since 2023-11-30). `Resources/bas_to_ar_2026.csv` has the same ranges
+  corrected to the BAS 2026 chart of accounts:
   - Handelsvaror is 4000-4299 (groups 40-42), Råvaror och förnödenheter 4300-4899
     (groups 43-48) and 4910-4929.
   - The post Övriga immateriella anläggningstillgångar (1090-1099, e.g. tomträtter).
@@ -354,7 +398,7 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
     verktyg och installationer 1220-1229 and 1250-1269 (127x is no longer in BAS).
   - 8990-8999 (the group Resultat) is outside the årsredovisning.
 
-  Besides, 8710 and 8750 (extraordinary items, which K2 does not have) are in Övriga
+  In both, 8710 and 8750 (extraordinary items, which K2 does not have) are in Övriga
   rörelseintäkter and Övriga rörelsekostnader, 2099 is Årets resultat in the
   balansräkning, and the Noter rows are added. The post names follow K2's forms (p.
   3.5, 4.7): Färdiga varor (1450-1459) and Handelsvaror (1460-1469) are two posts,

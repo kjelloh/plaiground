@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -42,7 +43,27 @@ struct Line {
 // header row. Typ is Rubrik, Post, Summa or Utanför. Error text names the row.
 std::expected<std::vector<Line>, std::string> parse_layout(std::string_view csv_text);
 
-// The mapping built into the program: Resources/bas_to_ar_2026.csv (BAS 2026)
+// A mapping built into the program, Resources/bas_to_ar_<year>.csv
+struct BuiltInLayout {
+  int year = 0;          // the BAS year it is made for
+  std::string_view file; // e.g. Resources/bas_to_ar_2024.csv
+  std::string_view text;
+};
+
+// The built-in mappings, oldest first (BAS_TO_AR_YEARS in CMakeLists.txt)
+std::vector<BuiltInLayout> const& built_in_layouts();
+
+// The BAS year of the books when none is given
+constexpr int default_bas_year = 2024;
+
+// The mapping for books that follow BAS bas_year: the newest built-in mapping
+// not newer than bas_year, or nothing when all are newer
+std::optional<BuiltInLayout> layout_for(int bas_year);
+
+// For which BAS years layout is chosen, e.g. "BAS 2024-2025" or "BAS 2026 and later"
+std::string bas_years_of(BuiltInLayout const& layout);
+
+// The text of the mapping for default_bas_year
 std::string_view layout_text();
 
 } // namespace cratchit::ar

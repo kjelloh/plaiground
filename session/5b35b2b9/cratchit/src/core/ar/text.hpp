@@ -54,8 +54,9 @@ std::string format_business(Check const& check);
 std::string format_signatures(sie::Document const& document, std::vector<sie::FiscalYear> const& years,
                               Check const& check);
 
-// The K2 check: what is missing ([n], rule, what to provide, template heading), then what to confirm
-std::string format_check(Check const& check);
+// The K2 check: the rules and the mapping it was made with, what is missing
+// ([n], rule, what to provide, template heading), then what to confirm
+std::string format_check(Check const& check, std::string_view mapping = {});
 
 // The trace of the årsredovisning as plain text, in the order of the report:
 // Flerårsöversikt and Resultatdisposition (the lines they are computed from),

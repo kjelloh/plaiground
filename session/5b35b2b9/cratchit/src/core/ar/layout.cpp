@@ -141,6 +141,30 @@ bool AccountSet::contains(std::string_view account) const {
   return number && in_any(included, *number) && !in_any(excluded, *number);
 }
 
+std::optional<BuiltInLayout> layout_for(int bas_year) {
+  std::optional<BuiltInLayout> chosen;
+  for (auto const& layout : built_in_layouts()) {
+    if (layout.year <= bas_year) {
+      chosen = layout;
+    }
+  }
+  return chosen;
+}
+
+std::string bas_years_of(BuiltInLayout const& layout) {
+  auto const& layouts = built_in_layouts();
+  auto const next = std::ranges::find_if(layouts, [&layout](BuiltInLayout const& other) { return other.year > layout.year; });
+  if (next == layouts.end()) {
+    return std::format("BAS {} and later", layout.year);
+  }
+  return next->year - 1 == layout.year ? std::format("BAS {}", layout.year)
+                                       : std::format("BAS {}-{}", layout.year, next->year - 1);
+}
+
+std::string_view layout_text() {
+  return layout_for(default_bas_year)->text;
+}
+
 std::expected<AccountSet, std::string> parse_account_set(std::string_view text) {
   return SetReader(text).read();
 }

@@ -20,15 +20,28 @@ file(READ MANUAL.md manual_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
 configure_file(src/core/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
-# Likewise the BAS to ÅR mapping into the program as bytes; CMake re-runs when it changes
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS Resources/bas_to_ar_2026.csv)
-file(READ Resources/bas_to_ar_2026.csv layout_hex HEX)
-string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," layout_bytes "${layout_hex}")
-configure_file(src/core/ar/layout_text.cpp.in generated/layout_text.cpp @ONLY)
+# Likewise each BAS to ÅR mapping, Resources/bas_to_ar_<year>.csv, and a list of them.
+# A new mapping is a new CSV and its year here.
+set(BAS_TO_AR_YEARS 2024 2026)
+set(layout_declarations "")
+set(layout_entries "")
+set(layout_sources "")
+foreach(year IN LISTS BAS_TO_AR_YEARS)
+  set(layout_file Resources/bas_to_ar_${year}.csv)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${layout_file})
+  file(READ ${layout_file} layout_hex HEX)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," layout_bytes "${layout_hex}")
+  configure_file(src/core/ar/layout_text.cpp.in generated/layout_text_${year}.cpp @ONLY)
+  string(APPEND layout_declarations "std::string_view layout_text_${year}();\n")
+  string(APPEND layout_entries "      {${year}, \"${layout_file}\", layout_text_${year}()},\n")
+  list(APPEND layout_sources ${CMAKE_CURRENT_BINARY_DIR}/generated/layout_text_${year}.cpp)
+endforeach()
+configure_file(src/core/ar/layouts.cpp.in generated/layouts.cpp @ONLY)
 
 # All application logic lives in the core library
 add_library(cratchit_core
   src/core/amount.cpp
+  src/core/ar/arguments.cpp
   src/core/ar/closing.cpp
   src/core/ar/disposition.cpp
   src/core/ar/equity.cpp
@@ -36,7 +49,8 @@ add_library(cratchit_core
   src/core/ar/notes.cpp
   src/core/ar/overview.cpp
   src/core/ar/requirements.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/generated/layout_text.cpp
+  ${layout_sources}
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/layouts.cpp
   src/core/ar/statement.cpp
   src/core/ar/text.cpp
   src/core/ar/trace.cpp

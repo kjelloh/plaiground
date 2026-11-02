@@ -336,9 +336,12 @@ std::string format_signatures(sie::Document const& document, std::vector<sie::Fi
   return out;
 }
 
-std::string format_check(Check const& check) {
+std::string format_check(Check const& check, std::string_view mapping) {
   std::string out = titled("K2 check", '=');
   add_paragraph(out, std::format("Checked against {}.", requirements_source));
+  if (!mapping.empty()) {
+    add_paragraph(out, std::format("Mapping: {}.", mapping));
+  }
   out += '\n';
   if (check.missing.empty()) {
     out += "Complete: nothing is missing.\n";

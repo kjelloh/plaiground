@@ -40,7 +40,7 @@ Nivå;Typ;BAS Range;ÅR
 1;Summa;;Årets resultat
 1;Rubrik;;Balansräkning
 2;Rubrik;;Tillgångar
-3;Post;1690-1699;Tecknat men ej inbetalat kapital
+3;Post;1690-1699;Tecknat men ej inbetalt kapital
 3;Rubrik;;Anläggningstillgångar
 4;Rubrik;;Immateriella anläggningstillgångar
 5;Post;1020-1059 eller 1080-1089 (förutom 1088);Koncessioner, patent, licenser, varumärken samt liknande rättigheter
@@ -72,7 +72,8 @@ Nivå;Typ;BAS Range;ÅR
 4;Rubrik;;Varulager m.m.
 5;Post;1410-1429, 1430, 1431 eller 1438;Råvaror och förnödenheter
 5;Post;1432-1449 (förutom 1438);Varor under tillverkning
-5;Post;1450-1469;Färdiga varor och handelsvaror
+5;Post;1450-1459;Färdiga varor
+5;Post;1460-1469;Handelsvaror
 5;Post;1490-1499;Övriga lagertillgångar
 5;Post;1470-1479;Pågående arbete för annans räkning
 5;Post;1480-1489;Förskott till leverantörer
@@ -123,7 +124,7 @@ Nivå;Typ;BAS Range;ÅR
 3;Summa;;Summa avsättningar
 3;Rubrik;;Långfristiga skulder
 4;Post;2310-2329;Obligationslån
-4;Post;2330-2339;Checkräkningskredit
+4;Post;2330-2339;Kontokredit
 4;Post;2340-2359;Övriga skulder till kreditinstitut
 4;Post;2360-2369;Skulder till koncernföretag
 4;Post;2370-2379 (förutom 2373);Skulder till intresseföretag och gemensamt styrda företag
@@ -131,7 +132,7 @@ Nivå;Typ;BAS Range;ÅR
 4;Post;2390-2399;Övriga skulder
 3;Summa;;Summa långfristiga skulder
 3;Rubrik;;Kortfristiga skulder
-4;Post;2480-2489;Checkräkningskredit
+4;Post;2480-2489;Kontokredit
 4;Post;2410-2419;Övriga skulder till kreditinstitut
 4;Post;2420-2429;Förskott från kunder
 4;Post;2430-2439;Pågående arbete för annans räkning

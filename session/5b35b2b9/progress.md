@@ -222,7 +222,7 @@ The original is in git history (commit 36ad56e). Deliberate changes:
       Balanserat resultat 39 106 / Summa -7 596 in its Resultatdisposition (books: 139 106 / 92 404, the
       aktieägartillskott 100 000 left out, as in its Förändringar i eget kapital).
     - 166 tests pass, no warnings. MANUAL.md: Flerårsöversikt, Resultatdisposition, The Not column.
-12. `Resources/bas_to_ar_2026.csv`, built in instead of 2024 (option a; the 2024 file kept for comparison;
+12. `Resources/bas_to_ar_2026.csv`, built in instead of 2024 (option a; since step 14b both are built in;
     `layout_2024_text()` renamed `layout_text()`). Done.
     - The web mapping (arsredovisning-online.se/bas-kontoplan, fetched 2026-11-02 with curl, parsed locally)
       is unchanged since 2023-11-30 (`article:modified_time`): identical to the user's 2024 extract, 97 rows.
@@ -320,10 +320,28 @@ The original is in git history (commit 36ad56e). Deliberate changes:
       Not 2 is left out (no Personalkostnader), so the notes are Not 1 and Not 3 (number gap; the note number
       comes from the CSV).
     - 176 tests pass, no warnings. MANUAL.md: What it prints, Resultatdisposition, K2 check.
-15. Next: write the input template when the file does not exist, never overwrite it (user: fixed name,
+14b. `--bas-year <year>` (user: books may not have moved to BAS 2026; 2024 the default, a non-default
+    mapping is the user's option). Done.
+    - Both `Resources/bas_to_ar_2024.csv` and `..._2026.csv` are built in: CMake `BAS_TO_AR_YEARS 2024 2026`
+      generates one `layout_text_<year>()` each and a registry `built_in_layouts()` (`layouts.cpp.in`). A new
+      BAS year = a CSV + its year in that list.
+    - `layout_for(bas_year)`: the newest mapping not newer than the year (2024, 2025 -> 2024; 2026+ -> 2026;
+      before 2024 an error, exit 2). `default_bas_year = 2024`; `layout_text()` is the default's text.
+    - The 2024 file got the K2 corrections of step 14 (Färdiga varor / Handelsvaror, Kontokredit, inbetalt);
+      it now differs from 2026 only by the BAS 2026 changes.
+    - `core/ar/arguments`: `[--trace] [--bas-year <year>] <file.se>` in any order, or --help/-h; errors for
+      an unknown option, a missing / non-four-digit year, an option twice, no file or two files.
+    - The mapping used is named in a stderr note, the K2 check and the top of the trace.
+    - The user's 3 files give identical ÅR, trace and check under both (except the mapping line).
+    - Tests: reading, no account on two lines and the Not 3 split run on every built-in mapping; the two
+      differ only by the 2026 post (same headings/posts/sums in order); placements pinned for 2024 and 2026;
+      selection; argument parsing. 187 tests pass, no warnings. MANUAL.md: synopsis, --bas-year with the
+      difference table, the mapping section.
+15. POSTPONED (user, 2026-11-02: the user can edit the generated ÅR by hand, which covers the TBDs for
+    now). When taken up: write the input template when the file does not exist, never overwrite it (user: fixed name,
     hard coded, no option; name still to agree). Generated from the requirements table, starting with the
     company's orgnr and fiscal year; an existing file for another company or year is an error.
-16. Then: read the file, validate each section (a date, a number, no TBD left), fill the TBDs; report a
+16. POSTPONED with 15. Then: read the file, validate each section (a date, a number, no TBD left), fill the TBDs; report a
     missing section by its heading instead of rewriting the file.
 17. Later: flerårsöversikt over several SIE files (4 years), the board's proposal in the Resultatdisposition,
     the texts not in SIE (förvaltningsberättelse, Not 1, Not 2, underskrifter), iXBRL.
