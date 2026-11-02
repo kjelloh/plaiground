@@ -1,7 +1,9 @@
 #include "core/ar/closing.hpp"
+#include "core/ar/disposition.hpp"
 #include "core/ar/equity.hpp"
 #include "core/ar/layout.hpp"
 #include "core/ar/notes.hpp"
+#include "core/ar/overview.hpp"
 #include "core/ar/statement.hpp"
 #include "core/ar/text.hpp"
 #include "core/date.hpp"
@@ -90,9 +92,13 @@ int main(int argc, char* argv[]) {
   for (auto const& error : notes.errors) {
     std::println(stderr, "Error: {}", error);
   }
+  auto const overview = cratchit::ar::build_overview(statement);
+  auto const disposition = cratchit::ar::build_disposition(statement);
+  std::println(stderr, "Note: Resultatdisposition: the amounts of the board's proposal are TBD (koppling till "
+                       "stämmobeslut saknas)");
   int const exit_code = errors.empty() && equity.errors.empty() && notes.errors.empty() ? 0 : 1;
   if (trace) {
-    std::print("{}", cratchit::ar::format_trace(equity, statement, notes, document, years));
+    std::print("{}", cratchit::ar::format_trace(overview, disposition, equity, statement, notes, document, years));
     return exit_code;
   }
   std::println("{}", document.company_name);
@@ -100,8 +106,10 @@ int main(int argc, char* argv[]) {
   std::println("Årsredovisning för räkenskapsåret {} - {}", cratchit::format_iso_date(years.front().start),
                cratchit::format_iso_date(years.front().end));
   std::println("");
+  std::println("{}", cratchit::ar::format_overview(overview, years));
   std::println("{}", cratchit::ar::format_equity_changes(equity));
-  std::print("{}", cratchit::ar::format_statements(statement, years));
+  std::println("{}", cratchit::ar::format_disposition(disposition));
+  std::print("{}", cratchit::ar::format_statements(statement, years, cratchit::ar::note_references(notes)));
   if (auto const text = cratchit::ar::format_notes(notes, years); !text.empty()) {
     std::print("\n{}", text);
   }

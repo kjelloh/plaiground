@@ -13,11 +13,16 @@ Prints the Swedish årsredovisning (annual report) of a company's books, read fr
 
 As plain text, laid out as for a K2 aktiebolag (BFNAR 2016:10):
 
-1. Förändringar i eget kapital (changes in equity) of fiscal year 0.
-2. The resultaträkning (income statement).
-3. The balansräkning (balance sheet).
-4. Noter (notes) of fiscal year 0, for the posts of the balansräkning that have one in
+1. Flerårsöversikt (multi-year overview) of fiscal year 0 and the year before.
+2. Förändringar i eget kapital (changes in equity) of fiscal year 0.
+3. Resultatdisposition (the disposition of the funds) of fiscal year 0.
+4. The resultaträkning (income statement).
+5. The balansräkning (balance sheet), with a Not column naming the note of a post.
+6. Noter (notes) of fiscal year 0, for the posts of the balansräkning that have one in
    the mapping: for now Not 3 Inventarier, verktyg och installationer.
+
+The first three are part of the förvaltningsberättelse (directors' report), whose
+texts are not yet included.
 
 For the resultaträkning and balansräkning:
 
@@ -30,6 +35,53 @@ For the resultaträkning and balansräkning:
 Errors and notes go to stderr, so the report can be redirected to a file:
 
     cratchit_ar TheITfiedAB20250817_172409.se > ar.txt
+
+## Flerårsöversikt
+
+Three key figures for fiscal year 0 and the year before, to compare the years at a
+glance:
+
+                                                                2022-05-01    2021-05-01
+                                                               -2023-04-30   -2022-04-30
+
+    Nettoomsättning (tkr)                                                2           336
+    Resultat efter finansiella poster (tkr)                            -84           284
+    Soliditet (%)                                                     96,2         100,0
+
+- **Nettoomsättning** (net sales) and **Resultat efter finansiella poster** (result
+  after financial items, before year-end appropriations and tax) are the lines of the
+  resultaträkning, in thousands of kronor (tkr), rounded half away from zero.
+- **Soliditet** (equity ratio) is how much of the assets the owners' capital stands
+  for: (Summa eget kapital + 79,4 % of Summa obeskattade reserver) / Summa tillgångar,
+  from the balansräkning, in percent with one decimal. The untaxed reserves count with
+  79,4 % as 20,6 % of them is deferred tax. A `-` means there are no assets.
+- An SIE file holds two years, so the overview shows two. The filed årsredovisningar
+  show four.
+
+## Resultatdisposition
+
+The funds at the årsstämma's (annual general meeting's) disposal, and the board's
+proposal for them:
+
+    Till årsstämmans förfogande står följande medel
+      Balanserat resultat                                          278 845
+      Årets resultat                                               -84 193
+    Summa                                                          194 653
+
+    Styrelsen föreslår att medlen disponeras enligt följande
+      Utdelas till aktieägare                                          TBD
+      Balanseras i ny räkning                                          TBD
+    Summa                                                          194 653
+
+    TBD: koppling till stämmobeslut saknas
+
+- **The funds** are the posts under Fritt eget kapital in the balansräkning (e.g.
+  Balanserat resultat and Årets resultat), at the end of fiscal year 0. Their Summa
+  equals Summa fritt eget kapital.
+- **The proposal** (how much to pay out as dividend and how much to carry forward) is
+  the board's decision and not in the SIE file, so its amounts are `TBD`. A note on
+  stderr says so too. The SIE file only shows the dividend a year later, when the
+  årsstämma's decision is booked (see Utdelning in Förändringar i eget kapital).
 
 ## Förändringar i eget kapital
 
@@ -107,6 +159,16 @@ From the SIE file alone, for fiscal year 0:
 
 To see the vouchers behind each row, run `cratchit_ar --trace` (see below). Each
 voucher on the equity accounts is in exactly one row.
+
+## The Not column
+
+When there are notes, the balansräkning has a `Not` column with the number of the note
+that breaks a post down:
+
+                                                         Not    2023-04-30    2022-04-30
+          Inventarier, verktyg och installationer          3        52 321        38 836
+
+The number comes from the note's title in the mapping, `Not <n> <post>`.
 
 ## Noter
 
@@ -194,10 +256,11 @@ small company), so page it or save it:
 
 ### How to read it
 
-The trace follows the order of the report: Förändringar i eget kapital, the
-resultaträkning, the balansräkning and the notes. Each shown amount is a heading
-line, in whole kronor as on the årsredovisning, with what makes it up indented below
-it in kronor and öre **as booked: debit positive, credit negative**.
+The trace follows the order of the report: Flerårsöversikt and Resultatdisposition
+(with the lines of the statements they are computed from), Förändringar i eget
+kapital, the resultaträkning, the balansräkning and the notes. Each shown amount is a
+heading line, in whole kronor as on the årsredovisning, with what makes it up
+indented below it in kronor and öre **as booked: debit positive, credit negative**.
 
 In the resultaträkning and balansräkning, each post lists its accounts, and each
 account its vouchers in fiscal year 0, by date:
@@ -320,6 +383,6 @@ For example:
 
 ## Not yet included
 
-Förvaltningsberättelse texts, flerårsöversikt, resultatdisposition, the text notes
-(Not 1 Redovisningsprinciper, Not 2 Medelantal anställda), the note reference in the
-balansräkning, and underskrifter.
+Förvaltningsberättelse texts, the board's proposal in the resultatdisposition (shown as
+TBD), flerårsöversikt for more than two years, the text notes (Not 1
+Redovisningsprinciper, Not 2 Medelantal anställda), and underskrifter.

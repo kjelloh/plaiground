@@ -4,6 +4,7 @@
 #include "core/ar/statement.hpp"
 #include "core/sie/document.hpp"
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -47,5 +48,8 @@ struct Notes {
 // balance and changes must add up to the closing balance, and a note whose
 // title is "Not <n> <post>" must sum to that post of the balansräkning.
 Notes build_notes(Statement const& statement, sie::Document const& document);
+
+// The note number of each post with a note titled "Not <n> <post>", e.g. {"Inventarier, verktyg och installationer", "3"}
+std::map<std::string, std::string> note_references(Notes const& notes);
 
 } // namespace cratchit::ar

@@ -82,7 +82,7 @@ TEST(ArTrace, AccountsAndVouchersByDate) {
   EXPECT_EQ(vat.amounts, (std::vector<Amount>{0, 4280}));
   EXPECT_EQ(vat.postings.size(), 1u);
 
-  auto const text = cratchit::ar::format_trace({}, statement, {}, document, {{0, 2023y / May / 1, 2024y / April / 30},
+  auto const text = cratchit::ar::format_trace({}, {}, {}, statement, {}, document, {{0, 2023y / May / 1, 2024y / April / 30},
                                                                           {-1, 2022y / May / 1, 2023y / April / 30}});
   EXPECT_NE(text.find("\nKassa och bank                                                  193 kr        100 kr\n"
                       "  1930 Företagskonto                                            192.80        100.00\n"

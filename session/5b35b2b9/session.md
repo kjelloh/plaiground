@@ -78,6 +78,8 @@ So now I had some chats with Claude about 'Not 3' on AR.
 
 But lets see where we end up (and if I want to later tweak it)?
 
+And now I have vibe coded a two-year Flerårsöversikt, a Resultatdisposition ("Utdelas till aktieägare" marked TBD), and a Not column in the BR.
+
 ## 202061101
 
 Now it is time to see if we can make a C++ app like cratchit actually map an SIE file to a proper and valid Swedish 'Årsredovisning' (ÅR)?

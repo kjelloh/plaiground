@@ -154,4 +154,15 @@ Notes build_notes(Statement const& statement, sie::Document const& document) {
   return notes;
 }
 
+std::map<std::string, std::string> note_references(Notes const& notes) {
+  std::map<std::string, std::string> references;
+  for (auto const& note : notes.notes) {
+    if (auto const post = post_of(note.title)) {
+      std::string_view const title = note.title;
+      references.emplace(*post, title.substr(4, title.size() - post->size() - 5));
+    }
+  }
+  return references;
+}
+
 } // namespace cratchit::ar

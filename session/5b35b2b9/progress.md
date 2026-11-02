@@ -206,7 +206,23 @@ The original is in git history (commit 36ad56e). Deliberate changes:
       Inköp by the PDF. A sale or utrangering would also touch 1229 or 3970/7970.
     - The 23/24 PDF has no Not 3 although the BR shows Inventarier 42 734.
     - Numbering: K2 also requires Not 1 Redovisningsprinciper and Not 2 Medelantal anställda (not in SIE).
-11. Resultatdisposition (needs the proposed dividend, not in SIE; agree input with the user first).
+11. Flerårsöversikt (2 years), Resultatdisposition and the Not column. Done.
+    - `core/ar/overview`: Nettoomsättning and Resultat efter finansiella poster (tkr, half away from zero),
+      Soliditet = (Summa eget kapital + 0,794 x Summa obeskattade reserver) / Summa tillgångar in tenths of a
+      percent ("-" without assets). Printed first. Two years from one SIE file; four (more files) later.
+    - `core/ar/disposition`: the shown posts under "Fritt eget kapital" (year 0) and their Summa; the proposal
+      rows "Utdelas till aktieägare" and "Balanseras i ny räkning" are kept with amount TBD and the line
+      "TBD: koppling till stämmobeslut saknas" (user, 2026-11-02). Also a stderr note. Printed after
+      Förändringar i eget kapital (PDF order).
+    - Not column: `note_references` from note titles "Not <n> <post>"; the balansräkning gets a 6 wide Not
+      column at the end of the text column, only when there are notes.
+    - `--trace` starts with both, showing the statement lines they are computed from.
+    - All 3 years match the PDFs (`test/expected_ar/*_flerarsoversikt.csv`, `*_resultatdisposition.csv`)
+      except where the 24/25 PDF is wrong: soliditet 85,3 (copied from the year before; books: 99,9) and
+      Balanserat resultat 39 106 / Summa -7 596 in its Resultatdisposition (books: 139 106 / 92 404, the
+      aktieägartillskott 100 000 left out, as in its Förändringar i eget kapital).
+    - 166 tests pass, no warnings. MANUAL.md: Flerårsöversikt, Resultatdisposition, The Not column.
 12. `bas_to_ar_2026.csv` from https://www.arsredovisning-online.se/bas-kontoplan/ in the same form;
     diff against 2024 and rerun the 3 years.
-13. Later: flerårsöversikt over several SIE files, soliditet, the texts not in SIE, iXBRL.
+13. Later: flerårsöversikt over several SIE files (4 years), the board's proposal in the Resultatdisposition,
+    the texts not in SIE (förvaltningsberättelse, Not 1, Not 2, underskrifter), iXBRL.

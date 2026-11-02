@@ -2,6 +2,9 @@
 
 #include "core/date.hpp"
 
+#include <map>
+#include <optional>
+
 #include <algorithm>
 
 #include <format>
@@ -12,6 +15,11 @@ namespace {
 
 constexpr std::size_t text_width = 56;
 constexpr std::size_t column_width = 14;
+constexpr std::size_t note_width = 6; // the Not column of the balansräkning, at the end of the text column
+
+// The mark for an amount that is not known yet, and why
+constexpr std::string_view unknown_amount = "TBD";
+constexpr std::string_view unknown_reason = "TBD: koppling till stämmobeslut saknas";
 
 // Characters, not bytes, of UTF-8 text
 std::size_t width_of(std::string_view text) {
@@ -50,10 +58,12 @@ std::vector<std::string> wrapped(std::string_view text, std::size_t width) {
   return lines;
 }
 
-// One row of text and amounts; the amounts on the last line of a wrapped text
+// One row of text and amounts; the amounts on the last line of a wrapped text. With
+// a note, the last note_width characters of the text column hold it, right aligned.
 void add_row(std::string& out, std::string_view text, std::size_t indent, std::vector<std::string> const& columns,
-             std::size_t width = text_width) {
-  auto const lines = wrapped(text, width - indent);
+             std::size_t width = text_width, std::optional<std::string_view> note = std::nullopt) {
+  auto const text_end = note ? width - note_width : width;
+  auto const lines = wrapped(text, text_end - indent);
   for (std::size_t index = 0; index < lines.size(); ++index) {
     out += std::string(indent, ' ');
     if (index + 1 < lines.size()) {
@@ -64,7 +74,10 @@ void add_row(std::string& out, std::string_view text, std::size_t indent, std::v
       out += lines[index] + '\n';
       continue;
     }
-    auto row = padded(lines[index], width - indent);
+    auto row = padded(lines[index], text_end - indent);
+    if (note) {
+      row += right(*note, note_width);
+    }
     for (auto const& column : columns) {
       row += right(column, column_width);
     }
@@ -87,19 +100,20 @@ std::vector<std::string> amount_columns(StatementLine const& line) {
 
 // A statement's title and the years over its columns: periods for the
 // resultaträkning, closing days for the balansräkning
-void add_title(std::string& out, std::string_view title, std::vector<sie::FiscalYear> const& years) {
+void add_title(std::string& out, std::string_view title, std::vector<sie::FiscalYear> const& years,
+               std::optional<std::string_view> note = std::nullopt) {
   out += std::format("{}\n{}\n", title, std::string(width_of(title), '='));
   std::vector<std::string> first;
   std::vector<std::string> second;
   for (auto const& year : years) {
-    if (title == "Resultaträkning") {
+    if (title != "Balansräkning") {
       first.push_back(format_iso_date(year.start));
       second.push_back("-" + format_iso_date(year.end));
     } else {
       first.push_back(format_iso_date(year.end));
     }
   }
-  add_row(out, "", 0, first);
+  add_row(out, "", 0, first, text_width, note);
   if (!second.empty()) {
     add_row(out, "", 0, second);
   }
@@ -179,9 +193,11 @@ std::string format_notes(Notes const& notes, std::vector<sie::FiscalYear> const&
   return out;
 }
 
-std::string format_statements(Statement const& statement, std::vector<sie::FiscalYear> const& years) {
+std::string format_statements(Statement const& statement, std::vector<sie::FiscalYear> const& years,
+                              std::map<std::string, std::string> const& notes) {
   std::string out;
   std::size_t item_indent = 2;
+  bool note_column = false; // in the balansräkning, when there are notes
   for (auto const& line : statement.lines) {
     if (line.in_notes) {
       break; // the notes are printed by format_notes
@@ -190,11 +206,17 @@ std::string format_statements(Statement const& statement, std::vector<sie::Fisca
       if (!out.empty()) {
         out += '\n';
       }
-      add_title(out, line.text, years);
+      note_column = line.text == "Balansräkning" && !notes.empty();
+      add_title(out, line.text, years, note_column ? std::optional<std::string_view>("Not") : std::nullopt);
       continue;
     }
     if (!line.shown) {
       continue;
+    }
+    std::optional<std::string_view> note;
+    if (note_column) {
+      auto const found = line.kind == LineKind::item ? notes.find(line.text) : notes.end();
+      note = found == notes.end() ? std::string_view{} : std::string_view(found->second);
     }
     if (line.kind == LineKind::heading) {
       out += '\n';
@@ -202,16 +224,56 @@ std::string format_statements(Statement const& statement, std::vector<sie::Fisca
       item_indent = indent_of(line) + 2;
     } else if (line.kind == LineKind::sum && line.level == 1) {
       out += '\n';
-      add_row(out, line.text, 0, amount_columns(line));
+      add_row(out, line.text, 0, amount_columns(line), text_width, note);
     } else {
-      add_row(out, line.text, line.kind == LineKind::item ? item_indent : indent_of(line), amount_columns(line));
+      add_row(out, line.text, line.kind == LineKind::item ? item_indent : indent_of(line), amount_columns(line),
+              text_width, note);
     }
   }
   return out;
 }
 
-std::string format_trace(EquityChanges const& equity, Statement const& statement, Notes const& notes,
-                         sie::Document const& document, std::vector<sie::FiscalYear> const& years) {
+std::string format_overview(Overview const& overview, std::vector<sie::FiscalYear> const& years) {
+  std::string out;
+  add_title(out, "Flerårsöversikt", years);
+  out += '\n';
+  std::vector<std::string> net_sales;
+  std::vector<std::string> result;
+  std::vector<std::string> solidity;
+  for (std::size_t year = 0; year < years.size(); ++year) {
+    net_sales.push_back(format_kronor(to_tkr(overview.net_sales[year])));
+    result.push_back(format_kronor(to_tkr(overview.result_after_financial_items[year])));
+    solidity.push_back(overview.solidity[year] ? format_percent(*overview.solidity[year]) : "-");
+  }
+  add_row(out, "Nettoomsättning (tkr)", 0, net_sales);
+  add_row(out, "Resultat efter finansiella poster (tkr)", 0, result);
+  add_row(out, "Soliditet (%)", 0, solidity);
+  return out;
+}
+
+std::string format_disposition(Disposition const& disposition) {
+  std::string const title = "Resultatdisposition";
+  std::string out = std::format("{}\n{}\n\n", title, std::string(width_of(title), '='));
+  auto const total = format_kronor(to_kronor(disposition.total));
+  add_row(out, "Till årsstämmans förfogande står följande medel", 0, {});
+  for (auto const& row : disposition.funds) {
+    add_row(out, row.text, 2, {format_kronor(to_kronor(row.amount))});
+  }
+  add_row(out, "Summa", 0, {total});
+  out += '\n';
+  add_row(out, "Styrelsen föreslår att medlen disponeras enligt följande", 0, {});
+  for (auto const& text : disposition.proposal) {
+    add_row(out, text, 2, {std::string(unknown_amount)});
+  }
+  add_row(out, "Summa", 0, {total});
+  out += '\n';
+  add_row(out, unknown_reason, 0, {});
+  return out;
+}
+
+std::string format_trace(Overview const& overview, Disposition const& disposition, EquityChanges const& equity,
+                         Statement const& statement, Notes const& notes, sie::Document const& document,
+                         std::vector<sie::FiscalYear> const& years) {
   std::string out = "Trace of the årsredovisning\n"
                     "Lines in kronor as on the årsredovisning; accounts and vouchers in kronor and öre as booked\n"
                     "(debit positive). Year 0 down to the vouchers; the SIE file has no vouchers for the year before.\n";
@@ -229,6 +291,45 @@ std::string format_trace(EquityChanges const& equity, Statement const& statement
     return std::format("{} {} {} {}", voucher.series, voucher.number, format_iso_date(voucher.date), voucher.text);
   };
   auto const kronor = [](Amount amount) { return format_kronor(to_kronor(amount)) + " kr"; };
+
+  std::vector<std::string> year_ends;
+  for (auto const& year : years) {
+    year_ends.push_back(format_iso_date(year.end));
+  }
+  auto const exact_columns = [](std::vector<Amount> const& amounts) {
+    std::vector<std::string> columns;
+    for (auto const amount : amounts) {
+      columns.push_back(format_amount(amount));
+    }
+    return columns;
+  };
+  title("Flerårsöversikt");
+  out += "Amounts as on the årsredovisning (not as booked), from the lines of the resultaträkning\n"
+         "and balansräkning traced below.\n";
+  add_row(out, "", 0, year_ends);
+  out += '\n';
+  add_row(out, "Nettoomsättning (tkr): Nettoomsättning", 0, exact_columns(overview.net_sales));
+  add_row(out, "Resultat efter finansiella poster (tkr): Resultat efter finansiella poster", 0,
+          exact_columns(overview.result_after_financial_items));
+  std::vector<std::string> solidity;
+  for (auto const& value : overview.solidity) {
+    solidity.push_back(value ? format_percent(*value) + " %" : "-");
+  }
+  add_row(out, "Soliditet (%) = (Summa eget kapital + 79,4 % of Summa obeskattade reserver) / Summa tillgångar", 0,
+          solidity);
+  add_row(out, "Summa eget kapital", 2, exact_columns(overview.equity));
+  add_row(out, "Summa obeskattade reserver", 2, exact_columns(overview.untaxed_reserves));
+  add_row(out, "Summa tillgångar", 2, exact_columns(overview.assets));
+
+  title("Resultatdisposition");
+  out += "Amounts as on the årsredovisning, from the posts under Fritt eget kapital of the balansräkning.\n\n";
+  for (auto const& row : disposition.funds) {
+    add_row(out, row.text, 0, {format_amount(row.amount)});
+  }
+  add_row(out, "Summa", 0, {format_amount(disposition.total)});
+  for (auto const& text : disposition.proposal) {
+    add_row(out, std::format("{}: {}", text, unknown_reason), 0, {});
+  }
 
   title("Förändringar i eget kapital");
   auto const is_equity = [&equity](std::string_view account) {
