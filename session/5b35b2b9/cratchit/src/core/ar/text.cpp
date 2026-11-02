@@ -157,10 +157,35 @@ std::string format_equity_changes(EquityChanges const& changes) {
   return out;
 }
 
+std::string format_notes(Notes const& notes, std::vector<sie::FiscalYear> const& years) {
+  if (notes.notes.empty()) {
+    return "";
+  }
+  std::string out = "Noter\n=====\n";
+  std::vector<std::string> const header{format_iso_date(years.front().end)};
+  for (auto const& note : notes.notes) {
+    out += '\n';
+    add_row(out, note.title, 0, header);
+    for (auto const& section : note.sections) {
+      out += '\n';
+      add_row(out, section.text, 0, {});
+      for (auto const& row : section.rows) {
+        add_row(out, row.text, 2, {format_kronor(to_kronor(row.amount))});
+      }
+    }
+    out += '\n';
+    add_row(out, note.sum_text, 0, {format_kronor(to_kronor(note.sum))});
+  }
+  return out;
+}
+
 std::string format_statements(Statement const& statement, std::vector<sie::FiscalYear> const& years) {
   std::string out;
   std::size_t item_indent = 2;
   for (auto const& line : statement.lines) {
+    if (line.in_notes) {
+      break; // the notes are printed by format_notes
+    }
     if (line.kind == LineKind::heading && line.level == 1) {
       if (!out.empty()) {
         out += '\n';
@@ -185,8 +210,8 @@ std::string format_statements(Statement const& statement, std::vector<sie::Fisca
   return out;
 }
 
-std::string format_trace(EquityChanges const& equity, Statement const& statement, sie::Document const& document,
-                         std::vector<sie::FiscalYear> const& years) {
+std::string format_trace(EquityChanges const& equity, Statement const& statement, Notes const& notes,
+                         sie::Document const& document, std::vector<sie::FiscalYear> const& years) {
   std::string out = "Trace of the årsredovisning\n"
                     "Lines in kronor as on the årsredovisning; accounts and vouchers in kronor and öre as booked\n"
                     "(debit positive). Year 0 down to the vouchers; the SIE file has no vouchers for the year before.\n";
@@ -195,6 +220,10 @@ std::string format_trace(EquityChanges const& equity, Statement const& statement
   };
   auto const named = [&document](std::string_view account) {
     return std::format("{} {}", account, account_name(document, account));
+  };
+  // A voucher's transaction: the account with the transaction's own text, else the account's name
+  auto const transaction_text = [&named](sie::Transaction const& transaction) {
+    return transaction.text.empty() ? named(transaction.account) : std::format("{} {}", transaction.account, transaction.text);
   };
   auto const voucher_text = [](sie::Voucher const& voucher) {
     return std::format("{} {} {} {}", voucher.series, voucher.number, format_iso_date(voucher.date), voucher.text);
@@ -217,7 +246,7 @@ std::string format_trace(EquityChanges const& equity, Statement const& statement
       add_row(out, voucher_text(*voucher), 2, {});
       for (auto const& transaction : voucher->transactions) {
         if (transaction.kind != sie::Transaction::Kind::removed && is_equity(transaction.account)) {
-          add_row(out, named(transaction.account), 4, {format_amount(transaction.amount)});
+          add_row(out, transaction_text(transaction), 4, {format_amount(transaction.amount)});
         }
       }
     }
@@ -254,6 +283,34 @@ std::string format_trace(EquityChanges const& equity, Statement const& statement
       }
       for (auto const& posting : account.postings) {
         add_row(out, voucher_text(*posting.voucher), 4, {format_amount(posting.amount)});
+      }
+    }
+  }
+  if (!notes.notes.empty()) {
+    title("Noter");
+    add_row(out, "", 0, {format_iso_date(years.front().end)});
+  }
+  for (auto const& note : notes.notes) {
+    out += '\n';
+    add_row(out, note.title, 0, {});
+    for (auto const& section : note.sections) {
+      out += '\n';
+      add_row(out, section.text, 0, {});
+      for (auto const& row : section.rows) {
+        add_row(out, row.text, 2, {kronor(row.amount)});
+        for (auto const& [account, amount] : row.accounts) {
+          if (amount != 0) {
+            add_row(out, named(account), 4, {format_amount(amount)});
+          }
+        }
+        for (auto const* voucher : row.vouchers) {
+          add_row(out, voucher_text(*voucher), 4, {});
+          for (auto const& transaction : voucher->transactions) {
+            if (transaction.kind != sie::Transaction::Kind::removed && section.accounts.contains(transaction.account)) {
+              add_row(out, transaction_text(transaction), 6, {format_amount(transaction.amount)});
+            }
+          }
+        }
       }
     }
   }

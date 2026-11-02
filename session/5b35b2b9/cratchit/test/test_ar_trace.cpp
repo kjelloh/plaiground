@@ -1,4 +1,5 @@
 #include "core/ar/equity.hpp"
+#include "core/ar/notes.hpp"
 #include "core/ar/text.hpp"
 #include "core/ar/trace.hpp"
 #include "core/sie/file.hpp"
@@ -81,7 +82,7 @@ TEST(ArTrace, AccountsAndVouchersByDate) {
   EXPECT_EQ(vat.amounts, (std::vector<Amount>{0, 4280}));
   EXPECT_EQ(vat.postings.size(), 1u);
 
-  auto const text = cratchit::ar::format_trace({}, statement, document, {{0, 2023y / May / 1, 2024y / April / 30},
+  auto const text = cratchit::ar::format_trace({}, statement, {}, document, {{0, 2023y / May / 1, 2024y / April / 30},
                                                                           {-1, 2022y / May / 1, 2023y / April / 30}});
   EXPECT_NE(text.find("\nKassa och bank                                                  193 kr        100 kr\n"
                       "  1930 Företagskonto                                            192.80        100.00\n"
@@ -115,7 +116,7 @@ TEST_P(ArTraceOfFile, AddsUp) {
   auto const traced = trace_statement(statement, document);
   std::size_t shown = 0;
   for (auto const& line : statement.lines) {
-    shown += line.kind == cratchit::ar::LineKind::item && line.shown;
+    shown += line.kind == cratchit::ar::LineKind::item && line.shown && !line.in_notes;
   }
   EXPECT_EQ(traced.size(), shown);
   for (auto const& line : traced) {
@@ -149,6 +150,27 @@ TEST_P(ArTraceOfFile, AddsUp) {
       }
     }
     EXPECT_EQ(explained, row.amounts.back()) << row.text;
+  }
+
+  auto const notes = cratchit::ar::build_notes(statement, document);
+  EXPECT_FALSE(notes.notes.empty());
+  for (auto const& note : notes.notes) {
+    for (auto const& section : note.sections) {
+      for (auto const& row : section.rows) {
+        Amount explained = 0;
+        for (auto const& [account, amount] : row.accounts) {
+          explained += amount;
+        }
+        for (auto const* voucher : row.vouchers) {
+          for (auto const& transaction : voucher->transactions) {
+            if (transaction.kind != Transaction::Kind::removed && section.accounts.contains(transaction.account)) {
+              explained += transaction.amount;
+            }
+          }
+        }
+        EXPECT_EQ(explained, row.amount) << note.title << " " << row.text;
+      }
+    }
   }
 }
 

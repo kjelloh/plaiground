@@ -34,11 +34,14 @@ struct StatementLine {
   std::vector<Balances> accounts;
   bool shown = false; // items with an amount in any year, and the headings and sums over them
   AccountSet account_set; // for items: the accounts the mapping puts on the line
+  bool in_notes = false;  // under the statement heading Noter
 };
 
 struct Statement {
   std::vector<StatementLine> lines;   // the layout's lines but outside
-  std::vector<std::string> errors;    // accounts with an amount that are on no line, or on two
+  // Accounts with an amount that are on no line of the resultaträkning and balansräkning, or on two;
+  // or on two lines of the notes
+  std::vector<std::string> errors;
 };
 
 // The årsredovisning of years (index 0 first) by layout. Each item is the sum
@@ -46,7 +49,9 @@ struct Statement {
 // (tillgångar) as booked, all others negated, so that income, equity and debt
 // are positive and costs negative. A sum adds the items after the last heading
 // at its level or above. Each line is rounded to kronor from its exact amount,
-// so a sum may differ by a krona from the shown items it adds.
+// so a sum may differ by a krona from the shown items it adds. The lines under
+// the statement heading Noter (Nivå 1) break down posts of the balansräkning,
+// so an account may be on one line there too.
 Statement build_statement(std::vector<Line> const& layout, std::vector<Balances> const& years);
 
 // The exact amounts of the first line with this text, or nothing

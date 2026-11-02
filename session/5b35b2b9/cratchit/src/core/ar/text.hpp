@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/ar/equity.hpp"
+#include "core/ar/notes.hpp"
 #include "core/ar/statement.hpp"
 #include "core/ar/trace.hpp"
 #include "core/sie/document.hpp"
@@ -21,11 +22,16 @@ std::string format_equity_changes(EquityChanges const& changes);
 // year (index 0 first): the shown lines, indented by level, long texts wrapped
 std::string format_statements(Statement const& statement, std::vector<sie::FiscalYear> const& years);
 
+// The notes as plain text, for fiscal year 0 (years.front()): each note's
+// sections with their rows, then its sum
+std::string format_notes(Notes const& notes, std::vector<sie::FiscalYear> const& years);
+
 // The trace of the årsredovisning as plain text, in the order of the report:
 // Förändringar i eget kapital (accounts of the first and last row, vouchers of
-// the changes), then the resultaträkning and balansräkning (accounts and
-// year 0 vouchers under each shown item)
-std::string format_trace(EquityChanges const& equity, Statement const& statement, sie::Document const& document,
-                         std::vector<sie::FiscalYear> const& years);
+// the changes), the resultaträkning and balansräkning (accounts and year 0
+// vouchers under each shown item), then the notes (accounts of the first and
+// last row of each section, vouchers of its changes)
+std::string format_trace(EquityChanges const& equity, Statement const& statement, Notes const& notes,
+                         sie::Document const& document, std::vector<sie::FiscalYear> const& years);
 
 } // namespace cratchit::ar

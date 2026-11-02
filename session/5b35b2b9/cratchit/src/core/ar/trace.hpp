@@ -33,7 +33,7 @@ struct TracedLine {
   std::vector<TracedAccount> accounts; // by number
 };
 
-// Each shown item with the accounts the mapping puts on it that have an
+// Each shown item of the resultaträkning and balansräkning (not the notes) with the accounts the mapping puts on it that have an
 // amount in any year, an opening balance or a posting in year 0. Year 0 goes
 // down to the vouchers; the SIE file has none for the years before. The lines
 // point into statement and document.

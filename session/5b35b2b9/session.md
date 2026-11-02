@@ -63,6 +63,21 @@ So I asked Claude to remove the mechanism to map based on sign.
 
 So now we should be back on 'plain BAS mapping to ÅR' again?
 
+So now I had some chats with Claude about 'Not 3' on AR.
+
+* I had some thinking myself about maybe adding a column with unique machine-readable name for the 'items' on the ÅR.
+* In the end I decided to let Claude do its thing as long as it produces the correct output.
+* Although I now noticed it has changed the format of bast_to_ar csv-file.
+
+    * It has columns 'Nivå;Typ;BAS Range;ÅR'
+    * But the entries are not in the order of the actual output.
+    * And the output also generate tables.
+    * So there must be some hard coded stuff that maps items to actual aoutput format.
+    * This is OK I think.
+    * Although I had some ideas of my own that is now NOT implemented.
+
+But lets see where we end up (and if I want to later tweak it)?
+
 ## 202061101
 
 Now it is time to see if we can make a C++ app like cratchit actually map an SIE file to a proper and valid Swedish 'Årsredovisning' (ÅR)?

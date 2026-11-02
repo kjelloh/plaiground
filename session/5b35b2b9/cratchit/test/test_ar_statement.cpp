@@ -106,6 +106,24 @@ TEST(ArStatement, AccountOnTwoLinesIsAnError) {
   EXPECT_EQ(statement.errors.front(), "Account 2650 is on more than one line: A and B");
 }
 
+TEST(ArStatement, AccountMayAlsoBeOnALineOfTheNotes) {
+  auto const layout = cratchit::ar::parse_layout("Nivå;Typ;BAS Range;ÅR\n1;Rubrik;;Balansräkning\n"
+                                                 "3;Post;1220-1229;Inventarier\n"
+                                                 "1;Rubrik;;Noter\n2;Rubrik;;Not 3 Inventarier\n"
+                                                 "3;Post;1220-1227;Anskaffningsvärden\n3;Post;1229;Avskrivningar\n"
+                                                 "3;Post;1220-1229;Fel\n2;Summa;;Redovisat värde\n");
+  ASSERT_TRUE(layout);
+  auto const statement = build_statement(*layout, {Balances{{"1221", 10000}, {"1229", -2000}}});
+  ASSERT_EQ(statement.errors.size(), 2u);
+  EXPECT_EQ(statement.errors[0], "Account 1221 is on more than one line of the notes: Anskaffningsvärden and Fel");
+  EXPECT_EQ(statement.errors[1], "Account 1229 is on more than one line of the notes: Avskrivningar and Fel");
+  auto const inventarier = std::ranges::find(statement.lines, "Inventarier", &cratchit::ar::StatementLine::text);
+  EXPECT_FALSE(inventarier->in_notes);
+  EXPECT_EQ(inventarier->amounts.front(), 80);
+  auto const sum = std::ranges::find(statement.lines, "Redovisat värde", &cratchit::ar::StatementLine::text);
+  EXPECT_TRUE(sum->in_notes);
+}
+
 TEST(ArStatement, HeadingWithoutItemsIsNotShown) {
   Balances const year{{"1930", 100}, {"2081", -100}};
   auto const statement = build_statement(small_layout(), {year});

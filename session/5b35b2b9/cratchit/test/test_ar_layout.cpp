@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 #include <format>
 #include <string>
 #include <vector>
@@ -100,16 +102,45 @@ TEST(ArLayout, BuiltInMappingReads) {
 }
 
 TEST(ArLayout, BuiltInMappingPutsNoAccountOnTwoLines) {
+  // At most one line in the resultaträkning and balansräkning, and at most one in the notes
   auto const lines = parse_layout(cratchit::ar::layout_2024_text());
   ASSERT_TRUE(lines);
   for (int number = 1000; number <= 9999; ++number) {
     auto const account = std::to_string(number);
     std::vector<std::string> texts;
+    std::vector<std::string> note_texts;
+    bool notes = false;
     for (auto const& line : *lines) {
+      if (line.kind == LineKind::heading && line.level == 1) {
+        notes = line.text == "Noter";
+      }
       if (line.accounts.contains(account)) {
-        texts.push_back(line.text);
+        (notes && line.kind != LineKind::outside ? note_texts : texts).push_back(line.text);
       }
     }
     EXPECT_LE(texts.size(), 1u) << account << " is on " << texts.front() << " and " << texts.back();
+    EXPECT_LE(note_texts.size(), 1u) << account << " is on " << note_texts.front() << " and " << note_texts.back();
+  }
+}
+
+TEST(ArLayout, BuiltInNote3SplitsItsPostExactly) {
+  // The sections of Not 3 hold exactly the accounts of the post Inventarier, verktyg och installationer
+  auto const lines = parse_layout(cratchit::ar::layout_2024_text());
+  ASSERT_TRUE(lines);
+  auto const post = std::ranges::find_if(*lines, [](auto const& line) {
+    return line.kind == LineKind::item && line.text == "Inventarier, verktyg och installationer";
+  });
+  auto const note = std::ranges::find(*lines, "Not 3 Inventarier, verktyg och installationer", &cratchit::ar::Line::text);
+  ASSERT_NE(post, lines->end());
+  ASSERT_NE(note, lines->end());
+  std::vector<cratchit::ar::Line const*> sections;
+  for (auto at = note + 1; at != lines->end() && at->kind == LineKind::item; ++at) {
+    sections.push_back(&*at);
+  }
+  ASSERT_EQ(sections.size(), 3u);
+  for (int number = 1000; number <= 9999; ++number) {
+    auto const account = std::to_string(number);
+    auto const in_sections = std::ranges::count_if(sections, [&account](auto const* line) { return line->accounts.contains(account); });
+    EXPECT_EQ(in_sections, post->accounts.contains(account) ? 1 : 0) << account;
   }
 }

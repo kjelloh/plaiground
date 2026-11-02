@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <format>
+#include <set>
 
 namespace cratchit::ar {
 
@@ -49,17 +50,29 @@ Balances year_balances(sie::Document const& document, int year) {
 
 Statement build_statement(std::vector<Line> const& layout, std::vector<Balances> const& years) {
   Statement statement;
-  // Every account with an amount must be on exactly one line
-  std::map<std::string, std::vector<std::string>> lines_of;
+  // Whether each line of the layout is under the statement heading Noter
+  std::vector<bool> in_notes;
+  bool notes = false;
+  for (auto const& line : layout) {
+    if (line.kind == LineKind::heading && line.level == 1) {
+      notes = line.text == "Noter";
+    }
+    in_notes.push_back(notes && line.kind != LineKind::outside);
+  }
+  // Every account with an amount must be on exactly one line of the resultaträkning and balansräkning,
+  // and may be on one line of the notes
+  std::set<std::string> checked;
   for (auto const& balances : years) {
     for (auto const& [account, amount] : balances) {
-      if (amount == 0 || lines_of.contains(account)) {
+      if (amount == 0 || !checked.insert(account).second) {
         continue;
       }
-      auto& texts = lines_of[account];
-      for (auto const& line : layout) {
+      std::vector<std::string> texts;
+      std::vector<std::string> note_texts;
+      for (std::size_t index = 0; index < layout.size(); ++index) {
+        auto const& line = layout[index];
         if ((line.kind == LineKind::item || line.kind == LineKind::outside) && line.accounts.contains(account)) {
-          texts.push_back(line.text);
+          (in_notes[index] ? note_texts : texts).push_back(line.text);
         }
       }
       if (texts.empty()) {
@@ -67,13 +80,18 @@ Statement build_statement(std::vector<Line> const& layout, std::vector<Balances>
       } else if (texts.size() > 1) {
         statement.errors.push_back(std::format("Account {} is on more than one line: {} and {}", account, texts[0], texts[1]));
       }
+      if (note_texts.size() > 1) {
+        statement.errors.push_back(std::format("Account {} is on more than one line of the notes: {} and {}", account,
+                                               note_texts[0], note_texts[1]));
+      }
     }
   }
-  for (auto const& line : layout) {
+  for (std::size_t index = 0; index < layout.size(); ++index) {
+    auto const& line = layout[index];
     if (line.kind == LineKind::outside) {
       continue;
     }
-    StatementLine out{line.level, line.kind, line.text, std::vector<Amount>(years.size(), 0), {}, {}, false, {}};
+    StatementLine out{line.level, line.kind, line.text, std::vector<Amount>(years.size(), 0), {}, {}, false, {}, in_notes[index]};
     if (line.kind == LineKind::item) {
       out.account_set = line.accounts;
       out.accounts.resize(years.size());

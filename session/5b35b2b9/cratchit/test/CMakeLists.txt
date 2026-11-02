@@ -5,6 +5,7 @@ add_executable(cratchit_tests
   test_ar_closing.cpp
   test_ar_equity.cpp
   test_ar_layout.cpp
+  test_ar_notes.cpp
   test_ar_statement.cpp
   test_ar_trace.cpp
   test_cp437.cpp

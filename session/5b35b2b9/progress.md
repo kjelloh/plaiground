@@ -176,7 +176,36 @@ The original is in git history (commit 36ad56e). Deliberate changes:
    (no vouchers in the file). Tests: the trace adds up to the öre on all 3 files (line = its accounts,
    account = IB + postings, equity row = its accounts/voucher transactions). 22/23 trace is ~900 lines.
    MANUAL.md: --trace section with real excerpts. Done.
-10. Not 3 Inventarier from 122x IB/UB and the year's purchases in the vouchers (check: page 8, 22/23 and 24/25).
+10. Not 3 Inventarier, verktyg och installationer. Done. Agreed design: no new column or file; the note is
+    ordinary rows in bas_to_ar_2024.csv under a new statement heading `1;Rubrik;;Noter`:
+    `2;Rubrik;;Not 3 Inventarier, verktyg och installationer`, three `Post` rows Anskaffningsvärden
+    (12x0-12x7), Avskrivningar (12x9), Nedskrivningar (12x8) within the BR post "1220-1279 (förutom 1260)",
+    and `2;Summa;;Redovisat värde`. The note number is just the CSV text.
+    - Rule changes: an account may be on one RR/BR line and one note line (checked per group; "on no line"
+      only for RR/BR). `StatementLine::in_notes`. RR/BR printing stops at Noter.
+    - `core/ar/notes`: per section #IB 0, vouchers, #UB 0; rows by section text (Inköp / Försäljningar och
+      utrangeringar; Återförda / Årets avskrivningar|nedskrivningar). Disposal = voucher also on another
+      section of the note or 3970-3979/7970-7979. Errors: section not adding up, Redovisat värde != BR post
+      (post found from the title "Not <n> <post>"), unknown section text. Year 0 only.
+    - Output: Noter after the Balansräkning. `--trace` lists each note row's accounts / vouchers (by date);
+      a voucher's transactions show the transaction text when it has one (e.g. I6 2023-04-30 names each
+      depreciated item and its period, "Mac Pro 2013 (5 år)"), else the account name. 22/23 trace ~1 180 lines.
+    - All 3 years: no errors. 22/23 and 24/25 match PDF page 8 to the krona
+      (`test/expected_ar/*_not_3.csv`); 23/24 (no Not 3 in its PDF) now gets one: 304 597 + 11 098 = 315 695,
+      -236 868 - 20 685 = -257 553, -15 408, 42 734.
+    - Tests: note sections split the BR post exactly (1000-9999), purchase/return/depreciation/scrapping,
+      errors, trace adds up for note rows. 158 tests pass, no warnings. MANUAL.md: Noter section.
+    - Not yet: the "Not 3" reference on the BR line; Not 1/Not 2 text notes.
+    What we knew before:
+    - The 22/23 and 24/25 Not 3 tables can be reproduced from #IB/#UB and vouchers to the krona
+      (22/23: 220 215 + 84 382 = 304 597; -165 970 - 70 897 = -236 868; -15 408; 52 321.
+      24/25: 315 695 + 43 752 = 359 447; -257 553 - 20 562 = -278 115; -15 408; 65 924).
+    - Account roles by BAS numbering: ...8 ackumulerade nedskrivningar, ...9 ackumulerade avskrivningar,
+      the others anskaffningsvärde (1218/1219, 1228/1229, 1258/1259 in the BAS 2026 book).
+    - 22/23 credits on 1226 (10 248) are returns and credit notes (A18, A41, A42, A70, D37), netted into
+      Inköp by the PDF. A sale or utrangering would also touch 1229 or 3970/7970.
+    - The 23/24 PDF has no Not 3 although the BR shows Inventarier 42 734.
+    - Numbering: K2 also requires Not 1 Redovisningsprinciper and Not 2 Medelantal anställda (not in SIE).
 11. Resultatdisposition (needs the proposed dividend, not in SIE; agree input with the user first).
 12. `bas_to_ar_2026.csv` from https://www.arsredovisning-online.se/bas-kontoplan/ in the same form;
     diff against 2024 and rerun the 3 years.

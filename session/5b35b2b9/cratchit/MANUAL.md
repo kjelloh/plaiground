@@ -16,6 +16,8 @@ As plain text, laid out as for a K2 aktiebolag (BFNAR 2016:10):
 1. Förändringar i eget kapital (changes in equity) of fiscal year 0.
 2. The resultaträkning (income statement).
 3. The balansräkning (balance sheet).
+4. Noter (notes) of fiscal year 0, for the posts of the balansräkning that have one in
+   the mapping: for now Not 3 Inventarier, verktyg och installationer.
 
 For the resultaträkning and balansräkning:
 
@@ -106,6 +108,81 @@ From the SIE file alone, for fiscal year 0:
 To see the vouchers behind each row, run `cratchit_ar --trace` (see below). Each
 voucher on the equity accounts is in exactly one row.
 
+## Noter
+
+A note breaks a post of the balansräkning down: how it changed during fiscal year 0,
+from what it was at the start to what it is at the end. For now there is one, for the
+post Inventarier, verktyg och installationer (equipment, tools and installations).
+The note numbers are those of the filed årsredovisningar: Not 1 and Not 2 are text
+notes not yet included.
+
+### How to read it
+
+An example, for the fiscal year ending 2023-04-30:
+
+    Not 3 Inventarier, verktyg och installationer               2023-04-30
+
+    Anskaffningsvärden
+      Ingående anskaffningsvärden                                  220 215
+      Inköp                                                         84 382
+      Utgående anskaffningsvärden                                  304 597
+
+    Avskrivningar
+      Ingående avskrivningar                                      -165 970
+      Årets avskrivningar                                          -70 897
+      Utgående avskrivningar                                      -236 868
+
+    Nedskrivningar
+      Ingående nedskrivningar                                      -15 408
+      Utgående nedskrivningar                                      -15 408
+
+    Redovisat värde                                                 52 321
+
+- **Anskaffningsvärden** (cost): what the company paid for the equipment it holds.
+  It grows with **Inköp** (purchases, net of returns and credit notes) and shrinks
+  with **Försäljningar och utrangeringar** (sold or scrapped equipment).
+- **Avskrivningar** (accumulated depreciation, negative): the cost written off so far.
+  It grows with **Årets avskrivningar** (this year's depreciation, the same amount as
+  in the resultaträkning) and shrinks with **Återförda avskrivningar** (the
+  depreciation of sold or scrapped equipment, taken out with it).
+- **Nedskrivningar** (accumulated write-downs, negative): value written off beyond
+  the plan, with **Årets nedskrivningar** and **Återförda nedskrivningar** the same way.
+- Each section reads from its opening (Ingående) through the year's changes to its
+  closing (Utgående) amount: here 220 215 + 84 382 = 304 597.
+- **Redovisat värde** (book value) is the three closing amounts added up, and equals
+  the post in the balansräkning (52 321).
+- A change that is zero is left out. Each amount is rounded to kronor on its own, so
+  a sum may differ by a krona from the shown amounts.
+
+### How it is generated
+
+From the SIE file alone, for fiscal year 0:
+
+1. **The note and its sections are rows in the mapping**
+   (`Resources/bas_to_ar_2024.csv`), under the statement heading `Noter`:
+
+       1;Rubrik;;Noter
+       2;Rubrik;;Not 3 Inventarier, verktyg och installationer
+       3;Post;1220-1227, 1230-1237, 1240-1247, 1250-1257, 1261-1267 eller 1270-1277;Anskaffningsvärden
+       3;Post;1229, 1239, 1249, 1259, 1269 eller 1279;Avskrivningar
+       3;Post;1228, 1238, 1248, 1258, 1268 eller 1278;Nedskrivningar
+       2;Summa;;Redovisat värde
+
+   The split follows BAS: 12x0-12x7 hold the cost, 12x8 the accumulated write-downs
+   and 12x9 the accumulated depreciation. The sections together hold exactly the
+   accounts of the post in the balansräkning. The title `Not <n> <post>` names that post.
+2. **Ingående** and **Utgående** are the opening (`#IB 0`) and closing (`#UB 0`)
+   balances of the section's accounts, as booked: debit positive.
+3. **The changes** are the year's vouchers that post to the section's accounts. A
+   voucher is a sale or scrapping (Försäljningar och utrangeringar, Återförda
+   avskrivningar or Återförda nedskrivningar) when it also posts to another section of
+   the same note, or to 3970-3979 or 7970-7979 (gain or loss on disposal). Any other
+   voucher is Inköp, Årets avskrivningar or Årets nedskrivningar.
+4. **The checks.** Each section's opening balance and changes must add up to its
+   closing balance, and Redovisat värde must equal the post in the balansräkning, to
+   the öre. If not, `cratchit_ar` says which and exits with 1.
+5. A note is shown when any account in it has an amount in either year.
+
 ## --trace
 
 Prints, instead of the årsredovisning, what each of its amounts is made of: the BAS
@@ -117,10 +194,10 @@ small company), so page it or save it:
 
 ### How to read it
 
-The trace follows the order of the report: Förändringar i eget kapital, then the
-resultaträkning and the balansräkning. Each shown amount is a heading line, in whole
-kronor as on the årsredovisning, with what makes it up indented below it in kronor
-and öre **as booked: debit positive, credit negative**.
+The trace follows the order of the report: Förändringar i eget kapital, the
+resultaträkning, the balansräkning and the notes. Each shown amount is a heading
+line, in whole kronor as on the årsredovisning, with what makes it up indented below
+it in kronor and öre **as booked: debit positive, credit negative**.
 
 In the resultaträkning and balansräkning, each post lists its accounts, and each
 account its vouchers in fiscal year 0, by date:
@@ -161,6 +238,16 @@ Here the dividend of 125 000 is the net of the two: 284 164.89 - 159 164.89 take
 from Balanserat resultat. The voucher's other transaction (2898, the dividend owed)
 is not listed, as it is not equity.
 
+In the notes, each section lists its rows the same way: the accounts' balances for
+Ingående and Utgående, the vouchers for each change. A voucher's transactions show
+the account with the transaction's own text when it has one, else the account's name,
+so the depreciation of each item is visible:
+
+      Årets avskrivningar                                       -70 897 kr
+        I 6 2023-04-30 Planenliga Avskrivningar för 20220501
+        - 20230430
+          1229 Mac Pro 2013 (5 år)                                -4986.00
+
 ## --help, -h
 
 Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
@@ -184,9 +271,11 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
   - `ÅR`: the text on the årsredovisning.
 - **Signs:** assets (class 1) are shown as booked. Everything else is negated, so
   income, equity and debt are positive and costs negative.
-- **One line per account:** each account is on one line whatever its balance. Moving
-  a receivable or a debt to its proper account is a closing entry in the books (see
-  Year-end closing notes).
+- **One line per account:** each account is on one line of the resultaträkning and
+  balansräkning whatever its balance. Moving a receivable or a debt to its proper
+  account is a closing entry in the books (see Year-end closing notes). Under the
+  statement heading `Noter`, an account may also be on one line of a note, which
+  breaks its post down (see Noter).
 - **Rounding:** each line is rounded to whole kronor from its exact amount, half away
   from zero. A sum may therefore differ by a krona from the shown posts it adds.
 
@@ -195,13 +284,17 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
 `cratchit_ar` exits with 1 and says why on stderr when:
 
 - The SIE file cannot be read or is not a valid SIE 4 file.
-- An account has an amount but is on no line of the mapping, or on more than one.
+- An account has an amount but is on no line of the resultaträkning and
+  balansräkning, or on more than one, or on more than one line of the notes.
 - The balansräkning does not balance (Summa tillgångar differs from Summa eget
   kapital och skulder), to the öre.
 - Årets resultat differs between resultaträkning and balansräkning, to the öre. The
   year's result must be booked to 2099, as in a closed fiscal year.
 - In Förändringar i eget kapital, a column's opening balance and changes do not add
   up to its closing balance, to the öre.
+- In a note, a section's opening balance and changes do not add up to its closing
+  balance, Redovisat värde differs from its post in the balansräkning, or a section
+  under `Noter` is not Anskaffningsvärden, Avskrivningar or Nedskrivningar.
 
 A wrong command line prints the usage and exits with 2.
 
@@ -227,5 +320,6 @@ For example:
 
 ## Not yet included
 
-Förvaltningsberättelse texts, flerårsöversikt, resultatdisposition, noter and
-underskrifter.
+Förvaltningsberättelse texts, flerårsöversikt, resultatdisposition, the text notes
+(Not 1 Redovisningsprinciper, Not 2 Medelantal anställda), the note reference in the
+balansräkning, and underskrifter.

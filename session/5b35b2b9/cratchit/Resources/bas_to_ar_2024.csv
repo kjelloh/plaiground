@@ -146,5 +146,11 @@ Nivå;Typ;BAS Range;ÅR
 4;Post;2900-2999;Upplupna kostnader och förutbetalda intäkter
 3;Summa;;Summa kortfristiga skulder
 2;Summa;;Summa eget kapital och skulder
+1;Rubrik;;Noter
+2;Rubrik;;Not 3 Inventarier, verktyg och installationer
+3;Post;1220-1227, 1230-1237, 1240-1247, 1250-1257, 1261-1267 eller 1270-1277;Anskaffningsvärden
+3;Post;1229, 1239, 1249, 1259, 1269 eller 1279;Avskrivningar
+3;Post;1228, 1238, 1248, 1258, 1268 eller 1278;Nedskrivningar
+2;Summa;;Redovisat värde
 ;Utanför;8999;Årets resultat (bokslutspost, redan med i resultaträkningen)
 ;Utanför;9000-9999;Kontoklass 9, intern redovisning

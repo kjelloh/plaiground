@@ -1,6 +1,7 @@
 #include "core/ar/closing.hpp"
 #include "core/ar/equity.hpp"
 #include "core/ar/layout.hpp"
+#include "core/ar/notes.hpp"
 #include "core/ar/statement.hpp"
 #include "core/ar/text.hpp"
 #include "core/date.hpp"
@@ -85,9 +86,13 @@ int main(int argc, char* argv[]) {
   for (auto const& note : equity.notes) {
     std::println(stderr, "Note: {}", note);
   }
-  int const exit_code = errors.empty() && equity.errors.empty() ? 0 : 1;
+  auto const notes = cratchit::ar::build_notes(statement, document);
+  for (auto const& error : notes.errors) {
+    std::println(stderr, "Error: {}", error);
+  }
+  int const exit_code = errors.empty() && equity.errors.empty() && notes.errors.empty() ? 0 : 1;
   if (trace) {
-    std::print("{}", cratchit::ar::format_trace(equity, statement, document, years));
+    std::print("{}", cratchit::ar::format_trace(equity, statement, notes, document, years));
     return exit_code;
   }
   std::println("{}", document.company_name);
@@ -97,5 +102,8 @@ int main(int argc, char* argv[]) {
   std::println("");
   std::println("{}", cratchit::ar::format_equity_changes(equity));
   std::print("{}", cratchit::ar::format_statements(statement, years));
+  if (auto const text = cratchit::ar::format_notes(notes, years); !text.empty()) {
+    std::print("\n{}", text);
+  }
   return exit_code;
 }

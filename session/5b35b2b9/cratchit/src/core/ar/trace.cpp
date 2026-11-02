@@ -55,7 +55,7 @@ std::vector<TracedLine> trace_statement(Statement const& statement, sie::Documen
   }
   std::vector<TracedLine> traced;
   for (auto const& line : statement.lines) {
-    if (line.kind != LineKind::item || !line.shown) {
+    if (line.kind != LineKind::item || !line.shown || line.in_notes) {
       continue;
     }
     TracedLine out{&line, {}};
