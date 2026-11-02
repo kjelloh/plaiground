@@ -65,7 +65,7 @@ Statement build_statement(std::vector<Line> const& layout, std::vector<Balances>
       if (texts.empty()) {
         statement.errors.push_back(std::format("Account {} has an amount but is on no line of the årsredovisning", account));
       } else if (texts.size() > 1) {
-        statement.errors.push_back(std::format("Account {} is on more than one line: {}", account, texts[0]));
+        statement.errors.push_back(std::format("Account {} is on more than one line: {} and {}", account, texts[0], texts[1]));
       }
     }
   }

@@ -67,6 +67,7 @@ TEST(ArAccountSet, Unreadable) {
   EXPECT_FALSE(parse_account_set("1000 (utom 1001)"));
   EXPECT_FALSE(parse_account_set("1000-1010 (förutom 1001"));
   EXPECT_FALSE(parse_account_set("100"));
+  EXPECT_FALSE(parse_account_set("2650 vid debetsaldo"));
 }
 
 TEST(ArLayout, Rows) {

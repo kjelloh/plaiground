@@ -41,12 +41,27 @@ Well then? We are in fact all set to ask Claude to help us put all this together
     * It shall use current [BAS-kontoplan och din årsredovisning](https://www.arsredovisning-online.se/bas-kontoplan/) and create bas_to_ar_2026.csv on the same form as [bas_to_ar_2024.csv](./cratchit/Resources/bas_to_ar_2024.csv)
 * The created cratchit app shall be able to take an SIE file as the input argument and print out a generated Swedish 'Årsrapport' formatted as plain text but mirroring the organisation of the historical 'årsrapporter', e.g., [Årsredovisning%20220501-230430.pdf](./_Resources/_årsredovisningar/Årsredovisning%20220501-230430.pdf)
 
-Claude has now implemented an cratychit_ar that takes an SIE file and prints out a 'Resultaträlning' and 'Balansräkning'.
+Claude has now implemented an cratchit_ar that takes an SIE file and prints out a 'Resultaträkning' and 'Balansräkning'.
 
 * It looks like well formatted (bit I have not checked the amounts myself yet)
 * I think we should ask Claude to also produce a report about how the amounts are generated.
     * I would like to have the applied Voucher and BAS account and amount that goes into an entry in ÅR in an indented list under each ÅR Item.
 * I think I will make Claude maintain a user manual for documentation and also to help Claude track what the app is doing and how.
+
+Claude found a discrepancy for 2650, 2510 and 1630 and proposed they should go on the receivable or liability line depending on their balance. I let Claude do this.
+
+* It seems reasonable?
+* And we may catch this as an error when we test against existing pdfs?
+
+I then made Claude read my pdf about BAS accounting (e-book).
+
+* I suspected the wrong signs where due to erroneous closed books?
+* That is, that I should in fact adjust the books when the signs did not match the semantics of these BAS accounts?
+* And now Claude confirmed this was the case!
+
+So I asked Claude to remove the mechanism to map based on sign.
+
+So now we should be back on 'plain BAS mapping to ÅR' again?
 
 
 

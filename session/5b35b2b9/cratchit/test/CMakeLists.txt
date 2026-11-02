@@ -2,6 +2,7 @@ find_package(GTest REQUIRED)
 
 add_executable(cratchit_tests
   test_amount.cpp
+  test_ar_closing.cpp
   test_ar_layout.cpp
   test_ar_statement.cpp
   test_cp437.cpp

@@ -52,6 +52,9 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
   - `ÅR`: the text on the årsredovisning.
 - **Signs:** assets (class 1) are shown as booked. Everything else is negated, so
   income, equity and debt are positive and costs negative.
+- **One line per account:** each account is on one line whatever its balance. Moving
+  a receivable or a debt to its proper account is a closing entry in the books (see
+  Year-end closing notes).
 - **Rounding:** each line is rounded to whole kronor from its exact amount, half away
   from zero. A sum may therefore differ by a krona from the shown posts it adds.
 
@@ -67,6 +70,26 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
   year's result must be booked to 2099, as in a closed fiscal year.
 
 A wrong command line prints the usage and exits with 2.
+
+## Year-end closing notes
+
+The årsredovisning shows the books as they are. For each year shown, `cratchit_ar`
+also notes on stderr the closing entries that BAS asks for at the balance day and
+that the books lack. Notes do not change the exit code.
+
+- `Moms (2610-2659) nets to a receivable`: the VAT not yet due is a receivable;
+  book it to 1650 Momsfordran.
+- `Skatteskulder (2500-2599) net to a receivable`: book it to 1640 Skattefordringar.
+- `1630 Skattekonto has a credit balance`: book it to 2850, so that a debt is not
+  netted against the assets.
+- `Redovisningsmedel (1990-1999) ... is not matched by Avräkning för annans räkning
+  (2830-2839)`: BAS 1990 is money held for others, booked against a debt on 2830. It is
+  not a suspense account.
+- `2999 OBS-konto is ...`: the suspense account must be zero at year end.
+
+For example:
+
+    Note: Moms (2610-2659) nets to a receivable 1331.46 at 2023-04-30; BAS: move it to 1650 Momsfordran
 
 ## Not yet included
 

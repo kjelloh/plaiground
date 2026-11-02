@@ -1,3 +1,4 @@
+#include "core/ar/closing.hpp"
 #include "core/ar/layout.hpp"
 #include "core/ar/statement.hpp"
 #include "core/ar/text.hpp"
@@ -63,15 +64,23 @@ int main(int argc, char* argv[]) {
     }
   }
   auto const statement = cratchit::ar::build_statement(*layout, balances);
-  for (auto const& error : statement.errors) {
+  auto errors = statement.errors;
+  for (auto const& finding : cratchit::ar::check_statement(statement)) {
+    errors.push_back(finding);
+  }
+  for (auto const& error : errors) {
     std::println(stderr, "Error: {}", error);
   }
-  for (auto const& finding : cratchit::ar::check_statement(statement)) {
-    std::println(stderr, "Error: {}", finding);
+  // Closing entries BAS asks for that the books lack; the årsredovisning shows the books as they are
+  for (std::size_t index = 0; index < years.size(); ++index) {
+    for (auto const& note : cratchit::ar::check_closing(balances[index], years[index].end)) {
+      std::println(stderr, "Note: {}", note);
+    }
   }
+  int const exit_code = errors.empty() ? 0 : 1;
   if (accounts) {
     std::print("{}", cratchit::ar::format_accounts(statement, years));
-    return statement.errors.empty() ? 0 : 1;
+    return exit_code;
   }
   std::println("{}", document.company_name);
   std::println("{}", document.orgnr);
@@ -79,5 +88,5 @@ int main(int argc, char* argv[]) {
                cratchit::format_iso_date(years.front().end));
   std::println("");
   std::print("{}", cratchit::ar::format_statements(statement, years));
-  return statement.errors.empty() ? 0 : 1;
+  return exit_code;
 }

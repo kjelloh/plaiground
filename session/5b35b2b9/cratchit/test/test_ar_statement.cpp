@@ -97,6 +97,15 @@ TEST(ArStatement, SignsSumsAndChecks) {
   EXPECT_TRUE(is_shown(statement, "Kostnader"));
 }
 
+TEST(ArStatement, AccountOnTwoLinesIsAnError) {
+  auto const layout = cratchit::ar::parse_layout("Nivå;Typ;BAS Range;ÅR\n1;Rubrik;;Balansräkning\n"
+                                                 "3;Post;2650;A\n3;Post;2600-2699;B\n");
+  ASSERT_TRUE(layout);
+  auto const statement = build_statement(*layout, {Balances{{"2650", 100}}, Balances{{"2650", 200}}});
+  ASSERT_EQ(statement.errors.size(), 1u);
+  EXPECT_EQ(statement.errors.front(), "Account 2650 is on more than one line: A and B");
+}
+
 TEST(ArStatement, HeadingWithoutItemsIsNotShown) {
   Balances const year{{"1930", 100}, {"2081", -100}};
   auto const statement = build_statement(small_layout(), {year});
