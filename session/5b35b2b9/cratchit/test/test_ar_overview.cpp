@@ -99,7 +99,7 @@ TEST(ArOverview, KeyFigures) {
   EXPECT_EQ(overview.solidity[0], 679);
   EXPECT_FALSE(overview.solidity[1]);
   auto const text = cratchit::ar::format_overview(
-      overview, {{0, 2023y / May / 1, 2024y / April / 30}, {-1, 2022y / May / 1, 2023y / April / 30}});
+      overview, {{0, 2023y / May / 1, 2024y / April / 30}, {-1, 2022y / May / 1, 2023y / April / 30}}, {});
   EXPECT_NE(text.find("\nNettoomsättning (tkr)                                                1             0\n"),
             std::string::npos)
       << text;
@@ -117,9 +117,10 @@ TEST(ArDisposition, FundsAreFreeEquity) {
   EXPECT_EQ(disposition.funds[1].text, "Årets resultat");
   EXPECT_EQ(disposition.funds[1].amount, 15000);
   EXPECT_EQ(disposition.total, 60000);
-  EXPECT_EQ(cratchit::ar::format_disposition(disposition),
+  auto const statement_check = cratchit::ar::check_requirements(statement, build_overview(statement), {});
+  EXPECT_EQ(cratchit::ar::format_disposition(disposition, statement_check),
             "Resultatdisposition\n"
-            "===================\n"
+            "-------------------\n"
             "\n"
             "Till årsstämmans förfogande står följande medel\n"
             "  Balanserat resultat                                              450\n"
@@ -127,11 +128,9 @@ TEST(ArDisposition, FundsAreFreeEquity) {
             "Summa                                                              600\n"
             "\n"
             "Styrelsen föreslår att medlen disponeras enligt följande\n"
-            "  Utdelas till aktieägare                                          TBD\n"
-            "  Balanseras i ny räkning                                          TBD\n"
-            "Summa                                                              600\n"
-            "\n"
-            "TBD: koppling till stämmobeslut saknas\n");
+            "  Utdelas till aktieägare                                      TBD [6]\n"
+            "  Balanseras i ny räkning                                      TBD [6]\n"
+            "Summa                                                              600\n");
 }
 
 TEST(ArNotes, ReferenceInTheBalanceSheet) {

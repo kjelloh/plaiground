@@ -244,5 +244,86 @@ The original is in git history (commit 36ad56e). Deliberate changes:
       Finansiellt leasade inventarier, Ej K2). Both are still Inventarier in the mapping.
     - Test ArLayout.BuiltInMappingFollowsBas2026 pins each placement. 167 tests pass, no warnings.
       MANUAL.md: the 2026 file, its origin and corrections.
-13. Later: flerårsöversikt over several SIE files (4 years), the board's proposal in the Resultatdisposition,
+13. Checklist of what a complete K2 årsredovisning must contain, verified against BFN's vägledning
+    "Årsredovisning i mindre företag (K2)", updated 2025-06-16 (`_Resources/_bfn/vl16-10-k2ar-kons2025.pdf`,
+    saved by the user; bfn.se refuses automated downloads). Points are BFNAR 2016:10 points as in the
+    vägledning. Done 2026-11-02.
+    Status: done = printed now; gen = can be generated without input; input = needs the company's input;
+    if = only when there is something to report ("Har ett företag inget att redovisa i en notupplysning,
+    behöver upplysningen inte lämnas", ch. 18).
+
+    | Part | Rule | Status |
+    |---|---|---|
+    | Order: förvaltningsberättelse, RR, BR, noter | 3.2 | done |
+    | That it is an årsredovisning, balansdag, räkenskapsår | 3.7 | done (front lines) |
+    | Name, orgnr (and säte, see below) | ÅRL 2:5 | done |
+    | Redovisningsvaluta (SEK, from #VALUTA) | 3.8 | gen |
+    | Unit: hela kronor (tkr allowed in the förvaltningsberättelse) | 3.9 | gen |
+    | Förvaltningsberättelse headings: Verksamheten / Allmänt om verksamheten / Väsentliga händelser under räkenskapsåret / (Egna aktier) / Flerårsöversikt / (Hållbarhet) / Förändringar i eget kapital / Resultatdisposition | 4.9 | gen |
+    | Säte | 5.2 | input (required) |
+    | Allmänt om verksamheten: business actually carried on, name change, special circumstances (e.g. one customer) | 5.3, 5.6 | input (required) |
+    | Väsentliga händelser under räkenskapsåret (incl. kontrollbalansräkning) | 5.4, 5.7 | input |
+    | Flerårsöversikt: Nettoomsättning, Resultat efter finansiella poster, Soliditet for the year and the THREE years before | 5.5 | done for 2 years; 4 years needed |
+    | Comment when Nettoomsättning varies more than 30 % between the years | 5.5 | input, REQUIRED when triggered (gen: detect) |
+    | Soliditet may be rounded to whole percent; a company without Nettoomsättning may leave it out | 5.5 comment | done (one decimal) |
+    | Förändringar i eget kapital, all equity posts | ÅRL 6:2 | done |
+    | Resultatdisposition over Summa fritt eget kapital, hela kronor | 5.8, 3.9 | done (funds) |
+    | Resultatdisposition proposal | ÅRL 6:2 | input (TBD now) |
+    | Board's motivated statement that a proposed dividend is försvarlig | ABL 18:4 (5.8 comment) | input, if dividend > 0 (the PDFs cite ABL 17:3) |
+    | RR and BR with K2's posts, sums and headings only; names may be adapted; empty rows may be left out | 3.4, 3.5, 4.4, 4.7 | done, 3 corrections below |
+    | Comparison column for the year before | 3.10 | done |
+    | Notes order: redovisningsprinciper, notes to posts, other notes | 18.2 | done (only Not 3 yet) |
+    | Redovisningsprinciper: applies ÅRL and BFNAR 2016:10 | 18.3 a | gen |
+    | Redovisningsprinciper: nyttjandeperiod or avskrivningsprocent per post | 18.4 | input (required with depreciation) |
+    | Anläggningstillgångar per post: ingående/utgående anskaffningsvärden, tillkommande/avgående, årets av- och nedskrivningar | ÅRL 5:8, 18.10 | done for Inventarier; any other shown post needs its note |
+    | Medelantal anställda (BFNAR 2006:11) | ÅRL 5:20, 18.9 | input, if employees (no note without employees) |
+    | Ställda säkerheter | ÅRL 5:14, 18.13-18.14 | input, if any |
+    | Eventualförpliktelser | ÅRL 5:15, 18.15-18.19 | input, if any |
+    | Lån/säkerheter till styrelseledamot m.fl. | ÅRL 5:18 | input, if any |
+    | Väsentliga händelser efter räkenskapsårets slut | ÅRL 5:22, 18.20-18.22 | input, if any |
+    | Exceptionella intäkter och kostnader; skulder > 5 år; uppskrivningsfond | ÅRL 5:19, 5:13, 5:11 | if any (not for this company now) |
+    | Nyckeltalsdefinitioner | not required (the PDFs add them) | gen, optional |
+    | Underskrifter: all board members and the VD | ÅRL 2:7 | input |
+    | Datering (day the content was decided) and the day each signed | ÅRL 2:7, ch. 3 comment | input |
+    | Fastställelseintyg, Revisionsberättelse | not in the vägledning (ABL / filing) | outside K2; check Bolagsverket later |
+
+    Mapping corrections found (3.5, K2 form 4.7, BAS 2026): split "Färdiga varor och handelsvaror" (1450-1469)
+    into Färdiga varor (1450-1459) and Handelsvaror (1460-1469); rename Checkräkningskredit to Kontokredit
+    (long and short term); "Tecknat men ej inbetalat kapital" -> "Tecknat men ej inbetalt kapital".
+    Consequences for this company: the Flerårsöversikt must show 4 years (the user preferred one SIE file:
+    older figures need another source, an input or more SIE files); the >30 % comment is required
+    (Nettoomsättning 336 -> 2 -> 0 tkr); Not 2 Medelantal anställda is not needed if there were no employees
+    (no personnel costs in any year, yet the PDFs say 1); the ABL 18:4 statement is only needed with a dividend.
+    Rule for step 15 (user): every TBD names the Markdown heading of the input file that provides it.
+    Proposed next steps: 14 the gen rows and the mapping corrections; 15 one Markdown input file for the input
+    rows (name, place and format to agree first).
+14. A complete K2 årsredovisning with TBD [n] for what the SIE file cannot give, and a K2 check (user's route,
+    2026-11-02: first all that one SIE file gives, then every required item TBD with the BFN point and what to
+    provide; the template file comes next). Done.
+    - `core/ar/requirements`: one table (id, title, rule, what to provide, template heading) is the single
+      source for the markers, the check and the coming template. `check_requirements` numbers the missing
+      items in the order of the ÅR, then the ones to confirm. Conditions from the books: Nettoomsättning
+      varying > 30 % between the two years (detail in kronor), depreciation (RR line or a note),
+      Personalkostnader, a shown post under Immateriella/Materiella anläggningstillgångar without a note.
+    - Output order (p. 3.2): front (name, orgnr, Årsredovisning för räkenskapsåret, board/currency/unit
+      sentence), Förvaltningsberättelse (= title) with the p. 4.9 sections (- titles): Verksamheten (Säte TBD,
+      Allmänt om verksamheten TBD, Väsentliga händelser TBD), Flerårsöversikt (+ "De två föregående
+      räkenskapsåren TBD", comment TBD when triggered), Förändringar i eget kapital, Resultatdisposition
+      (proposal TBD [n]); RR; BR; Noter (Not 1 fixed sentence + Avskrivningstider TBD, Not 2 only with
+      Personalkostnader, Not 3); Underskrifter (fixed lines, Ort och datum TBD, signatures TBD); K2 check
+      (English, cites the vägledning version). A stderr note gives the count. Exit code unchanged.
+    - Mapping corrections (p. 3.5, 4.7): Färdiga varor 1450-1459 and Handelsvaror 1460-1469 split;
+      Checkräkningskredit -> Kontokredit (2x); "Tecknat men ej inbetalt kapital". All mapping texts now occur
+      in the vägledning (except our note title).
+    - All 3 files: 9 missing (säte, verksamhet, händelser, flerår, omsättning, förslag, principer, datering,
+      underskrifter), 6 to confirm (anställda, yttrande, säkerheter, eventual, styrelselån, efter).
+      Not 2 is left out (no Personalkostnader), so the notes are Not 1 and Not 3 (number gap; the note number
+      comes from the CSV).
+    - 176 tests pass, no warnings. MANUAL.md: What it prints, Resultatdisposition, K2 check.
+15. Next: write the input template when the file does not exist, never overwrite it (user: fixed name,
+    hard coded, no option; name still to agree). Generated from the requirements table, starting with the
+    company's orgnr and fiscal year; an existing file for another company or year is an error.
+16. Then: read the file, validate each section (a date, a number, no TBD left), fill the TBDs; report a
+    missing section by its heading instead of rewriting the file.
+17. Later: flerårsöversikt over several SIE files (4 years), the board's proposal in the Resultatdisposition,
     the texts not in SIE (förvaltningsberättelse, Not 1, Not 2, underskrifter), iXBRL.

@@ -1,5 +1,6 @@
 #include "core/ar/text.hpp"
 
+#include "core/ar/requirements.hpp"
 #include "core/date.hpp"
 
 #include <map>
@@ -17,9 +18,6 @@ constexpr std::size_t text_width = 56;
 constexpr std::size_t column_width = 14;
 constexpr std::size_t note_width = 6; // the Not column of the balansräkning, at the end of the text column
 
-// The mark for an amount that is not known yet, and why
-constexpr std::string_view unknown_amount = "TBD";
-constexpr std::string_view unknown_reason = "TBD: koppling till stämmobeslut saknas";
 
 // Characters, not bytes, of UTF-8 text
 std::size_t width_of(std::string_view text) {
@@ -56,6 +54,26 @@ std::vector<std::string> wrapped(std::string_view text, std::size_t width) {
     text = space == std::string_view::npos ? std::string_view{} : text.substr(space + 1);
   }
   return lines;
+}
+
+constexpr std::size_t paragraph_width = 84; // running text
+
+// A title underlined with = (a part of the årsredovisning) or - (a section of the förvaltningsberättelse)
+std::string titled(std::string_view title, char underline) {
+  return std::format("{}\n{}\n", title, std::string(width_of(title), underline));
+}
+
+// Running text wrapped at paragraph_width, indented; lines after the first indented by hanging more
+void add_paragraph(std::string& out, std::string_view text, std::size_t indent = 0, std::size_t hanging = 0) {
+  auto const lines = wrapped(text, paragraph_width - indent - hanging);
+  for (std::size_t index = 0; index < lines.size(); ++index) {
+    out += std::string(indent + (index > 0 ? hanging : 0), ' ') + lines[index] + '\n';
+  }
+}
+
+// The marker of a missing requirement, e.g. "TBD [4]"; "TBD" when the check does not list it
+std::string marker_of(Check const& check, std::string_view id) {
+  return check.marker(id).value_or("TBD");
 }
 
 // One row of text and amounts; the amounts on the last line of a wrapped text. With
@@ -101,8 +119,8 @@ std::vector<std::string> amount_columns(StatementLine const& line) {
 // A statement's title and the years over its columns: periods for the
 // resultaträkning, closing days for the balansräkning
 void add_title(std::string& out, std::string_view title, std::vector<sie::FiscalYear> const& years,
-               std::optional<std::string_view> note = std::nullopt) {
-  out += std::format("{}\n{}\n", title, std::string(width_of(title), '='));
+               std::optional<std::string_view> note = std::nullopt, char underline = '=') {
+  out += std::format("{}\n{}\n", title, std::string(width_of(title), underline));
   std::vector<std::string> first;
   std::vector<std::string> second;
   for (auto const& year : years) {
@@ -135,8 +153,7 @@ std::string format_kronor(Kronor kronor) {
 
 std::string format_equity_changes(EquityChanges const& changes) {
   constexpr std::size_t width = 30; // narrower text, as the table has a column per post and the total
-  std::string const title = "Förändringar i eget kapital";
-  std::string out = std::format("{}\n{}\n", title, std::string(width_of(title), '='));
+  std::string out = titled("Förändringar i eget kapital", '-');
   // Column titles wrapped over lines, bottom aligned
   std::vector<std::vector<std::string>> titles;
   for (auto const& column : changes.columns) {
@@ -171,13 +188,21 @@ std::string format_equity_changes(EquityChanges const& changes) {
   return out;
 }
 
-std::string format_notes(Notes const& notes, std::vector<sie::FiscalYear> const& years) {
-  if (notes.notes.empty()) {
-    return "";
+std::string format_notes(Notes const& notes, std::vector<sie::FiscalYear> const& years, Check const& check) {
+  std::string out = titled("Noter", '=');
+  out += "\nNot 1 Redovisningsprinciper\n";
+  add_paragraph(out, "Årsredovisningen är upprättad i enlighet med årsredovisningslagen och Bokföringsnämndens allmänna "
+                     "råd (BFNAR 2016:10) om årsredovisning i mindre företag.",
+                2);
+  if (auto const missing = check.marker("principer")) {
+    add_paragraph(out, std::format("Avskrivningstider: {}", *missing), 2);
   }
-  std::string out = "Noter\n=====\n";
-  std::vector<std::string> const header{format_iso_date(years.front().end)};
+  if (auto const missing = check.marker("anstallda")) {
+    out += "\nNot 2 Medelantal anställda\n";
+    add_paragraph(out, std::format("Medelantal anställda under året: {}", *missing), 2);
+  }
   for (auto const& note : notes.notes) {
+    std::vector<std::string> const header{format_iso_date(years.front().end)};
     out += '\n';
     add_row(out, note.title, 0, header);
     for (auto const& section : note.sections) {
@@ -233,9 +258,9 @@ std::string format_statements(Statement const& statement, std::vector<sie::Fisca
   return out;
 }
 
-std::string format_overview(Overview const& overview, std::vector<sie::FiscalYear> const& years) {
+std::string format_overview(Overview const& overview, std::vector<sie::FiscalYear> const& years, Check const& check) {
   std::string out;
-  add_title(out, "Flerårsöversikt", years);
+  add_title(out, "Flerårsöversikt", years, std::nullopt, '-');
   out += '\n';
   std::vector<std::string> net_sales;
   std::vector<std::string> result;
@@ -248,12 +273,19 @@ std::string format_overview(Overview const& overview, std::vector<sie::FiscalYea
   add_row(out, "Nettoomsättning (tkr)", 0, net_sales);
   add_row(out, "Resultat efter finansiella poster (tkr)", 0, result);
   add_row(out, "Soliditet (%)", 0, solidity);
+  if (auto const missing = check.marker("flerar")) {
+    out += '\n';
+    add_row(out, "De två föregående räkenskapsåren", 0, {*missing});
+  }
+  if (auto const missing = check.marker("omsattning")) {
+    out += '\n';
+    add_paragraph(out, std::format("Kommentar till nettoomsättningens förändring: {}", *missing));
+  }
   return out;
 }
 
-std::string format_disposition(Disposition const& disposition) {
-  std::string const title = "Resultatdisposition";
-  std::string out = std::format("{}\n{}\n\n", title, std::string(width_of(title), '='));
+std::string format_disposition(Disposition const& disposition, Check const& check) {
+  std::string out = titled("Resultatdisposition", '-') + '\n';
   auto const total = format_kronor(to_kronor(disposition.total));
   add_row(out, "Till årsstämmans förfogande står följande medel", 0, {});
   for (auto const& row : disposition.funds) {
@@ -263,11 +295,81 @@ std::string format_disposition(Disposition const& disposition) {
   out += '\n';
   add_row(out, "Styrelsen föreslår att medlen disponeras enligt följande", 0, {});
   for (auto const& text : disposition.proposal) {
-    add_row(out, text, 2, {std::string(unknown_amount)});
+    add_row(out, text, 2, {marker_of(check, "forslag")});
   }
   add_row(out, "Summa", 0, {total});
+  return out;
+}
+
+std::string format_front(sie::Document const& document, std::vector<sie::FiscalYear> const& years) {
+  std::string out = std::format("{}\n{}\n", document.company_name, document.orgnr);
+  out += std::format("Årsredovisning för räkenskapsåret {} - {}\n\n", format_iso_date(years.front().start),
+                     format_iso_date(years.front().end));
+  auto const currency = document.currency.empty() || document.currency == "SEK" ? std::string("svenska kronor (SEK)")
+                                                                                 : document.currency;
+  add_paragraph(out, std::format("Styrelsen avger följande årsredovisning. Redovisningsvalutan är {} och alla belopp "
+                                 "anges i hela kronor om inte annat anges.",
+                                 currency));
+  return out;
+}
+
+std::string format_business(Check const& check) {
+  std::string out = titled("Förvaltningsberättelse", '=') + '\n';
+  out += titled("Verksamheten", '-') + '\n';
+  out += "Allmänt om verksamheten\n";
+  add_paragraph(out, std::format("Säte: {}", marker_of(check, "sate")), 2);
+  add_paragraph(out, marker_of(check, "verksamhet"), 2);
+  out += "\nVäsentliga händelser under räkenskapsåret\n";
+  add_paragraph(out, marker_of(check, "handelser"), 2);
+  return out;
+}
+
+std::string format_signatures(sie::Document const& document, std::vector<sie::FiscalYear> const& years,
+                              Check const& check) {
+  std::string out = titled("Underskrifter", '=') + '\n';
+  out += std::format("Årsredovisning för {}, {}\n", document.company_name, document.orgnr);
+  out += std::format("Avseende räkenskapsåret {} - {}\n\n", format_iso_date(years.front().start),
+                     format_iso_date(years.front().end));
+  add_paragraph(out, std::format("Ort och datum: {}", marker_of(check, "datering")));
+  add_paragraph(out, std::format("Styrelseledamöter och verkställande direktör, med datum för underskrift: {}",
+                                 marker_of(check, "underskrifter")));
+  return out;
+}
+
+std::string format_check(Check const& check) {
+  std::string out = titled("K2 check", '=');
+  add_paragraph(out, std::format("Checked against {}.", requirements_source));
   out += '\n';
-  add_row(out, unknown_reason, 0, {});
+  if (check.missing.empty()) {
+    out += "Complete: nothing is missing.\n";
+  } else {
+    add_paragraph(out, std::format("Not complete: {} {} missing, marked TBD [n] in the årsredovisning. Each breaks the "
+                                   "rule given until it is provided.",
+                                   check.missing.size(), check.missing.size() == 1 ? "item is" : "items are"));
+  }
+  // An item: its number, title and rule, then what was found (or when it applies), what to provide and where
+  auto const add_item = [&out](CheckItem const& item, std::string_view detail_label) {
+    auto const& requirement = *item.requirement;
+    out += '\n';
+    add_paragraph(out, std::format("[{}] {} - {}", item.number, requirement.title, requirement.rule), 0, 4);
+    if (!item.detail.empty()) {
+      add_paragraph(out, std::format("{}: {}.", detail_label, item.detail), 4);
+    }
+    add_paragraph(out, std::format("Provide: {}.", requirement.provide), 4);
+    if (!requirement.heading.empty()) {
+      add_paragraph(out, std::format("Template heading: ## {}", requirement.heading), 4);
+    }
+  };
+  for (auto const& item : check.missing) {
+    add_item(item, "Found");
+  }
+  if (!check.to_confirm.empty()) {
+    out += '\n';
+    add_paragraph(out, "Required only if it applies, which the SIE file does not tell. Confirm or provide:");
+    for (auto const& item : check.to_confirm) {
+      add_item(item, "When");
+    }
+  }
   return out;
 }
 
@@ -328,7 +430,7 @@ std::string format_trace(Overview const& overview, Disposition const& dispositio
   }
   add_row(out, "Summa", 0, {format_amount(disposition.total)});
   for (auto const& text : disposition.proposal) {
-    add_row(out, std::format("{}: {}", text, unknown_reason), 0, {});
+    add_row(out, std::format("{}: TBD, the board's proposal is not in the SIE file (see the K2 check)", text), 0, {});
   }
 
   title("Förändringar i eget kapital");

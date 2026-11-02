@@ -4,6 +4,7 @@
 #include "core/ar/equity.hpp"
 #include "core/ar/notes.hpp"
 #include "core/ar/overview.hpp"
+#include "core/ar/requirements.hpp"
 #include "core/ar/statement.hpp"
 #include "core/ar/trace.hpp"
 #include "core/sie/document.hpp"
@@ -28,16 +29,33 @@ std::string format_equity_changes(EquityChanges const& changes);
 std::string format_statements(Statement const& statement, std::vector<sie::FiscalYear> const& years,
                               std::map<std::string, std::string> const& notes = {});
 
-// Flerårsöversikt as plain text: a column per year, amounts in tkr, soliditet in percent
-std::string format_overview(Overview const& overview, std::vector<sie::FiscalYear> const& years);
+// Flerårsöversikt as plain text: a column per year, amounts in tkr, soliditet in
+// percent; then the missing earlier years and the comment, TBD as check lists them
+std::string format_overview(Overview const& overview, std::vector<sie::FiscalYear> const& years, Check const& check);
 
 // Resultatdisposition as plain text: the funds with their sum, then the
-// proposal's rows marked TBD, as the amounts are not in the SIE file
-std::string format_disposition(Disposition const& disposition);
+// proposal's rows marked TBD [n] from check, as the amounts are not in the SIE file
+std::string format_disposition(Disposition const& disposition, Check const& check);
 
-// The notes as plain text, for fiscal year 0 (years.front()): each note's
-// sections with their rows, then its sum
-std::string format_notes(Notes const& notes, std::vector<sie::FiscalYear> const& years);
+// Noter as plain text, for fiscal year 0 (years.front()): Not 1 Redovisningsprinciper
+// (with the depreciation periods TBD when check lists them), Not 2 Medelantal
+// anställda when check lists it, then each note of notes with its sections and sum
+std::string format_notes(Notes const& notes, std::vector<sie::FiscalYear> const& years, Check const& check);
+
+// The front of the årsredovisning: name, orgnr, that it is an årsredovisning for
+// fiscal year 0, and the sentence on the board, the currency and the unit
+std::string format_front(sie::Document const& document, std::vector<sie::FiscalYear> const& years);
+
+// The start of the förvaltningsberättelse: Verksamheten with Allmänt om
+// verksamheten (säte) and Väsentliga händelser under räkenskapsåret, TBD as check lists them
+std::string format_business(Check const& check);
+
+// The signature page: whose årsredovisning for which year, then place, date and signatures (TBD)
+std::string format_signatures(sie::Document const& document, std::vector<sie::FiscalYear> const& years,
+                              Check const& check);
+
+// The K2 check: what is missing ([n], rule, what to provide, template heading), then what to confirm
+std::string format_check(Check const& check);
 
 // The trace of the årsredovisning as plain text, in the order of the report:
 // Flerårsöversikt and Resultatdisposition (the lines they are computed from),

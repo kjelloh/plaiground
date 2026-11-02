@@ -148,6 +148,31 @@ Finally, there are still parts missing in generated Årsredovisning that needs i
 
 Maybe I should ask Claude to try and map the current generated ÅR to the requirements in [Bokföringsnämndens vägledning Årsredovisning i mindre företag (K2)](https://www.bfn.se/wp-content/uploads/vl16-10-k2ar-kons2025.pdf)?
 
+Yes. Claude wa able to read the 'Bokföringsnämndens vägledning' (although I had to download it manually).
+
+* Claude seems to have verified the ÅR we generate is close to the one required by 'Bokföringsnämndens vägledning' for K2 rules.
+* It lists some items that are lacking in addition to the ones I identified.
+* At this stage I wonder if we should have Claude read [Årsredovisningslag (1995:1554)](https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/arsredovisningslag-19951554_sfs-1995-1554/#K3)
+
+    * Although the URL contains 'K3' so it does not apply to K2-rules?
+    * It is also available as plain text [SFS-nummer · 1995:1554](http://rkrattsbaser.gov.se/sfst?bet=1995:1554)
+
+I have now decided on a plan for the next steps.
+
+1. Make the app generate all we know must go into the ÅR with TBD for the missing parts.
+2. Then make the app apply either the 20204 or th 2026 bas_to_ar file.
+
+    * We need the 2024 one to generate ÅR from my current books (The ÅR I am going to generate now for 2025-05-01 to 2026-04-30)
+
+3. Then try the app on my 2025-05-01 to 2026-04-30 SIE-file (books)
+
+    * It should be possible to make it generate an ÅR without BAS account conflicts (because I know Årsredovisning Online did last year for the BAS accounts I use)
+
+I have now asked Claude to step 1. 
+
+* I tried it on an older SIE file and the output and listed TBD notes looks GOOD!
+* I now have a good feeling about this!
+
 ## 202061101
 
 Now it is time to see if we can make a C++ app like cratchit actually map an SIE file to a proper and valid Swedish 'Årsredovisning' (ÅR)?

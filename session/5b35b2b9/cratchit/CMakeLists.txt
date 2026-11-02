@@ -35,6 +35,7 @@ add_library(cratchit_core
   src/core/ar/layout.cpp
   src/core/ar/notes.cpp
   src/core/ar/overview.cpp
+  src/core/ar/requirements.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/layout_text.cpp
   src/core/ar/statement.cpp
   src/core/ar/text.cpp

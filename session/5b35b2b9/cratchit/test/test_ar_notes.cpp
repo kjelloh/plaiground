@@ -138,7 +138,10 @@ TEST(ArNotes, UnknownSectionIsAnError) {
 TEST(ArNotes, NoteWithoutAmountsIsNotShown) {
   auto const statement = cratchit::ar::build_statement(layout(), {Balances{{"1930", 100}}});
   EXPECT_TRUE(build_notes(statement, {}).notes.empty());
-  EXPECT_EQ(cratchit::ar::format_notes({}, {}), "");
+  // Not 1 is always there
+  auto const text = cratchit::ar::format_notes({}, {{0, 2023y / May / 1, 2024y / April / 30}}, {});
+  EXPECT_TRUE(text.starts_with("Noter\n=====\n\nNot 1 Redovisningsprinciper\n")) << text;
+  EXPECT_EQ(text.find("Not 3"), std::string::npos);
 }
 
 namespace {

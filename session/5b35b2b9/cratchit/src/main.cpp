@@ -4,6 +4,7 @@
 #include "core/ar/layout.hpp"
 #include "core/ar/notes.hpp"
 #include "core/ar/overview.hpp"
+#include "core/ar/requirements.hpp"
 #include "core/ar/statement.hpp"
 #include "core/ar/text.hpp"
 #include "core/date.hpp"
@@ -94,24 +95,23 @@ int main(int argc, char* argv[]) {
   }
   auto const overview = cratchit::ar::build_overview(statement);
   auto const disposition = cratchit::ar::build_disposition(statement);
-  std::println(stderr, "Note: Resultatdisposition: the amounts of the board's proposal are TBD (koppling till "
-                       "stämmobeslut saknas)");
+  auto const check = cratchit::ar::check_requirements(statement, overview, notes);
+  std::println(stderr, "Note: K2 check: {} required {} missing (TBD in the årsredovisning), see the end of the output",
+               check.missing.size(), check.missing.size() == 1 ? "item is" : "items are");
   int const exit_code = errors.empty() && equity.errors.empty() && notes.errors.empty() ? 0 : 1;
   if (trace) {
     std::print("{}", cratchit::ar::format_trace(overview, disposition, equity, statement, notes, document, years));
     return exit_code;
   }
-  std::println("{}", document.company_name);
-  std::println("{}", document.orgnr);
-  std::println("Årsredovisning för räkenskapsåret {} - {}", cratchit::format_iso_date(years.front().start),
-               cratchit::format_iso_date(years.front().end));
-  std::println("");
-  std::println("{}", cratchit::ar::format_overview(overview, years));
+  // In the order of BFNAR 2016:10 p. 3.2: förvaltningsberättelse, resultaträkning, balansräkning, noter
+  std::println("{}", cratchit::ar::format_front(document, years));
+  std::println("{}", cratchit::ar::format_business(check));
+  std::println("{}", cratchit::ar::format_overview(overview, years, check));
   std::println("{}", cratchit::ar::format_equity_changes(equity));
-  std::println("{}", cratchit::ar::format_disposition(disposition));
-  std::print("{}", cratchit::ar::format_statements(statement, years, cratchit::ar::note_references(notes)));
-  if (auto const text = cratchit::ar::format_notes(notes, years); !text.empty()) {
-    std::print("\n{}", text);
-  }
+  std::println("{}", cratchit::ar::format_disposition(disposition, check));
+  std::println("{}", cratchit::ar::format_statements(statement, years, cratchit::ar::note_references(notes)));
+  std::println("{}", cratchit::ar::format_notes(notes, years, check));
+  std::println("{}", cratchit::ar::format_signatures(document, years, check));
+  std::print("{}", cratchit::ar::format_check(check));
   return exit_code;
 }

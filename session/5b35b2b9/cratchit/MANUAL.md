@@ -11,18 +11,31 @@ Prints the Swedish årsredovisning (annual report) of a company's books, read fr
 
 ## What it prints
 
-As plain text, laid out as for a K2 aktiebolag (BFNAR 2016:10):
+A complete årsredovisning for a K2 aktiebolag (BFNAR 2016:10), as plain text, in the
+order the rules prescribe (p. 3.2). What the SIE file cannot provide is marked
+`TBD [n]`; the K2 check at the end says, for each n, which rule requires it and what
+to provide.
 
-1. Flerårsöversikt (multi-year overview) of fiscal year 0 and the year before.
-2. Förändringar i eget kapital (changes in equity) of fiscal year 0.
-3. Resultatdisposition (the disposition of the funds) of fiscal year 0.
-4. The resultaträkning (income statement).
-5. The balansräkning (balance sheet), with a Not column naming the note of a post.
-6. Noter (notes) of fiscal year 0, for the posts of the balansräkning that have one in
-   the mapping: for now Not 3 Inventarier, verktyg och installationer.
-
-The first three are part of the förvaltningsberättelse (directors' report), whose
-texts are not yet included.
+1. The front: company name, orgnr, that it is an årsredovisning for fiscal year 0, and
+   the sentence on the board, the reporting currency and the unit (p. 3.7-3.9).
+2. The förvaltningsberättelse (directors' report), with the headings of p. 4.9:
+   - Verksamheten: Allmänt om verksamheten with the säte, and Väsentliga händelser
+     under räkenskapsåret (TBD).
+   - Flerårsöversikt (multi-year overview) of fiscal year 0 and the year before; the
+     two years before those are TBD, and so is the comment when Nettoomsättning varies
+     more than 30 %.
+   - Förändringar i eget kapital (changes in equity) of fiscal year 0.
+   - Resultatdisposition (the disposition of the funds) of fiscal year 0, with the
+     board's proposal TBD.
+3. The resultaträkning (income statement).
+4. The balansräkning (balance sheet), with a Not column naming the note of a post.
+5. Noter (notes) of fiscal year 0: Not 1 Redovisningsprinciper (the depreciation
+   periods TBD), Not 2 Medelantal anställda when the books show personnel costs, and
+   the notes of the posts of the balansräkning that have one in the mapping: for now
+   Not 3 Inventarier, verktyg och installationer.
+6. Underskrifter: whose årsredovisning for which year, then place, date and signatures
+   (TBD).
+7. The K2 check (see below).
 
 For the resultaträkning and balansräkning:
 
@@ -69,19 +82,17 @@ proposal for them:
     Summa                                                          194 653
 
     Styrelsen föreslår att medlen disponeras enligt följande
-      Utdelas till aktieägare                                          TBD
-      Balanseras i ny räkning                                          TBD
+      Utdelas till aktieägare                                      TBD [6]
+      Balanseras i ny räkning                                      TBD [6]
     Summa                                                          194 653
-
-    TBD: koppling till stämmobeslut saknas
 
 - **The funds** are the posts under Fritt eget kapital in the balansräkning (e.g.
   Balanserat resultat and Årets resultat), at the end of fiscal year 0. Their Summa
   equals Summa fritt eget kapital.
 - **The proposal** (how much to pay out as dividend and how much to carry forward) is
-  the board's decision and not in the SIE file, so its amounts are `TBD`. A note on
-  stderr says so too. The SIE file only shows the dividend a year later, when the
-  årsstämma's decision is booked (see Utdelning in Förändringar i eget kapital).
+  the board's decision and not in the SIE file, so its amounts are `TBD [n]` (see the
+  K2 check). The SIE file only shows the dividend a year later, when the årsstämma's
+  decision is booked (see Utdelning in Förändringar i eget kapital).
 
 ## Förändringar i eget kapital
 
@@ -345,9 +356,11 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
 
   Besides, 8710 and 8750 (extraordinary items, which K2 does not have) are in Övriga
   rörelseintäkter and Övriga rörelsekostnader, 2099 is Årets resultat in the
-  balansräkning, and the Noter rows are added. Every BAS 2026 account that a K2
-  aktiebolag may use is on a line; those marked "Ej K2" and the equity accounts of other
-  company forms (2010-2072) are not.
+  balansräkning, and the Noter rows are added. The post names follow K2's forms (p.
+  3.5, 4.7): Färdiga varor (1450-1459) and Handelsvaror (1460-1469) are two posts,
+  Kontokredit is the credit line, and Tecknat men ej inbetalt kapital is spelled as
+  in K2. Every BAS 2026 account that a K2 aktiebolag may use is on a line; those
+  marked "Ej K2" and the equity accounts of other company forms (2010-2072) are not.
 - **Signs:** assets (class 1) are shown as booked. Everything else is negated, so
   income, equity and debt are positive and costs negative.
 - **One line per account:** each account is on one line of the resultaträkning and
@@ -397,8 +410,47 @@ For example:
 
     Note: Moms (2610-2659) nets to a receivable 1331.46 at 2023-04-30; BAS: move it to 1650 Momsfordran
 
+## K2 check
+
+The output ends with a check of the årsredovisning against the requirements of
+BFNAR 2016:10, as in BFN:s vägledning Årsredovisning i mindre företag (K2), updated
+2025-06-16. A note on stderr gives the number of missing items.
+
+    K2 check
+    ========
+    ...
+    Not complete: 9 items are missing, marked TBD [n] in the årsredovisning. Each breaks
+    the rule given until it is provided.
+
+    [1] Säte - BFNAR 2016:10 p. 5.2; ÅRL 2 kap. 5 §
+        Provide: the municipality where the company has its registered office (säte).
+        Template heading: ## Säte
+    ...
+    [5] Kommentar till nettoomsättningens förändring - BFNAR 2016:10 p. 5.5
+        Found: Nettoomsättning went from 335825 kr to 1527 kr.
+        Provide: why the Nettoomsättning varies more than 30 % between the years.
+        Template heading: ## Kommentar till flerårsöversikten
+
+- **Missing items** are required now. Each is `TBD [n]` in the årsredovisning, with the
+  rule that requires it, what was found in the books (`Found`), what to provide and
+  the heading it will have in the input template (not yet written by `cratchit_ar`).
+  - Always, as the SIE file cannot hold them: säte, Allmänt om verksamheten, Väsentliga
+    händelser under räkenskapsåret, the Flerårsöversikt's two earlier years, the
+    board's proposal, the datering and the underskrifter.
+  - When the books show it applies: the comment on Nettoomsättning (it varies more
+    than 30 % between the two years in the file), the depreciation periods (the
+    resultaträkning has Av- och nedskrivningar or a post has a note), Medelantal
+    anställda (the resultaträkning has Personalkostnader), and a note for each shown
+    post under Immateriella or Materiella anläggningstillgångar that has none.
+- **Items to confirm** are required only if something applies that the SIE file does
+  not tell (`When`): the board's statement on a proposed dividend (ABL 18 kap. 4 §),
+  ställda säkerheter, eventualförpliktelser, loans to board members and events after
+  the balance day; and the items above that the books do not show as applying.
+- An årsredovisning is complete when no item is missing: `Complete: nothing is
+  missing.` The exit code does not change with missing items.
+
 ## Not yet included
 
-Förvaltningsberättelse texts, the board's proposal in the resultatdisposition (shown as
-TBD), flerårsöversikt for more than two years, the text notes (Not 1
-Redovisningsprinciper, Not 2 Medelantal anställda), and underskrifter.
+The company's own information, marked TBD [n]: `cratchit_ar` does not yet write or
+read the input template that will provide it. Also: the Fastställelseintyg and anything
+else Bolagsverket needs for filing, which BFN's vägledning does not cover.
