@@ -12,7 +12,7 @@ conan install . --build=missing -s build_type=Debug -s compiler.cppstd=23
 cmake --preset conan-debug && cmake --build --preset conan-debug
 ctest --preset conan-debug
 build/Debug/cratchit_ar ../_Resources/_sie/<file>.se             # the ÅR
-build/Debug/cratchit_ar --accounts ../_Resources/_sie/<file>.se  # accounts behind each post, in öre
+build/Debug/cratchit_ar --trace ../_Resources/_sie/<file>.se     # accounts and vouchers behind each amount
 ```
 
 `_Resources/` is git ignored; the tests comparing against the PDFs skip when its SIE files are missing.
@@ -169,6 +169,13 @@ The original is in git history (commit 36ad56e). Deliberate changes:
    `test/expected_ar/*_eget_kapital.csv`; all 3 match within 1 kr. 24/25 PDF is wrong: puts the
    aktieägartillskott 100 000 in the Årets resultat column and closes Balanserat resultat at 39 106 (BR: 139 106).
    MANUAL.md updated. 145 tests pass, no warnings. Done.
+9b. `--trace` replaces `--accounts` (agreed; no filter for now). `core/ar/trace` is the model: each shown
+   RR/BR item -> accounts (#UB or #RES per year, #IB 0 for class 1-2) -> year 0 postings by date
+   (#BTRANS left out). Equity rows keep their accounts (first/last row) or vouchers (changes).
+   `format_trace` in `core/ar/text`, in report order; amounts as booked. Year -1 only to account level
+   (no vouchers in the file). Tests: the trace adds up to the öre on all 3 files (line = its accounts,
+   account = IB + postings, equity row = its accounts/voucher transactions). 22/23 trace is ~900 lines.
+   MANUAL.md: --trace section with real excerpts. Done.
 10. Not 3 Inventarier from 122x IB/UB and the year's purchases in the vouchers (check: page 8, 22/23 and 24/25).
 11. Resultatdisposition (needs the proposed dividend, not in SIE; agree input with the user first).
 12. `bas_to_ar_2026.csv` from https://www.arsredovisning-online.se/bas-kontoplan/ in the same form;

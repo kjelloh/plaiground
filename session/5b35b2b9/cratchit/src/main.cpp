@@ -13,17 +13,17 @@
 #include <print>
 #include <string_view>
 
-// cratchit_ar [--accounts] <file.se>: prints the Swedish årsredovisning of an
-// SIE 4 file, or with --accounts the BAS accounts in each of its posts.
+// cratchit_ar [--trace] <file.se>: prints the Swedish årsredovisning of an
+// SIE 4 file, or with --trace the BAS accounts and vouchers behind each of its amounts.
 // cratchit_ar --help or -h prints the manual.
 int main(int argc, char* argv[]) {
   if (argc == 2 && (std::string_view(argv[1]) == "--help" || std::string_view(argv[1]) == "-h")) {
     std::print("{}", cratchit::manual_text());
     return 0;
   }
-  bool const accounts = argc == 3 && std::string_view(argv[1]) == "--accounts";
-  if ((argc != 2 && !accounts) || std::string_view(argv[argc - 1]).starts_with('-')) {
-    std::println(stderr, "Usage: cratchit_ar [--accounts] <file.se>\nSee cratchit_ar --help");
+  bool const trace = argc == 3 && std::string_view(argv[1]) == "--trace";
+  if ((argc != 2 && !trace) || std::string_view(argv[argc - 1]).starts_with('-')) {
+    std::println(stderr, "Usage: cratchit_ar [--trace] <file.se>\nSee cratchit_ar --help");
     return 2;
   }
   std::filesystem::path const file = argv[argc - 1];
@@ -86,8 +86,8 @@ int main(int argc, char* argv[]) {
     std::println(stderr, "Note: {}", note);
   }
   int const exit_code = errors.empty() && equity.errors.empty() ? 0 : 1;
-  if (accounts) {
-    std::print("{}", cratchit::ar::format_accounts(statement, years));
+  if (trace) {
+    std::print("{}", cratchit::ar::format_trace(equity, statement, document, years));
     return exit_code;
   }
   std::println("{}", document.company_name);

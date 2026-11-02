@@ -33,6 +33,7 @@ struct StatementLine {
   // For items: the accounts in it with their exact amounts as booked, per year
   std::vector<Balances> accounts;
   bool shown = false; // items with an amount in any year, and the headings and sums over them
+  AccountSet account_set; // for items: the accounts the mapping puts on the line
 };
 
 struct Statement {

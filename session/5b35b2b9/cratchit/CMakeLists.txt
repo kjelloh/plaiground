@@ -35,6 +35,7 @@ add_library(cratchit_core
   ${CMAKE_CURRENT_BINARY_DIR}/generated/layout_text.cpp
   src/core/ar/statement.cpp
   src/core/ar/text.cpp
+  src/core/ar/trace.cpp
   src/core/bas.cpp
   src/core/charset/cp437.cpp
   src/core/charset/detect.cpp

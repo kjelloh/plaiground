@@ -5,7 +5,6 @@
 #include <algorithm>
 
 #include <format>
-#include <set>
 
 namespace cratchit::ar {
 
@@ -186,32 +185,76 @@ std::string format_statements(Statement const& statement, std::vector<sie::Fisca
   return out;
 }
 
-std::string format_accounts(Statement const& statement, std::vector<sie::FiscalYear> const& years) {
-  std::string out;
+std::string format_trace(EquityChanges const& equity, Statement const& statement, sie::Document const& document,
+                         std::vector<sie::FiscalYear> const& years) {
+  std::string out = "Trace of the årsredovisning\n"
+                    "Lines in kronor as on the årsredovisning; accounts and vouchers in kronor and öre as booked\n"
+                    "(debit positive). Year 0 down to the vouchers; the SIE file has no vouchers for the year before.\n";
+  auto const title = [&out](std::string_view text) {
+    out += std::format("\n{}\n{}\n", text, std::string(width_of(text), '='));
+  };
+  auto const named = [&document](std::string_view account) {
+    return std::format("{} {}", account, account_name(document, account));
+  };
+  auto const voucher_text = [](sie::Voucher const& voucher) {
+    return std::format("{} {} {} {}", voucher.series, voucher.number, format_iso_date(voucher.date), voucher.text);
+  };
+  auto const kronor = [](Amount amount) { return format_kronor(to_kronor(amount)) + " kr"; };
+
+  title("Förändringar i eget kapital");
+  auto const is_equity = [&equity](std::string_view account) {
+    return std::ranges::any_of(equity.column_accounts, [account](AccountSet const& set) { return set.contains(account); });
+  };
+  for (auto const& row : equity.rows) {
+    out += '\n';
+    add_row(out, row.text, 0, {kronor(row.amounts.back())});
+    for (auto const& [account, amount] : row.accounts) {
+      if (amount != 0) {
+        add_row(out, named(account), 2, {format_amount(amount)});
+      }
+    }
+    for (auto const* voucher : row.vouchers) {
+      add_row(out, voucher_text(*voucher), 2, {});
+      for (auto const& transaction : voucher->transactions) {
+        if (transaction.kind != sie::Transaction::Kind::removed && is_equity(transaction.account)) {
+          add_row(out, named(transaction.account), 4, {format_amount(transaction.amount)});
+        }
+      }
+    }
+  }
+
   std::vector<std::string> header;
   for (auto const& year : years) {
     header.push_back(format_iso_date(year.end));
   }
-  add_row(out, "ÅR post / BAS account", 0, header);
-  for (auto const& line : statement.lines) {
-    if (line.kind != LineKind::item || !line.shown) {
-      continue;
+  bool in_balance_sheet = false;
+  title("Resultaträkning");
+  add_row(out, "", 0, header);
+  for (auto const& traced : trace_statement(statement, document)) {
+    if (!in_balance_sheet && !traced.accounts.empty() && traced.accounts.front().account.starts_with('1')) {
+      in_balance_sheet = true;
+      title("Balansräkning");
+      add_row(out, "", 0, header);
     }
     out += '\n';
-    add_row(out, line.text, 0, amount_columns(line));
-    std::set<std::string> accounts;
-    for (auto const& balances : line.accounts) {
-      for (auto const& [account, amount] : balances) {
-        accounts.insert(account);
-      }
+    std::vector<std::string> totals;
+    for (auto const amount : traced.line->exact) {
+      totals.push_back(kronor(amount));
     }
-    for (auto const& account : accounts) {
+    add_row(out, traced.line->text, 0, totals);
+    for (auto const& account : traced.accounts) {
       std::vector<std::string> columns;
-      for (auto const& balances : line.accounts) {
-        auto const found = balances.find(account);
-        columns.push_back(found == balances.end() ? "" : format_amount(found->second));
+      for (auto const amount : account.amounts) {
+        columns.push_back(format_amount(amount));
       }
-      add_row(out, account, 4, columns);
+      add_row(out, named(account.account), 2, columns);
+      if (account.opening) {
+        add_row(out, std::format("Ingående balans {}", format_iso_date(years.front().start)), 4,
+                {format_amount(*account.opening)});
+      }
+      for (auto const& posting : account.postings) {
+        add_row(out, voucher_text(*posting.voucher), 4, {format_amount(posting.amount)});
+      }
     }
   }
   return out;

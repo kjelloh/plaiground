@@ -2,6 +2,7 @@
 
 #include "core/ar/equity.hpp"
 #include "core/ar/statement.hpp"
+#include "core/ar/trace.hpp"
 #include "core/sie/document.hpp"
 
 #include <string>
@@ -20,8 +21,11 @@ std::string format_equity_changes(EquityChanges const& changes);
 // year (index 0 first): the shown lines, indented by level, long texts wrapped
 std::string format_statements(Statement const& statement, std::vector<sie::FiscalYear> const& years);
 
-// Each shown item with the accounts in it and their amounts as booked, to
-// check the mapping by
-std::string format_accounts(Statement const& statement, std::vector<sie::FiscalYear> const& years);
+// The trace of the årsredovisning as plain text, in the order of the report:
+// Förändringar i eget kapital (accounts of the first and last row, vouchers of
+// the changes), then the resultaträkning and balansräkning (accounts and
+// year 0 vouchers under each shown item)
+std::string format_trace(EquityChanges const& equity, Statement const& statement, sie::Document const& document,
+                         std::vector<sie::FiscalYear> const& years);
 
 } // namespace cratchit::ar

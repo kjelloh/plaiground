@@ -69,17 +69,22 @@ EquityChanges equity_changes(std::vector<Line> const& layout, sie::Document cons
   // Shown as equity: credit positive
   std::vector<Amount> opening(items.size(), 0);
   std::vector<Amount> closing(items.size(), 0);
+  Balances opening_accounts;
+  Balances closing_accounts;
   for (auto const& balance : document.opening) {
     if (auto const column = column_of(balance.account); balance.year == 0 && column) {
       opening[*column] -= balance.amount;
+      opening_accounts[balance.account] += balance.amount;
     }
   }
   for (auto const& balance : document.closing) {
     if (auto const column = column_of(balance.account); balance.year == 0 && column) {
       closing[*column] -= balance.amount;
+      closing_accounts[balance.account] += balance.amount;
     }
   }
   std::map<std::string_view, std::vector<Amount>> by_change;
+  std::map<std::string_view, std::vector<sie::Voucher const*>> vouchers_of;
   for (auto const& voucher : document.vouchers) {
     std::vector<sie::Transaction const*> equity;
     std::vector<sie::Transaction const*> other;
@@ -92,6 +97,7 @@ EquityChanges equity_changes(std::vector<Line> const& layout, sie::Document cons
       continue;
     }
     auto const change = change_of(equity, other);
+    vouchers_of[change].push_back(&voucher);
     auto& amounts = by_change.try_emplace(change, items.size(), 0).first->second;
     for (auto const* transaction : equity) {
       amounts[*column_of(transaction->account)] -= transaction->amount;
@@ -109,10 +115,11 @@ EquityChanges equity_changes(std::vector<Line> const& layout, sie::Document cons
     if (any) {
       used.push_back(column);
       changes.columns.push_back(items[column]->text);
+      changes.column_accounts.push_back(items[column]->accounts);
     }
   }
   auto const row = [&used](std::string_view text, std::vector<Amount> const& amounts) {
-    EquityChanges::Row out{std::string(text), {}};
+    EquityChanges::Row out{std::string(text), {}, {}, {}};
     Amount total = 0;
     for (auto const column : used) {
       out.amounts.push_back(amounts[column]);
@@ -122,13 +129,16 @@ EquityChanges equity_changes(std::vector<Line> const& layout, sie::Document cons
     return out;
   };
   changes.rows.push_back(row("Belopp vid årets ingång", opening));
+  changes.rows.back().accounts = opening_accounts;
   for (auto const text : change_texts) {
     auto const found = by_change.find(text);
     if (found != by_change.end() && std::ranges::any_of(found->second, [](Amount amount) { return amount != 0; })) {
       changes.rows.push_back(row(text, found->second));
+      changes.rows.back().vouchers = vouchers_of[text];
     }
   }
   changes.rows.push_back(row("Belopp vid årets utgång", closing));
+  changes.rows.back().accounts = closing_accounts;
   for (auto const column : used) {
     Amount sum = opening[column];
     for (auto const& [text, amounts] : by_change) {

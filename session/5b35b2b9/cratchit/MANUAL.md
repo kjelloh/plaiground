@@ -5,7 +5,7 @@ Prints the Swedish årsredovisning (annual report) of a company's books, read fr
 ## Synopsis
 
     cratchit_ar <file.se>
-    cratchit_ar --accounts <file.se>
+    cratchit_ar --trace <file.se>
     cratchit_ar --help
     cratchit_ar -h
 
@@ -103,13 +103,63 @@ From the SIE file alone, for fiscal year 0:
    Belopp vid årets utgång, to the öre. If not, `cratchit_ar` says which column and
    exits with 1. That would mean the SIE file's balances and vouchers do not agree.
 
-To check a row against the books, find the vouchers on the equity accounts (2081-2099)
-in your bookkeeping program. Each one is in exactly one row.
+To see the vouchers behind each row, run `cratchit_ar --trace` (see below). Each
+voucher on the equity accounts is in exactly one row.
 
-## --accounts
+## --trace
 
-Lists each shown post with the BAS accounts in it and their amounts as booked, in
-kronor and öre, per year. Use it to check which accounts make up a post.
+Prints, instead of the årsredovisning, what each of its amounts is made of: the BAS
+accounts and the vouchers behind it. Use it to check an amount against the books, or
+to find out why a post holds what it does. It is long (several hundred lines for a
+small company), so page it or save it:
+
+    cratchit_ar --trace TheITfiedAB20230503_152345.se | less
+
+### How to read it
+
+The trace follows the order of the report: Förändringar i eget kapital, then the
+resultaträkning and the balansräkning. Each shown amount is a heading line, in whole
+kronor as on the årsredovisning, with what makes it up indented below it in kronor
+and öre **as booked: debit positive, credit negative**.
+
+In the resultaträkning and balansräkning, each post lists its accounts, and each
+account its vouchers in fiscal year 0, by date:
+
+    Redovisningsmedel                                               157 kr        161 kr
+      1999 OBS                                                      156.75        161.25
+        Ingående balans 2022-05-01                                  161.25
+        A 68 2022-11-23 Reglera OBS-konto                          -161.25
+        I 5 2023-04-30 Ej rapporterad Moms till OB-konto            156.75
+
+- The post line has one column per year, like the report.
+- The account line (number and `#KONTO` name) has the account's closing balance
+  (`#UB`) for a balance account (class 1 and 2) or its result (`#RES`) for a result
+  account, per year.
+- Below it, for fiscal year 0: `Ingående balans` (`#IB 0`) for a balance account, then
+  every voucher on the account, as series, number, date and text, with the amount
+  booked on the account. The opening balance and the vouchers add up to the account's
+  year 0 amount: here 161.25 - 161.25 + 156.75 = 156.75.
+- The year before can only be traced to the accounts: the SIE file has its balances
+  but not its vouchers.
+- The post's amount is its accounts added up, with the sign the årsredovisning shows:
+  class 1 as booked, all others negated (so a credit income of -636.05 is 636 kr of
+  income).
+- An account is listed when it has an amount in either year, an opening balance or a
+  voucher, so an account that ends the year at 0 still shows how it got there.
+- Sums are not traced again: they add up the posts above them.
+
+In Förändringar i eget kapital, the first and last row list the equity accounts'
+opening and closing balances. A change row lists its vouchers, each with its
+transactions on the equity accounts:
+
+    Utdelning                                                  -125 000 kr
+      I 2 2022-11-24 Årsstämma resultatfördelning
+        2098 Vinst eller förlust från föregående år              284164.89
+        2091 Balanserad vinst eller förlust                     -159164.89
+
+Here the dividend of 125 000 is the net of the two: 284 164.89 - 159 164.89 taken
+from Balanserat resultat. The voucher's other transaction (2898, the dividend owed)
+is not listed, as it is not equity.
 
 ## --help, -h
 

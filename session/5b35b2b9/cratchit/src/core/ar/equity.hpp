@@ -2,6 +2,7 @@
 
 #include "core/amount.hpp"
 #include "core/ar/layout.hpp"
+#include "core/ar/statement.hpp"
 #include "core/sie/document.hpp"
 
 #include <string>
@@ -15,11 +16,17 @@ struct EquityChanges {
   struct Row {
     std::string text;
     std::vector<Amount> amounts; // one per column, then the total
+    // What the row is made of, as booked: for the first and last row the accounts' balances,
+    // for a change the vouchers (in the document) with an equity transaction
+    Balances accounts;
+    std::vector<sie::Voucher const*> vouchers;
   };
   std::vector<std::string> columns; // the posts under Eget kapital with an amount
   std::vector<Row> rows;            // Belopp vid årets ingång, the changes with an amount, Belopp vid årets utgång
   std::vector<std::string> errors;  // a column whose opening and changes do not add up to its closing
   std::vector<std::string> notes;   // vouchers whose change is shown as Övriga förändringar
+  // The accounts of each column, for tracing
+  std::vector<AccountSet> column_accounts;
 };
 
 // The posts under the heading Eget kapital in the layout are the columns. A
@@ -30,6 +37,7 @@ struct EquityChanges {
 // - else, when all its equity transactions are on 2093: Erhållna aktieägartillskott
 // - else Övriga förändringar, with a note
 // Opening (#IB 0) plus the changes must be closing (#UB 0) in every column.
+// The rows point into document's vouchers.
 EquityChanges equity_changes(std::vector<Line> const& layout, sie::Document const& document);
 
 } // namespace cratchit::ar

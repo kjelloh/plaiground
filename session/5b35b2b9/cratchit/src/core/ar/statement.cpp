@@ -73,8 +73,9 @@ Statement build_statement(std::vector<Line> const& layout, std::vector<Balances>
     if (line.kind == LineKind::outside) {
       continue;
     }
-    StatementLine out{line.level, line.kind, line.text, std::vector<Amount>(years.size(), 0), {}, {}, false};
+    StatementLine out{line.level, line.kind, line.text, std::vector<Amount>(years.size(), 0), {}, {}, false, {}};
     if (line.kind == LineKind::item) {
+      out.account_set = line.accounts;
       out.accounts.resize(years.size());
       for (std::size_t year = 0; year < years.size(); ++year) {
         for (auto const& [account, amount] : years[year]) {
