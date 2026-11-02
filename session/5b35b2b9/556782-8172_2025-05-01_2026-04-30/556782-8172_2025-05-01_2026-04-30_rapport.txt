@@ -1,0 +1,132 @@
+Report for 556782-8172_2025-05-01_2026-04-30_arsredovisning.txt
+===============================================================
+
+Generated: 2026-11-02 18:26 by cratchit_ar 0.1.0
+SIE file:  _Resources/_sie/sie_2025-26_all.se, copied as 556782-8172_2025-05-01_2026-04-30.se
+           #PROGRAM cratchit 0.1.0, #GEN 2026-11-02
+Mapping:   Resources/bas_to_ar_2024.csv (BAS 2024-2025; books following BAS 2024, the default; see --bas-year)
+Status:    PRELIMINÄR: the books are not closed; 9 items TBD
+
+The årsredovisning is replaced on every run. Copy it before editing it, and merge your
+edits into a new version by hand.
+
+Errors
+------
+None.
+
+Notes
+-----
+Closing: the books for 2025-05-01 - 2026-04-30 are not closed: the year's result -24989.49 is not booked to 2099 (nothing on 8999). The årsredovisning is a preview that shows it as booked (see --trace).
+Closing: Moms (2610-2659) nets to a receivable 0.10 at 2026-04-30; BAS: move it to 1650 Momsfordran
+Closing: No depreciation (7800-7899) in the year ending 2026-04-30, although 1229 (accumulated depreciation) is -278114.96; depreciation is a closing entry
+Closing: 2098 Vinst eller förlust från föregående år is 46701.78 at 2026-04-30; last year's result is not yet moved on as the årsstämma decided (e.g. to 2091 Balanserat resultat)
+Closing: Moms (2610-2659) nets to a receivable 67.60 at 2025-04-30; BAS: move it to 1650 Momsfordran
+Closing: Redovisningsmedel (1990-1999) 336.00 at 2025-04-30 is not matched by Avräkning för annans räkning (2830-2839) 0.00; BAS 1990 is money held for others, not a suspense account
+
+K2 check
+========
+Checked against BFN:s vägledning Årsredovisning i mindre företag (K2), BFNAR
+2016:10, uppdaterad 2025-06-16.
+Mapping: Resources/bas_to_ar_2024.csv (BAS 2024-2025; books following BAS 2024, the
+default; see --bas-year).
+
+Not complete: 9 items are missing, marked TBD [n] in the årsredovisning. Each breaks
+the rule given until it is provided.
+
+[1] Bokslut: årets resultat bokfört - BFL 6 kap. 1 § (the bookkeeping is closed
+    with the årsredovisning; BFNAR 2016:10 kap. 1 kommentar)
+    Found: the year's result -24989.49 is not booked to 2099; the årsredovisning
+    shows it as booked.
+    Provide: close the books: book the year's result to 2099 against 8999, and the
+    other closing entries in the closing notes.
+
+[2] Säte - BFNAR 2016:10 p. 5.2; ÅRL 2 kap. 5 §
+    Provide: the municipality where the company has its registered office (säte).
+    Template heading: ## Säte
+
+[3] Allmänt om verksamheten - BFNAR 2016:10 p. 4.9, 5.3, 5.6; ÅRL 6 kap. 1 §
+    Provide: the business the company actually carries on, a change of company name,
+    and circumstances that particularly affect it (e.g. only one customer).
+    Template heading: ## Allmänt om verksamheten
+
+[4] Väsentliga händelser under räkenskapsåret - BFNAR 2016:10 p. 4.9, 5.4, 5.7;
+    ÅRL 6 kap. 1 §
+    Provide: important decided changes in the business, external factors that
+    affected it, and whether the company can no longer be assumed to continue (or
+    kontrollbalansräkning); "Inga." if there were none.
+    Template heading: ## Väsentliga händelser under räkenskapsåret
+
+[5] Flerårsöversikt, de två tidigare åren - BFNAR 2016:10 p. 5.5; ÅRL 6 kap. 1 §
+    Found: an SIE file holds two years; the vägledning asks for the year and the
+    three before.
+    Provide: Nettoomsättning (tkr), Resultat efter finansiella poster (tkr) and
+    Soliditet (%) for the two fiscal years before those in the SIE file (e.g. from
+    last year's årsredovisning).
+    Template heading: ## Flerårsöversikt, tidigare år
+
+[6] Resultatdisposition, styrelsens förslag - BFNAR 2016:10 p. 5.8; ÅRL 6 kap. 2
+    §
+    Provide: how much of the funds to pay as dividend (Utdelas till aktieägare); the
+    rest is Balanseras i ny räkning.
+    Template heading: ## Utdelning
+
+[7] Not 1 Redovisningsprinciper, avskrivningar - BFNAR 2016:10 p. 18.4; ÅRL 5
+    kap. 8 §
+    Found: the company has anläggningstillgångar with notes.
+    Provide: the nyttjandeperiod (years) or avskrivningsprocent for each kind of
+    anläggningstillgång.
+    Template heading: ## Avskrivningstider
+
+[8] Datering - ÅRL 2 kap. 7 §; BFNAR 2016:10 kap. 3 kommentar
+    Provide: the place and the date the årsredovisning's content was decided.
+    Template heading: ## Ort och datum
+
+[9] Underskrifter - ÅRL 2 kap. 7 §
+    Provide: the name and role of every board member and the VD, and the date each
+    signed.
+    Template heading: ## Underskrifter
+
+Required only if it applies, which the SIE file does not tell. Confirm or provide:
+
+[10] Kommentar till nettoomsättningens förändring - BFNAR 2016:10 p. 5.5
+    When: if it varies more than 30 % between any of the four years.
+    Provide: why the Nettoomsättning varies more than 30 % between the years.
+    Template heading: ## Kommentar till flerårsöversikten
+
+[11] Not 2 Medelantal anställda - BFNAR 2016:10 p. 18.9; ÅRL 5 kap. 20 §
+    When: the books show no Personalkostnader, and without employees no note is
+    needed.
+    Provide: the average number of employees during the year (BFNAR 2006:11); no
+    note without employees.
+    Template heading: ## Medelantal anställda
+
+[12] Styrelsens yttrande om vinstutdelningen - ABL 18 kap. 4 §; BFNAR 2016:10 p.
+    5.8 kommentar
+    When: if the board proposes a dividend.
+    Provide: the board's motivated statement that a proposed dividend is försvarlig
+    with regard to ABL 17 kap. 3 §.
+    Template heading: ## Yttrande om vinstutdelning
+
+[13] Ställda säkerheter - BFNAR 2016:10 p. 18.13-18.14; ÅRL 5 kap. 14 §
+    When: if the company has given securities.
+    Provide: kind and amount of each security given (företagsinteckning,
+    fastighetsinteckning, ...); "Inga." if none.
+    Template heading: ## Ställda säkerheter
+
+[14] Eventualförpliktelser - BFNAR 2016:10 p. 18.15-18.19; ÅRL 5 kap. 15 §
+    When: if the company has possible obligations.
+    Provide: possible obligations, e.g. guarantees, and their amount; "Inga." if
+    none.
+    Template heading: ## Eventualförpliktelser
+
+[15] Lån och säkerheter till styrelseledamöter m.fl. - ÅRL 5 kap. 18 §
+    When: if there are such loans or securities.
+    Provide: loans, securities or guarantees given to a board member or the VD, with
+    amount and terms; "Inga." if none.
+    Template heading: ## Lån till styrelseledamöter
+
+[16] Väsentliga händelser efter räkenskapsårets slut - BFNAR 2016:10 p.
+    18.20-18.22; ÅRL 5 kap. 22 §
+    When: if there were such events.
+    Provide: important events after the balance day; "Inga." if none.
+    Template heading: ## Väsentliga händelser efter räkenskapsårets slut

@@ -11,7 +11,7 @@ cd cratchit
 conan install . --build=missing -s build_type=Debug -s compiler.cppstd=23
 cmake --preset conan-debug && cmake --build --preset conan-debug
 ctest --preset conan-debug
-build/Debug/cratchit_ar ../_Resources/_sie/<file>.se             # the ÅR
+build/Debug/cratchit_ar ../_Resources/_sie/<file>.se             # writes <orgnr>_<start>_<end>/ in the working dir
 build/Debug/cratchit_ar --trace ../_Resources/_sie/<file>.se     # accounts and vouchers behind each amount
 ```
 
@@ -352,6 +352,22 @@ The original is in git history (commit 36ad56e). Deliberate changes:
     - 2025-26 findings: result -24 989.49 not booked; no depreciation booked (1229 -278 114.96); 46 701.78 still on
       2098; moms 0.10 receivable. The 23/24 file also gets the 2098 note (278 845.50, corrected after export).
     - Closed years unchanged. 194 tests pass, no warnings. MANUAL.md: Books not yet closed, closing notes.
+14d. The ÅR always as files (user: orgnr + fiscal year names; a folder in the working directory with a copy of the
+    SIE file; always overwrite, tell the user to copy before editing; --trace stays on the terminal; no .bak). Done.
+    - `core/ar/output`: folder `<orgnr>_<start>_<end>/` (other characters than letters, digits, '-' in the orgnr
+      -> '_') with `<stem>_arsredovisning.txt`, `<stem>_rapport.txt`, `<stem>.se`.
+    - The report: generated date/time and `cratchit_ar <version>` (CRATCHIT_AR_VERSION from the CMake project),
+      the SIE file given + its copy + #PROGRAM/#GEN, the mapping, a status line, the "replaced on every run" advice,
+      Errors, Notes (SIE notes, closing notes, Övriga förändringar), then the K2 check (moved out of the ÅR).
+    - The ÅR file is the ÅR only (front to Underskrifter). The terminal gets a short summary and the errors.
+    - Errors (exit 1): the report is written, the ÅR is not, and the SIE copy is kept unless missing, so the
+      folder's ÅR and SIE copy always belong together (found while testing: a broken export first replaced the
+      good copy). An SIE file that cannot be read writes no folder (terminal only).
+    - The SIE copy is written when missing or different (with a new ÅR); identical or the copy itself is kept.
+    - `--trace` writes nothing; errors and notes to stderr as before.
+    - Tests in temporary folders (names, first write, replace, identical/different/self SIE, errors keep ÅR and
+      SIE, first run with errors, missing input, report layout). 203 tests pass, no warnings.
+      MANUAL.md: The folder it writes; stderr mentions moved to the report.
 15. POSTPONED (user, 2026-11-02: the user can edit the generated ÅR by hand, which covers the TBDs for
     now). When taken up: write the input template when the file does not exist, never overwrite it (user: fixed name,
     hard coded, no option; name still to agree). Generated from the requirements table, starting with the

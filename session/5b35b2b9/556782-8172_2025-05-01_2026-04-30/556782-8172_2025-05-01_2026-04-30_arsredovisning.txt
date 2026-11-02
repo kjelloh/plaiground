@@ -1,0 +1,163 @@
+The ITfied AB
+556782-8172
+Årsredovisning för räkenskapsåret 2025-05-01 - 2026-04-30
+
+PRELIMINÄR: bokslutet är inte gjort, årets resultat är inte bokfört (TBD [1]).
+
+Styrelsen avger följande årsredovisning. Redovisningsvalutan är svenska kronor (SEK)
+och alla belopp anges i hela kronor om inte annat anges.
+
+Förvaltningsberättelse
+======================
+
+Verksamheten
+------------
+
+Allmänt om verksamheten
+  Säte: TBD [2]
+  TBD [3]
+
+Väsentliga händelser under räkenskapsåret
+  TBD [4]
+
+Flerårsöversikt
+---------------
+                                                            2025-05-01    2024-05-01
+                                                           -2026-04-30   -2025-04-30
+
+Nettoomsättning (tkr)                                                0             0
+Resultat efter finansiella poster (tkr)                            -25           -47
+Soliditet (%)                                                     99,5          99,9
+
+De två föregående räkenskapsåren                               TBD [5]
+
+Förändringar i eget kapital
+---------------------------
+                                                Balanserat         Årets
+                                Aktiekapital      resultat      resultat        Totalt
+
+Belopp vid årets ingång              100 800       139 106       -46 702       193 204
+Balanseras i ny räkning                            -46 702        46 702             0
+Årets resultat                                                   -24 989       -24 989
+Belopp vid årets utgång              100 800        92 404       -24 989       168 214
+
+Resultatdisposition
+-------------------
+
+Till årsstämmans förfogande står följande medel
+  Balanserat resultat                                           92 404
+  Årets resultat                                               -24 989
+Summa                                                           67 414
+
+Styrelsen föreslår att medlen disponeras enligt följande
+  Utdelas till aktieägare                                      TBD [6]
+  Balanseras i ny räkning                                      TBD [6]
+Summa                                                           67 414
+
+Resultaträkning
+===============
+                                                            2025-05-01    2024-05-01
+                                                           -2026-04-30   -2025-04-30
+
+Rörelseintäkter, lagerförändringar m.m.
+  Nettoomsättning                                                   -3            -4
+Summa rörelseintäkter, lagerförändringar m.m.                       -3            -4
+
+Rörelsekostnader
+  Övriga externa kostnader                                     -25 323       -28 143
+  Av- och nedskrivningar av materiella och immateriella
+  anläggningstillgångar                                              0       -20 562
+Summa rörelsekostnader                                         -25 323       -48 706
+
+Rörelseresultat                                                -25 326       -48 709
+
+Finansiella poster
+  Övriga ränteintäkter och liknande resultatposter                 337         2 010
+  Räntekostnader och liknande resultatposter                         0            -3
+Summa finansiella poster                                           337         2 007
+
+Resultat efter finansiella poster                              -24 989       -46 702
+
+Resultat före skatt                                            -24 989       -46 702
+
+Årets resultat                                                 -24 989       -46 702
+
+Balansräkning
+=============
+                                                     Not    2026-04-30    2025-04-30
+
+Tillgångar
+
+  Anläggningstillgångar
+
+    Materiella anläggningstillgångar
+      Inventarier, verktyg och installationer          3        66 284        65 924
+    Summa materiella anläggningstillgångar                      66 284        65 924
+  Summa anläggningstillgångar                                   66 284        65 924
+
+  Omsättningstillgångar
+
+    Kortfristiga fordringar
+      Övriga fordringar                                            754         2 654
+    Summa kortfristiga fordringar                                  754         2 654
+
+    Kassa och bank
+      Kassa och bank                                           101 984       124 560
+      Redovisningsmedel                                              0           336
+    Summa kassa och bank                                       101 984       124 896
+  Summa omsättningstillgångar                                  102 738       127 550
+Summa tillgångar                                               169 022       193 474
+
+Eget kapital och skulder
+
+  Eget kapital
+
+    Bundet eget kapital
+      Aktiekapital                                             100 800       100 800
+    Summa bundet eget kapital                                  100 800       100 800
+
+    Fritt eget kapital
+      Balanserat resultat                                       92 404       139 106
+      Årets resultat                                           -24 989       -46 702
+    Summa fritt eget kapital                                    67 414        92 404
+  Summa eget kapital                                           168 214       193 204
+
+  Kortfristiga skulder
+    Övriga skulder                                                 808           270
+  Summa kortfristiga skulder                                       808           270
+Summa eget kapital och skulder                                 169 022       193 474
+
+Noter
+=====
+
+Not 1 Redovisningsprinciper
+  Årsredovisningen är upprättad i enlighet med årsredovisningslagen och
+  Bokföringsnämndens allmänna råd (BFNAR 2016:10) om årsredovisning i mindre
+  företag.
+  Avskrivningstider: TBD [7]
+
+Not 3 Inventarier, verktyg och installationer               2026-04-30
+
+Anskaffningsvärden
+  Ingående anskaffningsvärden                                  359 447
+  Inköp                                                            360
+  Utgående anskaffningsvärden                                  359 807
+
+Avskrivningar
+  Ingående avskrivningar                                      -278 115
+  Utgående avskrivningar                                      -278 115
+
+Nedskrivningar
+  Ingående nedskrivningar                                      -15 408
+  Utgående nedskrivningar                                      -15 408
+
+Redovisat värde                                                 66 284
+
+Underskrifter
+=============
+
+Årsredovisning för The ITfied AB, 556782-8172
+Avseende räkenskapsåret 2025-05-01 - 2026-04-30
+
+Ort och datum: TBD [8]
+Styrelseledamöter och verkställande direktör, med datum för underskrift: TBD [9]

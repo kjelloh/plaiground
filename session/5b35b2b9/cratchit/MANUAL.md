@@ -1,6 +1,6 @@
 # cratchit_ar
 
-Prints the Swedish årsredovisning (annual report) of a company's books, read from an SIE 4 file.
+Makes the Swedish årsredovisning (annual report) of a company's books, read from an SIE 4 file.
 
 ## Synopsis
 
@@ -11,7 +11,46 @@ Prints the Swedish årsredovisning (annual report) of a company's books, read fr
 The options may come in any order. A wrong command line prints the usage and exits
 with 2.
 
-## What it prints
+## The folder it writes
+
+    cratchit_ar _Resources/_sie/TheITfiedAB20250817_172409.se
+
+writes, in the working directory, a folder named after the company's orgnr and the
+fiscal year, with three files named after the folder:
+
+    556782-8172_2024-05-01_2025-04-30/
+        556782-8172_2024-05-01_2025-04-30_arsredovisning.txt
+        556782-8172_2024-05-01_2025-04-30_rapport.txt
+        556782-8172_2024-05-01_2025-04-30.se
+
+- `_arsredovisning.txt` is the årsredovisning (see What the årsredovisning holds).
+- `_rapport.txt` is the report on it: when and by which version it was made, the SIE
+  file and the mapping used, its status (complete, not complete, PRELIMINÄR or errors),
+  the errors, the notes (e.g. the year-end closing notes) and the K2 check.
+- `.se` is a copy of the SIE file it was made from.
+
+Each run replaces the files with the latest generation, so the folder is always one
+copy away from an archive. **The årsredovisning is replaced on every run: copy it before
+editing it**, and merge your edits into a new version by hand when the books change.
+
+The terminal gets a short summary of what was written, and the errors:
+
+    Folder .../556782-8172_2024-05-01_2025-04-30
+      Wrote 556782-8172_2024-05-01_2025-04-30_arsredovisning.txt: not complete; 9 items TBD
+        (replaced on every run: copy it before editing)
+      Wrote 556782-8172_2024-05-01_2025-04-30_rapport.txt: 4 notes, the K2 check
+      Copied the SIE file as 556782-8172_2024-05-01_2025-04-30.se
+
+- The SIE copy is written when it is missing or differs from the file given. Given the
+  copy itself, e.g. when run from the folder, nothing is copied.
+- With errors (exit 1) the report is written, with the errors, but not the
+  årsredovisning: an earlier one is left as it was, and so is its SIE copy, so that the
+  two still belong together.
+- An SIE file that cannot be read, or that is not a valid SIE 4 file, writes no folder
+  at all; the errors go to the terminal.
+- `--trace` writes no files: it prints to the terminal.
+
+## What the årsredovisning holds
 
 A complete årsredovisning for a K2 aktiebolag (BFNAR 2016:10), as plain text, in the
 order the rules prescribe (p. 3.2). What the SIE file cannot provide is marked
@@ -37,7 +76,8 @@ to provide.
    Not 3 Inventarier, verktyg och installationer.
 6. Underskrifter: whose årsredovisning for which year, then place, date and signatures
    (TBD).
-7. The K2 check (see below).
+
+The K2 check (see below) is in the report.
 
 For the resultaträkning and balansräkning:
 
@@ -47,9 +87,6 @@ For the resultaträkning and balansräkning:
 - A post is shown when any account in it has an amount in either year. Headings and
   sums are shown when a post under them is.
 
-Errors and notes go to stderr, so the report can be redirected to a file:
-
-    cratchit_ar TheITfiedAB20250817_172409.se > ar.txt
 
 ## Flerårsöversikt
 
@@ -162,7 +199,7 @@ From the SIE file alone, for fiscal year 0:
    | Utdelning | include 2898 Outtagen vinstutdelning | the årsstämma's dividend: 2098 against 2898 and 2091 |
    | Balanseras i ny räkning | none: only equity accounts | last year's result: 2099 against 2098 |
    | Årets resultat | include 8999 Årets resultat | the year-end booking: 2099 against 8999 |
-   | Övriga förändringar | anything else | noted on stderr with the voucher's series, number, date and text |
+   | Övriga förändringar | anything else | noted in the report with the voucher's series, number, date and text |
 
    A voucher adds its equity amounts to its row, each in its account's column.
    Amounts struck from a voucher (`#BTRANS`) do not count.
@@ -263,12 +300,14 @@ From the SIE file alone, for fiscal year 0:
 
 ## --trace
 
-Prints, instead of the årsredovisning, what each of its amounts is made of: the BAS
-accounts and the vouchers behind it. Use it to check an amount against the books, or
-to find out why a post holds what it does. It is long (several hundred lines for a
+Prints to the terminal, instead of writing the folder, what each amount of the
+årsredovisning is made of: the BAS accounts and the vouchers behind it. Use it to check
+an amount against the books, or to find out why a post holds what it does. It writes
+no files; the errors and notes go to stderr. It is long (several hundred lines for a
 small company), so page it or save it:
 
     cratchit_ar --trace TheITfiedAB20230503_152345.se | less
+    cratchit_ar --trace TheITfiedAB20230503_152345.se > trace.txt
 
 ### How to read it
 
@@ -344,7 +383,7 @@ writes a generic `EUBAS97` whatever the year.
 | 2026 and later | `Resources/bas_to_ar_2026.csv` |
 | before 2024 | none: an error, exit 2 |
 
-The mapping used is named in a note on stderr, in the K2 check and at the top of the
+The mapping used is named in the report, in its K2 check and at the top of the
 trace, e.g. `Resources/bas_to_ar_2024.csv (BAS 2024-2025; books following BAS 2024,
 the default; see --bas-year)`.
 
@@ -417,7 +456,7 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
 
 ## Errors and checks
 
-`cratchit_ar` exits with 1 and says why on stderr when:
+`cratchit_ar` exits with 1 and says why, on the terminal and in the report, when:
 
 - The SIE file cannot be read or is not a valid SIE 4 file.
 - An account has an amount but is on no line of the resultaträkning and
@@ -442,9 +481,10 @@ they stand and what the closing still needs. It takes the books as not closed wh
 nothing is booked to 8990-8999 in fiscal year 0 and the balansräkning is off by
 exactly the year's result, as that is not booked to 2099. Then:
 
-- A note says so, instead of the errors for the balansräkning and Årets resultat:
+- A note in the report says so, instead of the errors for the balansräkning and Årets
+  resultat:
 
-      Note: Closing: the books for 2025-05-01 - 2026-04-30 are not closed: the year's result
+      Closing: the books for 2025-05-01 - 2026-04-30 are not closed: the year's result
       -24989.49 is not booked to 2099 (nothing on 8999). The årsredovisning is a preview that
       shows it as booked (see --trace).
 
@@ -464,7 +504,7 @@ The year-end closing notes below say what else the closing may need.
 ## Year-end closing notes
 
 The årsredovisning shows the books as they are. For each year shown, `cratchit_ar`
-also notes on stderr, as `Note: Closing: ...`, the closing entries that BAS asks for at
+also notes in the report, as `Closing: ...`, the closing entries that BAS asks for at
 the balance day and that the books lack. Notes do not change the exit code.
 
 - `Moms (2610-2659) nets to a receivable`: the VAT not yet due is a receivable;
@@ -485,13 +525,13 @@ the balance day and that the books lack. Notes do not change the exit code.
 
 For example:
 
-    Note: Closing: Moms (2610-2659) nets to a receivable 1331.46 at 2023-04-30; BAS: move it to 1650 Momsfordran
+    Closing: Moms (2610-2659) nets to a receivable 1331.46 at 2023-04-30; BAS: move it to 1650 Momsfordran
 
 ## K2 check
 
-The output ends with a check of the årsredovisning against the requirements of
+The report ends with a check of the årsredovisning against the requirements of
 BFNAR 2016:10, as in BFN:s vägledning Årsredovisning i mindre företag (K2), updated
-2025-06-16. A note on stderr gives the number of missing items.
+2025-06-16. The terminal summary gives the number of missing items.
 
     K2 check
     ========

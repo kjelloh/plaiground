@@ -47,6 +47,7 @@ add_library(cratchit_core
   src/core/ar/equity.cpp
   src/core/ar/layout.cpp
   src/core/ar/notes.cpp
+  src/core/ar/output.cpp
   src/core/ar/overview.cpp
   src/core/ar/requirements.cpp
   ${layout_sources}
@@ -89,6 +90,7 @@ add_executable(cratchit_ar
   src/main.cpp
 )
 target_link_libraries(cratchit_ar PRIVATE cratchit_core cratchit_warnings)
+target_compile_definitions(cratchit_ar PRIVATE CRATCHIT_AR_VERSION="${PROJECT_VERSION}")
 
 include(CTest)
 if(BUILD_TESTING)

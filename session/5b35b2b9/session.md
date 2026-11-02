@@ -220,6 +220,19 @@ Claude now implemented the 'books not closed' detection and 'PRELIMINARY' ÅR ge
 
 * I like where this is going now!
 
+I have now vibe coded the app to output to ÅR-file and report-file.
+
+* The --trace output is still to terminal.
+* And the terminal now shows some summary about created files and results.
+
+I think this feel trustworthy for now!
+
+* I can actually leave this app for now
+* I can now create a cratchit_skv_ink (or similar) that generates the Tax Return report?
+
+    * We should then be able to tell Claude to use the same architecture and shared c ode from this app?
+    * It would need a bas_to_ink_yyyy.csv file to map to SKV Vat return form amounts? 
+
 ## 202061101
 
 Now it is time to see if we can make a C++ app like cratchit actually map an SIE file to a proper and valid Swedish 'Årsredovisning' (ÅR)?
