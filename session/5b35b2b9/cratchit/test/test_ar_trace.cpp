@@ -108,7 +108,7 @@ TEST_P(ArTraceOfFile, AddsUp) {
   auto const lexed = cratchit::sie::lex_file(sie);
   ASSERT_TRUE(lexed);
   auto const document = cratchit::sie::parse_document(lexed->lines).document;
-  auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_2024_text());
+  auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(layout);
   auto const statement = cratchit::ar::build_statement(
       *layout, {cratchit::ar::year_balances(document, 0), cratchit::ar::year_balances(document, -1)});

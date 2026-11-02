@@ -80,6 +80,74 @@ But lets see where we end up (and if I want to later tweak it)?
 
 And now I have vibe coded a two-year Flerårsöversikt, a Resultatdisposition ("Utdelas till aktieägare" marked TBD), and a Not column in the BR.
 
+I now gave Claude a go on refactoring a bas_to_ar_2026 from the information on the web [BAS-kontoplan och din årsredovisning](https://www.arsredovisning-online.se/bas-kontoplan/).
+
+* I now start to think what mechanism we may incorporate to keep track of what BAS account plan revision (year) to apply vs what mapping a company actually uses?
+
+* The SIE file lists the used accounts and how they are mapped to SRU accounts.
+    * But this says nothing about what version of the BAS account plan the company uses?
+    * And I fail to see how such a tracking is even possible given the current design of SIE files?
+
+Anyhow, I now made Claude implement an bas_to_ar_2026 mapping.
+
+* It discovered that åresredovisning online has NOT changed (still as edited 2023)
+* So Claude decided to extract the mapping from my e-book!
+* It then discovered my SIE files conflicts with the 2026 BAS account plan.
+
+
+┌───────────────────────────────────────────┬─────────────────────────────────────┬───────────────────────────────────────┐
+│                   Post                    │            Was (website)            │            Now (BAS 2026)             │
+├───────────────────────────────────────────┼─────────────────────────────────────┼───────────────────────────────────────┤
+│ Handelsvaror                              │ 4960‑4969, 4980‑4989                │ 4000‑4299, 4960‑4969, 4980‑4989       │
+├───────────────────────────────────────────┼─────────────────────────────────────┼───────────────────────────────────────┤
+│ Råvaror och förnödenheter                 │ 4000‑4799, 4910‑4931                │ 4300‑4899, 4910‑4929                  │
+├───────────────────────────────────────────┼─────────────────────────────────────┼───────────────────────────────────────┤
+│ Övriga immateriella anläggningstillgångar │ —                                   │ new post, 1090‑1099 (e.g. tomträtter) │
+├───────────────────────────────────────────┼─────────────────────────────────────┼───────────────────────────────────────┤
+│ Maskiner och andra tekniska anläggningar  │ 1210‑1219                           │ 1210‑1219, 1230‑1249                  │
+├───────────────────────────────────────────┼─────────────────────────────────────┼───────────────────────────────────────┤
+│ Inventarier, verktyg och installationer   │ 1220‑1279 except 1260               │ 1220‑1229, 1250‑1269                  │
+├───────────────────────────────────────────┼─────────────────────────────────────┼───────────────────────────────────────┤
+│ Not 3 sections                            │ over 12x0–12x9 incl. 123x/124x/127x │ over 122x, 125x, 126x                 │
+├───────────────────────────────────────────┼─────────────────────────────────────┼───────────────────────────────────────┤
+│ Utanför                                   │ 8999                                │ 8990‑8999                             │
+└───────────────────────────────────────────┴─────────────────────────────────────┴───────────────────────────────────────┘
+
+- Class 4 is the most important correction. BAS 2026 says outright that groups 40–42 are Handelsvaror and 43–48 Råvaror och förnödenheter. A trading company would have had its purchases on the wrong line with the website mapping.
+- What's still on no line is deliberate: the 10 accounts marked "Ej K2", and the equity accounts of other company forms (2010–2072, 2080, 2088). An amount on one of those still stops the program with an error. No account is on two lines.
+- Your account names differ from BAS 2026. 1226 "Elektroniklabb - Verktyg och maskiner" is "Bilar och transportmedel" in BAS 2026. 1227 "Elektroniklabb - Lager" is "Finansiellt leasade inventarier (Ej K2)". Both still land on Inventarier, but you may want to look at them.
+
+So I have to decide how to adress these issues.
+
+* For one, I have NOT switched to BAS 2026 yet.
+* So having cratchit_to_ar apply it seems wrong?
+* Also, if/when I switch I need to move my 'inventarier' 2026 and 2027 to something (or something free) in BAS 2026?
+
+Finally, there are still parts missing in generated Årsredovisning that needs information from sources outside an SIE-file
+
+* 'Allmänt om verksamheten' is a piece of text written by me (the company)
+    * Where do we feed this to the app?
+* 'Väsentliga händelser under räkenskapsåret' is also a piece of text written by me (the company)
+    * Where do we feed this to the app?
+* 'Flerårsöversikt (tkr)' now covers only two years (what can be determined from a single SIE file) and no note (comment)
+    * We may be tempted to support several SIE files to allow the app to generated more years?
+    * The note (comment) 'Den minskade omsättningen beror på vårt åtagande att utveckla nya tjänster och produkter' is written by me.
+    * Should we allow a note (comment) to be added to 'Flerårsöversikt'?
+* The comment in 'Resultatdisposition'
+    * I had a comment 'Med hänvisning till ovanstående ...' referring to 'ABL 17 kap 3 §'
+    * I think this comment was originally generated by årsredovisning-online?
+    * Do I need it?
+    * If so, how tdo I feed it to the app?
+    * How do I link it up through the current mechanism?
+* 'Not 1-Redovisningsprinciper' is missing
+    * It contains a definition of how 'avskrivningar' is applied by the company.
+    * How can I provide (feed) information so that the app can generate this note?
+* 'Not 2-Medelantal anställda' is missing.
+    * It needs to know how many employees the company has had during the year.
+    * Again, how to we feed this to the app?
+
+Maybe I should ask Claude to try and map the current generated ÅR to the requirements in [Bokföringsnämndens vägledning Årsredovisning i mindre företag (K2)](https://www.bfn.se/wp-content/uploads/vl16-10-k2ar-kons2025.pdf)?
+
 ## 202061101
 
 Now it is time to see if we can make a C++ app like cratchit actually map an SIE file to a proper and valid Swedish 'Årsredovisning' (ÅR)?

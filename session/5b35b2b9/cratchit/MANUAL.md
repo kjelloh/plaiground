@@ -134,7 +134,7 @@ An example, for the fiscal year 2022-05-01 - 2023-04-30:
 From the SIE file alone, for fiscal year 0:
 
 1. **Columns.** The posts under the heading `Eget kapital` in the mapping
-   (`Resources/bas_to_ar_2024.csv`), e.g. Aktiekapital (2081, 2083, 2084), Balanserat
+   (`Resources/bas_to_ar_2026.csv`), e.g. Aktiekapital (2081, 2083, 2084), Balanserat
    resultat (2090, 2091, 2093-2095, 2098) and Årets resultat (2099). A post becomes a
    column only when its accounts have an amount.
 2. **Belopp vid årets ingång** is the opening balance (`#IB 0`) of each column's
@@ -221,13 +221,13 @@ An example, for the fiscal year ending 2023-04-30:
 From the SIE file alone, for fiscal year 0:
 
 1. **The note and its sections are rows in the mapping**
-   (`Resources/bas_to_ar_2024.csv`), under the statement heading `Noter`:
+   (`Resources/bas_to_ar_2026.csv`), under the statement heading `Noter`:
 
        1;Rubrik;;Noter
        2;Rubrik;;Not 3 Inventarier, verktyg och installationer
-       3;Post;1220-1227, 1230-1237, 1240-1247, 1250-1257, 1261-1267 eller 1270-1277;Anskaffningsvärden
-       3;Post;1229, 1239, 1249, 1259, 1269 eller 1279;Avskrivningar
-       3;Post;1228, 1238, 1248, 1258, 1268 eller 1278;Nedskrivningar
+       3;Post;1220-1227, 1250-1257 eller 1260-1267;Anskaffningsvärden
+       3;Post;1229, 1259 eller 1269;Avskrivningar
+       3;Post;1228, 1258 eller 1268;Nedskrivningar
        2;Summa;;Redovisat värde
 
    The split follows BAS: 12x0-12x7 hold the cost, 12x8 the accumulated write-downs
@@ -319,19 +319,35 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
 
 - **Source:** the closing balance (`#UB`) of balance accounts and the result (`#RES`)
   of result accounts, for each year.
-- **Mapping:** the file `Resources/bas_to_ar_2024.csv` is built into the program. It
-  lists every line of the årsredovisning in order, with the columns
+- **Mapping:** the file `Resources/bas_to_ar_2026.csv` (BAS 2026) is built into the
+  program. It lists every line of the årsredovisning in order, with the columns
   `Nivå;Typ;BAS Range;ÅR`:
   - `Nivå`: the level, 1 for the statements themselves and deeper for their parts.
   - `Typ`: one of
     - `Rubrik`: a heading.
     - `Post`: a post with BAS accounts.
     - `Summa`: adds up the posts after the last `Rubrik` at its level or above.
-    - `Utanför`: accounts that are not on the årsredovisning, e.g. 8999 and class 9.
+    - `Utanför`: accounts that are not on the årsredovisning, e.g. 8990-8999 and class 9.
   - `BAS Range`: four digit accounts and ranges separated by `,`, `eller` or `och`, e.g.
     `1590-1619, 1630-1659 eller 1680-1689`. `(förutom ...)` excludes accounts, e.g.
-    `4900-4999 (förutom 4910-4931 och 4980-4989)`.
+    `4900-4999 (förutom 4910-4929 och 4980-4989)`.
   - `ÅR`: the text on the årsredovisning.
+- **Where the mapping comes from:** the BAS ranges of
+  [BAS-kontoplan och din årsredovisning](https://www.arsredovisning-online.se/bas-kontoplan/)
+  (unchanged since 2023-11-30, the same as `Resources/bas_to_ar_2024.csv`, which is
+  kept for comparison), corrected to the BAS 2026 chart of accounts:
+  - Handelsvaror is 4000-4299 (groups 40-42), Råvaror och förnödenheter 4300-4899
+    (groups 43-48) and 4910-4929.
+  - The post Övriga immateriella anläggningstillgångar (1090-1099, e.g. tomträtter).
+  - Maskiner och andra tekniska anläggningar is 1210-1219 and 1230-1249, Inventarier,
+    verktyg och installationer 1220-1229 and 1250-1269 (127x is no longer in BAS).
+  - 8990-8999 (the group Resultat) is outside the årsredovisning.
+
+  Besides, 8710 and 8750 (extraordinary items, which K2 does not have) are in Övriga
+  rörelseintäkter and Övriga rörelsekostnader, 2099 is Årets resultat in the
+  balansräkning, and the Noter rows are added. Every BAS 2026 account that a K2
+  aktiebolag may use is on a line; those marked "Ej K2" and the equity accounts of other
+  company forms (2010-2072) are not.
 - **Signs:** assets (class 1) are shown as booked. Everything else is negated, so
   income, equity and debt are positive and costs negative.
 - **One line per account:** each account is on one line of the resultaträkning and

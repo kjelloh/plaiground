@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
   if (!parsed.errors.empty() || !findings.errors.empty()) {
     return 1;
   }
-  auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_2024_text());
+  auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_text());
   if (!layout) {
     std::println(stderr, "Error: {}", layout.error());
     return 1;

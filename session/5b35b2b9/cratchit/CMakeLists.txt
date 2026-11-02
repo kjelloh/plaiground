@@ -21,8 +21,8 @@ string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
 configure_file(src/core/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
 # Likewise the BAS to ÅR mapping into the program as bytes; CMake re-runs when it changes
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS Resources/bas_to_ar_2024.csv)
-file(READ Resources/bas_to_ar_2024.csv layout_hex HEX)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS Resources/bas_to_ar_2026.csv)
+file(READ Resources/bas_to_ar_2026.csv layout_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," layout_bytes "${layout_hex}")
 configure_file(src/core/ar/layout_text.cpp.in generated/layout_text.cpp @ONLY)
 

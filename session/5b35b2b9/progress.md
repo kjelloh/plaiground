@@ -23,7 +23,7 @@ build/Debug/cratchit_ar --trace ../_Resources/_sie/<file>.se     # accounts and 
 - Expected amounts typed in from the PDFs may be test files (the PDFs are public).
 - Texts not in SIE (verksamhet, medelantal anställda, utdelningsförslag, underskrifter, flerårsöversikt
   beyond two years) are left out for now.
-- `Resources/bas_to_ar_2024.csv` defines every line of the ÅR, not just BAS ranges.
+- The mapping CSV (`Resources/bas_to_ar_<year>.csv`, built in: 2026) defines every line of the ÅR, not just BAS ranges.
 - Never add data files the user has not agreed to.
 - The user reviews and commits each step; Claude does not commit.
 - `cratchit/MANUAL.md` (English) is the user manual, built in and printed by `--help` / `-h`.
@@ -45,7 +45,7 @@ All from Fortnox, SIE 4, fiscal year May-April, each with `#RAR 0` and `#RAR -1`
 - SIE stack copied unchanged from `session/60cae9fe/cratchit` (lexer, document, check, charset, amount, date,
   log, csv) with its tests. Only what the SIE parser needs; no REPL, workspace or VAT code.
 - `core/ar/layout`: parses the mapping CSV `Nivå;Typ;BAS Range;ÅR`, built into the program by CMake
-  (`layout_text.cpp.in`). Typ: `Rubrik`, `Post` (has BAS accounts), `Summa`, `Utanför` (accounts on no line).
+  (`layout_text.cpp.in`; since step 12 `Resources/bas_to_ar_2026.csv`). Typ: `Rubrik`, `Post` (has BAS accounts), `Summa`, `Utanför` (accounts on no line).
   BAS Range grammar: numbers and ranges separated by `,` / `eller` / `och`, `(förutom ...)` excludes from the
   whole set.
 - `core/ar/statement`: each account with an amount is on exactly one line; amounts per year from `#UB` (balance) and `#RES` (result). A Summa adds the posts after
@@ -222,7 +222,27 @@ The original is in git history (commit 36ad56e). Deliberate changes:
       Balanserat resultat 39 106 / Summa -7 596 in its Resultatdisposition (books: 139 106 / 92 404, the
       aktieägartillskott 100 000 left out, as in its Förändringar i eget kapital).
     - 166 tests pass, no warnings. MANUAL.md: Flerårsöversikt, Resultatdisposition, The Not column.
-12. `bas_to_ar_2026.csv` from https://www.arsredovisning-online.se/bas-kontoplan/ in the same form;
-    diff against 2024 and rerun the 3 years.
+12. `Resources/bas_to_ar_2026.csv`, built in instead of 2024 (option a; the 2024 file kept for comparison;
+    `layout_2024_text()` renamed `layout_text()`). Done.
+    - The web mapping (arsredovisning-online.se/bas-kontoplan, fetched 2026-11-02 with curl, parsed locally)
+      is unchanged since 2023-11-30 (`article:modified_time`): identical to the user's 2024 extract, 97 rows.
+    - Checked against the BAS 2026 chart of accounts (the user's Bokföringsboken 2026, local text only, not
+      in the repo): 60 accounts were on no line. Corrected from the book:
+      - Class 4: groups 40-42 are Handelsvaror, 43-48 Råvaror och förnödenheter (book, class 4, "Redovisning
+        i resultaträkningen"). Was: 4000-4799 all Råvaror. Now Handelsvaror 4000-4299, 4960-4969, 4980-4989;
+        Råvaror 4300-4899, 4910-4929 (4910/4920 are the only 491x-492x main accounts); Förändring av lager
+        4900-4999 except those.
+      - New K2 post Övriga immateriella anläggningstillgångar 1090-1099 (e.g. 1092 Tomträtter, new in 2026).
+      - Group 12 reorganised: 1230, 1240 free accounts for maskiner; 1250, 1260 for inventarier; 127x gone.
+        Maskiner 1210-1219, 1230-1249; Inventarier 1220-1229, 1250-1269; Not 3 sections follow.
+      - Utanför 8990-8999 (group Resultat; was only 8999).
+      Left on no line (on purpose): the 10 "(EJ K2)" accounts and equity of other company forms (2010-2072,
+      2080, 2088). No account on two lines.
+    - The user's books give byte-identical reports and traces for all 3 years (no moved account used).
+    - Note: the user's chart names differ from BAS 2026 for accounts they use: 1226 "Elektroniklabb -
+      Verktyg och maskiner" (BAS 2026: Bilar och transportmedel), 1227 "Elektroniklabb - Lager" (BAS 2026:
+      Finansiellt leasade inventarier, Ej K2). Both are still Inventarier in the mapping.
+    - Test ArLayout.BuiltInMappingFollowsBas2026 pins each placement. 167 tests pass, no warnings.
+      MANUAL.md: the 2026 file, its origin and corrections.
 13. Later: flerårsöversikt over several SIE files (4 years), the board's proposal in the Resultatdisposition,
     the texts not in SIE (förvaltningsberättelse, Not 1, Not 2, underskrifter), iXBRL.

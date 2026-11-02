@@ -96,14 +96,14 @@ TEST(ArLayout, Errors) {
 }
 
 TEST(ArLayout, BuiltInMappingReads) {
-  auto const lines = parse_layout(cratchit::ar::layout_2024_text());
+  auto const lines = parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(lines) << lines.error();
   EXPECT_GT(lines->size(), 100u);
 }
 
 TEST(ArLayout, BuiltInMappingPutsNoAccountOnTwoLines) {
   // At most one line in the resultaträkning and balansräkning, and at most one in the notes
-  auto const lines = parse_layout(cratchit::ar::layout_2024_text());
+  auto const lines = parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(lines);
   for (int number = 1000; number <= 9999; ++number) {
     auto const account = std::to_string(number);
@@ -125,7 +125,7 @@ TEST(ArLayout, BuiltInMappingPutsNoAccountOnTwoLines) {
 
 TEST(ArLayout, BuiltInNote3SplitsItsPostExactly) {
   // The sections of Not 3 hold exactly the accounts of the post Inventarier, verktyg och installationer
-  auto const lines = parse_layout(cratchit::ar::layout_2024_text());
+  auto const lines = parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(lines);
   auto const post = std::ranges::find_if(*lines, [](auto const& line) {
     return line.kind == LineKind::item && line.text == "Inventarier, verktyg och installationer";
@@ -143,4 +143,44 @@ TEST(ArLayout, BuiltInNote3SplitsItsPostExactly) {
     auto const in_sections = std::ranges::count_if(sections, [&account](auto const* line) { return line->accounts.contains(account); });
     EXPECT_EQ(in_sections, post->accounts.contains(account) ? 1 : 0) << account;
   }
+}
+
+TEST(ArLayout, BuiltInMappingFollowsBas2026) {
+  // Where BAS 2026 (BAS-kontogruppen, Bokföringsboken 2026) puts accounts the 2023 web mapping placed elsewhere
+  auto const lines = parse_layout(cratchit::ar::layout_text());
+  ASSERT_TRUE(lines);
+  auto const line_of = [&lines](std::string_view account) {
+    bool notes = false;
+    for (auto const& line : *lines) {
+      if (line.kind == LineKind::heading && line.level == 1) {
+        notes = line.text == "Noter";
+      }
+      bool const in_notes = notes && line.kind != LineKind::outside;
+      if (!in_notes && line.accounts.contains(account)) {
+        return line.text;
+      }
+    }
+    return std::string{};
+  };
+  // Groups 40-42 are Handelsvaror, 43-48 Råvaror och förnödenheter
+  EXPECT_EQ(line_of("4010"), "Handelsvaror");
+  EXPECT_EQ(line_of("4210"), "Handelsvaror");
+  EXPECT_EQ(line_of("4960"), "Handelsvaror");
+  EXPECT_EQ(line_of("4310"), "Råvaror och förnödenheter");
+  EXPECT_EQ(line_of("4810"), "Råvaror och förnödenheter");
+  EXPECT_EQ(line_of("4910"), "Råvaror och förnödenheter");
+  EXPECT_EQ(line_of("4940"), "Förändring av lager av produkter i arbete, färdiga varor och pågående arbete för annans räkning");
+  // Övriga immateriella anläggningstillgångar, e.g. tomträtter
+  EXPECT_EQ(line_of("1092"), "Övriga immateriella anläggningstillgångar");
+  // 1230 and 1240 are free accounts for maskiner, 1250 and 1260 for inventarier; 127x is gone
+  EXPECT_EQ(line_of("1230"), "Maskiner och andra tekniska anläggningar");
+  EXPECT_EQ(line_of("1249"), "Maskiner och andra tekniska anläggningar");
+  EXPECT_EQ(line_of("1260"), "Inventarier, verktyg och installationer");
+  EXPECT_EQ(line_of("1269"), "Inventarier, verktyg och installationer");
+  EXPECT_EQ(line_of("1270"), "");
+  // The Resultat group is outside the årsredovisning
+  EXPECT_EQ(line_of("8990"), "Resultat (bokslutspost, redan med i resultaträkningen)");
+  // Not allowed under K2, so on no line
+  EXPECT_EQ(line_of("1010"), "");
+  EXPECT_EQ(line_of("2240"), "");
 }

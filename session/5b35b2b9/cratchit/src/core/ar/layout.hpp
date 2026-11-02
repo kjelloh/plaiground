@@ -42,7 +42,7 @@ struct Line {
 // header row. Typ is Rubrik, Post, Summa or Utanför. Error text names the row.
 std::expected<std::vector<Line>, std::string> parse_layout(std::string_view csv_text);
 
-// Resources/bas_to_ar_2024.csv, built into the program
-std::string_view layout_2024_text();
+// The mapping built into the program: Resources/bas_to_ar_2026.csv (BAS 2026)
+std::string_view layout_text();
 
 } // namespace cratchit::ar

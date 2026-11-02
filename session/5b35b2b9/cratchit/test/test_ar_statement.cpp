@@ -180,7 +180,7 @@ TEST_P(ArAgainstPdf, AmountsMatchWithinAKrona) {
   ASSERT_TRUE(lexed);
   auto const parsed = cratchit::sie::parse_document(lexed->lines);
   ASSERT_TRUE(parsed.errors.empty());
-  auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_2024_text());
+  auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(layout);
   auto const statement = build_statement(*layout, {cratchit::ar::year_balances(parsed.document, 0),
                                                    cratchit::ar::year_balances(parsed.document, -1)});
