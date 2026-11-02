@@ -1,4 +1,5 @@
 #include "core/ar/closing.hpp"
+#include "core/ar/equity.hpp"
 #include "core/ar/layout.hpp"
 #include "core/ar/statement.hpp"
 #include "core/ar/text.hpp"
@@ -77,7 +78,14 @@ int main(int argc, char* argv[]) {
       std::println(stderr, "Note: {}", note);
     }
   }
-  int const exit_code = errors.empty() ? 0 : 1;
+  auto const equity = cratchit::ar::equity_changes(*layout, document);
+  for (auto const& error : equity.errors) {
+    std::println(stderr, "Error: {}", error);
+  }
+  for (auto const& note : equity.notes) {
+    std::println(stderr, "Note: {}", note);
+  }
+  int const exit_code = errors.empty() && equity.errors.empty() ? 0 : 1;
   if (accounts) {
     std::print("{}", cratchit::ar::format_accounts(statement, years));
     return exit_code;
@@ -87,6 +95,7 @@ int main(int argc, char* argv[]) {
   std::println("Årsredovisning för räkenskapsåret {} - {}", cratchit::format_iso_date(years.front().start),
                cratchit::format_iso_date(years.front().end));
   std::println("");
+  std::println("{}", cratchit::ar::format_equity_changes(equity));
   std::print("{}", cratchit::ar::format_statements(statement, years));
   return exit_code;
 }

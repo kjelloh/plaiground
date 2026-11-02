@@ -30,6 +30,7 @@ configure_file(src/core/ar/layout_text.cpp.in generated/layout_text.cpp @ONLY)
 add_library(cratchit_core
   src/core/amount.cpp
   src/core/ar/closing.cpp
+  src/core/ar/equity.cpp
   src/core/ar/layout.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/layout_text.cpp
   src/core/ar/statement.cpp

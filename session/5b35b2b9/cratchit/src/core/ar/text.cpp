@@ -2,6 +2,8 @@
 
 #include "core/date.hpp"
 
+#include <algorithm>
+
 #include <format>
 #include <set>
 
@@ -50,8 +52,9 @@ std::vector<std::string> wrapped(std::string_view text, std::size_t width) {
 }
 
 // One row of text and amounts; the amounts on the last line of a wrapped text
-void add_row(std::string& out, std::string_view text, std::size_t indent, std::vector<std::string> const& columns) {
-  auto const lines = wrapped(text, text_width - indent);
+void add_row(std::string& out, std::string_view text, std::size_t indent, std::vector<std::string> const& columns,
+             std::size_t width = text_width) {
+  auto const lines = wrapped(text, width - indent);
   for (std::size_t index = 0; index < lines.size(); ++index) {
     out += std::string(indent, ' ');
     if (index + 1 < lines.size()) {
@@ -62,11 +65,11 @@ void add_row(std::string& out, std::string_view text, std::size_t indent, std::v
       out += lines[index] + '\n';
       continue;
     }
-    out += padded(lines[index], text_width - indent);
+    auto row = padded(lines[index], width - indent);
     for (auto const& column : columns) {
-      out += right(column, column_width);
+      row += right(column, column_width);
     }
-    out += '\n';
+    out += row.substr(0, row.find_last_not_of(' ') + 1) + '\n';
   }
 }
 
@@ -113,6 +116,44 @@ std::string format_kronor(Kronor kronor) {
       out += ' ';
     }
     out += digits[index];
+  }
+  return out;
+}
+
+std::string format_equity_changes(EquityChanges const& changes) {
+  constexpr std::size_t width = 30; // narrower text, as the table has a column per post and the total
+  std::string const title = "Förändringar i eget kapital";
+  std::string out = std::format("{}\n{}\n", title, std::string(width_of(title), '='));
+  // Column titles wrapped over lines, bottom aligned
+  std::vector<std::vector<std::string>> titles;
+  for (auto const& column : changes.columns) {
+    titles.push_back(wrapped(column, column_width - 2));
+  }
+  titles.push_back({"Totalt"});
+  std::size_t height = 0;
+  for (auto const& lines : titles) {
+    height = std::max(height, lines.size());
+  }
+  for (std::size_t line = 0; line < height; ++line) {
+    std::vector<std::string> header;
+    for (auto const& lines : titles) {
+      auto const skip = height - lines.size();
+      header.push_back(line < skip ? "" : lines[line - skip]);
+    }
+    add_row(out, "", 0, header, width);
+  }
+  out += '\n';
+  for (std::size_t index = 0; index < changes.rows.size(); ++index) {
+    auto const& row = changes.rows[index];
+    // A change leaves the columns it does not touch blank; the first and last row and the total show 0
+    bool const is_change = index > 0 && index + 1 < changes.rows.size();
+    std::vector<std::string> columns;
+    for (std::size_t column = 0; column < row.amounts.size(); ++column) {
+      auto const kronor = to_kronor(row.amounts[column]);
+      bool const blank = is_change && kronor == 0 && column + 1 < row.amounts.size();
+      columns.push_back(blank ? "" : format_kronor(kronor));
+    }
+    add_row(out, row.text, 0, columns, width);
   }
   return out;
 }

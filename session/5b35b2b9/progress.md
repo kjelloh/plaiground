@@ -121,6 +121,14 @@ The original is in git history (commit 36ad56e). Deliberate changes:
   - 2024-04-30: 2641 156,75 -> 1650 (with the 1 026 already there).
   - 2025-04-30: 2641 67,60 and the 336 of unbooked VAT on 1999 -> 1650.
 
+### Equity vouchers (step 9)
+
+- 24/25 books a dividend 125 000 (I2 2024-07-27) and cancels it (I3 2025-04-30 "Makulerad I2"): no dividend
+  that year, as the PDF's empty Utdelning row says.
+- The 23/24 SIE file (exported 2024-07-27) closes with 2091 -348 498,23 and 2098 278 845,50; the 24/25 file
+  opens that year with 2091 -69 652,73 and 2098 0. The books were changed after the export. Balanserat
+  resultat is the same (69 653) either way.
+
 ## Steps
 
 1. Skeleton, SIE stack, header printed. Done.
@@ -152,7 +160,15 @@ The original is in git history (commit 36ad56e). Deliberate changes:
    follow the account class. Kept because the data needs them: `förutom`, the `,`/`eller`/`och`
    separators, `Utanför` (8999, class 9), `Nivå`/`Typ`. Can come back if a real need shows.
    Output of the 3 files unchanged. MANUAL.md updated.
-9. Förändringar i eget kapital from IB/UB of 2081/209x and the dividend paid (check: pages 3 of the PDFs).
+9. Förändringar i eget kapital (`core/ar/equity`), printed before the resultaträkning. Columns: the BR posts
+   under the Rubrik "Eget kapital" with an amount, then Totalt. Rows: #IB 0, the year's vouchers on those
+   accounts classified by their other accounts (none: Balanseras i ny räkning; 8999: Årets resultat;
+   2898: Utdelning; all on 2093: Erhållna aktieägartillskott; else Övriga förändringar + note), #UB 0.
+   Error unless opening + changes = closing per column, to the öre. Zero change rows left out, zero cells
+   blank. Text column 30 wide, column titles wrapped. Expected tables typed from the PDFs:
+   `test/expected_ar/*_eget_kapital.csv`; all 3 match within 1 kr. 24/25 PDF is wrong: puts the
+   aktieägartillskott 100 000 in the Årets resultat column and closes Balanserat resultat at 39 106 (BR: 139 106).
+   MANUAL.md updated. 145 tests pass, no warnings. Done.
 10. Not 3 Inventarier from 122x IB/UB and the year's purchases in the vouchers (check: page 8, 22/23 and 24/25).
 11. Resultatdisposition (needs the proposed dividend, not in SIE; agree input with the user first).
 12. `bas_to_ar_2026.csv` from https://www.arsredovisning-online.se/bas-kontoplan/ in the same form;

@@ -63,8 +63,6 @@ So I asked Claude to remove the mechanism to map based on sign.
 
 So now we should be back on 'plain BAS mapping to ÅR' again?
 
-
-
 ## 202061101
 
 Now it is time to see if we can make a C++ app like cratchit actually map an SIE file to a proper and valid Swedish 'Årsredovisning' (ÅR)?
