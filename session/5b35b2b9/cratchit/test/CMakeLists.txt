@@ -7,6 +7,7 @@ add_executable(cratchit_tests
   test_cp437.cpp
   test_date.cpp
   test_log.cpp
+  test_manual.cpp
   test_sie_check.cpp
   test_sie_document.cpp
   test_sie_file.cpp

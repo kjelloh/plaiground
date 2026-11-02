@@ -25,6 +25,10 @@ build/Debug/cratchit_ar --accounts ../_Resources/_sie/<file>.se  # accounts behi
   beyond two years) are left out for now.
 - `Resources/bas_to_ar_2024.csv` defines every line of the ÅR, not just BAS ranges.
 - Never add data files the user has not agreed to.
+- The user reviews and commits each step; Claude does not commit.
+- `cratchit/MANUAL.md` (English) is the user manual, built in and printed by `--help` / `-h`.
+  **Every step that changes what the user sees updates MANUAL.md in the same step**
+  (options, output, errors, what is not yet included). The test `Manual.NamesEveryOption` lists the options.
 
 ## Pairs to verify against
 
@@ -85,11 +89,14 @@ The original is in git history (commit 36ad56e). Deliberate changes:
 5. RR/BR structure, sums, signs, checks. Done; all 3 years balance and agree to the öre.
 6. Plain text rendering. Done; amounts match all 3 PDFs within ±1 kr except the findings above.
    124 tests pass, no warnings. Not committed yet.
-7. Next: sign rule for accounts that are a fordran or a skuld by their balance (2650, 1630/2510 ...),
+7. User manual: `MANUAL.md` built in like the mapping (`core/manual`, `manual_text.cpp.in`);
+   `--help` / `-h` prints it raw to stdout, exit 0; a wrong command line (also an unknown `-` option)
+   prints usage and `See cratchit_ar --help`, exit 2. 126 tests pass, no warnings. Done.
+8. Next: sign rule for accounts that are a fordran or a skuld by their balance (2650, 1630/2510 ...),
    in the CSV, e.g. a debit/credit column. Then 2650 in the 22/23 expected file follows the PDF.
-8. Förändringar i eget kapital from IB/UB of 2081/209x and the dividend paid (check: pages 3 of the PDFs).
-9. Not 3 Inventarier from 122x IB/UB and the year's purchases in the vouchers (check: page 8, 22/23 and 24/25).
-10. Resultatdisposition (needs the proposed dividend, not in SIE; agree input with the user first).
-11. `bas_to_ar_2026.csv` from https://www.arsredovisning-online.se/bas-kontoplan/ in the same form;
+9. Förändringar i eget kapital from IB/UB of 2081/209x and the dividend paid (check: pages 3 of the PDFs).
+10. Not 3 Inventarier from 122x IB/UB and the year's purchases in the vouchers (check: page 8, 22/23 and 24/25).
+11. Resultatdisposition (needs the proposed dividend, not in SIE; agree input with the user first).
+12. `bas_to_ar_2026.csv` from https://www.arsredovisning-online.se/bas-kontoplan/ in the same form;
     diff against 2024 and rerun the 3 years.
-12. Later: flerårsöversikt over several SIE files, soliditet, the texts not in SIE, iXBRL.
+13. Later: flerårsöversikt over several SIE files, soliditet, the texts not in SIE, iXBRL.

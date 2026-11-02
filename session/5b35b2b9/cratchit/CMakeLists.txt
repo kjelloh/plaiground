@@ -14,7 +14,13 @@ else()
   target_compile_options(cratchit_warnings INTERFACE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-# Build the BAS to ÅR mapping into the program as bytes; CMake re-runs when it changes
+# Build MANUAL.md into the program as bytes; CMake re-runs when the manual changes
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS MANUAL.md)
+file(READ MANUAL.md manual_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
+configure_file(src/core/manual_text.cpp.in generated/manual_text.cpp @ONLY)
+
+# Likewise the BAS to ÅR mapping into the program as bytes; CMake re-runs when it changes
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS Resources/bas_to_ar_2024.csv)
 file(READ Resources/bas_to_ar_2024.csv layout_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," layout_bytes "${layout_hex}")
@@ -34,6 +40,7 @@ add_library(cratchit_core
   src/core/csv.cpp
   src/core/date.cpp
   src/core/log.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
   src/core/sie/check.cpp
   src/core/sie/document.cpp
   src/core/sie/file.cpp

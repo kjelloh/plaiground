@@ -2,6 +2,7 @@
 #include "core/ar/statement.hpp"
 #include "core/ar/text.hpp"
 #include "core/date.hpp"
+#include "core/manual.hpp"
 #include "core/sie/check.hpp"
 #include "core/sie/document.hpp"
 #include "core/sie/file.hpp"
@@ -11,11 +12,16 @@
 #include <string_view>
 
 // cratchit_ar [--accounts] <file.se>: prints the Swedish årsredovisning of an
-// SIE 4 file, or with --accounts the BAS accounts in each of its posts
+// SIE 4 file, or with --accounts the BAS accounts in each of its posts.
+// cratchit_ar --help or -h prints the manual.
 int main(int argc, char* argv[]) {
+  if (argc == 2 && (std::string_view(argv[1]) == "--help" || std::string_view(argv[1]) == "-h")) {
+    std::print("{}", cratchit::manual_text());
+    return 0;
+  }
   bool const accounts = argc == 3 && std::string_view(argv[1]) == "--accounts";
-  if (argc != 2 && !accounts) {
-    std::println(stderr, "Usage: cratchit_ar [--accounts] <file.se>");
+  if ((argc != 2 && !accounts) || std::string_view(argv[argc - 1]).starts_with('-')) {
+    std::println(stderr, "Usage: cratchit_ar [--accounts] <file.se>\nSee cratchit_ar --help");
     return 2;
   }
   std::filesystem::path const file = argv[argc - 1];
