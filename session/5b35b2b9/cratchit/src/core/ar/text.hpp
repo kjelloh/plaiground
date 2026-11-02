@@ -43,8 +43,10 @@ std::string format_disposition(Disposition const& disposition, Check const& chec
 std::string format_notes(Notes const& notes, std::vector<sie::FiscalYear> const& years, Check const& check);
 
 // The front of the årsredovisning: name, orgnr, that it is an årsredovisning for
-// fiscal year 0, and the sentence on the board, the currency and the unit
-std::string format_front(sie::Document const& document, std::vector<sie::FiscalYear> const& years);
+// fiscal year 0, PRELIMINÄR when check says the books are not closed, and the
+// sentence on the board, the currency and the unit
+std::string format_front(sie::Document const& document, std::vector<sie::FiscalYear> const& years,
+                         Check const& check);
 
 // The start of the förvaltningsberättelse: Verksamheten with Allmänt om
 // verksamheten (säte) and Väsentliga händelser under räkenskapsåret, TBD as check lists them

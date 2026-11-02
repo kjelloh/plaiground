@@ -74,7 +74,16 @@ int main(int argc, char* argv[]) {
     std::println(stderr, "Error: {}", layout.error());
     return 1;
   }
-  auto const& document = parsed.document;
+  // Books not yet closed: show the årsredovisning as if the year's result were booked, and say so
+  auto const unbooked = cratchit::ar::unbooked_result(parsed.document);
+  auto const document = unbooked ? cratchit::ar::with_closing_entry(parsed.document, *unbooked) : parsed.document;
+  if (auto const year = document.year(0); unbooked && year) {
+    std::println(stderr,
+                 "Note: Closing: the books for {} - {} are not closed: the year's result {} is not booked to 2099 "
+                 "(nothing on 8999). The årsredovisning is a preview that shows it as booked (see --trace).",
+                 cratchit::format_iso_date(year->start), cratchit::format_iso_date(year->end),
+                 cratchit::format_amount(-*unbooked));
+  }
   // The year of the file and the year before, when the file has it
   std::vector<cratchit::sie::FiscalYear> years;
   std::vector<cratchit::ar::Balances> balances;
@@ -95,7 +104,7 @@ int main(int argc, char* argv[]) {
   // Closing entries BAS asks for that the books lack; the årsredovisning shows the books as they are
   for (std::size_t index = 0; index < years.size(); ++index) {
     for (auto const& note : cratchit::ar::check_closing(balances[index], years[index].end)) {
-      std::println(stderr, "Note: {}", note);
+      std::println(stderr, "Note: Closing: {}", note);
     }
   }
   auto const equity = cratchit::ar::equity_changes(*layout, document);
@@ -111,7 +120,7 @@ int main(int argc, char* argv[]) {
   }
   auto const overview = cratchit::ar::build_overview(statement);
   auto const disposition = cratchit::ar::build_disposition(statement);
-  auto const check = cratchit::ar::check_requirements(statement, overview, notes);
+  auto const check = cratchit::ar::check_requirements(statement, overview, notes, unbooked);
   std::println(stderr, "Note: K2 check: {} required {} missing (TBD in the årsredovisning), see the end of the output",
                check.missing.size(), check.missing.size() == 1 ? "item is" : "items are");
   int const exit_code = errors.empty() && equity.errors.empty() && notes.errors.empty() ? 0 : 1;
@@ -121,7 +130,7 @@ int main(int argc, char* argv[]) {
     return exit_code;
   }
   // In the order of BFNAR 2016:10 p. 3.2: förvaltningsberättelse, resultaträkning, balansräkning, noter
-  std::println("{}", cratchit::ar::format_front(document, years));
+  std::println("{}", cratchit::ar::format_front(document, years, check));
   std::println("{}", cratchit::ar::format_business(check));
   std::println("{}", cratchit::ar::format_overview(overview, years, check));
   std::println("{}", cratchit::ar::format_equity_changes(equity));

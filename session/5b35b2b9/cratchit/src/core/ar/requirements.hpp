@@ -45,6 +45,7 @@ struct Check {
 // The requirements for the årsredovisning of statement, overview and notes, all
 // still without the company's input. Missing ones are numbered first, in the order
 // of the årsredovisning, then those to confirm:
+// - missing first when the books are not closed (unbooked_result, see closing.hpp)
 // - always missing: säte, allmänt om verksamheten, väsentliga händelser, the
 //   flerårsöversikt's two earlier years, the board's proposal, datering, underskrifter
 // - missing when the books show it applies, else to confirm: the comment on a
@@ -54,6 +55,7 @@ struct Check {
 //   anläggningstillgångar without a note
 // - to confirm: the board's statement on a dividend, ställda säkerheter,
 //   eventualförpliktelser, lån till styrelseledamöter, events after the balance day
-Check check_requirements(Statement const& statement, Overview const& overview, Notes const& notes);
+Check check_requirements(Statement const& statement, Overview const& overview, Notes const& notes,
+                         std::optional<Amount> unbooked_result = std::nullopt);
 
 } // namespace cratchit::ar

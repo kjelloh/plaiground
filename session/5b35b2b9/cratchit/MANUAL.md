@@ -423,9 +423,10 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
 - An account has an amount but is on no line of the resultaträkning and
   balansräkning, or on more than one, or on more than one line of the notes.
 - The balansräkning does not balance (Summa tillgångar differs from Summa eget
-  kapital och skulder), to the öre.
-- Årets resultat differs between resultaträkning and balansräkning, to the öre. The
-  year's result must be booked to 2099, as in a closed fiscal year.
+  kapital och skulder), to the öre, other than by a year's result that is not yet
+  booked (see Books not yet closed).
+- Årets resultat differs between resultaträkning and balansräkning, to the öre, other
+  than for the same reason.
 - In Förändringar i eget kapital, a column's opening balance and changes do not add
   up to its closing balance, to the öre.
 - In a note, a section's opening balance and changes do not add up to its closing
@@ -434,11 +435,37 @@ Prints this manual. Long output can be paged: `cratchit_ar --help | less`.
 
 A wrong command line prints the usage and exits with 2.
 
+## Books not yet closed
+
+`cratchit_ar` can be run on books whose fiscal year is not yet closed, to see where
+they stand and what the closing still needs. It takes the books as not closed when
+nothing is booked to 8990-8999 in fiscal year 0 and the balansräkning is off by
+exactly the year's result, as that is not booked to 2099. Then:
+
+- A note says so, instead of the errors for the balansräkning and Årets resultat:
+
+      Note: Closing: the books for 2025-05-01 - 2026-04-30 are not closed: the year's result
+      -24989.49 is not booked to 2099 (nothing on 8999). The årsredovisning is a preview that
+      shows it as booked (see --trace).
+
+- The årsredovisning is made as if the year's result were booked: `cratchit_ar` adds
+  the closing entry Fortnox makes, 2099 against 8999 on the balance day, so that the
+  balansräkning balances and Förändringar i eget kapital and the Resultatdisposition
+  show the year's result. It is not a voucher of the books: `--trace` shows it as
+  `* 2026-04-30 Ej bokfört: Årets resultat (simulerat av cratchit_ar)`.
+- The årsredovisning starts with
+  `PRELIMINÄR: bokslutet är inte gjort, årets resultat är inte bokfört (TBD [1]).`, and
+  the K2 check has the missing item Bokslut (BFL 6 kap. 1 §: the bookkeeping is closed
+  with the årsredovisning).
+- The exit code is 0. Any other difference is still an error.
+
+The year-end closing notes below say what else the closing may need.
+
 ## Year-end closing notes
 
 The årsredovisning shows the books as they are. For each year shown, `cratchit_ar`
-also notes on stderr the closing entries that BAS asks for at the balance day and
-that the books lack. Notes do not change the exit code.
+also notes on stderr, as `Note: Closing: ...`, the closing entries that BAS asks for at
+the balance day and that the books lack. Notes do not change the exit code.
 
 - `Moms (2610-2659) nets to a receivable`: the VAT not yet due is a receivable;
   book it to 1650 Momsfordran.
@@ -449,10 +476,16 @@ that the books lack. Notes do not change the exit code.
   (2830-2839)`: BAS 1990 is money held for others, booked against a debt on 2830. It is
   not a suspense account.
 - `2999 OBS-konto is ...`: the suspense account must be zero at year end.
+- `No depreciation (7800-7899) in the year ending ...`: an account of accumulated
+  depreciation of anläggningstillgångar (10x9, 11x9, 12x9) has a balance, but the year
+  has no depreciation. Depreciation (78xx against 12x9) is a closing entry.
+- `2098 Vinst eller förlust från föregående år is ...`: last year's result is still on
+  2098, so the årsstämma's decision on it (e.g. to 2091 Balanserat resultat, or a
+  dividend) is not booked.
 
 For example:
 
-    Note: Moms (2610-2659) nets to a receivable 1331.46 at 2023-04-30; BAS: move it to 1650 Momsfordran
+    Note: Closing: Moms (2610-2659) nets to a receivable 1331.46 at 2023-04-30; BAS: move it to 1650 Momsfordran
 
 ## K2 check
 
@@ -478,6 +511,7 @@ BFNAR 2016:10, as in BFN:s vägledning Årsredovisning i mindre företag (K2), u
 - **Missing items** are required now. Each is `TBD [n]` in the årsredovisning, with the
   rule that requires it, what was found in the books (`Found`), what to provide and
   the heading it will have in the input template (not yet written by `cratchit_ar`).
+  - First, when the books are not closed: Bokslut (see Books not yet closed).
   - Always, as the SIE file cannot hold them: säte, Allmänt om verksamheten, Väsentliga
     händelser under räkenskapsåret, the Flerårsöversikt's two earlier years, the
     board's proposal, the datering and the underskrifter.

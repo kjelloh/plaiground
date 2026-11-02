@@ -301,10 +301,16 @@ std::string format_disposition(Disposition const& disposition, Check const& chec
   return out;
 }
 
-std::string format_front(sie::Document const& document, std::vector<sie::FiscalYear> const& years) {
+std::string format_front(sie::Document const& document, std::vector<sie::FiscalYear> const& years,
+                         Check const& check) {
   std::string out = std::format("{}\n{}\n", document.company_name, document.orgnr);
   out += std::format("Årsredovisning för räkenskapsåret {} - {}\n\n", format_iso_date(years.front().start),
                      format_iso_date(years.front().end));
+  if (auto const unclosed = check.marker("bokslut")) {
+    add_paragraph(out, std::format("PRELIMINÄR: bokslutet är inte gjort, årets resultat är inte bokfört ({}).",
+                                   *unclosed));
+    out += '\n';
+  }
   auto const currency = document.currency.empty() || document.currency == "SEK" ? std::string("svenska kronor (SEK)")
                                                                                  : document.currency;
   add_paragraph(out, std::format("Styrelsen avger följande årsredovisning. Redovisningsvalutan är {} och alla belopp "
@@ -393,7 +399,8 @@ std::string format_trace(Overview const& overview, Disposition const& dispositio
     return transaction.text.empty() ? named(transaction.account) : std::format("{} {}", transaction.account, transaction.text);
   };
   auto const voucher_text = [](sie::Voucher const& voucher) {
-    return std::format("{} {} {} {}", voucher.series, voucher.number, format_iso_date(voucher.date), voucher.text);
+    auto const id = voucher.number.empty() ? voucher.series : std::format("{} {}", voucher.series, voucher.number);
+    return std::format("{} {} {}", id, format_iso_date(voucher.date), voucher.text);
   };
   auto const kronor = [](Amount amount) { return format_kronor(to_kronor(amount)) + " kr"; };
 

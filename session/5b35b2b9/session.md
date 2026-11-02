@@ -204,6 +204,22 @@ Note: K2 check: 8 required items are missing (TBD in the årsredovisning), see t
 
 I would be nice if the app made a first sanity check to detect that the books are not closed?
 
+I asked Claude and think it came up with a good tweak to detect not-closed books and generating a preliminary ÅR that clearly is NOT a final one.
+
+Also, I now think what I am now doing is PERFECT for where AI shines.
+
+* AI is good at reading plain language and this interpret requirements from them.
+    * So in this case I point Claude at text that specifies Swedish rules for ÅR
+    * And Claude seems able to map these rules to seemingly appropriate code and UI?
+* And I chose to combine this with making the app produce feed back with references.
+    * These make me able to check the result of the app against Swedish documented rules.
+    * AND - it also enables Claude to read the app output and do the same
+    * In this way Claude will be able to converge by itself (round trip feed back)
+
+Claude now implemented the 'books not closed' detection and 'PRELIMINARY' ÅR generation and tweaked TBD and notes ok.
+
+* I like where this is going now!
+
 ## 202061101
 
 Now it is time to see if we can make a C++ app like cratchit actually map an SIE file to a proper and valid Swedish 'Årsredovisning' (ÅR)?

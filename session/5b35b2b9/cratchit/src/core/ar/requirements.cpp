@@ -36,6 +36,11 @@ bool varies_more_than_30_percent(Amount later, Amount earlier) {
 
 std::vector<Requirement> const& requirements() {
   static std::vector<Requirement> const all{
+      {"bokslut", "Bokslut: årets resultat bokfört",
+       "BFL 6 kap. 1 § (the bookkeeping is closed with the årsredovisning; BFNAR 2016:10 kap. 1 kommentar)",
+       "close the books: book the year's result to 2099 against 8999, and the other closing entries in the "
+       "closing notes",
+       ""},
       {"sate", "Säte", "BFNAR 2016:10 p. 5.2; ÅRL 2 kap. 5 §",
        "the municipality where the company has its registered office (säte)", "Säte"},
       {"verksamhet", "Allmänt om verksamheten", "BFNAR 2016:10 p. 4.9, 5.3, 5.6; ÅRL 6 kap. 1 §",
@@ -90,7 +95,8 @@ std::optional<std::string> Check::marker(std::string_view id) const {
   return found == missing.end() ? std::nullopt : std::optional(std::format("TBD [{}]", found->number));
 }
 
-Check check_requirements(Statement const& statement, Overview const& overview, Notes const& notes) {
+Check check_requirements(Statement const& statement, Overview const& overview, Notes const& notes,
+                         std::optional<Amount> unbooked_result) {
   Check check;
   std::vector<CheckItem> confirm;
   auto const missing = [&check](std::string_view id, std::string detail = {}) {
@@ -100,6 +106,10 @@ Check check_requirements(Statement const& statement, Overview const& overview, N
     confirm.push_back({&requirement(id), 0, std::move(detail)});
   };
 
+  if (unbooked_result) {
+    missing("bokslut", std::format("the year's result {} is not booked to 2099; the årsredovisning shows it as booked",
+                                   format_amount(-*unbooked_result)));
+  }
   missing("sate");
   missing("verksamhet");
   missing("handelser");

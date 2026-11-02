@@ -118,7 +118,7 @@ TEST(ArRequirements, TextsCarryTheMarkers) {
   document.company_name = "Bolaget AB";
   document.orgnr = "556000-0000";
   std::vector<cratchit::sie::FiscalYear> const years{{0, 2024y / May / 1, 2025y / April / 30}};
-  EXPECT_EQ(cratchit::ar::format_front(document, years),
+  EXPECT_EQ(cratchit::ar::format_front(document, years, check),
             "Bolaget AB\n556000-0000\nÅrsredovisning för räkenskapsåret 2024-05-01 - 2025-04-30\n\n"
             "Styrelsen avger följande årsredovisning. Redovisningsvalutan är svenska kronor (SEK)\n"
             "och alla belopp anges i hela kronor om inte annat anges.\n");

@@ -337,6 +337,21 @@ The original is in git history (commit 36ad56e). Deliberate changes:
       differ only by the 2026 post (same headings/posts/sums in order); placements pinned for 2024 and 2026;
       selection; argument parsing. 187 tests pass, no warnings. MANUAL.md: synopsis, --bas-year with the
       difference table, the mapping section.
+14c. Books not yet closed (user: run on the open 2025-26 books, `_Resources/_sie/sie_2025-26_all.se`, a cratchit
+    export; want kinder feedback instead of errors). Done.
+    - `unbooked_result(document)`: nothing on 8990-8999 in year 0, result accounts 3000-8989 sum to S != 0, and the
+      class 1-2 closing balances sum to exactly -S. Only then; any other imbalance stays an error.
+    - `with_closing_entry`: adds the Fortnox closing entry (2099 +S, 8999 -S) as voucher series "*" dated the
+      balance day, text "Ej bokfört: Årets resultat (simulerat av cratchit_ar)", and adjusts #UB 2099 / #RES 8999.
+      Everything downstream (BR, Förändringar i eget kapital, Resultatdisposition, notes, trace) then works.
+    - Output: one stderr note instead of the two errors; "PRELIMINÄR: bokslutet är inte gjort, årets resultat är
+      inte bokfört (TBD [1])" at the top; K2 check item [1] Bokslut (BFL 6 kap. 1 §, from the K2 vägledning's
+      kap. 1 kommentar); exit 0.
+    - Closing notes now prefixed "Closing:"; new: no depreciation (7800-7899) although a 10x9/11x9/12x9 account
+      has a balance; 2098 not zero (last year's result not moved on as the årsstämma decided).
+    - 2025-26 findings: result -24 989.49 not booked; no depreciation booked (1229 -278 114.96); 46 701.78 still on
+      2098; moms 0.10 receivable. The 23/24 file also gets the 2098 note (278 845.50, corrected after export).
+    - Closed years unchanged. 194 tests pass, no warnings. MANUAL.md: Books not yet closed, closing notes.
 15. POSTPONED (user, 2026-11-02: the user can edit the generated ÅR by hand, which covers the TBDs for
     now). When taken up: write the input template when the file does not exist, never overwrite it (user: fixed name,
     hard coded, no option; name still to agree). Generated from the requirements table, starting with the
