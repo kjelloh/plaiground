@@ -12,7 +12,36 @@ So the reason and ways to generate amounts and structure of the Swedish 'Årsrap
 
 For financial year 2023-2024 I found an AppleNumbers document where I have defined mapping from BAS accounts to ÅR rows.
 
-* I created [BAS_to_ÅR.csv](./cratchit/Resources/BAS_to_ÅR.csv)
+* I created [bas_to_ar_2024.csv](./cratchit/Resources/bas_to_ar_2024.csv)
+
+Now where did I get this mapping from?
+
+* In cratchit::zeroth I had code that parsed a text file and dumped those mappings.
+
+```c++
+    else if (ast[0] == "-ar_vs_bas") {
+      auto ar_entries = BAS::K2::AR::parse(BAS::K2::AR::ar_online::bas_2024_mapping_to_k2_ar_text);
+      std::cout << "\nÅR <--> BAS Accounts table {";
+      std::cout << "\n\tÅR\tBAS Range";
+      for (auto const& ar_entry : ar_entries) {
+        std::cout << "\n\t" << ar_entry.m_field_heading_text;
+        std::cout << "\t" << ar_entry.m_bas_accounts_text;
+      }
+      std::cout << "\n} // ÅR <--> BAS Accounts table";
+    }
+```
+
+* AHA! I found a comment that this data comes from [BAS-kontoplan och din årsredovisning](https://www.arsredovisning-online.se/bas-kontoplan/)
+
+Well then? We are in fact all set to ask Claude to help us put all this together?
+
+* Create a C++ cratchit APP by cloning code from cratchit app based on  [Cratchit session 60cae9fe CMakeLists.txt](../60cae9fe/cratchit/CMakeLists.txt)
+    * It shall re-use SIE file parser.
+    * It shall make a cratchit app that only takes and SIE File and produces an 'Årsrapport'.
+    * It shall use current [BAS-kontoplan och din årsredovisning](https://www.arsredovisning-online.se/bas-kontoplan/) and create bas_to_ar_2026.csv on the same form as [bas_to_ar_2024.csv](./cratchit/Resources/bas_to_ar_2024.csv)
+* The created cratchit app shall be able to take an SIE file as the input argument and print out a generated Swedish 'Årsrapport' formatted as plain text but mirroring the organisation of the historical 'årsrapporter', e.g., [Årsredovisning%20220501-230430.pdf](./_Resources/_årsredovisningar/Årsredovisning%20220501-230430.pdf)
+
+
 
 ## 202061101
 
