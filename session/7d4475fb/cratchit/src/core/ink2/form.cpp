@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <format>
+#include <optional>
 
 namespace cratchit::ink2 {
 
@@ -39,7 +40,17 @@ std::string join(std::vector<std::string> const& texts) {
 
 } // namespace
 
-Form build_form(std::vector<Line> const& lines, Balances const& balances) {
+SruCodes sru_codes(sie::Document const& document) {
+  SruCodes codes;
+  for (auto const& account : document.accounts) {
+    if (!account.sru.empty()) {
+      codes[account.number] = account.sru;
+    }
+  }
+  return codes;
+}
+
+Form build_form(std::vector<Line> const& lines, Balances const& balances, SruCodes const& sru) {
   Form form;
   std::vector<Field const*> fields;
   for (auto const& line : lines) {
@@ -48,8 +59,13 @@ Form build_form(std::vector<Line> const& lines, Balances const& balances) {
       form.fields[field.sru];
     }
   }
+  auto const field_of = [&](std::string_view code) -> Field const* {
+    auto const found = std::ranges::find(fields, code, &Field::sru);
+    return found == fields.end() ? nullptr : *found;
+  };
   Amount outside = 0;
   std::vector<std::string> outside_accounts;
+  std::vector<std::string> without_sru;
   for (auto const& [account, amount] : balances) {
     if (amount == 0) {
       continue;
@@ -59,39 +75,86 @@ Form build_form(std::vector<Line> const& lines, Balances const& balances) {
       outside_accounts.push_back(account);
       continue;
     }
-    std::vector<std::string> taken_by;
+    auto const code = sru.find(account);
+    std::optional<std::string> const books_sru =
+        code == sru.end() ? std::nullopt : std::optional<std::string>(code->second);
+    if (!books_sru) {
+      without_sru.push_back(account);
+    }
+    std::vector<Field const*> taken_by;
+    bool books_agree = false; // the #SRU names a field that takes it, or the other field of its plus/minus pair
     for (auto const* field : fields) {
-      bool const takes = std::ranges::any_of(field->accounts.groups, [&](AccountGroup const& group) {
+      bool takes = false;
+      bool conditional = false;
+      for (auto const& group : field->accounts.groups) {
         if (!group.contains(account)) {
-          return false;
+          continue;
         }
+        conditional = conditional || group.condition != Condition::always;
         Amount net = 0;
         for (auto const& [other, other_amount] : balances) {
           if (group.contains(other)) {
             net += other_amount;
           }
         }
-        return meets(group.condition, net);
-      });
+        takes = takes || meets(group.condition, net);
+      }
       if (takes) {
-        taken_by.push_back(field->sru);
-        auto& out = form.fields[field->sru];
-        out.used = true;
-        out.exact += field->sign * amount;
-        out.accounts[account] = amount;
+        taken_by.push_back(field);
+      }
+      if (books_sru && field->sru == *books_sru && (takes || conditional)) {
+        books_agree = true;
       }
     }
-    if (taken_by.empty()) {
-      form.errors.push_back(
-          std::format("Account {} has an amount {} but is in no field of the mapping", account, format_amount(amount)));
-    } else if (taken_by.size() > 1) {
-      form.errors.push_back(std::format("Account {} ({}) is in more than one field: {}", account, format_amount(amount),
-                                        join(taken_by)));
+    auto const sru_codes_of = [](std::vector<Field const*> const& taken) {
+      std::vector<std::string> codes;
+      for (auto const* field : taken) {
+        codes.push_back(field->sru);
+      }
+      return join(codes);
+    };
+    if (taken_by.size() > 1) {
+      auto const chosen = std::ranges::find_if(
+          taken_by, [&](Field const* field) { return books_sru && field->sru == *books_sru; });
+      if (chosen == taken_by.end()) {
+        form.errors.push_back(std::format("Account {} ({}) is in more than one field: {}{}", account,
+                                          format_amount(amount), sru_codes_of(taken_by),
+                                          books_sru ? std::format(", and its #SRU {} is none of them", *books_sru)
+                                                    : std::string(", and it has no #SRU to choose")));
+        taken_by.clear();
+      } else {
+        form.notes.push_back(std::format("#SRU: account {} is in {} in the mapping; its #SRU chooses {}", account,
+                                         sru_codes_of(taken_by), *books_sru));
+        taken_by = {*chosen};
+      }
+    } else if (taken_by.empty()) {
+      auto const* field = books_sru ? field_of(*books_sru) : nullptr;
+      if (field) {
+        form.notes.push_back(std::format("#SRU: account {} ({}) is in no field of the mapping; put in {} by its #SRU",
+                                         account, format_amount(amount), field->sru));
+        taken_by = {field};
+      } else {
+        form.errors.push_back(std::format("Account {} has an amount {} but is in no field of the mapping{}", account,
+                                          format_amount(amount),
+                                          books_sru ? std::format(", nor is its #SRU {}", *books_sru) : ""));
+      }
+    } else if (books_sru && !books_agree) {
+      form.notes.push_back(std::format("#SRU: account {} has #SRU {} but the mapping puts it in {} (used)", account,
+                                       *books_sru, taken_by.front()->sru));
+    }
+    for (auto const* field : taken_by) {
+      auto& out = form.fields[field->sru];
+      out.used = true;
+      out.exact += field->sign * amount;
+      out.accounts[account] = amount;
     }
   }
   if (!outside_accounts.empty()) {
     form.notes.push_back(std::format("Left out, as not BAS accounts of class 1-8: {} (together {})",
                                      join(outside_accounts), format_amount(outside)));
+  }
+  if (!sru.empty() && !without_sru.empty()) {
+    form.notes.push_back(std::format("#SRU: no #SRU in the books for {}; the mapping decides", join(without_sru)));
   }
   for (auto& [sru, field] : form.fields) {
     field.kronor = to_kronor(field.exact);

@@ -15,6 +15,7 @@
 #include <charconv>
 #include <filesystem>
 #include <format>
+#include <iterator>
 #include <set>
 #include <string>
 #include <vector>
@@ -43,7 +44,8 @@ Made make_form(std::filesystem::path const& sie) {
   auto const document = unbooked ? cratchit::with_closing_entry(parsed.document, *unbooked) : parsed.document;
   auto const lines = cratchit::ink2::parse_mapping(cratchit::ink2::mapping_text());
   EXPECT_TRUE(lines);
-  return {*document.year(0), cratchit::ink2::build_form(*lines, cratchit::year_balances(document, 0))};
+  return {*document.year(0), cratchit::ink2::build_form(*lines, cratchit::year_balances(document, 0),
+                                                       cratchit::ink2::sru_codes(document))};
 }
 
 // Where the made INK2R differs from the filed one, "<code>: filed <amount>, made <amount>", a field
@@ -89,6 +91,7 @@ struct Filed {
   char const* sru; // under sru_folder
   std::vector<std::string> differences;
   std::vector<std::string> errors;
+  std::vector<std::string> sru_notes; // the notes on the books' #SRU
 };
 
 void check(Filed const& filed) {
@@ -104,7 +107,14 @@ void check(Filed const& filed) {
   ASSERT_NE(ink2r, forms->end());
   EXPECT_EQ(differences(made, *ink2r), filed.differences);
   EXPECT_EQ(made.form.errors, filed.errors);
+  std::vector<std::string> sru_notes;
+  std::ranges::copy_if(made.form.notes, std::back_inserter(sru_notes),
+                       [](std::string const& note) { return note.starts_with("#SRU"); });
+  EXPECT_EQ(sru_notes, filed.sru_notes);
 }
+
+// Fortnox's #SRU agree with BAS's table but for these own accounts of the company
+std::string const own_accounts = "#SRU: no #SRU in the books for 1226, 1227; the mapping decides";
 
 } // namespace
 
@@ -122,7 +132,8 @@ TEST(Ink2Filed, Year2021_22) {
              "7365: filed 195, made 196",
              "7369: filed 0, made -428",
          },
-         {}});
+         {},
+         {own_accounts}});
 }
 
 TEST(Ink2Filed, Year2022_23) {
@@ -136,7 +147,8 @@ TEST(Ink2Filed, Year2022_23) {
              // Filed: 84192.50 rounded down so that the resultaträkning adds up in whole kronor
              "7550: filed 84192, made 84193",
          },
-         {"Account 8710 has an amount -195.50 but is in no field of the mapping"}});
+         {"Account 8710 has an amount -195.50 but is in no field of the mapping, nor is its #SRU 7418"},
+         {own_accounts}});
 }
 
 TEST(Ink2Filed, Year2023_24) {
@@ -147,9 +159,10 @@ TEST(Ink2Filed, Year2023_24) {
              // Filed: 25024.84 rounded down so that the balansräkning adds up in whole kronor
              "7369: filed 25024, made 25025",
          },
-         {}});
+         {},
+         {own_accounts}});
 }
 
 TEST(Ink2Filed, Year2024_25) {
-  check({"TheITfiedAB20250817_172409.se", "deklaration 2025/BLANKETTER.SRU", {}, {}});
+  check({"TheITfiedAB20250817_172409.se", "deklaration 2025/BLANKETTER.SRU", {}, {}, {own_accounts}});
 }

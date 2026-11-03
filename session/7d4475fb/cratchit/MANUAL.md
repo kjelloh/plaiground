@@ -54,6 +54,21 @@ built into the program), with the BAS accounts written as BAS writes them, e.g.
   7450 and 7550 are not both given.
 - Accounts outside 1000-8999 (e.g. class 9 for internal accounting) are left out, with a note.
 
+### The books' own SRU codes (#SRU)
+
+An SIE file may give each account the SRU code its bookkeeping program uses (`#SRU`). The
+mapping decides, and the `#SRU` codes are checked against it and fill in where it cannot:
+
+- An account the mapping puts in two fields (BAS lists 40xx-47xx under both 3.5 Råvaror och
+  förnödenheter and 3.6 Handelsvaror, by the nature of the goods) goes to the one its `#SRU`
+  names, with a note. When its `#SRU` names neither, or it has none, it is an error.
+- An account in no field of the mapping goes to the field its `#SRU` names, with a note. When
+  that is no field of INK2R (e.g. an older code), it is an error.
+- An account whose `#SRU` names another field than the mapping is a note; the mapping is used.
+  A `#SRU` naming the other field of a plus/minus pair agrees (e.g. 8999 with 7450 in a year
+  with a loss, as `#SRU` has one code per account).
+- One note lists the accounts with an amount that have no `#SRU`, when the file gives any.
+
 ## Books not closed
 
 When the books of fiscal year 0 are not closed (nothing on 8990-8999, and the balance
@@ -65,14 +80,15 @@ booked to 2099 against 8999: the head says PRELIMINÄR and a note says why.
 - An SIE file that cannot be read, or that is not a valid SIE 4 file: the errors, exit 1,
   and no form.
 - An account of class 1-8 with an amount that is in no field of the mapping, or in more than
-  one (BAS lists 40xx-47xx under both 3.5 and 3.6): the form is printed, with the error, and
-  the exit code is 1. The form then does not add up.
+  one (BAS lists 40xx-47xx under both 3.5 and 3.6), that its `#SRU` cannot place: the form is
+  printed without it, with the error, and the exit code is 1. The form then does not add up.
 
 ## Notes
 
 - `Closing:` closing entries BAS asks for at the balance day that the books lack (e.g. moms
   netting to a receivable, which BAS moves to 1650 Momsfordran); the form shows the books as
   they are.
+- `#SRU:` what the books' own SRU codes chose, placed or disagree with, and accounts without one.
 - `Rounding:` the sums of the fields differ from rounding each field on its own.
 - `Left out`: accounts that are not BAS accounts of class 1-8.
 

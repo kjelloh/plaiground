@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <iterator>
+
 using cratchit::Balances;
 using cratchit::ink2::build_form;
 using cratchit::ink2::Form;
@@ -22,6 +25,13 @@ std::string used(Form const& form) {
       out += std::format("{}{}={}", out.empty() ? "" : " ", sru, field.kronor);
     }
   }
+  return out;
+}
+
+// The notes on the books' #SRU
+std::vector<std::string> sru_notes(Form const& form) {
+  std::vector<std::string> out;
+  std::ranges::copy_if(form.notes, std::back_inserter(out), [](std::string const& note) { return note.starts_with("#SRU"); });
   return out;
 }
 
@@ -68,10 +78,54 @@ TEST(Ink2Form, ConditionByTheNetOfTheGroup) {
 TEST(Ink2Form, AccountInNoFieldOrTwo) {
   auto const form = build_form(mapping(), {{"8710", -19550}, {"4010", 100}, {"9021", 1000}, {"9099", -500}});
   EXPECT_EQ(form.errors, (std::vector<std::string>{
-                             "Account 4010 (1.00) is in more than one field: 7511, 7512",
+                             "Account 4010 (1.00) is in more than one field: 7511, 7512, and it has no #SRU to choose",
                              "Account 8710 has an amount -195.50 but is in no field of the mapping",
                          }));
   EXPECT_EQ(form.notes.front(), "Left out, as not BAS accounts of class 1-8: 9021, 9099 (together 5.00)");
+}
+
+TEST(Ink2Form, SruChoosesBetweenFields) {
+  auto const form = build_form(mapping(), {{"4010", 10000}}, {{"4010", "7512"}});
+  EXPECT_TRUE(form.errors.empty());
+  EXPECT_EQ(used(form), "7512=100");
+  EXPECT_EQ(sru_notes(form), (std::vector<std::string>{"#SRU: account 4010 is in 7511, 7512 in the mapping; its #SRU chooses 7512"}));
+  auto const other = build_form(mapping(), {{"4010", 10000}}, {{"4010", "7513"}});
+  EXPECT_EQ(other.errors,
+            (std::vector<std::string>{"Account 4010 (100.00) is in more than one field: 7511, 7512, and its #SRU 7513 is "
+                                      "none of them"}));
+  EXPECT_EQ(used(other), "");
+}
+
+TEST(Ink2Form, SruIsTheFallback) {
+  auto const form = build_form(mapping(), {{"8710", -19550}}, {{"8710", "7413"}});
+  EXPECT_TRUE(form.errors.empty());
+  EXPECT_EQ(used(form), "7413=196");
+  EXPECT_EQ(sru_notes(form), (std::vector<std::string>{"#SRU: account 8710 (-195.50) is in no field of the mapping; put in "
+                                                  "7413 by its #SRU"}));
+  // An SRU code not on INK2R, as Fortnox's 7418 for 8710
+  auto const old = build_form(mapping(), {{"8710", -19550}}, {{"8710", "7418"}});
+  EXPECT_EQ(old.errors, (std::vector<std::string>{"Account 8710 has an amount -195.50 but is in no field of the "
+                                                  "mapping, nor is its #SRU 7418"}));
+}
+
+TEST(Ink2Form, SruDisagreeingIsANote) {
+  auto const form = build_form(mapping(), {{"2650", 42800}, {"1930", -42800}}, {{"2650", "7261"}, {"1930", "7281"}});
+  EXPECT_EQ(used(form), "7281=-428 7369=-428");
+  EXPECT_EQ(sru_notes(form), (std::vector<std::string>{"#SRU: account 2650 has #SRU 7261 but the mapping puts it in 7369 (used)"}));
+}
+
+TEST(Ink2Form, SruOfTheOtherFieldOfAPairAgrees) {
+  // Fortnox gives 8999 the SRU code 7450 also in a year with a loss
+  auto const form = build_form(mapping(), {{"8999", -3000}, {"8810", -100}}, {{"8999", "7450"}, {"8810", "7525"}});
+  EXPECT_EQ(used(form), "7420=1 7550=30");
+  EXPECT_TRUE(sru_notes(form).empty());
+}
+
+TEST(Ink2Form, AccountsWithoutSru) {
+  auto const form = build_form(mapping(), {{"1226", 100}, {"1227", 100}, {"1229", -100}}, {{"1229", "7215"}});
+  EXPECT_EQ(sru_notes(form), (std::vector<std::string>{"#SRU: no #SRU in the books for 1226, 1227; the mapping decides"}));
+  // Books without any #SRU get no such note
+  EXPECT_TRUE(sru_notes(build_form(mapping(), {{"1226", 100}, {"1229", -100}})).empty());
 }
 
 TEST(Ink2Form, ZeroAccountsAreNotUsed) {

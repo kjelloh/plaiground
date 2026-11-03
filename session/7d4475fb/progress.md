@@ -86,10 +86,18 @@ Against the filed INK2R (each difference is in the test with its reason):
    a separate INK2 processing step, if a rule asks for it.
 3. The SIE files' `#SRU` (by Fortnox) agree with BAS's table for every account with an amount but:
    1226/1227 (own sub-accounts, no #SRU), 8710 -> 7418 (an older code, not on INK2R 2026) and
-   8999 -> 7450 always (#SRU has one code per account, so no plus/minus split). Open: how to use them.
+   8999 -> 7450 always (#SRU has one code per account, so no plus/minus split).
+   Decided: BAS's table decides; #SRU is a cross-check (note) and decides only where the table
+   cannot: an account in two fields (its #SRU chooses) or in none (its #SRU, when a field of INK2R).
 4. FLAG 40xx-47xx (3.5 Råvaror och förnödenheter / 3.6 Handelsvaror): BAS's table lists them under
    both; which one is by the nature of the goods (råvaror consumed vs goods sold), not by account
-   number. The company's `#SRU` states its choice (Fortnox: 4010 -> 7511). Open until books have such accounts.
+   number. Now the account's #SRU chooses (Fortnox: 4010 -> 7511); an error without one.
+   Still to confirm what SKV requires; these books have no such accounts.
+
+### 3b. #SRU cross-check and fallback - done (2026-11-03)
+
+`ink2::sru_codes(document)` and `build_form(lines, balances, sru)`. On the session's files: one note
+per year (1226, 1227 have no #SRU) and 2022-23's 8710 stays an error (its #SRU 7418 is not on INK2R).
 
 ## Next
 

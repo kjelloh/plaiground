@@ -63,6 +63,28 @@ It seems [Teknisk information om filöverföring](https://www.skatteverket.se/fo
 
 * Claude also found this page and downloaded specs for INK2R to verify rounding rules.
 
+So now Claude has created the cratchit_ink2 app that takes an SIE file and produces a printout of IN2R ok.
+
+* It seems it is the INK2R we actually can generate from SIE file (the books)?
+* The INK2S seems to be 'skattemässiga justeringar' that needs amounts kept outside the books and relates to how we have chosen to apply Tax Return rules?
+    * It seems we should be able to provide some TBD mechanism as in cratchit_ar to begin with.
+    * And form that design a mechanism to keep track of and provide amounts and data required to create a full INK2?
+
+I also now started to think about what checks teh app shall do to ensure a valid INK2 is created.
+
+* It seems we need to detect amounts on BAS account that does not map to anything on INK2.
+    * This should be an error?
+    * We should not have amounts in the books that does not show up on INK2?
+    * Can we verify this somehow?
+* It seems we need to validate the BAS to SRU in the SIE file against the mapping we have from bas_to_ink2 csv-file?
+    * The SIE file should take precedence?
+    * AS the SIE file seems to define the BAS account plan the user actually uses.
+    * Still, if the SIE file maps to and SRU thats is not on the INK2, this is an error?
+    * Also, we should detect mapping in SIE file that breaks with the bas_to_ink2 mapping?
+    * It seems the user may map added BAS accounts as long as the mapping dows not break with bas_to_ink2 official mapping.
+    * And the app is allowed to 'fill in the blanks' when teh usr SIE file uses accounts with missing SRU mapping (use bas_to_ink2 mapping)
+        * We should inform the user so they can update the account plan.
+
 ## 20261102
 
 It seems I am now ready to tackle the task of parsing an SIE file and create an SKV VAT Returns Report 'Inkomstdeklaration 2'?

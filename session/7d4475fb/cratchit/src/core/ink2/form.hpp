@@ -27,11 +27,24 @@ struct Form {
   std::vector<std::string> notes;
 };
 
+// The SRU codes the books give their accounts (SIE #SRU), by account
+using SruCodes = std::map<std::string, std::string>;
+
+SruCodes sru_codes(sie::Document const& document);
+
 // The fields of lines for the balances of a fiscal year. Each account with an amount goes to
 // the fields with a group of accounts that holds it, whose condition the group meets: "Om
 // netto +" (and the profit of "+ 899x") when the group of the account nets to a credit (or a
 // debit for 899x) or zero, "Om netto -" (the loss of "– 899x") when to the other side.
-Form build_form(std::vector<Line> const& lines, Balances const& balances);
+//
+// The books' #SRU codes (sru) are checked against it, and decide where the mapping does not:
+// - In two fields or more (BAS lists 40xx-47xx under both 3.5 and 3.6): the one of them its #SRU
+//   names, with a note; an error when it names none of them.
+// - In no field: the field its #SRU names, with a note; an error when it names no field of lines.
+// - In one field, and its #SRU names another: a note, the mapping decides. A #SRU naming the other
+//   field of a plus/minus pair the account is in (e.g. 8999 -> 7450 for a loss) agrees.
+// - A note lists the accounts with an amount that have no #SRU, when the books give any.
+Form build_form(std::vector<Line> const& lines, Balances const& balances, SruCodes const& sru = {});
 
 // The sums of the form in whole kronor, as the fields show them
 struct Sums {

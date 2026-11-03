@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
   for (auto const& note : cratchit::check_closing(balances, year->end)) {
     notes.push_back("Closing: " + note);
   }
-  auto const form = cratchit::ink2::build_form(*lines, balances);
+  auto const form = cratchit::ink2::build_form(*lines, balances, cratchit::ink2::sru_codes(document));
   notes.insert(notes.end(), form.notes.begin(), form.notes.end());
   cratchit::ink2::Header const header{document.company_name, document.orgnr, year->start, year->end,
                                       std::string(cratchit::ink2::mapping_file), unbooked.has_value()};
