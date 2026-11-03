@@ -89,9 +89,58 @@ I now pressed on.
 
 * Claude now made cratchit_ink2 generate FULL INK2 (first page, INK2r and INK2S)
 * It reads last year SRU-file or argument --previous-deficit to chain in accumulated (saved) deficit over years
-* It generates SRU-files to upload to SKV and read in for coming year INK2 generation.
 
 
+It does NOT YET generate SRU-files to upload to SKV and read in for coming year INK2 generation.
+
+Claude asked for the document SKV 269 that specifies the upload interface and file format for SRU files to SKV.
+
+* [Tekniskt beskrivning − filöverföring av Inkomstdeklaration 1 och 2 samt bilagor till Inkomstdeklaration 3 och 4](https://www.skatteverket.se/download/18.96cca41179bad4b1aac472/1708607388657/Använd%20ejSKV269_27_(2021P4).pdf)
+* I placed it in _Resources/_skv
+
+BUT! It seems the SRU file format for INK2 terminates Dec 2026?
+
+```text
+Tjänsten Inkomstdeklaration 2 avvecklas 29 december 2026
+Använd gärna någon av våra andra digitala tjänster för att deklarera. Det kan du göra redan nu.
+```
+
+* It is a bit confusing?
+* But it seems information on this webpage replaces SKV 269 [Teknisk information om filöverföring](https://www.skatteverket.se/foretag/inkomstdeklaration/forredovisningsbyraer/tekniskinformationomfiloverforing.4.13948c0e18e810bfa0cca8.html)
+
+    * It has a specific text about SKV 269 being replaced by this page?
+
+    ```text
+    Den här sidan ersätter broschyren Teknisk information om filöverföring (SKV 269)
+Broschyren Information om filöverföring av Inkomstdeklaration 1 och 2 samt bilagor och fritextbrev till Inkomstdeklaration 1, 2, 3 och 4 (SKV 269) har utgått från och med den 1 januari 2024. Informationen på den här sidan ersätter innehållet i broschyren.
+    ```
+
+    * AND: The SRU-file content seems to be defined ON THE WEB PAGE ITSELF?!!
+
+BUT - Claude picked this up by itself!
+
+```text
+Step 4b is done: the app now writes the return as SRU files, and each year's folder works as next year's "last year's return"
+...
+What a run writes (in the working directory, as cratchit_ar does)
+556782-8172_2024-05-01_2025-04-30/
+    BLANKETTER.SRU   blocks INK2, INK2R, INK2S (e.g. INK2R-2025P1)
+    INFO.SRU         #ORGNR, #NAMN, #POSTNR, #POSTORT
+    556782-8172_2024-05-01_2025-04-30.se   copy of the SIE file
+- Format is from SKV's page "Teknisk information om filöverföring", which replaced SKV 269 in 2024:
+  - ISO 8859-1, with the orgnr written 165567828172
+  - negative amounts with -
+  - block names and periods (P1 for a year ending 30 April, and so on) as in your filed returns
+...
+```
+
+So next step is for me to test the generated files with SKV 'file upload test site' [Filöverföringstjänst](https://www1.skatteverket.se/fv/fv_web/login.do)
+
+* NOTE: I need to be logged in!
+* It is unclear if this is the same web service as the live one?
+* But I can upload without saving to test files (so either way is ok?)
+
+But this is SLOPPY by SKV?!!
 
 ## 20261102
 

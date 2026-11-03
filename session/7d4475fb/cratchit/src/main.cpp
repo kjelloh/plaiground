@@ -7,6 +7,7 @@
 #include "core/ink2/output.hpp"
 #include "core/ink2/previous.hpp"
 #include "core/ink2/skv.hpp"
+#include "core/ink2/sru_output.hpp"
 #include "core/ink2/tax.hpp"
 #include "core/manual.hpp"
 #include "core/sie/check.hpp"
@@ -14,16 +15,36 @@
 #include "core/sie/file.hpp"
 #include "core/sru.hpp"
 
+#include <ctime>
+#include <filesystem>
 #include <format>
+#include <fstream>
+#include <iterator>
+#include <optional>
 #include <print>
 #include <string>
 #include <string_view>
 #include <vector>
 
+namespace {
+
+// The local date and time now, for the SRU files
+cratchit::ink2::Stamp now() {
+  auto const time = std::time(nullptr);
+  std::tm local{};
+  localtime_r(&time, &local);
+  cratchit::Date const date{std::chrono::year{local.tm_year + 1900}, std::chrono::month{static_cast<unsigned>(local.tm_mon + 1)},
+                            std::chrono::day{static_cast<unsigned>(local.tm_mday)}};
+  return {date, std::format("{:02}{:02}{:02}", local.tm_hour, local.tm_min, local.tm_sec)};
+}
+
+} // namespace
+
 // cratchit_ink2 <file.se> <last year's BLANKETTER.SRU or its folder>, or with
 // --previous-deficit <kronor> instead of last year's return: prints INK2R, INK2S and INK2 page 1
-// of the Swedish inkomstdeklaration 2 for fiscal year 0 of an SIE 4 file. Errors and notes go to
-// stderr. cratchit_ink2 --help or -h prints the manual.
+// of the Swedish inkomstdeklaration 2 for fiscal year 0 of an SIE 4 file, and writes them as SRU
+// files to the folder <orgnr>_<start>_<end> of the working directory with a copy of the SIE file.
+// Errors and notes go to stderr. cratchit_ink2 --help or -h prints the manual.
 int main(int argc, char* argv[]) {
   auto const arguments = cratchit::ink2::parse_arguments(std::vector<std::string_view>(argv + 1, argv + argc));
   if (!arguments) {
@@ -72,6 +93,7 @@ int main(int argc, char* argv[]) {
   }
   // Last year's return, for its underskott
   cratchit::ink2::Previous previous;
+  std::optional<std::filesystem::path> previous_file;
   if (arguments->previous) {
     auto const file = cratchit::ink2::sru_file_in(*arguments->previous);
     if (!file) {
@@ -89,6 +111,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     previous = *read;
+    previous_file = *file;
   } else {
     previous = cratchit::ink2::previous_deficit(*arguments->previous_deficit, "--previous-deficit");
   }
@@ -133,6 +156,47 @@ int main(int argc, char* argv[]) {
                                                       cratchit::ink2::fields_of(*skv, "INK2"), tax.ink2, {}));
   std::vector<std::string> errors = form.errors;
   errors.insert(errors.end(), tax.errors.begin(), tax.errors.end());
+  // The return as SRU files, for filing: not with errors, nor while the books are not closed
+  auto const paths = cratchit::ink2::output_paths(std::filesystem::current_path(), document.orgnr, *year);
+  if (!errors.empty() || unbooked) {
+    std::println("\nFolder {}\n  Did not write the SRU files: {} (earlier ones are left as they were)",
+                 paths.folder.string(),
+                 !errors.empty() ? "there are errors" : "the books are not closed (PRELIMINÄR)");
+  } else {
+    // INFO.SRU's postnummer and postort: this year's books, else last year's INFO.SRU
+    auto postal = cratchit::ink2::postal_of(document.address.postal);
+    if (postal) {
+      notes.push_back(std::format("INFO.SRU: postnummer and postort {} {} from the SIE file's #ADRESS", postal->first,
+                                  postal->second));
+    } else if (auto const info = previous_file ? cratchit::ink2::info_file_in(previous_file->parent_path())
+                                               : std::nullopt) {
+      std::ifstream in(*info, std::ios::binary);
+      std::string const text{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+      postal = cratchit::ink2::postal_of_info(text);
+      if (postal) {
+        notes.push_back(std::format("INFO.SRU: postnummer and postort {} {} from {}", postal->first, postal->second,
+                                    info->string()));
+      }
+    }
+    if (!postal) {
+      errors.push_back("INFO.SRU needs postnummer and postort: not in the SIE file's #ADRESS (e.g. \"17141 Solna\"), "
+                       "nor in last year's INFO.SRU");
+    } else {
+      cratchit::ink2::Filer const filer{document.orgnr, document.company_name, postal->first, postal->second};
+      auto const stamp = now();
+      auto const written = cratchit::ink2::write_outputs(
+          paths, cratchit::ink2::format_blanketter(*skv, filer, *year, form, tax, stamp),
+          cratchit::ink2::format_info(filer, stamp, "cratchit_ink2 " CRATCHIT_INK2_VERSION), arguments->sie);
+      if (!written) {
+        errors.push_back(written.error());
+      } else {
+        std::println("\nFolder {}", paths.folder.string());
+        std::println("  Wrote BLANKETTER.SRU and INFO.SRU (replaced on every run)");
+        std::println("  {} {}", written->sie_copied ? "Copied the SIE file as" : "Kept",
+                     paths.sie.filename().string() + (written->sie_copied ? "" : " (the same as the input)"));
+      }
+    }
+  }
   for (auto const& error : errors) {
     std::println(stderr, "Error: {}", error);
   }

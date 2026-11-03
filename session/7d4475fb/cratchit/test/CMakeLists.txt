@@ -14,6 +14,7 @@ add_executable(cratchit_tests
   test_ink2_output.cpp
   test_ink2_previous.cpp
   test_ink2_skv.cpp
+  test_ink2_sru_output.cpp
   test_ink2_tax.cpp
   test_log.cpp
   test_manual.cpp

@@ -135,15 +135,34 @@ per year (1226, 1227 have no #SRU) and 2022-23's 8710 stays an error (its #SRU 7
   - The latest 2024 filing: 4.14a 84193 filed, 176026 made.
 - 2025-26 (books not closed), from the filed 2025 return: 4.16 = 24989 + 252665 + 8 = 277662.
 
+### 4b. SRU files - done (2026-11-03)
+
+- `ink2/sru_output`: BLANKETTER.SRU (blocks INK2, INK2R, INK2S, e.g. `INK2R-2025P1`; #IDENTITET with
+  the orgnr as 16 + ten digits and the run's date and time; 7011/7012 and the fields in SKV's order)
+  and INFO.SRU (#ORGNR, #NAMN, #POSTNR, #POSTORT), ISO 8859-1, LF; written with a copy of the SIE
+  file to `<orgnr>_<start>_<end>/` in the working directory, as cratchit_ar does.
+- Format from SKV's page "Teknisk information om filöverföring" (it replaces SKV 269, discontinued
+  2024-01-01): ISO 8859-1, records start with #, LF ends them, negative amounts with '-', amounts
+  signed relative to the form's printed sign (as the app shows them), orgnr SSÅÅMMDDNNNK (16 for
+  legal persons). The block name and period (P1-P4) follow the filed returns and SKV's rule for 7012.
+- Not written with errors, nor while the books are not closed (the files are for filing).
+- Postnummer/postort: SIE #ADRESS, else last year's INFO.SRU next to its BLANKETTER.SRU.
+- Tests: exact BLANKETTER.SRU and INFO.SRU texts, writing, and the app chaining its own returns:
+  from the filed 2022 return, 4.16 is 176032 (2022-23), 205969 (2023-24), 251466 (2024-25).
+- Run by hand: 2024-25 with the corrected 2024 return writes the folder; 2025-26 with that folder
+  reads 251460 and writes nothing (books not closed), and its #IB matches the written INK2R.
+
 ## Open
 
-- SKV 269 (Teknisk beskrivning SRU): Numeriskt_A for INK2R balance fields: may they be negative
-  (7365 -896 was filed)? Needed for 4b.
+- Test the written files with SKV's test function in Filöverföring (the user; Claude cannot).
+- SKV's field tables used are for periods from 2026P4; a fiscal year ending 2026-04-30 is 2026P1,
+  which the previous version of the tables covers. Check whether they differ for INK2/INK2R/INK2S.
+- Postal address: the SIE file's #ADRESS wins over last year's INFO.SRU. The 2024-25 SIE file says
+  17668 Järfälla, the 2024 INFO.SRU and the 2025-26 SIE file 17141 Solna.
 - 4.3b (nedskrivning av finansiella tillgångar) left out: deductible or not depends on the asset.
 - The rounding mode SKV wants, if any (now half away from zero).
 
 ## Next
 
-4b. Write `<orgnr>_<start>_<end>/` with BLANKETTER.SRU, INFO.SRU (address from last year's INFO.SRU
-    or #ADRESS) and the SIE copy, following SKV 269; test with SKV's test service before filing.
-5. Tracing amounts back to accounts and vouchers.
+5. Tracing amounts back to accounts and vouchers (`--trace`), and a report file like cratchit_ar's
+   with the notes, if wanted.

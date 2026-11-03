@@ -3,7 +3,8 @@
 Makes the Swedish inkomstdeklaration 2 for aktiebolag from a company's books read from an
 SIE 4 file: INK2R, the räkenskapsschema (balance sheet and income statement), INK2S, the
 skattemässiga justeringar, and INK2 page 1. Last year's return gives the underskott
-(deficit) to carry over.
+(deficit) to carry over. The return is printed, and written as the SRU files SKV's
+e-service Filöverföring takes, which are also next year's "last year's return".
 
 ## Synopsis
 
@@ -37,6 +38,39 @@ both:
 
 If SKV's decision changed last year's underskott, give that amount with
 `--previous-deficit`, or a corrected `BLANKETTER.SRU`.
+
+## The folder it writes
+
+    cratchit_ink2 _Resources/_sie/TheITfiedAB20250817_172409.se "_Resources/_ink2/deklaration 2024"
+
+writes, in the working directory, a folder named after the company's orgnr and the fiscal
+year:
+
+    556782-8172_2024-05-01_2025-04-30/
+        BLANKETTER.SRU
+        INFO.SRU
+        556782-8172_2024-05-01_2025-04-30.se
+
+- `BLANKETTER.SRU`: the blocks INK2, INK2R and INK2S (e.g. `INK2R-2025P1`: the form, the
+  year the fiscal year ends and its period, P1 for an end by 30 April, P2 by 30 June, P3 by
+  31 August, P4 by 31 December). Each has `#IDENTITET` (the orgnr as SRU writes it, 16 and
+  its ten digits, and the date and time of the run), `#NAMN`, the fiscal year (7011, 7012)
+  and the fields given, in SKV's order. Amounts in whole kronor, negative with `-`.
+- `INFO.SRU`: who files (`#ORGNR`, `#NAMN`, `#POSTNR`, `#POSTORT`). Postnummer and postort
+  are taken from the SIE file's `#ADRESS` (e.g. `"17141 Solna"`), else from last year's
+  `INFO.SRU` (next to its `BLANKETTER.SRU`), with a note saying which.
+- The `.se` file is a copy of the SIE file the return is made from.
+
+Both SRU files are ISO 8859-1, as SKV wants, and replaced on every run. The SIE copy is
+written when it is missing or differs. The terminal gets a short summary after the forms.
+
+The SRU files are for filing, so they are **not** written when there are errors, nor when
+the books are not closed (the forms are then a preview); earlier ones are left as they
+were. Test the files with the test function of SKV's Filöverföring before filing them.
+
+Next year, give this folder as last year's return:
+
+    cratchit_ink2 <next year's file.se> 556782-8172_2024-05-01_2025-04-30
 
 ## What it prints
 
@@ -139,6 +173,9 @@ if booked to 2099 against 8999: the head says PRELIMINÄR and a note says why.
   and no forms.
 - Last year's return that cannot be read, has no INK2S, is of another company, or is not of
   the fiscal year before: the error, exit 1, and no forms.
+- No postnummer and postort for INFO.SRU (neither in the SIE file's `#ADRESS` nor in last
+  year's INFO.SRU), a name with a character not in ISO 8859-1, or a file that cannot be
+  written: the error, exit 1. The forms are printed; the SRU files are not written.
 - An account of class 1-8 with an amount that is in no field of the mapping, or in more than
   one (BAS lists 40xx-47xx under both 3.5 and 3.6), that its `#SRU` cannot place: the forms
   are printed without it, with the error, and the exit code is 1. They then do not add up.
@@ -154,12 +191,12 @@ if booked to 2099 against 8999: the head says PRELIMINÄR and a note says why.
   filed INK2R.
 - `INK2S:` the marks taken from last year (or that there are none), a negative INK2S field,
   and periodiseringsfonder in the books (4.6a is not computed).
+- `INFO.SRU:` where postnummer and postort are from.
 - `Rounding:` the sums of the fields differ from rounding each field on its own.
 - `Left out`: accounts that are not BAS accounts of class 1-8.
 
 ## Not yet included
 
-- SRU files to send to SKV (`BLANKETTER.SRU`, `INFO.SRU`).
 - INK2S fields that need more than the books' accounts: 4.3b, 4.4, 4.5a-b, 4.6-4.13,
   4.14b-c, 4.17-4.22 (e.g. 4.6a schablonintäkt on periodiseringsfonder, 4.21
   pensionskostnader, 4.20 lån från aktieägare). INK2 page 1 but 1.1 and 1.2.
