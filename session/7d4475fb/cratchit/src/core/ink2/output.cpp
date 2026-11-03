@@ -1,0 +1,126 @@
+#include "core/ink2/output.hpp"
+
+#include <algorithm>
+#include <format>
+
+namespace cratchit::ink2 {
+
+namespace {
+
+constexpr std::size_t number_width = 6;
+constexpr std::size_t text_width = 58;
+constexpr std::size_t amount_width = 12;
+
+// The number of code points of UTF-8 text, as wide as it shows in a terminal for the texts of the form
+std::size_t width_of(std::string_view text) {
+  return static_cast<std::size_t>(
+      std::ranges::count_if(text, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
+}
+
+std::string padded(std::string_view text, std::size_t width) {
+  auto const shown = width_of(text);
+  return std::string(text) + std::string(shown < width ? width - shown : 0, ' ');
+}
+
+// Text in lines of at most width, broken at spaces (a longer word gets a line of its own)
+std::vector<std::string> wrapped(std::string_view text, std::size_t width) {
+  std::vector<std::string> lines;
+  std::string line;
+  std::size_t position = 0;
+  while (position < text.size()) {
+    auto const start = text.find_first_not_of(' ', position);
+    if (start == std::string_view::npos) {
+      break;
+    }
+    auto end = text.find(' ', start);
+    if (end == std::string_view::npos) {
+      end = text.size();
+    }
+    auto const word = text.substr(start, end - start);
+    if (!line.empty() && width_of(line) + 1 + width_of(word) > width) {
+      lines.push_back(std::move(line));
+      line.clear();
+    }
+    line += (line.empty() ? "" : " ") + std::string(word);
+    position = end;
+  }
+  if (!line.empty() || lines.empty()) {
+    lines.push_back(std::move(line));
+  }
+  return lines;
+}
+
+std::string compact_date(Date date) {
+  return std::format("{:04}{:02}{:02}", static_cast<int>(date.year()), static_cast<unsigned>(date.month()),
+                     static_cast<unsigned>(date.day()));
+}
+
+std::string amount_of(FieldAmount const& field) {
+  return field.used ? format_kronor(field.kronor) : "";
+}
+
+void append_sum(std::string& out, std::string_view text, Kronor kronor) {
+  out += std::format("  {}{:>{}}\n", padded(text, number_width + text_width + 10), format_kronor(kronor), amount_width);
+}
+
+} // namespace
+
+std::string format_kronor(Kronor kronor) {
+  auto const digits = std::to_string(kronor < 0 ? -kronor : kronor);
+  std::string out;
+  for (std::size_t index = 0; index < digits.size(); ++index) {
+    if (index != 0 && (digits.size() - index) % 3 == 0) {
+      out += ' ';
+    }
+    out += digits[index];
+  }
+  return (kronor < 0 ? "-" : "") + out;
+}
+
+std::string format_form(Header const& header, std::vector<Line> const& lines, Form const& form) {
+  std::string out;
+  out += "INK2R Räkenskapsschema\n";
+  out += std::format("{}, {}\n", header.company, header.orgnr);
+  out += std::format("Räkenskapsår {} - {}   7011 {}   7012 {}\n", format_iso_date(header.start),
+                     format_iso_date(header.end), compact_date(header.start), compact_date(header.end));
+  out += std::format("Mapping {}\n", header.mapping);
+  if (header.preliminary) {
+    out += "PRELIMINÄR: the books are not closed; the year's result is shown as if booked\n";
+  }
+  bool after_row = true;
+  for (auto const& line : lines) {
+    if (line.kind == Line::Kind::heading) {
+      out += std::format("{}{}\n", after_row ? "\n" : "", line.text);
+      after_row = false;
+      continue;
+    }
+    after_row = true;
+    auto const texts = wrapped(line.text, text_width);
+    auto const count = std::max(texts.size(), line.fields.size());
+    bool const paired = line.fields.size() > 1;
+    for (std::size_t index = 0; index < count; ++index) {
+      auto const number = index == 0 ? line.ink2 : std::string();
+      auto const text = index < texts.size() ? texts[index] : std::string();
+      std::string field;
+      if (index < line.fields.size()) {
+        auto const& sru = line.fields[index].sru;
+        auto const marker = !paired ? "  " : index == 0 ? " +" : " -";
+        field = std::format("  {}{}  {:>{}}", sru, marker, amount_of(form.fields.at(sru)), amount_width);
+      }
+      auto row = std::format("  {}{}{}", padded(number, number_width), padded(text, text_width), field);
+      while (row.ends_with(' ')) {
+        row.pop_back();
+      }
+      out += row + '\n';
+    }
+  }
+  auto const sums = sums_of(form);
+  out += "\nSummor av fälten, i hela kronor\n";
+  append_sum(out, "Tillgångar (72xx)", sums.assets);
+  append_sum(out, "Eget kapital och skulder (73xx)", sums.equity_and_debt);
+  append_sum(out, "Resultaträkningens fält (74xx - 75xx, utom 3.26-3.27)", sums.result);
+  append_sum(out, "Årets resultat (3.26 - 3.27)", sums.year_result);
+  return out;
+}
+
+} // namespace cratchit::ink2

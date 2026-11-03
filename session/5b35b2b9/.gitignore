@@ -1,1 +1,5 @@
+# Ignore external (local only) resources
 _Resources
+
+# Ignore cmake generated files
+build/
