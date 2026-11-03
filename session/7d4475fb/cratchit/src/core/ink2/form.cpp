@@ -52,10 +52,11 @@ SruCodes sru_codes(sie::Document const& document) {
 
 Form build_form(std::vector<Line> const& lines, Balances const& balances, SruCodes const& sru) {
   Form form;
-  std::vector<Field const*> fields;
+  std::vector<Field const*> fields;      // INK2R: each account in exactly one
+  std::vector<Field const*> ink2s_fields; // INK2S: the accounts in them, besides their INK2R field
   for (auto const& line : lines) {
     for (auto const& field : line.fields) {
-      fields.push_back(&field);
+      (form_of(field.sru) == "INK2S" ? ink2s_fields : fields).push_back(&field);
       form.fields[field.sru];
     }
   }
@@ -147,6 +148,16 @@ Form build_form(std::vector<Line> const& lines, Balances const& balances, SruCod
       out.used = true;
       out.exact += field->sign * amount;
       out.accounts[account] = amount;
+    }
+  }
+  for (auto const* field : ink2s_fields) {
+    for (auto const& [account, amount] : balances) {
+      if (amount != 0 && is_bas_account(account) && field->accounts.contains(account)) {
+        auto& out = form.fields[field->sru];
+        out.used = true;
+        out.exact += field->sign * amount;
+        out.accounts[account] = amount;
+      }
     }
   }
   if (!outside_accounts.empty()) {

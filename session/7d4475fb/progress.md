@@ -11,7 +11,8 @@ cd cratchit
 conan install . --build=missing -s build_type=Debug -s compiler.cppstd=23
 cmake --preset conan-debug && cmake --build --preset conan-debug
 ctest --preset conan-debug
-build/Debug/cratchit_ink2 ../_Resources/_sie/<file>.se      # INK2R to stdout, errors and notes to stderr
+build/Debug/cratchit_ink2 ../_Resources/_sie/<file>.se "../_Resources/_ink2/deklaration <last year>"
+                                    # INK2R, INK2S, INK2 to stdout, errors and notes to stderr
 ```
 
 `_Resources/` is git ignored; the tests that compare with the filed INK2 skip when its files are missing.
@@ -24,8 +25,9 @@ build/Debug/cratchit_ink2 ../_Resources/_sie/<file>.se      # INK2R to stdout, e
   no data files the user has not agreed to; `progress.md` at the session root.
 - `cratchit/MANUAL.md` (English) is the user manual, built in and printed by `--help` / `-h`.
   Every step that changes what the user sees updates MANUAL.md in the same step.
-- Of the three 2024 filings, the latest (`The ITfied AB 556782-8172`, 2025-08-15) is the reference.
-  Their INK2R are the same; they differ in INK2S 7763 and so in 7770 / INK2 7114.
+- Of the three 2024 filings, the corrected one (`Korrigerad 20241130`) is the reference (changed from
+  the latest after step 3; see step 4a). Their INK2R are the same; they differ in INK2S 7763 and so
+  in 7770 / INK2 7114.
 - Start with INK2R only (steps 1-3); INK2S and INK2 page 1 once we see what is missing.
 
 ## Pairs to verify against
@@ -34,7 +36,7 @@ build/Debug/cratchit_ink2 ../_Resources/_sie/<file>.se      # INK2R to stdout, e
 |---|---|---|
 | 2021-05-01 - 2022-04-30 | TheITfiedAB20221124_192100.se | deklaration 2022/blanketter.sru |
 | 2022-05-01 - 2023-04-30 | TheITfiedAB20230503_152345.se | deklaration 2023/blanketter.sru |
-| 2023-05-01 - 2024-04-30 | TheITfiedAB20240727_213539.se | deklaration 2024/The ITfied AB 556782-8172/blanketter.sru |
+| 2023-05-01 - 2024-04-30 | TheITfiedAB20240727_213539.se | deklaration 2024/Korrigerad 20241130/blanketter.sru |
 | 2024-05-01 - 2025-04-30 | TheITfiedAB20250817_172409.se | deklaration 2025/BLANKETTER.SRU |
 | 2025-05-01 - 2026-04-30 | sie_2025-26_all.se (books not closed) | to be made |
 
@@ -99,9 +101,49 @@ Against the filed INK2R (each difference is in the test with its reason):
 `ink2::sru_codes(document)` and `build_form(lines, balances, sru)`. On the session's files: one note
 per year (1226, 1227 have no #SRU) and 2022-23's 8710 stays an error (its #SRU 7418 is not on INK2R).
 
+## Agreed with the user (2026-11-03, before step 4)
+
+- `bas_2023_to_ink2_2026.csv` holds only mappings from BAS accounts to fields, for all forms (INK2R
+  and INK2S). How fields depend on each other (4.1 = 3.26, 4.15/4.16 sums, 1.1/1.2 = 4.15/4.16) is
+  hard coded in the app.
+- `Resources/skv_ink2_2026P4.csv` (agreed): SKV's fields of INK2, INK2R and INK2S, made from SKV's field
+  tables `INK2*_SKV2002-34-01-26-04.xls` (in SKV's zip "Ändringar från och med 2026P4", Teknisk
+  information om filöverföring). Columns form;sru;ink2;text;sign;type (type, amount or mark, added
+  for the yes/no fields). Made by a script kept outside the repo (xlrd); rerun for a new SKV version.
+- The app always needs last year's return, told from the SIE file by its ending (.sru, or a folder
+  of BLANKETTER.SRU), or instead `--previous-deficit <kronor>` (last year's 4.16), never both.
+  So the app chains over the years once it writes SRU files (step 4b), starting from the filed ones.
+- 4b: write a folder `<orgnr>_<start>_<end>/` with BLANKETTER.SRU, INFO.SRU and a copy of the SIE
+  file, mirroring cratchit_ar.
+- The 2024 deficit: the higher one (corrected filing, 205963). The user remembers forgetting to carry
+  a deficit somewhere and adding it. The arithmetic agrees: 2022-23's 4.16 is 176026, which the
+  corrected 2024 filing carries; the latest (2025-08-15) carries 84193 (2022-23's loss only).
+  The user may want to check what SKV registered for 2024.
+
+### 4a. INK2S and INK2 page 1 to the terminal - done (2026-11-03)
+
+- INK2S rows in the BAS CSV (block at the end, marked as cratchit's): 4.3a `89xx (exkl. 899x)`,
+  4.3c `5982, 6072, 6342, 6392, 6982, 6992, 7622, 7623, 7632, 8423`, 4.5c `8254, 8314`, from the
+  accounts the BAS e-book (BAS 2025) names ej avdragsgill / skattefri. For the user to review.
+  (The e-book's own INK2 table covers INK2R only; there is no BAS table for INK2S.)
+- `ink2/skv` (SKV's fields), `ink2/previous` (last year's return: orgnr, fiscal year, 7770, marks,
+  opening balance check), `ink2/tax` (the rules), new arguments, output of INK2S and INK2 page 1.
+- Against the filed returns, each year chained from the year before (in `test_ink2_filed.cpp`):
+  - 2023-24 against the corrected filing: INK2S and INK2 the same.
+  - 2022-23: 4.16 176032 made, 176026 filed: 3.27 rounding (84193/84192) and 8314 (5) not filed.
+  - 2024-25: 4.16 251460 made, 252665 filed: 6992 (1217, ej avdragsgill) and 8314 (12) not filed.
+  - The latest 2024 filing: 4.14a 84193 filed, 176026 made.
+- 2025-26 (books not closed), from the filed 2025 return: 4.16 = 24989 + 252665 + 8 = 277662.
+
+## Open
+
+- SKV 269 (Teknisk beskrivning SRU): Numeriskt_A for INK2R balance fields: may they be negative
+  (7365 -896 was filed)? Needed for 4b.
+- 4.3b (nedskrivning av finansiella tillgångar) left out: deductible or not depends on the asset.
+- The rounding mode SKV wants, if any (now half away from zero).
+
 ## Next
 
-4. INK2S and INK2 page 1: what can be made from the books (7650/7750 from 3.26/3.27, 7651
-   non-deductible costs, ...) and what needs input. E.g. 7763: 2023's equals 2022's 7770 (92519)
-   and 2025's equals 7770 of the corrected 2024 filing (205963), not of the latest one (114130).
-5. SRU files for SKV, and tracing amounts back to accounts and vouchers.
+4b. Write `<orgnr>_<start>_<end>/` with BLANKETTER.SRU, INFO.SRU (address from last year's INFO.SRU
+    or #ADRESS) and the SIE copy, following SKV 269; test with SKV's test service before filing.
+5. Tracing amounts back to accounts and vouchers.

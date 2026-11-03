@@ -5,10 +5,14 @@
 #include "core/ink2/form.hpp"
 #include "core/ink2/mapping.hpp"
 #include "core/ink2/output.hpp"
+#include "core/ink2/previous.hpp"
+#include "core/ink2/skv.hpp"
+#include "core/ink2/tax.hpp"
 #include "core/manual.hpp"
 #include "core/sie/check.hpp"
 #include "core/sie/document.hpp"
 #include "core/sie/file.hpp"
+#include "core/sru.hpp"
 
 #include <format>
 #include <print>
@@ -16,9 +20,10 @@
 #include <string_view>
 #include <vector>
 
-// cratchit_ink2 <file.se>: prints INK2R, the räkenskapsschema of the Swedish
-// inkomstdeklaration 2, of fiscal year 0 of an SIE 4 file, by the BAS 2023 table to INK2.
-// Errors and notes go to stderr. cratchit_ink2 --help or -h prints the manual.
+// cratchit_ink2 <file.se> <last year's BLANKETTER.SRU or its folder>, or with
+// --previous-deficit <kronor> instead of last year's return: prints INK2R, INK2S and INK2 page 1
+// of the Swedish inkomstdeklaration 2 for fiscal year 0 of an SIE 4 file. Errors and notes go to
+// stderr. cratchit_ink2 --help or -h prints the manual.
 int main(int argc, char* argv[]) {
   auto const arguments = cratchit::ink2::parse_arguments(std::vector<std::string_view>(argv + 1, argv + argc));
   if (!arguments) {
@@ -29,7 +34,7 @@ int main(int argc, char* argv[]) {
     std::print("{}", cratchit::manual_text());
     return 0;
   }
-  auto const lexed = cratchit::sie::lex_file(arguments->file);
+  auto const lexed = cratchit::sie::lex_file(arguments->sie);
   if (!lexed) {
     std::println(stderr, "Error: {}", lexed.error());
     return 1;
@@ -60,6 +65,38 @@ int main(int argc, char* argv[]) {
     std::println(stderr, "Error: {}: {}", cratchit::ink2::mapping_file, lines.error());
     return 1;
   }
+  auto const skv = cratchit::ink2::parse_skv_fields(cratchit::ink2::skv_fields_text());
+  if (!skv) {
+    std::println(stderr, "Error: {}: {}", cratchit::ink2::skv_fields_file, skv.error());
+    return 1;
+  }
+  // Last year's return, for its underskott
+  cratchit::ink2::Previous previous;
+  if (arguments->previous) {
+    auto const file = cratchit::ink2::sru_file_in(*arguments->previous);
+    if (!file) {
+      std::println(stderr, "Error: {}", file.error());
+      return 1;
+    }
+    auto const forms = cratchit::read_sru(*file);
+    if (!forms) {
+      std::println(stderr, "Error: {}", forms.error());
+      return 1;
+    }
+    auto const read = cratchit::ink2::previous_from_sru(*forms, file->string(), parsed.document.orgnr, year->start);
+    if (!read) {
+      std::println(stderr, "Error: {}", read.error());
+      return 1;
+    }
+    previous = *read;
+  } else {
+    previous = cratchit::ink2::previous_deficit(*arguments->previous_deficit, "--previous-deficit");
+  }
+  notes.push_back(arguments->previous ? std::format("INK2S 4.14a: last year's underskott is {} kr (4.16 of {})",
+                                              previous.deficit, previous.source)
+                                : std::format("INK2S 4.14a: last year's underskott is {} kr ({}; typed, not checked "
+                                              "against last year's return)",
+                                              previous.deficit, previous.source));
   // Books not yet closed: show the form as if the year's result were booked, and say so
   auto const unbooked = cratchit::unbooked_result(parsed.document);
   auto const document = unbooked ? cratchit::with_closing_entry(parsed.document, *unbooked) : parsed.document;
@@ -74,16 +111,33 @@ int main(int argc, char* argv[]) {
   for (auto const& note : cratchit::check_closing(balances, year->end)) {
     notes.push_back("Closing: " + note);
   }
-  auto const form = cratchit::ink2::build_form(*lines, balances, cratchit::ink2::sru_codes(document));
+  auto const codes = cratchit::ink2::sru_codes(document);
+  auto const form = cratchit::ink2::build_form(*lines, balances, codes);
   notes.insert(notes.end(), form.notes.begin(), form.notes.end());
+  // This year's opening balances against last year's filed balance sheet
+  if (previous.ink2r) {
+    auto const opening = cratchit::ink2::build_form(*lines, cratchit::ink2::opening_balances(document), codes);
+    for (auto const& note : cratchit::ink2::check_opening(opening, *previous.ink2r)) {
+      notes.push_back(note);
+    }
+  }
+  auto const tax = cratchit::ink2::build_tax_return(*skv, form, previous);
+  notes.insert(notes.end(), tax.notes.begin(), tax.notes.end());
   cratchit::ink2::Header const header{document.company_name, document.orgnr, year->start, year->end,
                                       std::string(cratchit::ink2::mapping_file), unbooked.has_value()};
   std::print("{}", cratchit::ink2::format_form(header, *lines, form));
-  for (auto const& error : form.errors) {
+  std::print("\n{}", cratchit::ink2::format_skv_form("INK2S Skattemässiga justeringar",
+                                                      cratchit::ink2::fields_of(*skv, "INK2S"), tax.ink2s,
+                                                      tax.ink2s_marks));
+  std::print("\n{}", cratchit::ink2::format_skv_form("INK2 Inkomstdeklaration 2, sidan 1",
+                                                      cratchit::ink2::fields_of(*skv, "INK2"), tax.ink2, {}));
+  std::vector<std::string> errors = form.errors;
+  errors.insert(errors.end(), tax.errors.begin(), tax.errors.end());
+  for (auto const& error : errors) {
     std::println(stderr, "Error: {}", error);
   }
   for (auto const& note : notes) {
     std::println(stderr, "Note: {}", note);
   }
-  return form.errors.empty() ? 0 : 1;
+  return errors.empty() ? 0 : 1;
 }

@@ -10,7 +10,7 @@
 
 namespace cratchit::ink2 {
 
-// The amount of a field of INK2R
+// The amount of a field of the mapping
 struct FieldAmount {
   bool used = false; // some account with an amount is in it; then shown even when 0
   Amount exact = 0;  // in öre, as the field shows it (see Field::sign)
@@ -18,7 +18,7 @@ struct FieldAmount {
   Balances accounts; // the accounts in it with their amounts as booked
 };
 
-// INK2R (räkenskapsschema) of one fiscal year
+// INK2R (räkenskapsschema) of one fiscal year, and the INK2S fields that come from accounts
 struct Form {
   std::map<std::string, FieldAmount> fields; // by SRU code, every field of the mapping
   // Accounts of class 1-8 with an amount that go to no field, or to more than one
@@ -44,6 +44,9 @@ SruCodes sru_codes(sie::Document const& document);
 // - In one field, and its #SRU names another: a note, the mapping decides. A #SRU naming the other
 //   field of a plus/minus pair the account is in (e.g. 8999 -> 7450 for a loss) agrees.
 // - A note lists the accounts with an amount that have no #SRU, when the books give any.
+//
+// All of this is for INK2R. An INK2S field of the mapping (e.g. 4.3c, costs not to deduct)
+// adds up the accounts it holds, which are also in their INK2R field.
 Form build_form(std::vector<Line> const& lines, Balances const& balances, SruCodes const& sru = {});
 
 // The sums of the form in whole kronor, as the fields show them

@@ -18,6 +18,9 @@ std::optional<Date> parse_iso_date(std::string_view text);
 // YYYY-MM-DD
 std::string format_iso_date(Date date);
 
+// YYYYMMDD, as in SIE and SRU
+std::string format_compact_date(Date date);
+
 // The day after date
 Date next_day(Date date);
 

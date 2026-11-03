@@ -9,7 +9,7 @@ TEST(Manual, StartsWithTheProgramName) {
 }
 
 TEST(Manual, NamesEveryOption) {
-  for (std::string_view const option : {"--help", "-h"}) {
+  for (std::string_view const option : {"--previous-deficit", "--help", "-h"}) {
     EXPECT_NE(cratchit::manual_text().find(option), std::string_view::npos) << option;
   }
 }

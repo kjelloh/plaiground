@@ -85,6 +85,14 @@ I also now started to think about what checks teh app shall do to ensure a valid
     * And the app is allowed to 'fill in the blanks' when teh usr SIE file uses accounts with missing SRU mapping (use bas_to_ink2 mapping)
         * We should inform the user so they can update the account plan.
 
+I now pressed on.
+
+* Claude now made cratchit_ink2 generate FULL INK2 (first page, INK2r and INK2S)
+* It reads last year SRU-file or argument --previous-deficit to chain in accumulated (saved) deficit over years
+* It generates SRU-files to upload to SKV and read in for coming year INK2 generation.
+
+
+
 ## 20261102
 
 It seems I am now ready to tackle the task of parsing an SIE file and create an SKV VAT Returns Report 'Inkomstdeklaration 2'?

@@ -28,7 +28,7 @@ TEST(Ink2Mapping, BuiltInHasEveryRowOfINK2R) {
   std::set<std::string> numbers;
   std::set<std::string> codes;
   for (auto const& line : lines) {
-    if (line.kind == Line::Kind::row) {
+    if (line.kind == Line::Kind::row && line.form == "INK2R") {
       EXPECT_TRUE(numbers.insert(line.ink2).second) << line.ink2;
       for (auto const& field : line.fields) {
         EXPECT_TRUE(codes.insert(field.sru).second) << field.sru;
@@ -84,14 +84,39 @@ TEST(Ink2Mapping, PairedFields) {
   EXPECT_EQ(shares->fields[1].sru, "7518");
 }
 
+TEST(Ink2Mapping, INK2SRows) {
+  auto const lines = built_in();
+  auto const costs = row(lines, "4.3c");
+  ASSERT_TRUE(costs);
+  EXPECT_EQ(costs->form, "INK2S");
+  EXPECT_EQ(costs->fields[0].sru, "7653");
+  EXPECT_EQ(costs->fields[0].sign, 1);
+  EXPECT_TRUE(costs->fields[0].accounts.contains("6992"));
+  EXPECT_TRUE(costs->fields[0].accounts.contains("8423"));
+  EXPECT_FALSE(costs->fields[0].accounts.contains("6991"));
+  auto const income = row(lines, "4.5c");
+  ASSERT_TRUE(income);
+  EXPECT_EQ(income->fields[0].sign, -1);
+  EXPECT_TRUE(income->fields[0].accounts.contains("8314"));
+  // The heading before the INK2S rows is of INK2S
+  auto const heading = std::ranges::find_if(lines, [](Line const& line) {
+    return line.kind == Line::Kind::heading && line.text.starts_with("INK2S");
+  });
+  ASSERT_NE(heading, lines.end());
+  EXPECT_EQ(heading->form, "INK2S");
+  EXPECT_EQ(lines.front().form, "INK2R");
+}
+
 TEST(Ink2Mapping, Errors) {
+  EXPECT_EQ(parse_mapping("bas;sru;ink2;text\n1088;7202;2.2;Förskott\n6992;7653;;\n").error(),
+            "Mapping row 3: a second field of another form than the row before it");
   EXPECT_EQ(parse_mapping("bas;sru;text\n").error(), "The mapping does not start with the header bas;sru;ink2;text");
   EXPECT_EQ(parse_mapping("bas;sru;ink2;text;;\n1088;7202;2.2;Förskott;;x\n").error(),
             "Mapping row 2: text after the fourth column");
   EXPECT_EQ(parse_mapping("bas;sru;ink2;text\n1088;;2.2;Förskott\n").error(),
             "Mapping row 2: a row of the form needs bas, sru, ink2 and text; a second field bas and sru only");
   EXPECT_EQ(parse_mapping("bas;sru;ink2;text\n1088;7802;2.2;Förskott\n").error(),
-            "Mapping row 2: \"7802\" is not an SRU code of INK2R (72xx-75xx)");
+            "Mapping row 2: \"7802\" is not an SRU code of INK2R or INK2S (72xx-77xx)");
   EXPECT_EQ(parse_mapping("bas;sru;ink2;text\n;;;Rubrik\n1088;7202;;\n").error(),
             "Mapping row 3: a second field without a row of the form before it");
   EXPECT_TRUE(parse_mapping("bas;sru;ink2;text\n10x;7202;2.2;Förskott\n").error().starts_with(

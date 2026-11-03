@@ -9,7 +9,10 @@
 
 namespace cratchit::ink2 {
 
-// A field of the INK2R form: its SRU code (SKV's fältkod) and the BAS accounts in it
+// The form of an SRU code: INK2R for 72xx-75xx, INK2S for 76xx-77xx, else empty
+std::string_view form_of(std::string_view sru);
+
+// A field of INK2R or INK2S: its SRU code (SKV's fältkod) and the BAS accounts in it
 struct Field {
   std::string sru;     // e.g. 7215
   std::string bas;     // the accounts as the mapping writes them, e.g. "12xx (exkl. 128x)"
@@ -19,6 +22,8 @@ struct Field {
   // as booked; 73xx (eget kapital och skulder) and 74xx (the plus fields, income) negated. The
   // year's result (3.26 and 3.27, conditions profit and loss) is the exception: 899x carries it
   // with the opposite sign, so the profit field shows 899x as booked and the loss field negated.
+  // INK2S likewise by SKV's sign of the field: 76xx (+, e.g. costs not to deduct) as booked,
+  // 77xx (-, e.g. income not to tax) negated.
   int sign = 1;
 
   bool in_balance_sheet() const { return sru.starts_with("72") || sru.starts_with("73"); }
@@ -29,6 +34,7 @@ struct Field {
 struct Line {
   enum class Kind { heading, row };
   Kind kind = Kind::heading;
+  std::string form; // INK2R or INK2S: of the fields of a row; of the next row for a heading
   std::string ink2; // e.g. 2.4; rows only
   std::string text;
   std::vector<Field> fields;

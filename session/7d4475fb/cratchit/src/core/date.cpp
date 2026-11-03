@@ -56,6 +56,11 @@ std::string format_iso_date(Date date) {
                      static_cast<unsigned>(date.day()));
 }
 
+std::string format_compact_date(Date date) {
+  return std::format("{:04}{:02}{:02}", static_cast<int>(date.year()), static_cast<unsigned>(date.month()),
+                     static_cast<unsigned>(date.day()));
+}
+
 Date next_day(Date date) {
   return Date{std::chrono::sys_days{date} + std::chrono::days{1}};
 }

@@ -123,3 +123,8 @@ bas;sru;ink2;text;;;;;
 89xx (exkl. 899x);7528;3.25;Skatt på årets resultat;;;;;
 + 899x;7450;3.26;Årets resultat, vinst (flyttas till p. 4.1)  (+);;;;;
 – 899x;7550;3.27;Årets resultat, förlust (flyttas till p. 4.2)    (-);;;;;
+;;;;;;;;
+;;;INK2S: BOKFÖRDA POSTER SOM INTE SKA MED I SKATTEN (cratchit, not from BAS's table: accounts BAS 2025 names ej avdragsgill or skattefri);;;;;
+89xx (exkl. 899x);7651;4.3a;Bokförda kostnader som inte ska dras av: Skatt på årets resultat;;;;;
+5982, 6072, 6342, 6392, 6982, 6992, 7622, 7623, 7632, 8423;7653;4.3c;Bokförda kostnader som inte ska dras av: Andra bokförda kostnader;;;;;
+8254, 8314;7754;4.5c;Bokförda intäkter som inte ska tas upp: Andra bokförda intäkter;;;;;

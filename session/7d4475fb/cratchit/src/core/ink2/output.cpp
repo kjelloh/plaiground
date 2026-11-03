@@ -50,11 +50,6 @@ std::vector<std::string> wrapped(std::string_view text, std::size_t width) {
   return lines;
 }
 
-std::string compact_date(Date date) {
-  return std::format("{:04}{:02}{:02}", static_cast<int>(date.year()), static_cast<unsigned>(date.month()),
-                     static_cast<unsigned>(date.day()));
-}
-
 std::string amount_of(FieldAmount const& field) {
   return field.used ? format_kronor(field.kronor) : "";
 }
@@ -82,13 +77,16 @@ std::string format_form(Header const& header, std::vector<Line> const& lines, Fo
   out += "INK2R Räkenskapsschema\n";
   out += std::format("{}, {}\n", header.company, header.orgnr);
   out += std::format("Räkenskapsår {} - {}   7011 {}   7012 {}\n", format_iso_date(header.start),
-                     format_iso_date(header.end), compact_date(header.start), compact_date(header.end));
+                     format_iso_date(header.end), format_compact_date(header.start), format_compact_date(header.end));
   out += std::format("Mapping {}\n", header.mapping);
   if (header.preliminary) {
     out += "PRELIMINÄR: the books are not closed; the year's result is shown as if booked\n";
   }
   bool after_row = true;
   for (auto const& line : lines) {
+    if (line.form != "INK2R") {
+      continue;
+    }
     if (line.kind == Line::Kind::heading) {
       out += std::format("{}{}\n", after_row ? "\n" : "", line.text);
       after_row = false;
@@ -120,6 +118,31 @@ std::string format_form(Header const& header, std::vector<Line> const& lines, Fo
   append_sum(out, "Eget kapital och skulder (73xx)", sums.equity_and_debt);
   append_sum(out, "Resultaträkningens fält (74xx - 75xx, utom 3.26-3.27)", sums.result);
   append_sum(out, "Årets resultat (3.26 - 3.27)", sums.year_result);
+  return out;
+}
+
+std::string format_skv_form(std::string_view title, std::vector<SkvField> const& fields,
+                            std::map<std::string, Kronor> const& amounts, std::set<std::string> const& marks) {
+  std::string out = std::format("{}\n", title);
+  for (auto const& field : fields) {
+    std::string value;
+    if (field.type == SkvField::Type::mark) {
+      value = marks.contains(field.sru) ? "X" : "";
+    } else if (auto const amount = amounts.find(field.sru); amount != amounts.end()) {
+      value = format_kronor(amount->second);
+    }
+    auto const marker = field.sign == '+' ? " +" : field.sign == '-' ? " -" : "  ";
+    auto const texts = wrapped(field.text, text_width);
+    for (std::size_t index = 0; index < texts.size(); ++index) {
+      auto row = index == 0 ? std::format("  {}{}  {:<4}{}  {:>{}}", padded(field.ink2, number_width),
+                                          padded(texts[index], text_width), field.sru, marker, value, amount_width)
+                            : std::format("  {}{}", padded("", number_width), texts[index]);
+      while (row.ends_with(' ')) {
+        row.pop_back();
+      }
+      out += row + '\n';
+    }
+  }
   return out;
 }
 
