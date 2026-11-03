@@ -12,7 +12,8 @@ conan install . --build=missing -s build_type=Debug -s compiler.cppstd=23
 cmake --preset conan-debug && cmake --build --preset conan-debug
 ctest --preset conan-debug
 build/Debug/cratchit_ink2 ../_Resources/_sie/<file>.se "../_Resources/_ink2/deklaration <last year>"
-                                    # INK2R, INK2S, INK2 to stdout, errors and notes to stderr
+                                    # writes <orgnr>_<start>_<end>/ in the working dir
+build/Debug/cratchit_ink2 --trace ../_Resources/_sie/<file>.se <last year>   # vouchers to fields
 ```
 
 `_Resources/` is git ignored; the tests that compare with the filed INK2 skip when its files are missing.
@@ -162,7 +163,30 @@ per year (1226, 1227 have no #SRU) and 2022-23's 8710 stays an error (its #SRU 7
 - 4.3b (nedskrivning av finansiella tillgångar) left out: deductible or not depends on the asset.
 - The rounding mode SKV wants, if any (now half away from zero).
 
+### 5. Text files, INK2 check with TBD [n], --trace - done (2026-11-03)
+
+Agreed: SRU files only when complete; the terminal gets a summary only; files
+`<stem>_ink2_fält.txt` and `<stem>_ink2_rapport.txt` (prefixed with the folder name, as cratchit_ar);
+plain `--trace` (all fields) for now.
+
+- `ink2/check`: the INK2 check. Missing (numbered, TBD [n] at their fields, no SRU files while any):
+  books not closed, periodiseringsfonder at the start (4.6a), an amount on 3.17 (4.3b), pension
+  costs 7410-7419 (4.21, 1.4/1.5), no marks from last year, no postal address for INFO.SRU. To
+  confirm, always: 4.4b/4.6e, 4.13, 4.14b-c, 4.20; and 4.14a when typed (`--previous-deficit`; to
+  confirm rather than TBD, so a first year can still be filed).
+- `ink2/report`: the report (header, errors, notes, the INK2 check), as cratchit_ar's.
+- `ink2/output`: the head with the status, TBD markers after the amounts, the return in the forms'
+  order (INK2 page 1, INK2R, INK2S).
+- `ink2/sru_output`: writes report always, the return as text unless errors, SRU files when
+  complete; earlier SRU files left when not written, and said to be of an earlier run.
+- `ink2/trace`: per field the mapping, conditions, accounts (IB/UB or RES, #SRU placement) and every
+  voucher of year 0, the sum; then the rule fields with their numbers; then accounts on no field.
+- Run by hand: 2024-25 complete (all files); 2025-26 PRELIMINÄR, TBD [1] Bokslut, no SRU files;
+  2022-23 the error on 8710: report only. Its trace shows 8710's 195.50 is voucher I 4 of
+  2023-04-30, "Korrigering 2021 D17 + A27".
+
 ## Next
 
-5. Tracing amounts back to accounts and vouchers (`--trace`), and a report file like cratchit_ar's
-   with the notes, if wanted.
+- A way to give what the INK2 check asks for (the marks, 4.13, ...) other than the books and last
+  year's return, e.g. an input file in the folder; to agree first.
+- `--trace <field>` to trace one field, if wanted.

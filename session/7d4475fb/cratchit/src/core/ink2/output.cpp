@@ -58,6 +58,27 @@ void append_sum(std::string& out, std::string_view text, Kronor kronor) {
   out += std::format("  {}{:>{}}\n", padded(text, number_width + text_width + 10), format_kronor(kronor), amount_width);
 }
 
+// A row: number, text, SRU code with its marker, amount, and what to show after it
+std::string row_of(std::string_view number, std::string_view text, std::string_view sru, std::string_view sign,
+                   std::string_view amount, std::string_view marker) {
+  auto row = std::format("  {}{}", padded(number, number_width), padded(text, text_width));
+  if (!sru.empty()) {
+    row += std::format("  {:<4}{}  {:>{}}", sru, sign, amount, amount_width);
+  }
+  if (!marker.empty()) {
+    row += "  " + std::string(marker);
+  }
+  while (row.ends_with(' ')) {
+    row.pop_back();
+  }
+  return row + '\n';
+}
+
+std::string marker_of(Markers const& markers, std::string const& sru) {
+  auto const found = markers.find(sru);
+  return found == markers.end() ? "" : found->second;
+}
+
 } // namespace
 
 std::string format_kronor(Kronor kronor) {
@@ -72,16 +93,19 @@ std::string format_kronor(Kronor kronor) {
   return (kronor < 0 ? "-" : "") + out;
 }
 
-std::string format_form(Header const& header, std::vector<Line> const& lines, Form const& form) {
+std::string format_head(Header const& header) {
   std::string out;
-  out += "INK2R Räkenskapsschema\n";
-  out += std::format("{}, {}\n", header.company, header.orgnr);
+  out += std::format("Inkomstdeklaration 2: {}, {}\n", header.company, header.orgnr);
   out += std::format("Räkenskapsår {} - {}   7011 {}   7012 {}\n", format_iso_date(header.start),
                      format_iso_date(header.end), format_compact_date(header.start), format_compact_date(header.end));
-  out += std::format("Mapping {}\n", header.mapping);
-  if (header.preliminary) {
-    out += "PRELIMINÄR: the books are not closed; the year's result is shown as if booked\n";
+  if (!header.status.empty()) {
+    out += std::format("Status: {}\n", header.status);
   }
+  return out;
+}
+
+std::string format_form(std::vector<Line> const& lines, Form const& form, Markers const& markers) {
+  std::string out = "INK2R Räkenskapsschema\n";
   bool after_row = true;
   for (auto const& line : lines) {
     if (line.form != "INK2R") {
@@ -99,17 +123,13 @@ std::string format_form(Header const& header, std::vector<Line> const& lines, Fo
     for (std::size_t index = 0; index < count; ++index) {
       auto const number = index == 0 ? line.ink2 : std::string();
       auto const text = index < texts.size() ? texts[index] : std::string();
-      std::string field;
       if (index < line.fields.size()) {
         auto const& sru = line.fields[index].sru;
-        auto const marker = !paired ? "  " : index == 0 ? " +" : " -";
-        field = std::format("  {}{}  {:>{}}", sru, marker, amount_of(form.fields.at(sru)), amount_width);
+        auto const sign = !paired ? "  " : index == 0 ? " +" : " -";
+        out += row_of(number, text, sru, sign, amount_of(form.fields.at(sru)), marker_of(markers, sru));
+      } else {
+        out += row_of(number, text, "", "", "", "");
       }
-      auto row = std::format("  {}{}{}", padded(number, number_width), padded(text, text_width), field);
-      while (row.ends_with(' ')) {
-        row.pop_back();
-      }
-      out += row + '\n';
     }
   }
   auto const sums = sums_of(form);
@@ -122,7 +142,8 @@ std::string format_form(Header const& header, std::vector<Line> const& lines, Fo
 }
 
 std::string format_skv_form(std::string_view title, std::vector<SkvField> const& fields,
-                            std::map<std::string, Kronor> const& amounts, std::set<std::string> const& marks) {
+                            std::map<std::string, Kronor> const& amounts, std::set<std::string> const& marks,
+                            Markers const& markers) {
   std::string out = std::format("{}\n", title);
   for (auto const& field : fields) {
     std::string value;
@@ -131,19 +152,24 @@ std::string format_skv_form(std::string_view title, std::vector<SkvField> const&
     } else if (auto const amount = amounts.find(field.sru); amount != amounts.end()) {
       value = format_kronor(amount->second);
     }
-    auto const marker = field.sign == '+' ? " +" : field.sign == '-' ? " -" : "  ";
+    auto const sign = field.sign == '+' ? " +" : field.sign == '-' ? " -" : "  ";
     auto const texts = wrapped(field.text, text_width);
     for (std::size_t index = 0; index < texts.size(); ++index) {
-      auto row = index == 0 ? std::format("  {}{}  {:<4}{}  {:>{}}", padded(field.ink2, number_width),
-                                          padded(texts[index], text_width), field.sru, marker, value, amount_width)
-                            : std::format("  {}{}", padded("", number_width), texts[index]);
-      while (row.ends_with(' ')) {
-        row.pop_back();
-      }
-      out += row + '\n';
+      out += index == 0 ? row_of(field.ink2, texts[index], field.sru, sign, value, marker_of(markers, field.sru))
+                        : row_of("", texts[index], "", "", "", "");
     }
   }
   return out;
+}
+
+std::string format_return(Header const& header, std::vector<Line> const& lines, std::vector<SkvField> const& skv,
+                          Form const& form, TaxReturn const& tax, Markers const& markers) {
+  return std::format("{}\n{}\n{}\n{}", format_head(header),
+                     format_skv_form("INK2 Inkomstdeklaration 2, sidan 1", fields_of(skv, "INK2"), tax.ink2, {},
+                                     markers),
+                     format_form(lines, form, markers),
+                     format_skv_form("INK2S Skattemässiga justeringar", fields_of(skv, "INK2S"), tax.ink2s,
+                                     tax.ink2s_marks, markers));
 }
 
 } // namespace cratchit::ink2

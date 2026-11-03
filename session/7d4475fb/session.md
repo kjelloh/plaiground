@@ -142,6 +142,19 @@ So next step is for me to test the generated files with SKV 'file upload test si
 
 But this is SLOPPY by SKV?!!
 
+Anyhow. How close are we now to generate a valid INK2 from a valid SIE File?
+
+* Claude proposed text files for ink2 and report + --trace to screen.
+* I approved.
+
+I have now tested on differen paris of SIE files and SRU-files.
+
+* I think the output is good and seems legit?
+* I like the --trace on my books for the upcoming INK2
+    * I could read the mapping of vouchers to INK2 form fields.
+    * I found it educating and good clues to what the books 'tells' INK2
+    * I believe I can use --trace to get the books correct for INK2?
+
 ## 20261102
 
 It seems I am now ready to tackle the task of parsing an SIE file and create an SKV VAT Returns Report 'Inkomstdeklaration 2'?

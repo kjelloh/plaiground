@@ -8,6 +8,7 @@ add_executable(cratchit_tests
   test_date.cpp
   test_ink2_accounts.cpp
   test_ink2_arguments.cpp
+  test_ink2_check.cpp
   test_ink2_filed.cpp
   test_ink2_form.cpp
   test_ink2_mapping.cpp
@@ -16,6 +17,7 @@ add_executable(cratchit_tests
   test_ink2_skv.cpp
   test_ink2_sru_output.cpp
   test_ink2_tax.cpp
+  test_ink2_trace.cpp
   test_log.cpp
   test_manual.cpp
   test_sie_check.cpp

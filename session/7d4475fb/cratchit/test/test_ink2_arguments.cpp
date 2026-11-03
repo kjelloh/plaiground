@@ -36,6 +36,13 @@ TEST(Ink2Arguments, PreviousDeficit) {
   EXPECT_EQ(parse_arguments({"books.se", "--previous-deficit", "0"})->previous_deficit, 0);
 }
 
+TEST(Ink2Arguments, Trace) {
+  auto const arguments = parse_arguments({"a.se", "--trace", "x.sru"});
+  ASSERT_TRUE(arguments) << arguments.error();
+  EXPECT_TRUE(arguments->trace);
+  EXPECT_FALSE(parse_arguments({"a.se", "x.sru"})->trace);
+}
+
 TEST(Ink2Arguments, Help) {
   EXPECT_TRUE(parse_arguments({"--help"})->help);
   EXPECT_TRUE(parse_arguments({"-h"})->help);
@@ -58,7 +65,8 @@ TEST(Ink2Arguments, Wrong) {
   }
   EXPECT_EQ(parse_arguments({"a.se", "--previous-deficit", "1", "--previous-deficit", "2"}).error(),
             "--previous-deficit is given twice");
-  EXPECT_EQ(parse_arguments({"--trace", "a.se"}).error(), "Unknown option --trace");
+  EXPECT_EQ(parse_arguments({"--trace", "a.se", "x.sru", "--trace"}).error(), "--trace is given twice");
+  EXPECT_EQ(parse_arguments({"--verbose", "a.se"}).error(), "Unknown option --verbose");
   EXPECT_EQ(parse_arguments({"--help", "a.se"}).error(), "Unknown option --help");
   EXPECT_EQ(parse_arguments({"a.se", "notes.txt"}).error(),
             "notes.txt is neither an SIE file (.se, .si, .sie) nor last year's return (.sru, or a folder of it)");

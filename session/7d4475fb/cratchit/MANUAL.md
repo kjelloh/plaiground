@@ -3,13 +3,14 @@
 Makes the Swedish inkomstdeklaration 2 for aktiebolag from a company's books read from an
 SIE 4 file: INK2R, the räkenskapsschema (balance sheet and income statement), INK2S, the
 skattemässiga justeringar, and INK2 page 1. Last year's return gives the underskott
-(deficit) to carry over. The return is printed, and written as the SRU files SKV's
-e-service Filöverföring takes, which are also next year's "last year's return".
+(deficit) to carry over. The return is written as text with a report, and, when nothing
+known is missing, as the SRU files SKV's e-service Filöverföring takes, which are also next
+year's "last year's return". `--trace` shows how each amount is made, down to the vouchers.
 
 ## Synopsis
 
-    cratchit_ink2 <file.se> <last year's BLANKETTER.SRU, or the folder of it>
-    cratchit_ink2 <file.se> --previous-deficit <kronor>
+    cratchit_ink2 [--trace] <file.se> <last year's BLANKETTER.SRU, or the folder of it>
+    cratchit_ink2 [--trace] <file.se> --previous-deficit <kronor>
     cratchit_ink2 --help
     cratchit_ink2 -h
 
@@ -44,13 +45,21 @@ If SKV's decision changed last year's underskott, give that amount with
     cratchit_ink2 _Resources/_sie/TheITfiedAB20250817_172409.se "_Resources/_ink2/deklaration 2024"
 
 writes, in the working directory, a folder named after the company's orgnr and the fiscal
-year:
+year, its files named after the folder:
 
     556782-8172_2024-05-01_2025-04-30/
+        556782-8172_2024-05-01_2025-04-30_ink2_fält.txt
+        556782-8172_2024-05-01_2025-04-30_ink2_rapport.txt
         BLANKETTER.SRU
         INFO.SRU
         556782-8172_2024-05-01_2025-04-30.se
 
+- `_ink2_fält.txt`: the return as text (see What the return holds), with `TBD [n]` at each
+  field the INK2 check finds missing.
+- `_ink2_rapport.txt`: the report on it: when and by which version it was made, the SIE
+  file, last year's return (or `--previous-deficit`), the mappings, the status (complete,
+  not complete, PRELIMINÄR or errors), what became of the SRU files, the errors, the notes
+  and the INK2 check (see below).
 - `BLANKETTER.SRU`: the blocks INK2, INK2R and INK2S (e.g. `INK2R-2025P1`: the form, the
   year the fiscal year ends and its period, P1 for an end by 30 April, P2 by 30 June, P3 by
   31 August, P4 by 31 December). Each has `#IDENTITET` (the orgnr as SRU writes it, 16 and
@@ -61,41 +70,80 @@ year:
   `INFO.SRU` (next to its `BLANKETTER.SRU`), with a note saying which.
 - The `.se` file is a copy of the SIE file the return is made from.
 
-Both SRU files are ISO 8859-1, as SKV wants, and replaced on every run. The SIE copy is
-written when it is missing or differs. The terminal gets a short summary after the forms.
+Which files a run writes:
 
-The SRU files are for filing, so they are **not** written when there are errors, nor when
-the books are not closed (the forms are then a preview); earlier ones are left as they
-were. Test the files with the test function of SKV's Filöverföring before filing them.
+| The return is | `_ink2_rapport.txt` | `_ink2_fält.txt` | SRU files |
+|---|---|---|---|
+| complete | written | written | written |
+| not complete (items TBD) | written | written, with TBD [n] | not written |
+| PRELIMINÄR (books not closed) | written | written, with TBD [n] | not written |
+| with errors (exit 1) | written, with the errors | not written | not written |
+
+- The SRU files are for filing, so they are written only when the return is complete. When
+  they are not written, earlier ones in the folder are left, and the terminal and the
+  report say they are of an earlier run: do not file them.
+- A file not written is left as it was. The SIE copy goes with `_ink2_fält.txt`: it is
+  written when missing, or when it differs and `_ink2_fält.txt` is written.
+- Every file written replaces the one before: **copy a file before editing it**.
+- An SIE file or last year's return that cannot be read writes no folder at all; the errors
+  go to the terminal.
+- SRU files are ISO 8859-1, as SKV wants. Test them with the test function of SKV's
+  Filöverföring before filing them.
+
+The terminal gets a short summary, and the errors:
+
+    Folder .../556782-8172_2024-05-01_2025-04-30
+      Wrote 556782-8172_2024-05-01_2025-04-30_ink2_fält.txt: complete
+      Wrote 556782-8172_2024-05-01_2025-04-30_ink2_rapport.txt: 6 notes, the INK2 check
+      Wrote BLANKETTER.SRU and INFO.SRU (replaced on every run)
+      Copied the SIE file as 556782-8172_2024-05-01_2025-04-30.se
 
 Next year, give this folder as last year's return:
 
     cratchit_ink2 <next year's file.se> 556782-8172_2024-05-01_2025-04-30
 
-## What it prints
+## What the return holds
 
-    cratchit_ink2 _Resources/_sie/sie_2025-26_all.se "_Resources/_ink2/deklaration 2025"
+`_ink2_fält.txt`, for fiscal year 0 of the SIE file (`#RAR 0`):
 
-prints for fiscal year 0 of the SIE file (`#RAR 0`) to the terminal:
+1. The head: the company name and orgnr, the fiscal year with the fields 7011 and 7012 (its
+   first and last day, as SKV writes them), and the status.
+2. INK2 page 1: every field of the form, as SKV's field table gives it, with its number,
+   text, SRU code and amount.
+3. INK2R: each line of the form in the order of the mapping: its number on the form
+   (2.1-2.50 for the balansräkning, 3.1-3.27 for the resultaträkning), its text, its SRU
+   code (SKV's fältkod) and its amount in whole kronor. The amount is blank when the books
+   have no account with an amount in the field, so `0` means accounts that add up to zero.
+   Lines whose amount goes to a plus or a minus field by its sign (e.g. 3.2, 3.12,
+   3.26/3.27) show both fields, marked `+` and `-`. Then the sums of the fields as shown:
+   tillgångar against eget kapital och skulder, and the fields of the resultaträkning
+   against årets resultat (3.26 less 3.27).
+4. INK2S: every field of the form, with SKV's `+` (adds to överskott) or `-` (takes from
+   it), its amount, and `X` for a mark given.
 
-1. INK2R:
-   - The head: the company name and orgnr, the fiscal year with the fields 7011 and 7012
-     (its first and last day, as SKV writes them), and the mapping used.
-   - Each line of the form in the order of the mapping: its number on the form (2.1-2.50
-     for the balansräkning, 3.1-3.27 for the resultaträkning), its text, its SRU code
-     (SKV's fältkod) and its amount in whole kronor. The amount is blank when the books
-     have no account with an amount in the field, so `0` means accounts that add up to
-     zero. Lines whose amount goes to a plus or a minus field by its sign (e.g. 3.2, 3.12,
-     3.26/3.27) show both fields, marked `+` and `-`.
-   - The sums of the fields as shown: tillgångar against eget kapital och skulder, and the
-     fields of the resultaträkning against årets resultat (3.26 less 3.27).
-2. INK2S: every field of the form, as SKV's field table gives it, with its number, text, SRU
-   code, SKV's `+` (adds to överskott) or `-` (takes from it), and its amount; `X` for a
-   mark given.
-3. INK2 page 1, likewise.
+A field the INK2 check finds missing has `TBD [n]` after its amount; [n] is the item of the
+INK2 check that says why and what to provide.
 
-Errors and notes go to stderr, after the forms, one per line, starting with `Error:` or
-`Note:`.
+## The INK2 check
+
+At the end of `_ink2_rapport.txt`. What the return needs that the books do not give:
+
+- **Missing** (`TBD [n]` in the return; no SRU files while any is), when the books show it
+  applies:
+  1. Bokslut: the books are not closed (3.26/3.27 and the fields made from them).
+  2. 4.6a Schablonintäkt: periodiseringsfonder (2110-2139) at the start of the year.
+  3. 4.3b Nedskrivning av finansiella tillgångar som inte ska dras av: an amount on 3.17.
+  4. 4.21 Pensionskostnader and 1.4/1.5 särskild löneskatt: pension costs (7410-7419).
+  5. Uppdragstagare and revision (8040/8041, 8044/8045): no marks from last year's return.
+  6. INFO.SRU's postnummer and postort: neither in `#ADRESS` nor in last year's INFO.SRU.
+
+  The items are numbered in this order, as they apply.
+- **To confirm**: what may apply and the books cannot tell, every year: 4.4b and 4.6e
+  (costs and income not in the books), 4.13 (other adjustments, e.g. representation booked
+  on deductible accounts), 4.14b-c (reductions of the underskott), 4.20 (loans from
+  shareholders); and 4.14a when given by `--previous-deficit`.
+
+Each item says which fields it is about, what the books show, and what to provide.
 
 ## How the amounts are made
 
@@ -164,28 +212,64 @@ mapping decides, and the `#SRU` codes are checked against it and fill in where i
 ## Books not closed
 
 When the books of fiscal year 0 are not closed (nothing on 8990-8999, and the balance
-accounts lack exactly the year's result), the forms are a preview that shows the result as
-if booked to 2099 against 8999: the head says PRELIMINÄR and a note says why.
+accounts lack exactly the year's result), the return is a preview that shows the result as
+if booked to 2099 against 8999: the status says PRELIMINÄR, the INK2 check has Bokslut as
+TBD [1], and no SRU files are written.
+
+## --trace
+
+Prints to the terminal, instead of writing the folder, how each amount of the return is
+made, from the vouchers up. It writes no files; the errors and notes go to stderr. It is
+long, so page it or save it:
+
+    cratchit_ink2 --trace TheITfiedAB20250817_172409.se "deklaration 2024" | less
+
+In the order the return is made:
+
+1. **INK2R from the accounts**, then **INK2S from the accounts** (4.3a, 4.3c, 4.5c): each
+   field with an amount:
+
+       INK2R 2.4  7215  Maskiner, inventarier och övriga materiella anläggningstillgångar
+         Mapping: 12xx (exkl. 128x); shown as booked
+         1221 Inventarier   IB 162495.27   UB 195687.27
+             2024-10-22 A 37     Account:NORDEA Text:KORT APPLE COM SE 26        23996.00
+         ...
+         Sum 65923.96 as booked, 65923.96 shown: 65 924 kr
+
+   - The mapping's accounts, and whether the field shows them as booked or negated.
+   - For a field with a condition (`Om netto +`, `+ 899x`, ...): what the accounts of the
+     group net to, and so why the amount is in this field.
+   - Each account: its opening and closing balance (a balance account) or its result, and
+     every voucher of fiscal year 0 on it: date, series and number, text, amount as booked.
+     An account placed by its `#SRU` says so. Unclosed books show the simulated closing
+     voucher (series `*`).
+   - The sum as booked, as shown, and in whole kronor.
+2. **INK2S and INK2 page 1 by their rules**: 4.1/4.2 from 3.26/3.27, 4.14a from last year,
+   4.15/4.16 as SKV's `+` fields less its `-` fields with each number, 1.1/1.2, and the
+   marks.
+3. **Accounts with an amount on no field of INK2R**, with their vouchers: those in no field
+   (errors) and those left out (class 9).
+
+Amounts in the trace are in kronor and öre, debit positive, as in SIE.
 
 ## Errors
 
 - An SIE file that cannot be read, or that is not a valid SIE 4 file: the errors, exit 1,
-  and no forms.
+  and no folder.
 - Last year's return that cannot be read, has no INK2S, is of another company, or is not of
-  the fiscal year before: the error, exit 1, and no forms.
-- No postnummer and postort for INFO.SRU (neither in the SIE file's `#ADRESS` nor in last
-  year's INFO.SRU), a name with a character not in ISO 8859-1, or a file that cannot be
-  written: the error, exit 1. The forms are printed; the SRU files are not written.
+  the fiscal year before: the error, exit 1, and no folder.
 - An account of class 1-8 with an amount that is in no field of the mapping, or in more than
-  one (BAS lists 40xx-47xx under both 3.5 and 3.6), that its `#SRU` cannot place: the forms
-  are printed without it, with the error, and the exit code is 1. They then do not add up.
+  one (BAS lists 40xx-47xx under both 3.5 and 3.6), that its `#SRU` cannot place: exit 1;
+  only the report is written, with the error (`--trace` shows the account's vouchers).
+- A name with a character not in ISO 8859-1, or a file that cannot be written: exit 1.
 
 ## Notes
 
-- `INK2S 4.14a:` last year's underskott and where it is from.
+In `_ink2_rapport.txt` (with `--trace`, on stderr):
+
 - `Closing:` closing entries BAS asks for at the balance day that the books lack (e.g. moms
-  netting to a receivable, which BAS moves to 1650 Momsfordran); the forms show the books as
-  they are.
+  netting to a receivable, which BAS moves to 1650 Momsfordran); the return shows the books
+  as they are.
 - `#SRU:` what the books' own SRU codes chose, placed or disagree with, and accounts without one.
 - `Opening balance:` a field of this year's opening balances that differs from last year's
   filed INK2R.
@@ -197,13 +281,15 @@ if booked to 2099 against 8999: the head says PRELIMINÄR and a note says why.
 
 ## Not yet included
 
+- A way to give what the INK2 check asks for (e.g. the marks, 4.13) other than the books
+  and last year's return.
 - INK2S fields that need more than the books' accounts: 4.3b, 4.4, 4.5a-b, 4.6-4.13,
   4.14b-c, 4.17-4.22 (e.g. 4.6a schablonintäkt on periodiseringsfonder, 4.21
   pensionskostnader, 4.20 lån från aktieägare). INK2 page 1 but 1.1 and 1.2.
-- Tracing each amount back to its accounts and vouchers.
 
 ## Options
 
+- `--trace`: print how each amount is made instead of writing the folder (see --trace).
 - `--previous-deficit <kronor>`: last year's 4.16 Underskott, instead of last year's return
   (see Last year's return).
 - `--help`, `-h`: print this manual.

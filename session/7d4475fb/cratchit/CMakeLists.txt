@@ -55,7 +55,10 @@ add_library(cratchit_core
   src/core/ink2/skv.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/skv_text.cpp
   src/core/ink2/sru_output.cpp
+  src/core/ink2/check.cpp
+  src/core/ink2/report.cpp
   src/core/ink2/tax.cpp
+  src/core/ink2/trace.cpp
   src/core/log.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
   src/core/sie/check.cpp

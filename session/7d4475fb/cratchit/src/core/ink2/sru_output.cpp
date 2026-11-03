@@ -187,18 +187,29 @@ OutputPaths output_paths(std::filesystem::path const& base, std::string_view org
   }
   auto const stem = std::format("{}_{}_{}", name, format_iso_date(year.start), format_iso_date(year.end));
   auto const folder = base / stem;
-  return {folder, folder / "BLANKETTER.SRU", folder / "INFO.SRU", folder / (stem + ".se")};
+  return {folder,
+          folder / std::filesystem::path(std::u8string(stem.begin(), stem.end()) + u8"_ink2_fält.txt"),
+          folder / (stem + "_ink2_rapport.txt"),
+          folder / "BLANKETTER.SRU",
+          folder / "INFO.SRU",
+          folder / (stem + ".se")};
 }
 
-std::expected<Written, std::string> write_outputs(OutputPaths const& paths, std::string_view blanketter,
-                                                  std::string_view info, std::filesystem::path const& sie_input) {
-  auto const blanketter_latin1 = to_latin1(blanketter);
-  if (!blanketter_latin1) {
-    return std::unexpected(std::format("BLANKETTER.SRU: {}", blanketter_latin1.error()));
-  }
-  auto const info_latin1 = to_latin1(info);
-  if (!info_latin1) {
-    return std::unexpected(std::format("INFO.SRU: {}", info_latin1.error()));
+std::expected<Written, std::string> write_outputs(OutputPaths const& paths, std::string const& report,
+                                                  std::optional<std::string> const& fields,
+                                                  std::optional<SruFiles> const& sru,
+                                                  std::filesystem::path const& sie_input) {
+  std::optional<std::pair<std::string, std::string>> sru_latin1;
+  if (sru) {
+    auto const blanketter = to_latin1(sru->blanketter);
+    if (!blanketter) {
+      return std::unexpected(std::format("BLANKETTER.SRU: {}", blanketter.error()));
+    }
+    auto const info = to_latin1(sru->info);
+    if (!info) {
+      return std::unexpected(std::format("INFO.SRU: {}", info.error()));
+    }
+    sru_latin1 = std::pair{*blanketter, *info};
   }
   auto const input = read_file(sie_input);
   if (!input) {
@@ -209,14 +220,30 @@ std::expected<Written, std::string> write_outputs(OutputPaths const& paths, std:
   if (error) {
     return std::unexpected(std::format("Cannot create the folder {}: {}", paths.folder.string(), error.message()));
   }
-  if (auto const done = write_file(paths.blanketter, *blanketter_latin1); !done) {
-    return std::unexpected(done.error());
-  }
-  if (auto const done = write_file(paths.info, *info_latin1); !done) {
-    return std::unexpected(done.error());
-  }
   Written written;
-  if (read_file(paths.sie) != input) {
+  if (auto const done = write_file(paths.report, report); !done) {
+    return std::unexpected(done.error());
+  }
+  if (fields) {
+    if (auto const done = write_file(paths.fields, *fields); !done) {
+      return std::unexpected(done.error());
+    }
+    written.fields = true;
+  }
+  if (sru_latin1) {
+    if (auto const done = write_file(paths.blanketter, sru_latin1->first); !done) {
+      return std::unexpected(done.error());
+    }
+    if (auto const done = write_file(paths.info, sru_latin1->second); !done) {
+      return std::unexpected(done.error());
+    }
+    written.sru = true;
+  } else {
+    written.old_sru = std::filesystem::exists(paths.blanketter, error) || std::filesystem::exists(paths.info, error);
+  }
+  // The copy goes with the return as text: without a new one, an earlier copy stays to match the earlier one
+  auto const existing = read_file(paths.sie);
+  if (existing != input && (fields || !existing)) {
     if (auto const done = write_file(paths.sie, *input); !done) {
       return std::unexpected(done.error());
     }

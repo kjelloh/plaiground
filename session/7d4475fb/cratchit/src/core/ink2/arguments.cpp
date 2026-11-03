@@ -20,12 +20,19 @@ std::string lower_extension(std::filesystem::path const& path) {
 
 std::expected<Arguments, std::string> parse_arguments(std::vector<std::string_view> const& arguments) {
   if (arguments.size() == 1 && (arguments.front() == "--help" || arguments.front() == "-h")) {
-    return Arguments{true, {}, std::nullopt, std::nullopt};
+    return Arguments{true, false, {}, std::nullopt, std::nullopt};
   }
   Arguments parsed;
   bool has_sie = false;
   for (std::size_t index = 0; index < arguments.size(); ++index) {
     auto const argument = arguments[index];
+    if (argument == "--trace") {
+      if (parsed.trace) {
+        return std::unexpected("--trace is given twice");
+      }
+      parsed.trace = true;
+      continue;
+    }
     if (argument == "--previous-deficit") {
       if (parsed.previous_deficit) {
         return std::unexpected("--previous-deficit is given twice");

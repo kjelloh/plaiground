@@ -131,25 +131,47 @@ TEST(Ink2SruOutput, WriteOutputs) {
   cratchit::sie::FiscalYear const year{0, 2025y / May / 1, 2026y / April / 30};
   auto const paths = cratchit::ink2::output_paths(base, "556782-8172", year);
   EXPECT_EQ(paths.folder, base / "556782-8172_2025-05-01_2026-04-30");
+  EXPECT_EQ(paths.fields.filename().u8string(), u8"556782-8172_2025-05-01_2026-04-30_ink2_fält.txt");
+  EXPECT_EQ(paths.report, paths.folder / "556782-8172_2025-05-01_2026-04-30_ink2_rapport.txt");
   EXPECT_EQ(paths.blanketter, paths.folder / "BLANKETTER.SRU");
   EXPECT_EQ(paths.info, paths.folder / "INFO.SRU");
   EXPECT_EQ(paths.sie, paths.folder / "556782-8172_2025-05-01_2026-04-30.se");
-  auto const written = cratchit::ink2::write_outputs(paths, "#BLANKETT X\n", "#POSTORT Järfälla\n", sie);
+  // Complete: everything
+  auto const written = cratchit::ink2::write_outputs(paths, "report 1", std::string("fields 1"),
+                                                     cratchit::ink2::SruFiles{"#BLANKETT X\n", "#POSTORT Järfälla\n"}, sie);
   ASSERT_TRUE(written) << written.error();
+  EXPECT_TRUE(written->fields);
+  EXPECT_TRUE(written->sru);
   EXPECT_TRUE(written->sie_copied);
+  EXPECT_EQ(read(paths.report), "report 1");
+  EXPECT_EQ(read(paths.fields), "fields 1");
   EXPECT_EQ(read(paths.blanketter), "#BLANKETT X\n");
   EXPECT_EQ(read(paths.info), "#POSTORT J\xE4rf\xE4lla\n");
   EXPECT_EQ(read(paths.sie), "#FLAGGA 0\r\n");
-  // Again: the SRU files replaced, the same SIE file kept
-  auto const again = cratchit::ink2::write_outputs(paths, "#BLANKETT Y\n", "#POSTORT Solna\n", sie);
-  ASSERT_TRUE(again);
-  EXPECT_FALSE(again->sie_copied);
-  EXPECT_EQ(read(paths.blanketter), "#BLANKETT Y\n");
   EXPECT_EQ(cratchit::ink2::info_file_in(paths.folder), paths.info);
+  // Not complete: the report and the fields, the earlier SRU files left and said to be
+  auto const again = cratchit::ink2::write_outputs(paths, "report 2", std::string("fields 2"), std::nullopt, sie);
+  ASSERT_TRUE(again);
+  EXPECT_FALSE(again->sru);
+  EXPECT_TRUE(again->old_sru);
+  EXPECT_FALSE(again->sie_copied);
+  EXPECT_EQ(read(paths.fields), "fields 2");
+  EXPECT_EQ(read(paths.blanketter), "#BLANKETT X\n");
+  // Errors: the report only; a changed SIE file is not copied over the one that matches the earlier return
+  std::ofstream(sie, std::ios::binary) << "#FLAGGA 1\r\n";
+  auto const errors = cratchit::ink2::write_outputs(paths, "report 3", std::nullopt, std::nullopt, sie);
+  ASSERT_TRUE(errors);
+  EXPECT_FALSE(errors->fields);
+  EXPECT_FALSE(errors->sie_copied);
+  EXPECT_EQ(read(paths.report), "report 3");
+  EXPECT_EQ(read(paths.fields), "fields 2");
+  EXPECT_EQ(read(paths.sie), "#FLAGGA 0\r\n");
   // Text not in ISO 8859-1 writes nothing
-  EXPECT_EQ(cratchit::ink2::write_outputs(paths, "#NAMN –\n", "", sie).error(),
+  EXPECT_EQ(cratchit::ink2::write_outputs(paths, "report 4", std::string("fields 4"),
+                                          cratchit::ink2::SruFiles{"#NAMN –\n", ""}, sie)
+                .error(),
             "BLANKETTER.SRU: \"–\" is not in ISO 8859-1, which SRU files are");
-  EXPECT_EQ(read(paths.blanketter), "#BLANKETT Y\n");
+  EXPECT_EQ(read(paths.report), "report 3");
   std::filesystem::remove_all(base);
 }
 

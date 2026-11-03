@@ -58,10 +58,13 @@ std::string format_info(Filer const& filer, Stamp const& stamp, std::string_view
 // UTF-8 text as ISO 8859-1, as SRU files are. Error text for a character it does not have.
 std::expected<std::string, std::string> to_latin1(std::string_view utf8);
 
-// Where a return goes: a folder <orgnr>_<start>_<end> holding BLANKETTER.SRU, INFO.SRU and a
-// copy of the SIE file, <orgnr>_<start>_<end>.se
+// Where a return goes: a folder <stem> = <orgnr>_<start>_<end> holding the return as text
+// (<stem>_ink2_fält.txt), its report (<stem>_ink2_rapport.txt), BLANKETTER.SRU, INFO.SRU and a
+// copy of the SIE file (<stem>.se)
 struct OutputPaths {
   std::filesystem::path folder;
+  std::filesystem::path fields;
+  std::filesystem::path report;
   std::filesystem::path blanketter;
   std::filesystem::path info;
   std::filesystem::path sie;
@@ -69,15 +72,28 @@ struct OutputPaths {
 
 OutputPaths output_paths(std::filesystem::path const& base, std::string_view orgnr, sie::FiscalYear const& year);
 
-// What write_outputs did
-struct Written {
-  bool sie_copied = false; // the SIE copy was missing or different
+// The SRU files' text (UTF-8)
+struct SruFiles {
+  std::string blanketter;
+  std::string info;
 };
 
-// Creates the folder if missing, writes BLANKETTER.SRU and INFO.SRU (in ISO 8859-1, replacing
-// any earlier ones) and a copy of the SIE file sie_input unless an identical one is there.
-// Error text names the file, or the character that is not in ISO 8859-1.
-std::expected<Written, std::string> write_outputs(OutputPaths const& paths, std::string_view blanketter,
-                                                  std::string_view info, std::filesystem::path const& sie_input);
+// What write_outputs did
+struct Written {
+  bool fields = false;     // the return as text was written
+  bool sru = false;        // the SRU files were written
+  bool old_sru = false;    // earlier SRU files are left, not written now: they are of an earlier run
+  bool sie_copied = false; // the SIE copy was written
+};
+
+// Creates the folder if missing and writes the report, the return as text when given (with errors
+// there is none, and an earlier one is left as it is), and the SRU files when given (in ISO 8859-1).
+// Each replaces the one before. The SIE file sie_input is copied unless an identical copy is there;
+// the copy goes with the return as text: without one, an earlier copy is left so that the two
+// still belong together. Error text names the file, or a character not in ISO 8859-1.
+std::expected<Written, std::string> write_outputs(OutputPaths const& paths, std::string const& report,
+                                                  std::optional<std::string> const& fields,
+                                                  std::optional<SruFiles> const& sru,
+                                                  std::filesystem::path const& sie_input);
 
 } // namespace cratchit::ink2
