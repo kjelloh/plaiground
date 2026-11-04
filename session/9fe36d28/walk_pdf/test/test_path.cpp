@@ -57,7 +57,7 @@ TEST(Path, ObjectIsItsNumber) {
 TEST(Path, ParseRejectsInvalid) {
   for (auto const* text :
        {"", "rev[0]", "/rev[0]/", "//", "/rev[]", "/rev[x]", "/rev[-1]", "/rev[0", "/header[0]",
-        "/obj[]", "/obj[5 0]", "/obj[0.5]", "/obj[-1]", "/obj[x]", "/page[0]", "/[]", "/[x]",
+        "/obj[]", "/obj[5 0]", "/obj[0.5]", "/obj[-1]", "/obj[x]", "/sheet[0]", "/[]", "/[x]",
         "/[1", "/A#2", "/A#ZZ", "/A(B", "/A%B", "/stream[0]"}) {
     EXPECT_FALSE(Path::parse(text)) << text;
   }

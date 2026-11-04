@@ -333,6 +333,9 @@ std::string peek_document(Content const& content) {
   std::size_t total = 0;
   count_children(content, total);
   auto result = count(total, "revision", "revisions");
+  if (auto const pages = content.document().pages().size(); pages > 0) {
+    result += "; " + count(pages, "page", "pages") + " (/pages)";
+  }
   if (auto const& security = content.document().security()) {
     result += "; encrypted: " + security->status;
     if (auto const denied = security->denied(); !denied.empty()) {
@@ -425,6 +428,15 @@ std::string peek(Content const& content, std::size_t width) {
       }
     }
     return text;
+  }
+  case Kind::pages: {
+    auto const count = content.document().pages().size();
+    return std::format("{} {}, in page tree order", count, count == 1 ? "page" : "pages");
+  }
+  case Kind::page: {
+    auto const& pages = content.document().pages();
+    auto const index = content.path().segments().back().number;
+    return index < pages.size() ? "-> " + pages[index].to_string() : std::string{};
   }
   case Kind::key:
   case Kind::index: return {}; // Only used in path segments

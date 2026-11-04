@@ -11,7 +11,7 @@ See [session.md](session.md) for what the session is about, and
 - The walker understands: revisions, the top-level elements of a revision
   (header, comments, objects, xref, trailer, startxref, eof), and what is inside
   objects and trailers (dictionary entries, array items, stream data).
-- 162 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
+- 186 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
 - A `charset` library for text transcoding (Unicode, UTF-8, UTF-16, CP437).
 - PDF text strings marked as UTF-16BE or UTF-8 are shown decoded in the peek,
   e.g. `/Title "Invoice"`.
@@ -28,7 +28,12 @@ See [session.md](session.md) for what the session is about, and
 - **Text is readable**: text blocks and text-showing operators show their text
   mapped through their fonts (/ToUnicode, or WinAnsi/MacRoman/Standard with
   /Differences), e.g. `"Inköp av råvaror och material i Sverige,"`.
-- Tested on the three PDFs in `_Resources/` (two e-books, one voucher).
+- Display order: `/pages/page[i]/op[j]` walks pages in page tree order, all
+  their drawing operations in order, and forms drawn by `Do`.
+- `walk_pdf --text <file>`: the document's text as plain text, laid out by where
+  it is drawn (lines by baseline, words joined by glyph widths). Refused when the
+  permissions do not allow copying (the e-books).
+- Tested on the PDFs in `_Resources/`: two e-books and (since 2026-11-04) 30 vouchers.
 
 ## Design decisions
 
@@ -63,6 +68,12 @@ See [session.md](session.md) for what the session is about, and
 | WinAnsi, MacRoman and Adobe Standard as `charset` decoders; tables made from Python's cp1252 and mac_roman codecs | They are single-byte encodings, like cp437; the codecs are an independent source |
 | Glyph names: a generated subset (ASCII, Latin-1, Windows-1252, Mac OS Roman, `uniXXXX`/`uXXXX`) | No Adobe Glyph List available offline; enough for Latin text; none of the test fonts needs more |
 | Text block text: strings in content-stream order; new lines and TJ gaps of -250 or more become spaces | Simple and good on the test files; text placement (reading order) comes later |
+| Display order under `/pages` (not listed under `/`); `page[i]` -> `op[j]` across all content streams; a form's operations as children of its `Do` | A second, logical tree beside the file layout; keeps the default listing small |
+| The font in effect in display order is tracked as the resolved font object, carried into forms | Tf selects a font object by name in the resources of the moment; a form may not have that name |
+| Plain text document = `PlainText { pages of lines }`, strings only; all knowledge in the builder (interpreter + layout) | The user's design: a simple document type, a visitor that knows where text goes. Markdown later gets its own builder and document |
+| Layout: lines by baseline (half a font size), space when a gap > 1/5 of the size, empty line when > 1.5 lines, direction rounded to quarter turns | Simple rules, good on the vouchers; columns side by side are a known limit |
+| /ActualText of marked content replaces the glyphs' text | A voucher draws a hyphen with a glyph that maps to a space, and says "-" in /ActualText |
+| `plain_text` checks the copy/extract permission (bit 5) | As agreed: text extraction honours the publisher's flag |
 | The peek shows decrypted content; a future text output honours the "copy/extract" permission (`/P` bit 5) | The user's decision (2026-11-04): peeking for structure inspection is not extraction. Agreed that actual text extraction respects the publisher's flag |
 
 ## Done
@@ -114,6 +125,14 @@ See [session.md](session.md) for what the session is about, and
     and mapping), `Document::load_font`, `font_name_at` (last Tf, with q/Q), and
     `Document::text(path)` for operations and text blocks. Peek shows the text.
     15 new tests.
+19. Display order: `Kind::pages`/`page`, `Document::pages()` (page tree, cycle guard),
+    `trailer_entry(key)`, `inherited(node, key)`, operations of a page's content streams
+    and of forms drawn by `Do` (8 levels at most), `display_resources`, `display_font`.
+    Index entries can keep their decoded buffer. 8 new tests (`test/test_display.cpp`).
+20. Plain text: `Font::glyphs` with widths (/Widths, /FirstChar, /MissingWidth; Type0
+    /W, /DW; Type3 /FontMatrix), `src/plain_text.*` (interpreter of graphics and text
+    state, forms with /Matrix, /ActualText; line layout; `PlainText`, permission check),
+    `walk_pdf --text`. 16 new tests (`test/test_plain_text.cpp`).
 
 ## Findings about the test PDFs
 
@@ -146,6 +165,18 @@ See [session.md](session.md) for what the session is about, and
   font /OCRB, "H # 62600012236149 # 311 25 8 > 53432795#41#" (reference, amount,
   bankgiro). Its other visible text is drawn as shapes (no characters); only the
   outline titles ("249,00 SEK", "5343-2795") carry it as text.
+- Display order: "bokforing" 830 pages, 253,503 text operations; "bokslutsb" 510
+  pages, 34,879 (27,679 operations inside forms). "bokforing" splits words over
+  several Tj ("BAS-intr" "essent" "er"): joining them needs positions.
+- Vouchers added to `_Resources/_vouchers` (30 in all): `4816_13`, `20578563254`
+  and the `Kvittens_*` files keep their pages in object streams (no pages found
+  yet). `FAKTURA_903006266022` has a Type0/Identity-H font without /ToUnicode
+  (/AllAndNone2): its glyph ids can not be mapped without the embedded font
+  program's own tables (42 operations show U+FFFD).
+- `--text` on the 30 vouchers (1 s in all): 23 give their text, e.g. the Fortnox and
+  Anthropic invoices read line by line with whole words and Swedish letters; 7 give
+  none (object streams). Columns side by side are joined on one line
+  ("Anthropic, PBC Bill to").
 - Some PDFs keep objects inside object streams (`/Type /ObjStm`); those objects are
   not visible until object streams are unpacked.
 - Strings may be UTF-16 (the voucher's `/Title`, outline titles such as
@@ -156,15 +187,13 @@ See [session.md](session.md) for what the session is about, and
 
 ## Next
 
-1. Logical walk of pages (catalog -> page tree -> pages in reading order),
-   with a visited set against cycles.
-2. Text output: write a document's text as plain text (and later Markdown), page by
-   page, honouring the "copy/extract" permission of encrypted files (as agreed).
-3. Reading order by text position (Tm/Td coordinates), for pages whose content
-   stream order is not reading order.
+1. Unpack object streams (`/Type /ObjStm`): 7 of the 30 vouchers keep their
+   pages in them and give no text yet.
+2. Columns: split a page's lines into columns before joining them.
+3. Markdown: a second builder over the same interpreter, keeping font sizes and
+   styles and marked content tags (headings, paragraphs, lists).
 4. AES decryption (`/V 4` with `/AESV2`, `/V 5`), if a test PDF needs it.
-5. Unpack object streams (`/Type /ObjStm`).
-6. Decode PDFDocEncoding text strings (those without a `FE FF`/`EF BB BF` mark),
+5. Decode PDFDocEncoding text strings (those without a `FE FF`/`EF BB BF` mark),
    a new decoder in `charset`.
 
 ## Open questions

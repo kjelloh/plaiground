@@ -33,6 +33,8 @@ std::string_view to_string(Kind kind) {
   case Kind::decoded: return "decoded";
   case Kind::text_block: return "text block";
   case Kind::operation: return "operation";
+  case Kind::pages: return "pages";
+  case Kind::page: return "page";
   case Kind::key: return "key";
   case Kind::index: return "index";
   }
@@ -42,7 +44,7 @@ std::string_view to_string(Kind kind) {
 namespace {
 
 // How each kind is named in a path segment. The document (root) has no segment.
-constexpr std::array<std::pair<Kind, std::string_view>, 11> segment_names{{
+constexpr std::array<std::pair<Kind, std::string_view>, 12> segment_names{{
     {Kind::revision, "rev"},
     {Kind::header, "header"},
     {Kind::comment, "comment"},
@@ -54,6 +56,7 @@ constexpr std::array<std::pair<Kind, std::string_view>, 11> segment_names{{
     {Kind::unknown, "unknown"},
     {Kind::text_block, "BT"},
     {Kind::operation, "op"},
+    {Kind::page, "page"},
 }};
 
 std::string_view segment_name(Kind kind) {
@@ -93,7 +96,7 @@ bool is_plain_key_byte(char c) {
 }
 
 bool is_reserved_word(std::string_view text) {
-  return text == "header" || text == "stream" || text == "decoded";
+  return text == "header" || text == "stream" || text == "decoded" || text == "pages";
 }
 
 std::string escape_key(std::string_view key) {
@@ -156,6 +159,9 @@ std::expected<Segment, std::string> parse_segment(std::string_view text) {
   if (text == "decoded") {
     return Segment::decoded();
   }
+  if (text == "pages") {
+    return Segment::pages();
+  }
   if (text.starts_with('[')) {
     auto const index = text.ends_with(']') && text.size() > 2
                            ? parse_number<std::uint64_t>(text.substr(1, text.size() - 2))
@@ -202,6 +208,7 @@ std::string Segment::to_string() const {
   case Kind::header: return "header";
   case Kind::stream: return "stream";
   case Kind::decoded: return "decoded";
+  case Kind::pages: return "pages";
   case Kind::key: return escape_key(key);
   case Kind::index: return std::format("[{}]", number);
   default: return std::format("{}[{}]", segment_name(kind), number);

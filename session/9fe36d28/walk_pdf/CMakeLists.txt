@@ -56,6 +56,7 @@ add_library(walk_pdf_core
   src/glyph_names.cpp
   src/path.cpp
   src/peek.cpp
+  src/plain_text.cpp
   src/scanner.cpp
   src/security.cpp
   src/syntax.cpp

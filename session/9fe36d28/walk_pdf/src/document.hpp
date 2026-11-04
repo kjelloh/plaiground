@@ -96,6 +96,12 @@ private:
   std::optional<Value> stream_;                      // a stream object's data, its last child
   bool decoded_ = false;                             // a stream's decoded data, its only child
   bool operations_ = false;                          // the parent is a content stream
+  // Display order: the decoded content streams a page or a form-drawing Do
+  // draws, whose operations are its children, in order
+  void next_drawn_operation();
+  std::vector<std::shared_ptr<std::string const>> streams_;
+  std::size_t stream_index_ = 0;
+  bool operands_done_ = false;
   std::optional<Element> current_;                   // nullopt at the end
 };
 
@@ -186,6 +192,16 @@ public:
   // TJ become a space. nullopt for anything else, or if its font is not found.
   std::optional<std::string> text(Path const& path) const;
 
+  // Display order: the page objects in page tree order, from the catalog's
+  // /Pages (found on first use). /pages/page[i] in a path is page i.
+  std::vector<Path> const& pages() const;
+
+  // The form object a Do operation (in display order) draws, if it draws a form
+  std::optional<Path> form_at(Path const& operation) const;
+
+  // The latest trailer (or cross-reference stream) entry with this key, e.g. "Root"
+  std::optional<Path> trailer_entry(std::string const& key) const;
+
 private:
   friend class ChildIterator;
 
@@ -206,13 +222,15 @@ private:
     Kind kind;
     std::size_t begin;
     std::size_t end;
+    std::shared_ptr<std::string const> buffer; // a decoded stream, when the path does not say which
   };
   static constexpr std::size_t index_capacity = 65536;
-  void remember(Path const& path, Kind kind, std::size_t begin, std::size_t end) const {
+  void remember(Path const& path, Kind kind, std::size_t begin, std::size_t end,
+                std::shared_ptr<std::string const> buffer = {}) const {
     if (index_.size() >= index_capacity) {
       index_.clear();
     }
-    index_.try_emplace(path, Location{kind, begin, end});
+    index_.try_emplace(path, Location{kind, begin, end, std::move(buffer)});
   }
 
   std::optional<Security> find_security() const;
@@ -238,6 +256,20 @@ private:
   void find_resources() const;
 
   mutable std::map<Path, std::shared_ptr<Font const>> fonts_;
+
+  // Display order
+  mutable std::optional<std::vector<Path>> pages_;
+  // A page attribute, from the page or its nearest ancestor in the page tree that has it
+  std::optional<Path> inherited(Path const& node, std::string const& key) const;
+  // The decoded content streams a page draws, or the form a Do operation draws
+  std::vector<std::shared_ptr<std::string const>> drawn_streams(Content const& parent) const;
+  // The resources in effect at a display-order path: its page's, or the form's it is in
+  std::optional<Path> display_resources(Path const& path) const;
+  // The font in effect at a display-order operation: selected by Tf in its
+  // page or form (by name, in that one's resources), or else the font in
+  // effect where the form is drawn
+  std::optional<Path> display_font(Path const& operation) const;
+  mutable std::map<Path, std::vector<std::pair<std::uint64_t, std::string>>> display_font_changes_;
 
   // The font name (as in "/F8 16 Tf") in effect at an offset in a decoded
   // content stream: the last Tf before it, with q and Q saving and restoring it

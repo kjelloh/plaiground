@@ -39,6 +39,10 @@ enum class Kind {
   text_block, // BT ... ET, a text object
   operation,  // operands and an operator, e.g. "<0001> Tj"
 
+  // Display order (not in the file's layout): the pages as shown
+  pages, // all pages, in page tree order
+  page,  // one page; its children are its drawing operations in order
+
   // Only in path segments: how a value is reached from its parent
   key,   // a dictionary entry, by its key
   index, // an array item, by its index
@@ -66,11 +70,12 @@ struct Segment {
   static Segment item(std::uint64_t index) { return {Kind::index, index, {}}; }
   static Segment stream() { return {Kind::stream, 0, {}}; }
   static Segment decoded() { return {Kind::decoded, 0, {}}; }
+  static Segment pages() { return {Kind::pages, 0, {}}; }
 
   // "rev[1]", "header", "obj[12]", "xref[0]", "Type" (a key), "[3]" (an index), "stream", "decoded".
   // A key is written as is, except that bytes which would clash with the path
   // syntax are written #xx, as PDF names do: "A B" is "A#20B". A key that is
-  // a reserved word ("header", "stream", "decoded") gets its first letter escaped.
+  // a reserved word ("header", "stream", "decoded", "pages") gets its first letter escaped.
   std::string to_string() const;
 
   auto operator<=>(Segment const&) const = default;

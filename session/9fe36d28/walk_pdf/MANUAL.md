@@ -9,13 +9,14 @@ the text of the PDF, so that it can be turned into plain text or Markdown.
 > items and stream data. It decrypts files that open without a password,
 > decompresses streams, splits page content into text blocks and their
 > operators, follows references, e.g. from a text block to its font, and shows
-> the text each text block holds. It does not yet put pages in reading order
-> or write the text out as a whole.
+> the text each text block holds. It walks pages in display order, and
+> writes a document's text as plain text (`--text`).
 
 ## Usage
 
 ```
 walk_pdf <file.pdf> [<path>] [--depth N]
+walk_pdf --text <file.pdf>
 walk_pdf [options]
 ```
 
@@ -68,7 +69,9 @@ The peek column shows what an element holds, without the keyword that opens it
 
 | Element    | Peek                                                              |
 |------------|-------------------------------------------------------------------|
-| `/`        | How many revisions the file has, and if it is encrypted, how and which permissions it does not grant (see Encrypted files below) |
+| `/`        | How many revisions and pages the file has, and if it is encrypted, how and which permissions it does not grant (see Encrypted files below) |
+| `/pages`   | How many pages there are |
+| page       | Its page object: `-> /rev[0]/obj[5]` |
 | revision   | How many elements it has, e.g. `19 elements: 13 objects, xref, trailer` |
 | header     | The PDF version, e.g. `version 1.3`                               |
 | comment    | Its text, or `<binary marker, n bytes>` for the line that tells tools the file holds binary data |
@@ -170,6 +173,79 @@ at where on the page text is placed, so the order is that of the content stream.
 Text drawn as shapes, rather than with a font, has no characters, and is not
 found. Some PDF makers draw all text that way.
 
+## Display order
+
+Everything above follows the file's layout: revisions, objects, streams, in
+the order the bytes are in the file. Pages are *shown* in another order: the
+catalog's page tree, and in each page its content streams and the forms they
+draw. walk_pdf walks that order under `/pages`:
+
+```
+walk_pdf file.pdf /pages --depth 1           the pages, in order
+walk_pdf file.pdf '/pages/page[0]' --depth 1  the first page's drawing operations
+```
+
+| Path                         | Element                                              |
+|------------------------------|------------------------------------------------------|
+| `/pages`                     | All pages, in page tree order                        |
+| `/pages/page[i]`             | Page i, counted from 0                               |
+| `/pages/page[i]/op[j]`       | Operation j of the page: all its content streams' operations, in order |
+| `.../op[j]/[k]`              | Operand k of an operation                            |
+| `.../op[j]/op[k]`            | When op[j] draws a form (`/Fm1 Do`), operation k of the form |
+
+`/pages` is not listed under `/`, so a plain `walk_pdf file.pdf` does not list
+every drawing operation; the `/` row says how many pages there are.
+
+Text-showing operations show their text, as elsewhere. The font in effect is
+followed through the page in drawing order, across its content streams, with
+`q`/`Q`, into the forms it draws. A form drawn with `Do` uses its own
+`/Resources` (or else its page's); forms drawing forms are followed eight
+levels deep at most, so a form that draws itself does not go on forever.
+
+Pages and fonts kept in object streams (`/Type /ObjStm`) are not found yet:
+such files show no pages.
+
+## Plain text
+
+`walk_pdf --text file.pdf` prints the document's text to standard output,
+each page after a `--- page n ---` line. walk_pdf writes no files; to keep the
+text, redirect it: `walk_pdf --text file.pdf > file.txt`. Errors go to
+standard error.
+
+For example:
+
+```
+--- page 1 ---
+Invoice
+
+Invoice number AXLBEPCT-0003
+
+Date of issue August 30, 2025
+```
+
+walk_pdf goes through each page in display order, as under `/pages`, and
+follows where each piece of text is drawn: the transformations (`cm`, a form's
+`/Matrix`), the text position (`Tm`, `Td`, `TD`, `T*`, `'`, `"`), and how far
+each glyph moves it (the font's widths, the size, `Tc`, `Tw`, `Tz`). Then:
+
+- Text on the same baseline (within half a font size) is one line, in order
+  along it. Text turned a quarter, as on a page printed sideways, reads along
+  its own lines.
+- Two pieces of a line are joined with a space when the gap between them is
+  wider than a fifth of the font size, and without one otherwise. A word drawn
+  in pieces is whole again.
+- Lines go top to bottom, with an empty line where the gap to the next is more
+  than one and a half lines.
+- Marked content with `/ActualText` (`/Span <</ActualText (-)>> BDC ... EMC`)
+  gives that text in place of the text its glyphs map to.
+
+Text whose font is not found is left out. Two columns side by side come out as
+one line each, the columns' lines joined.
+
+An encrypted file whose permissions do not allow copying or extracting its
+text (`/P`, see Encrypted files) is refused, with exit code 1. walk_pdf still
+shows its structure.
+
 ## Paths
 
 A path names one element of the file, from the top down, like a file system
@@ -255,6 +331,7 @@ its revision has no `xref` or `trailer`.
 
 | Option         | What it does                                                    |
 |----------------|-----------------------------------------------------------------|
+| `--text`       | Print the document's text as plain text, page by page, instead of its structure (see Plain text). |
 | `--depth N`    | How many levels below the path to list. 0 lists only the element at the path, 1 adds its children, and so on. Default 3. |
 | `-h`, `--help` | Print this manual and exit.                                     |
 
@@ -273,7 +350,7 @@ Running walk_pdf without arguments prints its name and version.
 | Code | Meaning                                                   |
 |------|-----------------------------------------------------------|
 | 0    | Success.                                                  |
-| 1    | The file could not be read, or has no element at the path. |
+| 1    | The file could not be read, or has no element at the path, or (`--text`) its permissions do not allow copying its text. |
 | 2    | Invalid command line arguments, or an invalid path.       |
 
 ## Building

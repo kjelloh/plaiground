@@ -223,3 +223,21 @@ I now feel VERY GOOD about this exercise.
     * This seems to have caused Claude to pick up the hint and build on it?
 
     So now Claude claims the app can map pdf text to text in a character set and encoding we can actually use!
+
+    And now I understood something more about pdf text.
+
+    * The text is 'placed' on the page with x,y coordinates!
+    * So to assemble 'plain text' we need to know font size, spacing, page coordinates etc.
+
+    Claude proposed a machinery for this so we end up with what is more-or-less a vector of strings (or a vector of vector of words).
+
+    Lets see how this goes (fingers crossed)
+
+    * AND - Am I glad I do not have to do this manually by myself!
+    * Also: MY GOOD HOW 'LITTERED' PDFS ARE (for what we use them for...)
+
+    Ok, so maybe we need this complexity to pass around good looking document?
+
+    * Still - It just FEELS overkill?
+
+    WOW! The app now seems to be able to dump plain text from a pdf!

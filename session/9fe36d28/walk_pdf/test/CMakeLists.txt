@@ -3,11 +3,13 @@ find_package(GTest REQUIRED)
 add_executable(walk_pdf_tests
   test_cp437.cpp
   test_crypto.cpp
+  test_display.cpp
   test_document.cpp
   test_filters.cpp
   test_fonts.cpp
   test_path.cpp
   test_peek.cpp
+  test_plain_text.cpp
   test_references.cpp
   test_security.cpp
   test_single_byte.cpp

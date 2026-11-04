@@ -2,6 +2,7 @@
 #include "manual.hpp"
 #include "path.hpp"
 #include "peek.hpp"
+#include "plain_text.hpp"
 
 #include <charconv>
 #include <cstdio>
@@ -59,15 +60,20 @@ struct Arguments {
   std::string file;
   walk_pdf::Path path;
   std::size_t depth = default_depth;
+  bool depth_given = false;
+  bool text = false; // --text: the document's text, instead of its structure
 };
 
-// <file> [<path>] [--depth N], in any order
+// <file> [<path>] [--depth N] or --text <file>, in any order
 std::expected<Arguments, std::string> parse_arguments(std::span<char*> arguments) {
   Arguments result;
   std::vector<std::string_view> positional;
   for (std::size_t i = 0; i < arguments.size(); ++i) {
     std::string_view const argument = arguments[i];
-    if (argument == "--depth") {
+    if (argument == "--text") {
+      result.text = true;
+    } else if (argument == "--depth") {
+      result.depth_given = true;
       if (i + 1 == arguments.size()) {
         return std::unexpected("--depth needs a number");
       }
@@ -87,6 +93,9 @@ std::expected<Arguments, std::string> parse_arguments(std::span<char*> arguments
   }
   if (positional.size() > 2) {
     return std::unexpected("too many arguments");
+  }
+  if (result.text && (positional.size() > 1 || result.depth_given)) {
+    return std::unexpected("--text takes a file only, no path or --depth");
   }
   result.file = positional[0];
   if (positional.size() == 2) {
@@ -131,6 +140,15 @@ int main(int argc, char* argv[]) {
   }
 
   walk_pdf::Document const document{std::move(*bytes)};
+  if (parsed->text) {
+    auto const text = walk_pdf::plain_text(document);
+    if (!text) {
+      std::println(stderr, "Error: '{}': {}", parsed->file, text.error());
+      return 1;
+    }
+    std::print("{}", text->to_string());
+    return 0;
+  }
   if (!document.find(parsed->path)) {
     std::println(stderr, "Error: '{}' has no element {}", parsed->file, parsed->path.to_string());
     return 1;

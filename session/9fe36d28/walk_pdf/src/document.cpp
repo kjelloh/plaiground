@@ -57,6 +57,16 @@ ChildIterator::ChildIterator(Content const& parent) : parent_(parent), position_
   decoded_ = parent.kind_ == Kind::stream && parent.in_file();
   operations_ = (parent.kind_ == Kind::decoded && parent.document_->is_content_stream(parent.path_.parent())) ||
                 parent.kind_ == Kind::text_block;
+  if (parent.kind_ == Kind::pages) {
+    position_ = 0;
+  } else if (parent.kind_ == Kind::page ||
+             (parent.kind_ == Kind::operation && parent.path_.segments().front().kind == Kind::pages)) {
+    streams_ = parent.document_->drawn_streams(parent);
+    operands_done_ = parent.kind_ == Kind::page;
+    if (operands_done_) {
+      position_ = 0;
+    }
+  }
   if (body && (body->kind == Kind::dictionary || body->kind == Kind::array)) {
     container_ = body;
     position_ = first_child_at(*body);
@@ -76,8 +86,23 @@ void ChildIterator::emit(Segment segment, Kind kind, std::size_t begin, std::siz
                          std::shared_ptr<std::string const> buffer) {
   auto const& document = *parent_->document_;
   auto path = parent_->path_.child(std::move(segment));
-  document.remember(path, kind, begin, end);
+  document.remember(path, kind, begin, end, buffer);
   current_.emplace(path, Content{document, path, kind, begin, end, std::move(buffer)});
+}
+
+// The next operation of the streams drawn, in order, as op[i]
+void ChildIterator::next_drawn_operation() {
+  while (stream_index_ < streams_.size()) {
+    auto const& stream = streams_[stream_index_];
+    if (auto const operation = next_operation(*stream, position_, stream->size())) {
+      position_ = operation->end;
+      auto const ordinal = ordinals_[static_cast<std::size_t>(Kind::operation)]++;
+      emit(Segment::ordinal(Kind::operation, ordinal), Kind::operation, operation->begin, operation->end, stream);
+      return;
+    }
+    ++stream_index_;
+    position_ = 0;
+  }
 }
 
 ChildIterator& ChildIterator::operator++() {
@@ -119,6 +144,23 @@ void ChildIterator::find_next() {
     }
   }
 
+  // Display order: the pages, and a page's (or form's) drawing operations
+  if (parent.kind_ == Kind::pages) {
+    auto const& pages = document.pages();
+    if (position_ < pages.size()) {
+      if (auto const object = document.find(pages[position_])) {
+        auto const begin = object->offset();
+        emit(Segment::ordinal(Kind::page, position_), Kind::page, begin, begin + object->bytes().size(), nullptr);
+      }
+      ++position_;
+    }
+    return;
+  }
+  if (parent.kind_ == Kind::page) {
+    next_drawn_operation();
+    return;
+  }
+
   // Inside a content stream: its text blocks, a block's operations, an operation's operands
   if (operations_ && parent.kind_ == Kind::decoded) {
     std::optional<std::size_t> block;
@@ -154,13 +196,18 @@ void ChildIterator::find_next() {
     if (source.substr(parent.begin_, 2) == "BI") {
       return; // An inline image's parameters and data are not looked into
     }
-    auto const operand = value_at(source, position_, parent.end_);
-    if (!operand || (operand->kind == Kind::unknown && operand->end == parent.end_)) {
-      return; // The operator
+    if (!operands_done_) {
+      auto const operand = value_at(source, position_, parent.end_);
+      if (operand && !(operand->kind == Kind::unknown && operand->end == parent.end_)) {
+        position_ = operand->end;
+        auto const index = ordinals_[static_cast<std::size_t>(Kind::index)]++;
+        emit(Segment::item(index), operand->kind, operand->begin, operand->end);
+        return;
+      }
+      operands_done_ = true; // Reached the operator
+      position_ = 0;
     }
-    position_ = operand->end;
-    auto const index = ordinals_[static_cast<std::size_t>(Kind::index)]++;
-    emit(Segment::item(index), operand->kind, operand->begin, operand->end);
+    next_drawn_operation(); // A Do that draws a form (display order): the form's operations
     return;
   }
 
@@ -261,10 +308,27 @@ std::optional<Content> Document::find(Path const& path) const {
   if (path.is_root()) {
     return root();
   }
+  // Display order: /pages and /pages/page[i]
+  if (path.segments().front().kind == Kind::pages) {
+    if (path.segments().size() == 1) {
+      return Content{*this, path, Kind::pages, 0, 0};
+    }
+    auto const& page = path.segments()[1];
+    if (path.segments().size() == 2) {
+      if (page.kind != Kind::page || page.number >= pages().size()) {
+        return std::nullopt;
+      }
+      auto const object = find(pages()[page.number]);
+      if (!object) {
+        return std::nullopt;
+      }
+      return Content{*this, path, Kind::page, object->offset(), object->offset() + object->bytes().size()};
+    }
+  }
   // Found before (or a sibling of something found before)
   if (auto const known = index_.find(path); known != index_.end()) {
-    auto const& [kind, begin, end] = known->second;
-    auto buffer = buffer_for(path);
+    auto const& [kind, begin, end, kept] = known->second;
+    auto buffer = kept ? kept : buffer_for(path);
     if (!buffer && std::ranges::any_of(path.segments(), [](Segment const& s) { return s.kind == Kind::decoded; })) {
       return std::nullopt; // Its stream can no longer be decoded
     }
@@ -361,35 +425,8 @@ std::optional<Security> const& Document::security() const {
 }
 
 std::optional<Security> Document::find_security() const {
-  // The latest dictionaries with /Encrypt and /ID: trailers, or in files
-  // without them, cross-reference streams
-  std::optional<Path> encrypt;
-  std::optional<Path> id;
-  for (auto r = revisions_.size(); r-- > 0 && !(encrypt && id);) {
-    auto const revision = Path{}.child(Segment::revision(r));
-    std::vector<Path> holders;
-    for (auto const& child : children(revision)) {
-      if (child.content.kind() == Kind::trailer) {
-        holders.push_back(child.path);
-      }
-    }
-    if (holders.empty()) {
-      for (auto const& child : children(revision)) {
-        auto const type = find(child.path.child(Segment::entry("Type")));
-        if (child.content.kind() == Kind::object && name_of(type) == "XRef") {
-          holders.push_back(child.path);
-        }
-      }
-    }
-    for (auto holder = holders.rbegin(); holder != holders.rend(); ++holder) {
-      if (!encrypt && find(holder->child(Segment::entry("Encrypt")))) {
-        encrypt = holder->child(Segment::entry("Encrypt"));
-      }
-      if (!id && find(holder->child(Segment::entry("ID")))) {
-        id = holder->child(Segment::entry("ID"));
-      }
-    }
-  }
+  auto const encrypt = trailer_entry("Encrypt");
+  auto const id = trailer_entry("ID");
   if (!encrypt) {
     return std::nullopt;
   }
@@ -639,16 +676,7 @@ void Document::find_resources() const {
     auto const entry = [&](std::string key) { return object.child(Segment::entry(std::move(key))); };
     if (name_of(find(entry("Type"))) == "Page") {
       // A page's resources may be inherited from its ancestors in the page tree
-      std::optional<Path> resources;
-      std::set<Path> visited;
-      for (std::optional<Path> node = object; node && !resources && visited.insert(*node).second;) {
-        if (find(node->child(Segment::entry("Resources")))) {
-          resources = follow(node->child(Segment::entry("Resources")));
-        } else {
-          node = follow(node->child(Segment::entry("Parent")));
-        }
-      }
-      if (resources) {
+      if (auto const resources = inherited(object, "Resources")) {
         for (auto const content : referenced_objects(*this, entry("Contents"))) {
           found.try_emplace(content, *resources);
         }
@@ -664,6 +692,9 @@ void Document::find_resources() const {
 
 std::optional<Path> Document::resources(Path const& stream) const {
   auto const& segments = stream.segments();
+  if (!segments.empty() && segments.front().kind == Kind::pages) {
+    return display_resources(stream);
+  }
   if (segments.size() < 2 || segments[1].kind != Kind::object) {
     return std::nullopt;
   }
@@ -742,12 +773,13 @@ std::optional<std::string> Document::shown_text(Content const& operation) const 
   // The decoded content stream it is in, and the font in effect there
   auto const& segments = operation.path().segments();
   auto const decoded = std::ranges::find_if(segments, [](Segment const& s) { return s.kind == Kind::decoded; });
-  if (decoded == segments.end()) {
-    return std::nullopt;
+  std::optional<Path> font_path;
+  if (decoded != segments.end()) {
+    auto const name = font_name_at(Path{std::vector<Segment>{segments.begin(), decoded + 1}}, operation.offset());
+    font_path = name ? font(operation.path(), *name) : std::nullopt;
+  } else if (!segments.empty() && segments.front().kind == Kind::pages) {
+    font_path = display_font(operation.path());
   }
-  auto const stream = Path{std::vector<Segment>{segments.begin(), decoded + 1}};
-  auto const name = font_name_at(stream, operation.offset());
-  auto const font_path = name ? font(operation.path(), *name) : std::nullopt;
   if (!font_path) {
     return std::nullopt;
   }
@@ -825,6 +857,207 @@ std::optional<std::string> Document::text(Path const& path) const {
     return std::nullopt;
   }
   return text;
+}
+
+std::optional<Path> Document::trailer_entry(std::string const& key) const {
+  // Trailers, or in files without them, cross-reference streams; the latest first
+  for (auto r = revisions_.size(); r-- > 0;) {
+    auto const revision = Path{}.child(Segment::revision(r));
+    std::vector<Path> holders;
+    for (auto const& child : children(revision)) {
+      if (child.content.kind() == Kind::trailer) {
+        holders.push_back(child.path);
+      }
+    }
+    if (holders.empty()) {
+      for (auto const& child : children(revision)) {
+        if (child.content.kind() == Kind::object &&
+            name_of(find(child.path.child(Segment::entry("Type")))) == "XRef") {
+          holders.push_back(child.path);
+        }
+      }
+    }
+    for (auto holder = holders.rbegin(); holder != holders.rend(); ++holder) {
+      if (auto const entry = holder->child(Segment::entry(key)); find(entry)) {
+        return entry;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<Path> Document::inherited(Path const& node, std::string const& key) const {
+  std::set<Path> visited; // A /Parent loop is damage
+  for (std::optional<Path> at = node; at && visited.insert(*at).second;) {
+    if (auto const entry = at->child(Segment::entry(key)); find(entry)) {
+      return follow(entry);
+    }
+    at = follow(at->child(Segment::entry("Parent")));
+  }
+  return std::nullopt;
+}
+
+std::vector<Path> const& Document::pages() const {
+  if (pages_) {
+    return *pages_;
+  }
+  std::vector<Path> found;
+  auto const root = trailer_entry("Root");
+  auto const catalog = root ? follow(*root) : std::nullopt;
+  auto const tree = catalog ? follow(catalog->child(Segment::entry("Pages"))) : std::nullopt;
+  // Depth first through /Kids; a node met twice (a loop, or damage) is skipped
+  std::set<Path> visited;
+  std::vector<Path> stack;
+  if (tree) {
+    stack.push_back(*tree);
+  }
+  while (!stack.empty()) {
+    auto const node = stack.back();
+    stack.pop_back();
+    if (!visited.insert(node).second) {
+      continue;
+    }
+    auto const kids = node.child(Segment::entry("Kids"));
+    if (name_of(find(node.child(Segment::entry("Type")))) == "Page" || !find(kids)) {
+      found.push_back(node);
+      continue;
+    }
+    std::vector<Path> children_in_order;
+    for (auto const& kid : children(kids)) {
+      if (auto const target = follow(kid.path)) {
+        children_in_order.push_back(*target);
+      }
+    }
+    stack.insert(stack.end(), children_in_order.rbegin(), children_in_order.rend());
+  }
+  pages_ = std::move(found);
+  return *pages_;
+}
+
+std::vector<std::shared_ptr<std::string const>> Document::drawn_streams(Content const& parent) const {
+  std::vector<Path> objects;
+  if (parent.kind() == Kind::page) {
+    auto const& page = parent.path().segments()[1];
+    if (page.number < pages().size()) {
+      for (auto const number : referenced_objects(*this, pages()[page.number].child(Segment::entry("Contents")))) {
+        if (auto const object = this->object(number)) {
+          objects.push_back(*object);
+        }
+      }
+    }
+  } else if (parent.kind() == Kind::operation) {
+    // A form drawn by Do; forms in forms are followed a few levels deep at most
+    auto const depth = std::ranges::count_if(parent.path().segments(),
+                                             [](Segment const& s) { return s.kind == Kind::operation; });
+    if (depth <= 8) {
+      if (auto const form = form_at(parent.path())) {
+        objects.push_back(*form);
+      }
+    }
+  }
+  std::vector<std::shared_ptr<std::string const>> streams;
+  for (auto const& object : objects) {
+    if (auto const decoded = decode(object.child(Segment::stream()))) {
+      streams.push_back(decoded->bytes);
+    }
+  }
+  return streams;
+}
+
+std::optional<Path> Document::form_at(Path const& operation) const {
+  auto const content = find(operation);
+  if (!content || content->kind() != Kind::operation) {
+    return std::nullopt;
+  }
+  auto const bytes = content->bytes();
+  auto const parsed = next_operation(bytes, 0, bytes.size());
+  if (!parsed || parsed->name != "Do") {
+    return std::nullopt;
+  }
+  auto const name = value_at(bytes, 0, parsed->operator_begin);
+  auto const resources = display_resources(operation);
+  if (!name || name->kind != Kind::name || !resources) {
+    return std::nullopt;
+  }
+  auto const xobjects = follow(resources->child(Segment::entry("XObject")));
+  auto const xobject = xobjects ? follow(xobjects->child(
+                                      Segment::entry(decode_name(bytes.substr(name->begin, name->end - name->begin)))))
+                                : std::nullopt;
+  if (!xobject || name_of(find(xobject->child(Segment::entry("Subtype")))) != "Form") {
+    return std::nullopt; // e.g. an image
+  }
+  return xobject;
+}
+
+std::optional<Path> Document::display_resources(Path const& path) const {
+  auto const& segments = path.segments();
+  if (segments.size() < 2 || segments[0].kind != Kind::pages || segments[1].kind != Kind::page ||
+      segments[1].number >= pages().size()) {
+    return std::nullopt;
+  }
+  // The page's, then each form drawn on the way down: a Do op[i] with op children
+  auto resources = inherited(pages()[segments[1].number], "Resources");
+  for (std::size_t i = 2; i + 1 < segments.size(); ++i) {
+    if (segments[i].kind == Kind::operation && segments[i + 1].kind == Kind::operation) {
+      auto const form = form_at(Path{std::vector<Segment>{segments.begin(), segments.begin() + static_cast<std::ptrdiff_t>(i) + 1}});
+      if (form && find(form->child(Segment::entry("Resources")))) {
+        resources = follow(form->child(Segment::entry("Resources")));
+      }
+    }
+  }
+  return resources;
+}
+
+std::optional<Path> Document::display_font(Path const& operation) const {
+  if (operation.segments().empty() || operation.segments().back().kind != Kind::operation) {
+    return std::nullopt;
+  }
+  auto const context = operation.parent(); // the page, or the Do that draws a form
+  auto known = display_font_changes_.find(context);
+  if (known == display_font_changes_.end()) {
+    // Where the font changes, by operation number: after each Tf, and each Q that restores one
+    std::vector<std::pair<std::uint64_t, std::string>> changes;
+    std::string current;
+    std::vector<std::string> saved;
+    for (auto const& child : children(context)) {
+      if (child.content.kind() != Kind::operation) {
+        continue; // a Do's operand
+      }
+      auto const bytes = child.content.bytes();
+      auto const parsed = next_operation(bytes, 0, bytes.size());
+      if (!parsed) {
+        continue;
+      }
+      auto const number = child.path.segments().back().number;
+      if (parsed->name == "Tf") {
+        if (auto const name = value_at(bytes, 0, parsed->operator_begin); name && name->kind == Kind::name) {
+          current = decode_name(bytes.substr(name->begin, name->end - name->begin));
+          changes.emplace_back(number, current);
+        }
+      } else if (parsed->name == "q") {
+        saved.push_back(current);
+      } else if (parsed->name == "Q" && !saved.empty()) {
+        current = saved.back();
+        saved.pop_back();
+        changes.emplace_back(number, current);
+      }
+    }
+    if (display_font_changes_.size() >= 256) {
+      display_font_changes_.clear();
+    }
+    known = display_font_changes_.emplace(context, std::move(changes)).first;
+  }
+  auto const number = operation.segments().back().number;
+  auto const& changes = known->second;
+  auto const after = std::ranges::lower_bound(changes, number, {}, &std::pair<std::uint64_t, std::string>::first);
+  if (after != changes.begin() && !std::prev(after)->second.empty()) {
+    return font(operation, std::prev(after)->second);
+  }
+  // None yet in a form: the font in effect where the form is drawn
+  if (context.segments().back().kind == Kind::operation) {
+    return display_font(context);
+  }
+  return std::nullopt;
 }
 
 } // namespace walk_pdf

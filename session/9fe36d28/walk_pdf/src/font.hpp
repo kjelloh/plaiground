@@ -6,9 +6,12 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace walk_pdf {
 
@@ -27,7 +30,18 @@ public:
   // /Encoding. A code that maps to nothing gives U+FFFD.
   std::string text(std::string_view codes) const;
 
+  // One character code of a string: its bytes, the text it stands for (as
+  // text() maps it), and how far it moves the text position, in text space
+  // units (multiply by the font size)
+  struct Glyph {
+    std::string_view code;
+    std::string text;
+    double width;
+  };
+  std::vector<Glyph> glyphs(std::string_view codes) const;
+
   std::size_t code_bytes() const { return code_bytes_; }
+  bool has_widths() const { return has_widths_; }
   bool has_to_unicode() const { return to_unicode_.has_value(); }
 
 private:
@@ -36,6 +50,14 @@ private:
   std::optional<CMap> to_unicode_;      // /ToUnicode
   // A simple font's code -> code point, from its /Encoding (U+FFFD: not mapped)
   std::optional<std::array<charset::unicode::CodePoint, 256>> simple_;
+
+  // Widths, in thousandths of text space (glyph space of Type 3 fonts converted)
+  std::string utf8_of(std::string_view code) const;
+  double width_of(std::string_view code) const;
+  bool has_widths_ = false;
+  std::array<double, 256> simple_widths_{}; // simple fonts, by code
+  std::map<std::uint32_t, double> cid_widths_; // Type0, by CID (the code, for Identity-H)
+  double default_width_ = 500;                // codes without a width (an estimate if none is given)
 };
 
 } // namespace walk_pdf
