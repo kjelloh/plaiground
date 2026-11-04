@@ -24,10 +24,11 @@ file(READ MANUAL.md manual_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
 configure_file(src/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
-# Text transcoding: Unicode, UTF-8, CP437 (seeded from cratchit, session 60cae9fe)
+# Text transcoding: Unicode, UTF-8, UTF-16, CP437 (seeded from cratchit, session 60cae9fe)
 add_library(charset
   src/charset/cp437.cpp
   src/charset/detect.cpp
+  src/charset/utf16.cpp
   src/charset/utf8.cpp
 )
 target_include_directories(charset PUBLIC src)
@@ -40,6 +41,7 @@ add_library(walk_pdf_core
   src/peek.cpp
   src/scanner.cpp
   src/syntax.cpp
+  src/text_string.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )
 target_include_directories(walk_pdf_core PUBLIC src)

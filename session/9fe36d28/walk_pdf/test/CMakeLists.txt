@@ -6,6 +6,8 @@ add_executable(walk_pdf_tests
   test_path.cpp
   test_peek.cpp
   test_syntax.cpp
+  test_text_string.cpp
+  test_utf16.cpp
   test_utf8.cpp
 )
 target_link_libraries(walk_pdf_tests PRIVATE walk_pdf_core walk_pdf_warnings GTest::gtest_main)

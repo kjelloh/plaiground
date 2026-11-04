@@ -2,6 +2,7 @@
 
 #include "bytes.hpp"
 #include "syntax.hpp"
+#include "text_string.hpp"
 
 #include <algorithm>
 #include <array>
@@ -45,14 +46,52 @@ std::string squeeze(std::string_view bytes, std::size_t limit) {
   return result;
 }
 
-// Text cut to width, ending with "..." when cut
+bool continues_a_character(char c) { return (static_cast<unsigned char>(c) & 0xC0) == 0x80; }
+
+// Characters in UTF-8 text
+std::size_t length(std::string_view text) {
+  return static_cast<std::size_t>(std::ranges::count_if(text, [](char c) { return !continues_a_character(c); }));
+}
+
+// UTF-8 text cut to width characters, ending with "..." when cut. Cuts
+// between characters, never inside one.
 std::string fit(std::string text, std::size_t width) {
-  if (text.size() <= width) {
+  if (length(text) <= width) {
     return text;
   }
-  width = std::max<std::size_t>(width, 3);
-  text.resize(width - 3);
+  auto const keep = std::max<std::size_t>(width, 3) - 3;
+  std::size_t characters = 0;
+  std::size_t end = 0;
+  for (; end < text.size(); ++end) {
+    if (!continues_a_character(text[end])) {
+      if (characters == keep) {
+        break;
+      }
+      ++characters;
+    }
+  }
+  text.resize(end);
   return text + "...";
+}
+
+// Text decoded from a string, on one line: control characters and runs of
+// whitespace as one space
+std::string display_text(std::string_view utf8) {
+  std::string result;
+  bool space = false;
+  for (auto const c : utf8) {
+    auto const byte = static_cast<unsigned char>(c);
+    if (byte < 0x20 || byte == 0x7F || c == ' ') {
+      space = !result.empty();
+      continue;
+    }
+    if (space) {
+      result += ' ';
+      space = false;
+    }
+    result += c;
+  }
+  return result;
 }
 
 // Does it start like PDF syntax: a dictionary, array, string or name?
@@ -68,6 +107,61 @@ std::string text_or_binary(std::string_view bytes, std::size_t width) {
     return std::format("<{} bytes, binary>", bytes.size());
   }
   return fit(squeeze(bytes, width), width);
+}
+
+// A string token shown decoded in quotes when it is marked as UTF-16 or
+// UTF-8 text, else as it is in the file
+std::string show_string(std::string_view token, std::size_t limit) {
+  if (auto const text = text_to_utf8(string_bytes(token))) {
+    return "\"" + display_text(*text) + "\"";
+  }
+  return squeeze(token, limit);
+}
+
+// A value on one line. Dictionaries and arrays are rebuilt from their
+// children, so that strings in them are shown decoded. Stops soon after out
+// is longer than limit bytes, as the rest is cut anyway.
+void render(std::string_view bytes, Value const& value, std::size_t limit, std::string& out) {
+  if (out.size() > limit) {
+    return;
+  }
+  auto const token = bytes.substr(value.begin, value.end - value.begin);
+  switch (value.kind) {
+  case Kind::dictionary:
+  case Kind::array: {
+    auto const is_dictionary = value.kind == Kind::dictionary;
+    out += is_dictionary ? "<<" : "[";
+    bool first = true;
+    for (auto pos = first_child_at(value); out.size() <= limit;) {
+      auto const child = next_child(bytes, value, pos);
+      if (!child) {
+        break;
+      }
+      pos = child->value.end;
+      if (is_dictionary) {
+        out += " /" + squeeze(child->key, limit) + " ";
+      } else if (!first) {
+        out += ' ';
+      }
+      first = false;
+      render(bytes, child->value, limit, out);
+    }
+    out += is_dictionary ? " >>" : "]";
+    break;
+  }
+  case Kind::string: out += show_string(token, limit); break;
+  default: out += squeeze(token, limit); break;
+  }
+}
+
+// A value's peek; a token that is not PDF syntax may be binary
+std::string peek_value(std::string_view bytes, Value const& value, std::size_t width) {
+  if (value.kind == Kind::unknown) {
+    return text_or_binary(bytes.substr(value.begin, value.end - value.begin), width);
+  }
+  std::string out;
+  render(bytes, value, 4 * width, out); // UTF-8 may take up to 4 bytes per character
+  return fit(std::move(out), width);
 }
 
 std::string count(std::size_t n, std::string_view singular, std::string_view plural) {
@@ -151,9 +245,8 @@ std::string peek_object(std::string_view bytes, std::size_t width) {
                           ? stream_data(bytes, body->end, end)
                           : std::nullopt;
   if (!stream) {
-    return text_or_binary(bytes.substr(begin, end - begin), width);
+    return body ? peek_value(bytes, *body, width) : text_or_binary(bytes.substr(begin, end - begin), width);
   }
-  auto const dictionary = bytes.substr(body->begin, body->end - body->begin);
   auto const filters = filter_names(bytes, *body);
   auto const size = stream->end - stream->begin;
   auto const description = filters.empty() ? std::format(" + stream <{} bytes>", size)
@@ -161,7 +254,7 @@ std::string peek_object(std::string_view bytes, std::size_t width) {
   // Always show the description, and the dictionary in whatever width is left
   auto const dictionary_width =
       std::max<std::size_t>(width > description.size() ? width - description.size() : 0, 20);
-  return fit(squeeze(dictionary, dictionary_width), dictionary_width) + description;
+  return peek_value(bytes, *body, dictionary_width) + description;
 }
 
 // Entries and object numbers from the subsection lines "first count"
@@ -245,7 +338,10 @@ std::string peek(Content const& content, std::size_t width) {
   case Kind::comment: return peek_comment(bytes, width);
   case Kind::object: return peek_object(bytes, width);
   case Kind::xref: return peek_xref(bytes);
-  case Kind::trailer: return text_or_binary(after(bytes, "trailer"), width);
+  case Kind::trailer: {
+    auto const body = value_at(bytes, std::string_view{"trailer"}.size(), bytes.size());
+    return body ? peek_value(bytes, *body, width) : text_or_binary(after(bytes, "trailer"), width);
+  }
   case Kind::startxref: return squeeze(after(bytes, "startxref"), width);
   case Kind::eof: return {};
   case Kind::unknown: return text_or_binary(bytes, width);
@@ -257,7 +353,10 @@ std::string peek(Content const& content, std::size_t width) {
   case Kind::reference:
   case Kind::string:
   case Kind::array:
-  case Kind::dictionary: return text_or_binary(bytes, width);
+  case Kind::dictionary: {
+    auto const value = value_at(bytes, 0, bytes.size());
+    return value ? peek_value(bytes, *value, width) : std::string{};
+  }
   case Kind::stream:
     // Stream data that is text (e.g. an uncompressed page) is shown, other data described
     return is_binary(bytes) ? std::format("<{} bytes>", bytes.size()) : fit(squeeze(bytes, width), width);

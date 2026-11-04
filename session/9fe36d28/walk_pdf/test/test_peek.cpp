@@ -52,7 +52,7 @@ TEST(Peek, StreamIsDescribed) {
   EXPECT_EQ(peek_at(Document{sample}, "/rev[0]/obj[2]", 100),
             "<< /Length 10 /Filter /FlateDecode >> + stream <10 bytes, FlateDecode>");
   EXPECT_EQ(peek_at(Document{sample}, "/rev[0]/obj[3]", 100),
-            "<< /Filter [ /ASCII85Decode /FlateDecode ] >> + stream <2 bytes, ASCII85Decode "
+            "<< /Filter [/ASCII85Decode /FlateDecode] >> + stream <2 bytes, ASCII85Decode "
             "FlateDecode>");
   EXPECT_EQ(peek_at(Document{sample}, "/rev[0]/obj[4]"), "<< /Length 3 >> + stream <3 bytes>");
 }
@@ -104,6 +104,40 @@ TEST(Peek, SyntaxWithBinaryStringsIsShownAsText) {
   Document const document{"%PDF-1.4\n1 0 obj\n<< /Title (\x01\x02\x03\x04\x05\x06\x07\x08) >>\n"
                           "endobj\n%%EOF\n"};
   EXPECT_EQ(peek_at(document, "/rev[0]/obj[1]"), "<< /Title (........) >>");
+}
+
+TEST(Peek, Utf16TextIsDecoded) {
+  // Strings marked FE FF are UTF-16BE text: "Invoice" and "Malmö"
+  using namespace std::string_view_literals;
+  Document const document{std::string{"%PDF-1.4\n1 0 obj\n<< /Title (\xFE\xFF\0I\0n\0v\0o\0i\0c\0e)"
+                                      " /City <FEFF004D0061006C006D00F6> >>\nendobj\n%%EOF\n"sv}};
+  EXPECT_EQ(peek_at(document, "/rev[0]/obj[1]/Title"), "\"Invoice\"");
+  EXPECT_EQ(peek_at(document, "/rev[0]/obj[1]/City"), "\"Malm\xC3\xB6\"");
+  EXPECT_EQ(peek_at(document, "/rev[0]/obj[1]"), "<< /Title \"Invoice\" /City \"Malm\xC3\xB6\" >>");
+}
+
+TEST(Peek, Utf8TextIsDecoded) {
+  Document const document{"%PDF-2.0\n1 0 obj\n(\xEF\xBB\xBFMalm\xC3\xB6\n  stad)\nendobj\n%%EOF\n"};
+  EXPECT_EQ(peek_at(document, "/rev[0]/obj[1]"), "\"Malm\xC3\xB6 stad\"");
+}
+
+TEST(Peek, UnmarkedStringsAreShownAsInTheFile) {
+  Document const document{"%PDF-1.4\n1 0 obj\n<< /D (D:20261012) /H <48656C6C6F> >>\nendobj\n%%EOF\n"};
+  EXPECT_EQ(peek_at(document, "/rev[0]/obj[1]"), "<< /D (D:20261012) /H <48656C6C6F> >>");
+}
+
+TEST(Peek, DecodedTextIsCutBetweenCharacters) {
+  std::string utf16 = "\xFE\xFF";
+  for (int i = 0; i < 40; ++i) {
+    utf16 += std::string{"\0\xF6", 2}; // ö, two bytes in UTF-8
+  }
+  Document const document{"%PDF-1.4\n1 0 obj\n(" + utf16 + ")\nendobj\n%%EOF\n"};
+  auto const text = peek_at(document, "/rev[0]/obj[1]", 20);
+  std::string expected = "\"";
+  for (int i = 0; i < 16; ++i) {
+    expected += "\xC3\xB6";
+  }
+  EXPECT_EQ(text, expected + "...");
 }
 
 TEST(Peek, BinaryUnknownIsDescribed) {

@@ -27,9 +27,9 @@ goes 3 levels down.
          0     489247  /                                1 revision
          0     489246  /rev[0]                          53 elements: 48 objects, xref, trailer
          0          8  /rev[0]/header                   version 1.4
-         9        167  /rev[0]/obj[1]                   << /Title (.. I n v o i c e) /Creator (.. w k h t m l t o...
-        27         18  /rev[0]/obj[1]/Title             (.. I n v o i c e)
-        55         40  /rev[0]/obj[1]/Creator           (.. w k h t m l t o p d f 0 . 1 2 . 4)
+         9        167  /rev[0]/obj[1]                   << /Title "Invoice" /Creator "wkhtmltopdf 0.12.4" /Produc...
+        27         18  /rev[0]/obj[1]/Title             "Invoice"
+        55         40  /rev[0]/obj[1]/Creator           "wkhtmltopdf 0.12.4"
        ...
      55726        120  /rev[0]/obj[5]                   << /Type /Page /Parent 2 0 R /Contents 35 0 R /Resources ...
      55743          5  /rev[0]/obj[5]/Type              /Page
@@ -71,7 +71,8 @@ The peek column shows what an element holds, without the keyword that opens it
 | startxref  | The byte offset of the cross-reference                            |
 | eof        | Nothing                                                           |
 | unknown    | Its text, or `<n bytes, binary>`                                  |
-| a value inside an object: dictionary, array, name, number, string, reference (`12 0 R`), boolean, null | Its text |
+| a value inside an object: dictionary, array, name, number, reference (`12 0 R`), boolean, null | Its text |
+| string     | Text strings marked as UTF-16 or UTF-8 are shown decoded, in quotes: `"Invoice"`. Other strings as they are in the file: `(D:20261012)` |
 | stream     | The stream's data if it is text (an uncompressed page, say), otherwise `<n bytes>` |
 
 Runs of whitespace are shown as one space, and other bytes outside printable
@@ -79,10 +80,17 @@ ASCII as `.`. Text that is too long is cut and ends with `...`. A peek is at
 most 60 characters, except that a stream's description is always shown in
 full, so an object with a stream can be a little wider.
 
+Dictionaries and arrays are shown rebuilt from their entries and items, so that
+the strings in them are decoded too: `<< /Title "Invoice" /Creator "wkhtmltopdf 0.12.4" ... >>`.
+
+A PDF text string is decoded when it starts with a mark saying how it is
+encoded: `FE FF` for UTF-16 (big-endian) and `EF BB BF` for UTF-8. Bytes that
+do not decode are shown as `�` (U+FFFD). Strings without a mark use
+PDFDocEncoding, which is not decoded yet.
+
 Compressed stream data, which holds the text of most pages, is only described,
 as it can not be read yet. Nor can the strings and streams of an encrypted PDF
-(one whose trailer has `/Encrypt`): they show as `.`. Strings stored as UTF-16
-show their zero bytes as spaces: `(.. I n v o i c e)`.
+(one whose trailer has `/Encrypt`): they show as `.` and escapes.
 
 ## Paths
 

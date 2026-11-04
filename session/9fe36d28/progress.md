@@ -11,9 +11,10 @@ See [session.md](session.md) for what the session is about, and
 - The walker understands: revisions, the top-level elements of a revision
   (header, comments, objects, xref, trailer, startxref, eof), and what is inside
   objects and trailers (dictionary entries, array items, stream data).
-- 78 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
-- A `charset` library for text transcoding (Unicode, UTF-8, CP437) is in place,
-  ready for extracting text.
+- 102 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
+- A `charset` library for text transcoding (Unicode, UTF-8, UTF-16, CP437).
+- PDF text strings marked as UTF-16BE or UTF-8 are shown decoded in the peek,
+  e.g. `/Title "Invoice"`.
 - Tested on the three PDFs in `_Resources/` (two e-books, one voucher).
 
 ## Design decisions
@@ -34,6 +35,8 @@ See [session.md](session.md) for what the session is about, and
 | Internal path index, a bounded cache (65,536 entries) | Without it a path-only walk is quadratic; unbounded it used 1.4 GB |
 | Peek column: content without its opening keyword; binary data described | The old preview only repeated what the path said |
 | Text transcoding in a separate `charset` library (namespace `charset::`), seeded from cratchit | Reuse the user's own transcoding code; keep it apart from the PDF code |
+| `utf16::ToUnicodeBuffer::push` returns up to two code points | A lone high surrogate followed by a character must give U+FFFD and that character |
+| Decoded strings shown in quotes `"..."`, undecoded ones as in the file `(...)` | You can tell which strings were decoded |
 
 ## Done
 
@@ -49,6 +52,10 @@ See [session.md](session.md) for what the session is about, and
 10. Brought in the `charset` seed from `session/60cae9fe/cratchit/src/core/charset/`
     (unicode, utf8, cp437, detect) and its tests, as `walk_pdf/src/charset/`, a CMake
     library target `charset` linked by `walk_pdf_core`. Only include paths changed.
+11. UTF-16 in `charset::utf16` (big- and little-endian, surrogate pairs, U+FFFD for
+    broken input). PDF strings decoded (`src/text_string.*`: literal escapes, hex
+    strings, UTF-16BE/UTF-8 text marks). The peek rebuilds dictionaries and arrays
+    from their tokens, shows decoded strings in quotes, and cuts UTF-8 between characters.
 
 ## Findings about the test PDFs
 
@@ -59,7 +66,8 @@ See [session.md](session.md) for what the session is about, and
   font's `/ToUnicode` map to become characters.
 - Some PDFs keep objects inside object streams (`/Type /ObjStm`); those objects are
   not visible until object streams are unpacked.
-- Strings may be UTF-16 (the voucher's `/Title`), shown today as `(.. I n v o i c e)`.
+- Strings may be UTF-16 (the voucher's `/Title`, outline titles such as
+  `"249,00 SEK"`); these are now decoded.
 
 ## Next
 
@@ -70,8 +78,8 @@ See [session.md](session.md) for what the session is about, and
 4. Map glyphs to characters through fonts' `/ToUnicode` maps.
 5. Decrypt the e-books (RC4, Standard security handler).
 6. Unpack object streams (`/Type /ObjStm`).
-7. Decode UTF-16 strings in the peek. PDF text strings are UTF-16BE (with a
-   `FE FF` mark) or PDFDocEncoding; both would be new decoders in `charset`.
+7. Decode PDFDocEncoding text strings (those without a `FE FF`/`EF BB BF` mark),
+   a new decoder in `charset`.
 
 ## Open questions
 
