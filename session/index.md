@@ -5,6 +5,7 @@
 1. [Consider a way to filter out all files that is reachable from a site with an index.md root document?](805fef21/session.md)
 1. [Consider how to have a github push trigger social media postings - take 1?](771ae935/session.md)
 1. [Consider take 2 on eml-to-chime python mechanism?](aa98c723/session.md)
+1. [Consider to vibe code a pdf-walker C++ console app?](9fe36d28/session.md)
 1. [Consider to vibe code a working emls-to-chimes and to_site integration?](afaa732d/session.md)
 1. [Consider vibe coded book keeping app cratchit take 1?](62c6984e/session.md)
 1. [Consider ways to mirror Jekyll Github Pages generation on local git repos?](b214e74e/session.md)
