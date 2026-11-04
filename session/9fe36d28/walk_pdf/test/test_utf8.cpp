@@ -7,14 +7,14 @@
 #include <string_view>
 #include <vector>
 
-using charset::utf8::FromUnicodeBuffer;
-using charset::utf8::ToUnicodeBuffer;
+using charset::utf8::Encoder;
+using charset::utf8::Decoder;
 
 namespace {
 
 // The bytes of one push, as a string to compare against escapes
 std::string encoded(char32_t code_point) {
-  FromUnicodeBuffer buffer;
+  Encoder buffer;
   std::string result;
   for (auto const byte : buffer.push(code_point)) {
     result.push_back(static_cast<char>(byte));
@@ -23,7 +23,7 @@ std::string encoded(char32_t code_point) {
 }
 
 // Every code point from pushing the bytes one at a time, then finishing
-std::u32string decoded(ToUnicodeBuffer& buffer, std::string_view bytes) {
+std::u32string decoded(Decoder& buffer, std::string_view bytes) {
   std::u32string result;
   for (char const c : bytes) {
     if (auto const code_point = buffer.push(static_cast<charset::utf8::CodePoint>(c))) {
@@ -37,7 +37,7 @@ std::u32string decoded(ToUnicodeBuffer& buffer, std::string_view bytes) {
 }
 
 std::u32string decoded(std::string_view bytes) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   return decoded(buffer, bytes);
 }
 
@@ -81,8 +81,8 @@ TEST(Utf8, NonCharactersGiveReplacementCharacter) {
 
 // Each code point goes straight from one buffer into the other
 TEST(Utf8, TranscodesCp437ToUtf8) {
-  charset::cp437::ToUnicodeBuffer to_unicode;
-  FromUnicodeBuffer from_unicode;
+  charset::cp437::Decoder to_unicode;
+  Encoder from_unicode;
   std::string result;
   for (char const c : std::string_view{"\x8Fr \x84r \x94l\r\n"}) {
     if (auto const code_point = to_unicode.push(static_cast<charset::cp437::CodePoint>(c))) {
@@ -106,7 +106,7 @@ TEST(Utf8ToUnicode, MultiByte) {
 }
 
 TEST(Utf8ToUnicode, CodePointOnlyOnLastByte) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_FALSE(buffer.push(0xE2));
   EXPECT_FALSE(buffer.push(0x82));
   EXPECT_EQ(buffer.push(0xAC), U'\x20AC');
@@ -114,7 +114,7 @@ TEST(Utf8ToUnicode, CodePointOnlyOnLastByte) {
 }
 
 TEST(Utf8ToUnicode, NoFailuresWhenWellFormed) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   decoded(buffer, "\xC3\x85r \xC3\xA4r \xC3\xB6l");
   EXPECT_EQ(buffer.failure_count(), 0u);
   EXPECT_TRUE(buffer.failed_bytes().empty());
@@ -122,7 +122,7 @@ TEST(Utf8ToUnicode, NoFailuresWhenWellFormed) {
 
 TEST(Utf8ToUnicode, BadLeadByteFailsAlone) {
   for (std::string const bad : {"\x80", "\xBF", "\xC0", "\xC1", "\xF5", "\xFF"}) {
-    ToUnicodeBuffer buffer;
+    Decoder buffer;
     EXPECT_EQ(decoded(buffer, bad + "A"), U"\xFFFD" "A") << int(static_cast<unsigned char>(bad[0]));
     EXPECT_EQ(buffer.failure_count(), 1u);
     EXPECT_EQ(buffer.failed_bytes(), as_bytes(bad));
@@ -131,21 +131,21 @@ TEST(Utf8ToUnicode, BadLeadByteFailsAlone) {
 
 // The byte that breaks a sequence is consumed with it, even when it is good on its own
 TEST(Utf8ToUnicode, BreakingByteIsConsumed) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(decoded(buffer, "\xE2\x82" "AB"), U"\xFFFD" "B");
   EXPECT_EQ(buffer.failure_count(), 1u);
   EXPECT_EQ(buffer.failed_bytes(), as_bytes("\xE2\x82" "A"));
 }
 
 TEST(Utf8ToUnicode, BreakingLeadByteIsConsumed) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(decoded(buffer, "\xC3\xC3\xA4"), U"\xFFFD\xFFFD");
   EXPECT_EQ(buffer.failure_count(), 2u);
   EXPECT_EQ(buffer.failed_bytes(), as_bytes("\xC3\xC3\xA4"));
 }
 
 TEST(Utf8ToUnicode, OverlongFails) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(decoded(buffer, "\xE0\x9F\xBF" "A"), U"\xFFFD\xFFFD" "A");
   EXPECT_EQ(decoded(buffer, "\xF0\x8F\xBF\xBF"), U"\xFFFD\xFFFD\xFFFD");
   EXPECT_EQ(buffer.failure_count(), 5u);
@@ -153,7 +153,7 @@ TEST(Utf8ToUnicode, OverlongFails) {
 }
 
 TEST(Utf8ToUnicode, SurrogateFails) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(decoded(buffer, "\xED\x9F\xBF"), U"\xD7FF");
   EXPECT_EQ(decoded(buffer, "\xED\xA0"), U"\xFFFD");
   EXPECT_EQ(buffer.failure_count(), 1u);
@@ -161,14 +161,14 @@ TEST(Utf8ToUnicode, SurrogateFails) {
 }
 
 TEST(Utf8ToUnicode, AboveMaxFails) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(decoded(buffer, "\xF4\x90"), U"\xFFFD");
   EXPECT_EQ(buffer.failure_count(), 1u);
   EXPECT_EQ(buffer.failed_bytes(), as_bytes("\xF4\x90"));
 }
 
 TEST(Utf8ToUnicode, FinishFailsUnfinishedSequence) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(decoded(buffer, "A\xF0\x9F\x98"), U"A\xFFFD");
   EXPECT_EQ(buffer.failure_count(), 1u);
   EXPECT_EQ(buffer.failed_bytes(), as_bytes("\xF0\x9F\x98"));
@@ -176,8 +176,8 @@ TEST(Utf8ToUnicode, FinishFailsUnfinishedSequence) {
 }
 
 TEST(Utf8ToUnicode, RoundTrip) {
-  FromUnicodeBuffer from_unicode;
-  ToUnicodeBuffer to_unicode;
+  Encoder from_unicode;
+  Decoder to_unicode;
   for (char32_t const code_point : {0x00, 0x7F, 0x80, 0x7FF, 0x800, 0xD7FF, 0xE000, 0xFFFD, 0xFFFF,
                                     0x10000, 0x1F600, 0x10FFFF}) {
     std::optional<char32_t> result;

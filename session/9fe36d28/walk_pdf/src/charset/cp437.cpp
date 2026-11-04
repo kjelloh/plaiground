@@ -37,14 +37,14 @@ constexpr std::array<unicode::CodePoint, 128> upper_half{
 
 } // namespace
 
-std::optional<unicode::CodePoint> ToUnicodeBuffer::push(CodePoint byte) {
+std::optional<unicode::CodePoint> Decoder::push(CodePoint byte) {
   if (byte < 0x80) {
     return unicode::CodePoint{byte};
   }
   return upper_half[byte - 0x80];
 }
 
-std::optional<CodePoint> FromUnicodeBuffer::push(unicode::CodePoint code_point) {
+std::optional<CodePoint> Encoder::push(unicode::CodePoint code_point) {
   if (code_point < 0x80) {
     return static_cast<CodePoint>(code_point);
   }

@@ -18,7 +18,7 @@ Bytes encode(unicode::CodePoint code_point, std::size_t size, CodePoint lead) {
 
 } // namespace
 
-Bytes FromUnicodeBuffer::push(unicode::CodePoint code_point) {
+Bytes Encoder::push(unicode::CodePoint code_point) {
   if (code_point < 0x80) {
     return encode(code_point, 1, 0x00);
   }
@@ -34,7 +34,7 @@ Bytes FromUnicodeBuffer::push(unicode::CodePoint code_point) {
   return encode(code_point, 4, 0xF0);
 }
 
-std::optional<unicode::CodePoint> ToUnicodeBuffer::push(CodePoint byte) {
+std::optional<unicode::CodePoint> Decoder::push(CodePoint byte) {
   if (pending_.size == 0) {
     lower_ = 0x80;
     upper_ = 0xBF;
@@ -81,23 +81,23 @@ std::optional<unicode::CodePoint> ToUnicodeBuffer::push(CodePoint byte) {
   return code_point_;
 }
 
-std::optional<unicode::CodePoint> ToUnicodeBuffer::finish() {
+std::optional<unicode::CodePoint> Decoder::finish() {
   if (pending_.size == 0) {
     return std::nullopt;
   }
   return fail(std::nullopt);
 }
 
-std::size_t ToUnicodeBuffer::failure_count() const {
+std::size_t Decoder::failure_count() const {
   return failure_count_;
 }
 
-std::vector<CodePoint> const& ToUnicodeBuffer::failed_bytes() const {
+std::vector<CodePoint> const& Decoder::failed_bytes() const {
   return failed_bytes_;
 }
 
 // Consumes the pending bytes and the byte that broke them, if any
-unicode::CodePoint ToUnicodeBuffer::fail(std::optional<CodePoint> breaking_byte) {
+unicode::CodePoint Decoder::fail(std::optional<CodePoint> breaking_byte) {
   failed_bytes_.insert(failed_bytes_.end(), pending_.begin(), pending_.end());
   if (breaking_byte) {
     failed_bytes_.push_back(*breaking_byte);

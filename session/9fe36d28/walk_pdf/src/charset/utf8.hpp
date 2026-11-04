@@ -25,7 +25,7 @@ struct Bytes {
 // Takes Unicode code points one at a time and gives back their UTF-8 bytes.
 // A surrogate (U+D800-U+DFFF) or a value above U+10FFFF is not a character
 // and gives the bytes of U+FFFD (replacement character).
-class FromUnicodeBuffer {
+class Encoder {
 public:
   Bytes push(unicode::CodePoint code_point);
 };
@@ -35,7 +35,7 @@ public:
 // sequence fails it: the sequence so far and that byte are consumed, kept in
 // failed_bytes() and give one U+FFFD (replacement character). Overlong forms,
 // surrogates and values above U+10FFFF are not well-formed.
-class ToUnicodeBuffer {
+class Decoder {
 public:
   // A code point once the bytes pushed so far make one, else nothing
   std::optional<unicode::CodePoint> push(CodePoint byte);

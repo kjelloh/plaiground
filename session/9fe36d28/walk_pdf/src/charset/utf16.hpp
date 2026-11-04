@@ -34,9 +34,9 @@ struct Bytes {
 // A code point above U+FFFF becomes a surrogate pair. A surrogate
 // (U+D800-U+DFFF) or a value above U+10FFFF is not a character and gives the
 // bytes of U+FFFD (replacement character).
-class FromUnicodeBuffer {
+class Encoder {
 public:
-  explicit FromUnicodeBuffer(ByteOrder order = ByteOrder::big_endian) : order_(order) {}
+  explicit Encoder(ByteOrder order = ByteOrder::big_endian) : order_(order) {}
 
   Bytes push(unicode::CodePoint code_point);
 
@@ -48,11 +48,11 @@ private:
 // become available. A high surrogate followed by a low surrogate makes one
 // code point. A surrogate without its partner fails: the units so far and the
 // unit that broke them are consumed and give one U+FFFD (replacement
-// character), as in utf8::ToUnicodeBuffer. So a lone high surrogate followed
+// character), as in utf8::Decoder. So a lone high surrogate followed
 // by "A" gives one U+FFFD, and the "A" is lost.
-class ToUnicodeBuffer {
+class Decoder {
 public:
-  explicit ToUnicodeBuffer(ByteOrder order = ByteOrder::big_endian) : order_(order) {}
+  explicit Decoder(ByteOrder order = ByteOrder::big_endian) : order_(order) {}
 
   // A code point once the bytes pushed so far make one, else nothing
   std::optional<unicode::CodePoint> push(Byte byte);

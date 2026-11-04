@@ -177,3 +177,5 @@ What's new:
 - src/security.*: the PDF spec's algorithms for computing the file key from the empty password, checking it against /U, and deriving each object's key. Both RC4 variants are supported (40-bit R2 and up to 128-bit R3/R4).
 ...
 ```
+
+I now Vibe coded so From/To UnicodeBuffer are now named Decoder/Encoder (so at least the naming does not violate the transcoding library 'never buffer Unicode code points' rule)

@@ -5,7 +5,7 @@
 namespace charset::detect {
 
 bool is_utf8(std::span<std::uint8_t const> bytes) {
-  utf8::ToUnicodeBuffer decoder;
+  utf8::Decoder decoder;
   bool multi_byte = false;
   for (auto const byte : bytes) {
     if (auto const code_point = decoder.push(byte); code_point && *code_point >= 0x80) {

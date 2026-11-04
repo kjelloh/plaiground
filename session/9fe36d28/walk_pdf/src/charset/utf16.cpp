@@ -16,7 +16,7 @@ void append(Bytes& bytes, CodeUnit unit, ByteOrder order) {
 
 } // namespace
 
-Bytes FromUnicodeBuffer::push(unicode::CodePoint code_point) {
+Bytes Encoder::push(unicode::CodePoint code_point) {
   Bytes result;
   if ((code_point >= 0xD800 && code_point <= 0xDFFF) || code_point > 0x10FFFF) {
     code_point = unicode::replacement_character;
@@ -31,7 +31,7 @@ Bytes FromUnicodeBuffer::push(unicode::CodePoint code_point) {
   return result;
 }
 
-std::optional<unicode::CodePoint> ToUnicodeBuffer::push(Byte byte) {
+std::optional<unicode::CodePoint> Decoder::push(Byte byte) {
   if (!first_byte_) {
     first_byte_ = byte;
     return std::nullopt;
@@ -43,7 +43,7 @@ std::optional<unicode::CodePoint> ToUnicodeBuffer::push(Byte byte) {
   return take(unit);
 }
 
-std::optional<unicode::CodePoint> ToUnicodeBuffer::take(CodeUnit unit) {
+std::optional<unicode::CodePoint> Decoder::take(CodeUnit unit) {
   if (high_) {
     if (!is_low_surrogate(unit)) {
       return fail(); // The high surrogate is alone; this unit goes with it
@@ -64,13 +64,13 @@ std::optional<unicode::CodePoint> ToUnicodeBuffer::take(CodeUnit unit) {
 }
 
 // Consumes the waiting high surrogate, if any, with the unit that broke it
-unicode::CodePoint ToUnicodeBuffer::fail() {
+unicode::CodePoint Decoder::fail() {
   high_.reset();
   ++failure_count_;
   return unicode::replacement_character;
 }
 
-std::optional<unicode::CodePoint> ToUnicodeBuffer::finish() {
+std::optional<unicode::CodePoint> Decoder::finish() {
   // An odd last byte and a waiting high surrogate are one failure together
   auto const failed = first_byte_.has_value() || high_.has_value();
   first_byte_.reset();

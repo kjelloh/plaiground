@@ -6,14 +6,14 @@
 #include <string_view>
 
 using charset::utf16::ByteOrder;
-using charset::utf16::FromUnicodeBuffer;
-using charset::utf16::ToUnicodeBuffer;
+using charset::utf16::Encoder;
+using charset::utf16::Decoder;
 
 namespace {
 
 // The bytes of one push, as a string to compare against escapes
 std::string encoded(char32_t code_point, ByteOrder order = ByteOrder::big_endian) {
-  FromUnicodeBuffer buffer{order};
+  Encoder buffer{order};
   std::string result;
   for (auto const byte : buffer.push(code_point)) {
     result.push_back(static_cast<char>(byte));
@@ -22,7 +22,7 @@ std::string encoded(char32_t code_point, ByteOrder order = ByteOrder::big_endian
 }
 
 // Every code point from pushing the bytes one at a time, then finishing
-std::u32string decoded(ToUnicodeBuffer& buffer, std::string_view bytes) {
+std::u32string decoded(Decoder& buffer, std::string_view bytes) {
   std::u32string result;
   for (char const c : bytes) {
     if (auto const code_point = buffer.push(static_cast<charset::utf16::Byte>(c))) {
@@ -36,7 +36,7 @@ std::u32string decoded(ToUnicodeBuffer& buffer, std::string_view bytes) {
 }
 
 std::u32string decoded(std::string_view bytes, ByteOrder order = ByteOrder::big_endian) {
-  ToUnicodeBuffer buffer{order};
+  Decoder buffer{order};
   return decoded(buffer, bytes);
 }
 
@@ -91,7 +91,7 @@ TEST(Utf16, RoundTrip) {
 
 TEST(Utf16, LoneHighSurrogateFailsWithTheUnitThatBrokeIt) {
   // As in UTF-8: the broken sequence and the unit that broke it give one U+FFFD
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(decoded(buffer, "\xD8\x3D\x00\x41\x00\x42"sv), U"�" U"B");
   EXPECT_EQ(buffer.failure_count(), 1U);
 }
@@ -102,7 +102,7 @@ TEST(Utf16, TwoHighSurrogatesInARow) {
 }
 
 TEST(Utf16, EveryPushGivesAtMostOneCodePoint) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_FALSE(buffer.push(0xD8));
   EXPECT_FALSE(buffer.push(0x3D)); // a high surrogate: waits for its partner
   EXPECT_FALSE(buffer.push(0xDE));
@@ -110,22 +110,22 @@ TEST(Utf16, EveryPushGivesAtMostOneCodePoint) {
 }
 
 TEST(Utf16, LoneLowSurrogateFails) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(decoded(buffer, "\xDE\x00\x00\x41"sv), U"�" U"A");
   EXPECT_EQ(buffer.failure_count(), 1U);
 }
 
 TEST(Utf16, UnfinishedInputFailsAtFinish) {
-  ToUnicodeBuffer odd;
+  Decoder odd;
   EXPECT_EQ(decoded(odd, "\x00\x41\x00"sv), U"A�");
   EXPECT_EQ(odd.failure_count(), 1U);
-  ToUnicodeBuffer high;
+  Decoder high;
   EXPECT_EQ(decoded(high, "\x00\x41\xD8\x3D"sv), U"A�");
   EXPECT_EQ(high.failure_count(), 1U);
 }
 
 TEST(Utf16, NothingPushedFinishesWithNothing) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_FALSE(buffer.finish());
   EXPECT_EQ(buffer.failure_count(), 0U);
 }

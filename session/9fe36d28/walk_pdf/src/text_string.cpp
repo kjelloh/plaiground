@@ -86,7 +86,7 @@ std::string literal_string_bytes(std::string_view text) {
 }
 
 void append_utf8(std::string& text, charset::unicode::CodePoint code_point) {
-  for (auto const byte : charset::utf8::FromUnicodeBuffer{}.push(code_point)) {
+  for (auto const byte : charset::utf8::Encoder{}.push(code_point)) {
     text += static_cast<char>(byte);
   }
 }
@@ -114,7 +114,7 @@ std::string string_bytes(std::string_view token) {
 std::optional<std::string> text_to_utf8(std::string_view bytes) {
   std::string text;
   if (bytes.starts_with("\xFE\xFF")) {
-    charset::utf16::ToUnicodeBuffer decoder{charset::utf16::ByteOrder::big_endian};
+    charset::utf16::Decoder decoder{charset::utf16::ByteOrder::big_endian};
     for (auto const byte : bytes.substr(2)) {
       if (auto const code_point = decoder.push(static_cast<charset::utf16::Byte>(byte))) {
         append_utf8(text, *code_point);
@@ -127,7 +127,7 @@ std::optional<std::string> text_to_utf8(std::string_view bytes) {
   }
   if (bytes.starts_with("\xEF\xBB\xBF")) {
     // Decode and encode again, so that malformed bytes become U+FFFD
-    charset::utf8::ToUnicodeBuffer decoder;
+    charset::utf8::Decoder decoder;
     for (auto const byte : bytes.substr(3)) {
       if (auto const code_point = decoder.push(static_cast<charset::utf8::CodePoint>(byte))) {
         append_utf8(text, *code_point);

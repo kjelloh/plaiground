@@ -5,17 +5,17 @@
 #include <set>
 
 using charset::cp437::CodePoint;
-using charset::cp437::ToUnicodeBuffer;
+using charset::cp437::Decoder;
 
 TEST(Cp437, AsciiIncludingControlCharactersIsUnchanged) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   for (unsigned byte = 0x00; byte < 0x80; ++byte) {
     EXPECT_EQ(buffer.push(static_cast<CodePoint>(byte)), char32_t(byte)) << "byte " << byte;
   }
 }
 
 TEST(Cp437, SwedishLetters) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(buffer.push(0x86), U'å');
   EXPECT_EQ(buffer.push(0x84), U'ä');
   EXPECT_EQ(buffer.push(0x94), U'ö');
@@ -26,7 +26,7 @@ TEST(Cp437, SwedishLetters) {
 }
 
 TEST(Cp437, SymbolsAndBoxDrawing) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   EXPECT_EQ(buffer.push(0x9E), U'₧'); // ₧
   EXPECT_EQ(buffer.push(0xB0), U'░'); // ░
   EXPECT_EQ(buffer.push(0xC9), U'╔'); // ╔
@@ -36,7 +36,7 @@ TEST(Cp437, SymbolsAndBoxDrawing) {
 }
 
 TEST(Cp437, EveryByteGivesADistinctCodePoint) {
-  ToUnicodeBuffer buffer;
+  Decoder buffer;
   std::set<char32_t> seen;
   for (unsigned byte = 0x00; byte <= 0xFF; ++byte) {
     auto const code_point = buffer.push(static_cast<CodePoint>(byte));
@@ -47,8 +47,8 @@ TEST(Cp437, EveryByteGivesADistinctCodePoint) {
 }
 
 TEST(Cp437, EveryByteRoundTrips) {
-  charset::cp437::ToUnicodeBuffer to_unicode;
-  charset::cp437::FromUnicodeBuffer from_unicode;
+  charset::cp437::Decoder to_unicode;
+  charset::cp437::Encoder from_unicode;
   for (unsigned byte = 0; byte < 256; ++byte) {
     auto const code_point = to_unicode.push(static_cast<charset::cp437::CodePoint>(byte));
     ASSERT_TRUE(code_point.has_value());
@@ -57,7 +57,7 @@ TEST(Cp437, EveryByteRoundTrips) {
 }
 
 TEST(Cp437, CodePointsOutsideCp437GiveNothing) {
-  charset::cp437::FromUnicodeBuffer from_unicode;
+  charset::cp437::Encoder from_unicode;
   EXPECT_FALSE(from_unicode.push(0x20AC).has_value()); // euro sign
   EXPECT_FALSE(from_unicode.push(0x00C3).has_value()); // A tilde
 }

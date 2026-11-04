@@ -40,6 +40,7 @@ See [session.md](session.md) for what the session is about, and
 | Text transcoding in a separate `charset` library (namespace `charset::`), seeded from cratchit | Reuse the user's own transcoding code; keep it apart from the PDF code |
 | Every `push` in `charset` gives at most one code point (`std::optional`); a broken sequence and the unit that broke it give one U+FFFD | One API and one failure rule across UTF-8 and UTF-16. Cost: a character right after a lone UTF-16 high surrogate is lost. No surrogate pairs or broken UTF-16 in the test PDFs. If lossless is needed later: hold the extra code point and return it on the next push |
 | Decoded strings shown in quotes `"..."`, undecoded ones as in the file `(...)` | You can tell which strings were decoded |
+| `charset` stages are named `Decoder` (encoded bytes → one code point per push) and `Encoder` (one code point → its encoded bytes), not `…Buffer` | The library provides byte-by-byte pipe stages only, never Unicode buffers; the names should not suggest otherwise |
 | Decrypt with the empty user password (Standard handler, RC4); own MD5 and RC4 in a `crypto` library | What viewers do; self-contained, no OpenSSL needed. AES not yet |
 | The peek shows decrypted content; a future text output honours the "copy/extract" permission (`/P` bit 5) | The user's decision (2026-11-04): peeking for structure inspection is not extraction. Agreed that actual text extraction respects the publisher's flag |
 
@@ -68,6 +69,11 @@ See [session.md](session.md) for what the session is about, and
     `Document::decrypt(path, bytes)`. The peek decrypts strings and stream starts, and the
     `/` row shows the encryption and denied permissions. Tested with small encrypted PDFs
     whose expected values were computed independently (Python hashlib).
+14. Renamed `ToUnicodeBuffer` → `Decoder` and `FromUnicodeBuffer` → `Encoder` in
+    `charset::utf8`, `utf16` and `cp437`. Audit: the library holds no Unicode buffers
+    (only one character's pending encoded bytes per stage, and CP437's constant table).
+    Kept for now: `utf8::Decoder::failed_bytes()` (a growing vector of failed input
+    bytes) and `detect::is_utf8(span)` (a whole-buffer function), both from cratchit.
 
 ## Findings about the test PDFs
 
