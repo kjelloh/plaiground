@@ -24,6 +24,15 @@ file(READ MANUAL.md manual_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
 configure_file(src/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
+# Text transcoding: Unicode, UTF-8, CP437 (seeded from cratchit, session 60cae9fe)
+add_library(charset
+  src/charset/cp437.cpp
+  src/charset/detect.cpp
+  src/charset/utf8.cpp
+)
+target_include_directories(charset PUBLIC src)
+target_link_libraries(charset PRIVATE walk_pdf_warnings)
+
 # The walker and other application logic live in the core library
 add_library(walk_pdf_core
   src/document.cpp
@@ -34,7 +43,7 @@ add_library(walk_pdf_core
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )
 target_include_directories(walk_pdf_core PUBLIC src)
-target_link_libraries(walk_pdf_core PRIVATE walk_pdf_warnings)
+target_link_libraries(walk_pdf_core PUBLIC charset PRIVATE walk_pdf_warnings)
 
 # Thin executable on top of the core library
 add_executable(walk_pdf
