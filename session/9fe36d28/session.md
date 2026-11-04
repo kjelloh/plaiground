@@ -21,9 +21,9 @@ I want the C++ code and console app to be self-contained in modern C++.
 * Cross platform with cmake build.
 * Consume packages from conan package manager (where appropriate)
 
-As a test I want the walker to work on my purchased e-books @/Users/kjell-olovhogdahl/Resilio Sync/Dropbox/The ITfied/Köpta Digitala Media/BAS.
+As a test during development I will copy pdf:s into a local _Resources folder
 
-* svensk_redovisning_bokforing.pdf
-* svensk_redovisning_bokslutsb.pdf
+* Example vouchers from my company books in _vouchers
+* Example e-books in _e-books 
 
-Also as a text I want the walker to work on my book keeping pdf vouchers @/Users/kjell-olovhogdahl/Downloads/ITfied/Verifikationer and @
+

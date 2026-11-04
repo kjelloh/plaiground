@@ -24,10 +24,17 @@ file(READ MANUAL.md manual_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
 configure_file(src/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
-add_executable(walk_pdf
-  src/main.cpp
+# The walker and other application logic live in the core library
+add_library(walk_pdf_core
+  src/walker.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )
-target_include_directories(walk_pdf PRIVATE src)
-target_link_libraries(walk_pdf PRIVATE walk_pdf_warnings)
+target_include_directories(walk_pdf_core PUBLIC src)
+target_link_libraries(walk_pdf_core PRIVATE walk_pdf_warnings)
+
+# Thin executable on top of the core library
+add_executable(walk_pdf
+  src/main.cpp
+)
+target_link_libraries(walk_pdf PRIVATE walk_pdf_core walk_pdf_warnings)
 target_compile_definitions(walk_pdf PRIVATE WALK_PDF_VERSION="${PROJECT_VERSION}")
