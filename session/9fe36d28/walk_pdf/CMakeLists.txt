@@ -28,6 +28,7 @@ configure_file(src/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 add_library(walk_pdf_core
   src/document.cpp
   src/path.cpp
+  src/peek.cpp
   src/scanner.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )

@@ -18,24 +18,25 @@ walk_pdf [options]
 `walk_pdf <file.pdf>` prints one line per element:
 
 ```
-    offset       size  path                     preview
-         0       1633  /rev[0]
-         0          8  /rev[0]/header           %PDF-1.7
-        12        171  /rev[0]/obj[73867]       73867 0 obj
-       187        416  /rev[0]/xref[0]          xref
-       603        259  /rev[0]/trailer[0]       trailer
-      1614         12  /rev[0]/startxref[0]     startxref
-      1628          5  /rev[0]/eof[0]           %%EOF
-      1637   16878001  /rev[1]
-      ...
+    offset       size  path                     peek
+         0      16575  /rev[0]                  19 elements: 13 objects, xref, trailer
+         0          8  /rev[0]/header           version 1.3
+         9         12  /rev[0]/comment[0]       <binary marker, 11 bytes>
+        22        488  /rev[0]/obj[3]           << /Filter /FlateDecode... + stream <417 bytes, FlateDecode>
+       511        113  /rev[0]/obj[1]           << /Type /Page /Parent 2 0 R /Resources 4 0 R /Contents 3...
+       625        107  /rev[0]/obj[4]           << /ProcSet [ /PDF /Text ] /ColorSpace << /Cs1 5 0 R /Cs2...
+       ...
+     16137        290  /rev[0]/xref[0]          14 entries, objects 0-13
+     16427        126  /rev[0]/trailer[0]       << /Size 14 /Root 10 0 R /Info 13 0 R /ID [ <d261359c6942...
+     16554         15  /rev[0]/startxref[0]     16137
+     16570          5  /rev[0]/eof[0]
 ```
 
 (The heading line is shown here for explanation only; walk_pdf does not print it.)
 
 - *offset* is the element's byte offset in the file, and *size* its length in bytes.
 - *path* says which element it is (see Paths below).
-- *preview* is the start of the element's first line. Bytes outside printable
-  ASCII are shown as `.`. Revisions have no preview.
+- *peek* is a short look at what the element holds (see Peek below).
 
 `walk_pdf <file.pdf> <path>` prints the same kind of lines, for the element at
 `path` and everything inside it. Quote the path in the shell, as `[` and `]`
@@ -44,6 +45,32 @@ mean something to most shells:
 ```
 walk_pdf book.pdf '/rev[1]/trailer[0]'
 ```
+
+## Peek
+
+The peek column shows what an element holds, without the keyword that opens it
+(`12 0 obj`, `trailer`, ...), since the path already says what it is:
+
+| Element    | Peek                                                              |
+|------------|-------------------------------------------------------------------|
+| revision   | How many elements it has, e.g. `19 elements: 13 objects, xref, trailer` |
+| header     | The PDF version, e.g. `version 1.3`                               |
+| comment    | Its text, or `<binary marker, n bytes>` for the line that tells tools the file holds binary data |
+| object     | Its body, e.g. `<< /Type /Page ... >>`. If it holds a stream, its dictionary followed by `+ stream <n bytes, filters>`, where the filters (e.g. `FlateDecode`) say how the data is compressed or encoded |
+| xref       | How many entries it has, and for which object numbers             |
+| trailer    | Its dictionary                                                    |
+| startxref  | The byte offset of the cross-reference                            |
+| eof        | Nothing                                                           |
+| unknown    | Its text, or `<n bytes, binary>`                                  |
+
+Runs of whitespace are shown as one space, and other bytes outside printable
+ASCII as `.`. Text that is too long is cut and ends with `...`. A peek is at
+most 60 characters, except that a stream's description is always shown in
+full, so an object with a stream can be a little wider.
+
+Stream data is never shown, only described. Compressed streams, which hold
+the text of most pages, can not be read yet. Nor can the strings and streams
+of an encrypted PDF (one whose trailer has `/Encrypt`): they show as `.`.
 
 ## Paths
 

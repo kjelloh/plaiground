@@ -1,6 +1,7 @@
 #include "document.hpp"
 #include "manual.hpp"
 #include "path.hpp"
+#include "peek.hpp"
 
 #include <cstdio>
 #include <filesystem>
@@ -22,24 +23,9 @@ std::optional<std::string> read_file(std::filesystem::path const& path) {
   return std::string{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
 }
 
-// The start of an element's first line, with bytes outside printable ASCII shown as '.'
-std::string preview(walk_pdf::Content const& content, std::size_t max_length = 60) {
-  if (content.kind() == walk_pdf::Kind::document || content.kind() == walk_pdf::Kind::revision) {
-    return {}; // Their first line is their first child's
-  }
-  std::string result;
-  for (auto const c : content.bytes()) {
-    if (c == '\n' || c == '\r' || result.size() == max_length) {
-      break;
-    }
-    result += (c >= ' ' && c <= '~') ? c : '.';
-  }
-  return result;
-}
-
 void print_row(walk_pdf::Content const& content) {
   std::println("{:>10} {:>10}  {:<24} {}", content.offset(), content.bytes().size(),
-               content.path().to_string(), preview(content));
+               content.path().to_string(), walk_pdf::peek(content));
 }
 
 // The content's children and their children, depth first
