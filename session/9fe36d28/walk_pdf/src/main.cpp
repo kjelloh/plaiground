@@ -31,9 +31,12 @@ std::optional<std::string> read_file(std::filesystem::path const& path) {
   return std::string{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
 }
 
+// Inside a decoded stream the offset is in the decoded data, not the file: "+1234"
 void print_row(walk_pdf::Content const& content) {
-  std::println("{:>10} {:>10}  {:<32} {}", content.offset(), content.bytes().size(),
-               content.path().to_string(), walk_pdf::peek(content));
+  auto const offset = content.in_file() ? std::format("{}", content.offset())
+                                        : std::format("+{}", content.offset());
+  std::println("{:>10} {:>10}  {:<32} {}", offset, content.bytes().size(), content.path().to_string(),
+               walk_pdf::peek(content));
 }
 
 // Depth first: the element at path, then its children, down to depth levels below it.

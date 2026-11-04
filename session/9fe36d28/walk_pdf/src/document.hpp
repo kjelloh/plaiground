@@ -1,5 +1,6 @@
 #pragma once
 
+#include "filters.hpp"
 #include "path.hpp"
 #include "security.hpp"
 #include "syntax.hpp"
@@ -8,7 +9,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <deque>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -20,14 +23,17 @@ class Document;
 class ChildIterator;
 
 // What is at a path: its kind, its bytes, and its children.
-// Content views bytes owned by its Document, which must outlive it.
+// Content views bytes owned by its Document, which must outlive it: the
+// file's bytes, or for elements inside a decoded stream, that stream's
+// decoded bytes (which the Content shares, so they stay while it lives).
 // Looping over a Content gives its children as Elements.
 class Content {
 public:
   Document const& document() const { return *document_; }
   Path const& path() const { return path_; }
   Kind kind() const { return kind_; }
-  std::size_t offset() const { return begin_; }
+  std::size_t offset() const { return begin_; } // in the file, or in the decoded stream
+  bool in_file() const { return !buffer_; }      // false inside a decoded stream
   std::string_view bytes() const;
 
   ChildIterator begin() const;
@@ -36,14 +42,20 @@ public:
 private:
   friend class Document;
   friend class ChildIterator;
-  Content(Document const& document, Path path, Kind kind, std::size_t begin, std::size_t end)
-      : document_(&document), path_(std::move(path)), kind_(kind), begin_(begin), end_(end) {}
+  Content(Document const& document, Path path, Kind kind, std::size_t begin, std::size_t end,
+          std::shared_ptr<std::string const> buffer = {})
+      : document_(&document), path_(std::move(path)), kind_(kind), begin_(begin), end_(end),
+        buffer_(std::move(buffer)) {}
+
+  // All the bytes this content's offsets are in: the file or a decoded stream
+  std::string_view source() const;
 
   Document const* document_;
   Path path_;
   Kind kind_;
-  std::size_t begin_; // offset of the first byte in the file
+  std::size_t begin_; // offset of the first byte in the source
   std::size_t end_;   // offset just after the last byte
+  std::shared_ptr<std::string const> buffer_; // a decoded stream, or null for the file
 };
 
 // A child found while looping over a Content
@@ -73,12 +85,15 @@ private:
   explicit ChildIterator(Content const& parent);
   void find_next();
   void emit(Segment segment, Kind kind, std::size_t begin, std::size_t end);
+  void emit(Segment segment, Kind kind, std::size_t begin, std::size_t end,
+            std::shared_ptr<std::string const> buffer);
 
   std::optional<Content> parent_;
   std::size_t position_ = 0;                         // where the search for the next child starts
   std::array<std::uint64_t, kind_count> ordinals_{}; // children seen so far, per kind
   std::optional<Value> container_;                   // the dictionary or array whose children these are
   std::optional<Value> stream_;                      // a stream object's data, its last child
+  bool decoded_ = false;                             // a stream's decoded data, its only child
   std::optional<Element> current_;                   // nullopt at the end
 };
 
@@ -126,6 +141,18 @@ public:
   // object is the encryption dictionary or a cross-reference stream.
   std::optional<std::string> decrypt(Path const& path, std::string_view bytes) const;
 
+  // A stream's filters, from its object's /Filter and /DecodeParms
+  std::vector<Filter> filters(Path const& stream) const;
+
+  // A stream's data decrypted and with its filters applied, and any problem
+  // that stopped decoding early. nullopt if a filter is one walk_pdf can not
+  // apply (e.g. an image's DCTDecode). Kept in a cache of recent streams.
+  struct DecodedStream {
+    std::shared_ptr<std::string const> bytes;
+    std::optional<std::string> problem;
+  };
+  std::optional<DecodedStream> decode(Path const& stream) const;
+
 private:
   friend class ChildIterator;
 
@@ -157,10 +184,19 @@ private:
 
   std::optional<Security> find_security() const;
 
+  // The decoded stream that holds the element at path, or null if it is in the file
+  std::shared_ptr<std::string const> buffer_for(Path const& path) const;
+
   std::string bytes_;
   std::vector<Range> revisions_;                  // found when the document is opened
   mutable std::optional<std::optional<Security>> security_; // found on first use
   mutable std::map<Path, Location> index_;        // not thread-safe
+
+  // Recently decoded streams, the oldest dropped when they hold more than the budget
+  static constexpr std::size_t decoded_budget = 64 * 1024 * 1024;
+  mutable std::map<Path, DecodedStream> decoded_;
+  mutable std::deque<Path> decoded_order_;
+  mutable std::size_t decoded_bytes_ = 0;
 };
 
 } // namespace walk_pdf

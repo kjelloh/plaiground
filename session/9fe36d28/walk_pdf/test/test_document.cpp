@@ -1,6 +1,7 @@
 #include "document.hpp"
 
 #include <gtest/gtest.h>
+#include <zlib.h>
 
 #include <string>
 #include <vector>
@@ -247,6 +248,43 @@ TEST(Document, WalkBeyondTheIndexCapacity) {
   }
   EXPECT_EQ(found, 70000U);
   EXPECT_EQ(document.find(*Path::parse("/rev[0]/obj[1]/[3]"))->bytes(), "3"); // after the index started over
+}
+
+TEST(Document, StreamIsDecoded) {
+  std::string const page = "BT /F1 12 Tf (Hello) Tj ET";
+  auto compressed = page;
+  {
+    auto size = compressBound(static_cast<uLong>(page.size()));
+    compressed.assign(size, '\0');
+    compress(reinterpret_cast<Bytef*>(compressed.data()), &size,
+             reinterpret_cast<Bytef const*>(page.data()), static_cast<uLong>(page.size()));
+    compressed.resize(size);
+  }
+  Document const document{"%PDF-1.4\n1 0 obj\n<< /Length " + std::to_string(compressed.size()) +
+                          " /Filter /FlateDecode >>\nstream\n" + compressed +
+                          "\nendstream\nendobj\n%%EOF\n"};
+  EXPECT_EQ(paths_of(*document.find(*Path::parse("/rev[0]/obj[1]/stream"))),
+            (std::vector<std::string>{"/rev[0]/obj[1]/stream/decoded"}));
+  auto const decoded = document.find(*Path::parse("/rev[0]/obj[1]/stream/decoded"));
+  ASSERT_TRUE(decoded);
+  EXPECT_EQ(decoded->kind(), Kind::decoded);
+  EXPECT_EQ(decoded->bytes(), page);
+  EXPECT_FALSE(decoded->in_file());
+  EXPECT_EQ(decoded->offset(), 0U);
+  EXPECT_TRUE(paths_of(*decoded).empty()); // not looked into yet
+}
+
+TEST(Document, UndecodableStreamHasNoDecodedChild) {
+  Document const document{"%PDF-1.4\n1 0 obj\n<< /Length 4 /Filter /DCTDecode >>\nstream\njpeg\n"
+                          "endstream\nendobj\n%%EOF\n"};
+  EXPECT_TRUE(paths_of(*document.find(*Path::parse("/rev[0]/obj[1]/stream"))).empty());
+  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[1]/stream/decoded")));
+}
+
+TEST(Document, StreamWithoutFiltersIsDecodedAsItIs) {
+  Document const document{"%PDF-1.4\n1 0 obj\n<< /Length 13 >>\nstream\nBT (Hi) Tj ET\n"
+                          "endstream\nendobj\n%%EOF\n"};
+  EXPECT_EQ(document.find(*Path::parse("/rev[0]/obj[1]/stream/decoded"))->bytes(), "BT (Hi) Tj ET");
 }
 
 TEST(Document, EmptyFileHasNoRevisions) {

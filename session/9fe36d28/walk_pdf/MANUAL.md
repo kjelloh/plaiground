@@ -6,8 +6,8 @@ the text of the PDF, so that it can be turned into plain text or Markdown.
 
 > Status: early. walk_pdf finds the file's revisions, their top-level
 > elements, and what is inside objects and trailers: dictionary entries, array
-> items and stream data. It decrypts files that open without a password. It
-> does not yet decompress streams or extract text.
+> items and stream data. It decrypts files that open without a password, and
+> decompresses streams. It does not yet extract text.
 
 ## Usage
 
@@ -45,6 +45,8 @@ goes 3 levels down.
 (The heading line is shown here for explanation only; walk_pdf does not print it.)
 
 - *offset* is the element's byte offset in the file, and *size* its length in bytes.
+  Inside a decoded stream, which is not in the file, the offset is in the
+  decoded data and starts with `+`, e.g. `+0`.
 - *path* says which element it is (see Paths below).
 - *peek* is a short look at what the element holds (see Peek below).
 
@@ -75,7 +77,8 @@ The peek column shows what an element holds, without the keyword that opens it
 | unknown    | Its text, or `<n bytes, binary>`                                  |
 | a value inside an object: dictionary, array, name, number, reference (`12 0 R`), boolean, null | Its text |
 | string     | Text strings marked as UTF-16 or UTF-8 are shown decoded, in quotes: `"Invoice"`. Other strings as they are in the file: `(D:20261012)` |
-| stream     | The stream's data if it is text (an uncompressed page, say), otherwise `<n bytes>` |
+| stream     | The stream's data if it is text (an uncompressed page, say), otherwise `<n bytes, filters>`, e.g. `<423875 bytes, FlateDecode>` |
+| decoded    | The stream's decoded data if it is text (e.g. a page's drawing instructions), otherwise `<n bytes>`. If decoding stopped early, why, first: `(FlateDecode: data ends early, ...)` |
 
 Runs of whitespace are shown as one space, and other bytes outside printable
 ASCII as `.`. Text that is too long is cut and ends with `...`. A peek is at
@@ -90,8 +93,11 @@ encoded: `FE FF` for UTF-16 (big-endian) and `EF BB BF` for UTF-8. Bytes that
 do not decode are shown as `�` (U+FFFD). Strings without a mark use
 PDFDocEncoding, which is not decoded yet.
 
-Compressed stream data, which holds the text of most pages, is only described,
-as it can not be read yet.
+A stream's data in the file is usually compressed, and in an encrypted file
+also encrypted. Its `decoded` child is the data decrypted and with its filters
+applied: `FlateDecode` (zlib, with PNG and TIFF predictors), `ASCIIHexDecode`
+and `ASCII85Decode`. Streams with other filters, such as images (`DCTDecode`),
+have no `decoded` child.
 
 ## Encrypted files
 
@@ -142,7 +148,8 @@ are two versions of object 5.
 | `unknown[i]`     | Bytes walk_pdf could not recognise                   |
 | *key*            | The value of a dictionary entry, e.g. `Type`, `Resources` |
 | `[i]`            | Item i of an array, counted from 0                   |
-| `stream`         | The data of a stream object                          |
+| `stream`         | The data of a stream object, as it is in the file    |
+| `decoded`        | A stream's data decrypted and decompressed (not in the file) |
 
 What is inside what:
 
@@ -152,6 +159,7 @@ What is inside what:
   has its items. A trailer has its dictionary's entries.
 - A dictionary value has its entries, and an array value its items. Other
   values have no children.
+- A stream has `decoded` as its child, when walk_pdf can apply its filters.
 
 For example, `/rev[0]/obj[5]/Resources/Font/F8` is the `/F8` entry of the
 `/Font` dictionary of the `/Resources` dictionary of object 5, and
@@ -161,7 +169,7 @@ A key is written as it is, except that a byte which would clash with the path
 syntax (whitespace, `/`, `[`, `]` and other PDF delimiters, `#`, or a byte
 outside printable ASCII) is written `#` and two hex digits, as in PDF names:
 the key `A B` is `A#20B`. Keys that are spelled like the reserved segments
-`header` and `stream` get their first letter written that way: `#68eader`.
+`header`, `stream` and `decoded` get their first letter written that way: `#68eader`.
 The empty key is `#`.
 
 An object is named by its object number alone: `12 0 obj` is `obj[12]`. The
@@ -188,7 +196,8 @@ its revision has no `xref` or `trailer`.
 | `-h`, `--help` | Print this manual and exit.                                     |
 
 With the default depth of 3, walk_pdf lists revisions, their elements, and the
-entries and items of objects and trailers, but not what is nested deeper. Give
+entries and items of objects and trailers, but not what is nested deeper.
+`--depth 4` also lists each stream's decoded data. Give
 a path and a depth to look further into one part, e.g.
 `walk_pdf file.pdf '/rev[0]/obj[5]' --depth 3`.
 

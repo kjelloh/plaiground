@@ -33,6 +33,7 @@ enum class Kind {
   dictionary, // << /Key value ... >>
   reference,  // 12 0 R, a reference to object 12
   stream,     // the data of a stream object, between "stream" and "endstream"
+  decoded,    // a stream's data decrypted and with its filters applied (not in the file)
 
   // Only in path segments: how a value is reached from its parent
   key,   // a dictionary entry, by its key
@@ -60,11 +61,12 @@ struct Segment {
   static Segment entry(std::string key) { return {Kind::key, 0, std::move(key)}; }
   static Segment item(std::uint64_t index) { return {Kind::index, index, {}}; }
   static Segment stream() { return {Kind::stream, 0, {}}; }
+  static Segment decoded() { return {Kind::decoded, 0, {}}; }
 
-  // "rev[1]", "header", "obj[12]", "xref[0]", "Type" (a key), "[3]" (an index), "stream".
+  // "rev[1]", "header", "obj[12]", "xref[0]", "Type" (a key), "[3]" (an index), "stream", "decoded".
   // A key is written as is, except that bytes which would clash with the path
   // syntax are written #xx, as PDF names do: "A B" is "A#20B". A key that is
-  // a reserved word ("header", "stream") gets its first letter escaped.
+  // a reserved word ("header", "stream", "decoded") gets its first letter escaped.
   std::string to_string() const;
 
   auto operator<=>(Segment const&) const = default;

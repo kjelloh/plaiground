@@ -9,6 +9,7 @@ class WalkPdfConan(ConanFile):
     generators = "CMakeToolchain", "CMakeDeps"
 
     def requirements(self):
+        self.requires("zlib/1.3.1")
         self.test_requires("gtest/1.15.0")
 
     def validate(self):

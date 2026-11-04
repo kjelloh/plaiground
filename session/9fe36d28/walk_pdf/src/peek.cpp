@@ -18,9 +18,10 @@ bool is_printable(char c) { return c >= ' ' && c <= '~'; }
 
 // Text is printable ASCII and whitespace. Allow some other bytes, as PDF text
 // may hold e.g. Latin-1 letters, but call it binary if more than a quarter are.
+// A zero byte is PDF whitespace, but not text: zeros are binary data.
 bool is_binary(std::string_view bytes) {
   auto const other = std::ranges::count_if(
-      bytes, [](char c) { return !is_printable(c) && !is_whitespace(c); });
+      bytes, [](char c) { return c == '\0' || (!is_printable(c) && !is_whitespace(c)); });
   return static_cast<std::size_t>(other) * 4 > bytes.size();
 }
 
@@ -376,10 +377,27 @@ std::string peek(Content const& content, std::size_t width) {
   }
   case Kind::stream: {
     // Stream data that is text (e.g. an uncompressed page) is shown, other
-    // data described. Only its start is needed, and decrypted.
+    // data described with its filters. Only its start is needed, and decrypted.
     auto const start = bytes.substr(0, 1024);
     auto const data = content.document().decrypt(content.path(), start).value_or(std::string{start});
-    return is_binary(data) ? std::format("<{} bytes>", bytes.size()) : fit(squeeze(data, width), width);
+    if (!is_binary(data)) {
+      return fit(squeeze(data, width), width);
+    }
+    std::vector<std::string> names;
+    for (auto const& filter : content.document().filters(content.path())) {
+      names.push_back(filter.name);
+    }
+    return names.empty() ? std::format("<{} bytes>", bytes.size())
+                         : std::format("<{} bytes, {}>", bytes.size(), join(names, " "));
+  }
+  case Kind::decoded: {
+    // As stream data, but already decrypted and decoded; says if decoding stopped early
+    auto const start = bytes.substr(0, 1024);
+    auto text = is_binary(start) ? std::format("<{} bytes>", bytes.size()) : fit(squeeze(start, width), width);
+    if (auto const decoded = content.document().decode(content.path().parent()); decoded && decoded->problem) {
+      text = "(" + *decoded->problem + ") " + text;
+    }
+    return text;
   }
   case Kind::key:
   case Kind::index: return {}; // Only used in path segments

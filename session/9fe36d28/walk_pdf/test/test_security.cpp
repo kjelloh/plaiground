@@ -3,6 +3,9 @@
 #include "security.hpp"
 
 #include <gtest/gtest.h>
+#include <zlib.h>
+
+#include "crypto/rc4.hpp"
 
 #include <format>
 #include <string>
@@ -134,6 +137,27 @@ TEST(Security, AesIsNotSupportedYet) {
   ASSERT_TRUE(document.security());
   EXPECT_FALSE(document.security()->key);
   EXPECT_EQ(document.security()->status, "AES-128: not supported yet");
+}
+
+TEST(Security, StreamIsDecryptedThenDecoded) {
+  // An encrypted FlateDecode stream: compress, then encrypt with object 2's key
+  std::string const page = "BT /F1 12 Tf (Hi) Tj ET";
+  auto size = compressBound(static_cast<uLong>(page.size()));
+  std::string compressed(size, '\0');
+  compress(reinterpret_cast<Bytef*>(compressed.data()), &size, reinterpret_cast<Bytef const*>(page.data()),
+           static_cast<uLong>(page.size()));
+  compressed.resize(size);
+  auto const encrypted = crypto::rc4(walk_pdf::object_key(bytes_of(rc4_128.key), 2, 0), compressed);
+  auto text = encrypted_pdf(rc4_128, rc4_128.user);
+  auto const old_stream = bytes_of(rc4_128.stream);
+  text.replace(text.find(old_stream), old_stream.size(), encrypted);
+  text.replace(text.find("2 0 obj\n<< /Length 23 >>"), 24,
+               "2 0 obj\n<< /Length " + std::to_string(encrypted.size()) + " /Filter /FlateDecode >>");
+  Document const document{text};
+  auto const decoded = document.find(*Path::parse("/rev[0]/obj[2]/stream/decoded"));
+  ASSERT_TRUE(decoded);
+  EXPECT_EQ(decoded->bytes(), page);
+  EXPECT_FALSE(document.decrypt(decoded->path(), "x")); // decrypted as a whole already
 }
 
 TEST(Security, UnencryptedFile) {

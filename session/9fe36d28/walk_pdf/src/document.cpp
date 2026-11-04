@@ -15,9 +15,11 @@ namespace walk_pdf {
 static_assert(std::input_iterator<ChildIterator>);
 static_assert(std::ranges::input_range<Content>);
 
-std::string_view Content::bytes() const {
-  return document_->bytes().substr(begin_, end_ - begin_);
+std::string_view Content::source() const {
+  return buffer_ ? std::string_view{*buffer_} : document_->bytes();
 }
+
+std::string_view Content::bytes() const { return source().substr(begin_, end_ - begin_); }
 
 ChildIterator Content::begin() const { return ChildIterator{*this}; }
 
@@ -40,7 +42,7 @@ std::optional<Value> body_of(std::string_view bytes, Content const& content,
 } // namespace
 
 ChildIterator::ChildIterator(Content const& parent) : parent_(parent), position_(parent.begin_) {
-  auto const bytes = parent.document_->bytes();
+  auto const bytes = parent.source();
   std::optional<Value> body;
   switch (parent.kind_) {
   case Kind::object: body = body_of(bytes, parent, "obj"); break;
@@ -49,6 +51,7 @@ ChildIterator::ChildIterator(Content const& parent) : parent_(parent), position_
   case Kind::array: body = Value{parent.kind_, parent.begin_, parent.end_}; break;
   default: break;
   }
+  decoded_ = parent.kind_ == Kind::stream && parent.in_file();
   if (body && (body->kind == Kind::dictionary || body->kind == Kind::array)) {
     container_ = body;
     position_ = first_child_at(*body);
@@ -60,10 +63,16 @@ ChildIterator::ChildIterator(Content const& parent) : parent_(parent), position_
 }
 
 void ChildIterator::emit(Segment segment, Kind kind, std::size_t begin, std::size_t end) {
+  emit(std::move(segment), kind, begin, end, parent_->buffer_);
+}
+
+// A child in the given bytes: the parent's for most, a decoded stream for "decoded"
+void ChildIterator::emit(Segment segment, Kind kind, std::size_t begin, std::size_t end,
+                         std::shared_ptr<std::string const> buffer) {
   auto const& document = *parent_->document_;
   auto path = parent_->path_.child(std::move(segment));
   document.remember(path, kind, begin, end);
-  current_.emplace(path, Content{document, path, kind, begin, end});
+  current_.emplace(path, Content{document, path, kind, begin, end, std::move(buffer)});
 }
 
 ChildIterator& ChildIterator::operator++() {
@@ -82,7 +91,7 @@ void ChildIterator::find_next() {
 
   // Inside objects: a dictionary's entries or an array's items, then a stream's data
   if (container_) {
-    if (auto const child = next_child(document.bytes(), *container_, position_)) {
+    if (auto const child = next_child(parent.source(), *container_, position_)) {
       position_ = child->value.end;
       auto const index = ordinals_[static_cast<std::size_t>(Kind::index)]++;
       emit(container_->kind == Kind::dictionary ? Segment::entry(child->key) : Segment::item(index),
@@ -95,6 +104,14 @@ void ChildIterator::find_next() {
     emit(Segment::stream(), Kind::stream, stream_->begin, stream_->end);
     stream_.reset();
     return;
+  }
+  if (decoded_) {
+    // A stream's data, decrypted and with its filters applied
+    decoded_ = false;
+    if (auto const decoded = document.decode(parent.path_)) {
+      emit(Segment::decoded(), Kind::decoded, 0, decoded->bytes->size(), decoded->bytes);
+      return;
+    }
   }
 
   std::optional<Found> found;
@@ -175,7 +192,11 @@ std::optional<Content> Document::find(Path const& path) const {
   // Found before (or a sibling of something found before)
   if (auto const known = index_.find(path); known != index_.end()) {
     auto const& [kind, begin, end] = known->second;
-    return Content{*this, path, kind, begin, end};
+    auto buffer = buffer_for(path);
+    if (!buffer && std::ranges::any_of(path.segments(), [](Segment const& s) { return s.kind == Kind::decoded; })) {
+      return std::nullopt; // Its stream can no longer be decoded
+    }
+    return Content{*this, path, kind, begin, end, std::move(buffer)};
   }
   // Otherwise find the parent, and look among its children. That scan
   // remembers every child it passes, so their lookups need no scan.
@@ -360,6 +381,9 @@ std::optional<std::string> Document::decrypt(Path const& path, std::string_view 
   if (segments.size() < 2 || segments[1].kind != Kind::object) {
     return std::nullopt; // Not in an object, e.g. in a trailer
   }
+  if (std::ranges::any_of(segments, [](Segment const& s) { return s.kind == Kind::decoded; })) {
+    return std::nullopt; // Decoded stream data was decrypted as a whole
+  }
   auto const number = segments[1].number;
   if (security->dictionary_object == number) {
     return std::nullopt;
@@ -375,6 +399,74 @@ std::optional<std::string> Document::decrypt(Path const& path, std::string_view 
     return std::nullopt;
   }
   return crypto::rc4(object_key(*security->key, number, generation_of(*object)), bytes);
+}
+
+std::vector<Filter> Document::filters(Path const& stream) const {
+  auto const object = stream.parent();
+  auto const filter = find(object.child(Segment::entry("Filter")));
+  auto const parameters = object.child(Segment::entry("DecodeParms"));
+  std::vector<Filter> result;
+  auto const add = [&](std::string name, Path const& parms) {
+    Filter f{std::move(name)};
+    auto const number = [&](std::string key, int fallback) {
+      return static_cast<int>(integer_of(find(parms.child(Segment::entry(std::move(key))))).value_or(fallback));
+    };
+    f.predictor = number("Predictor", 1);
+    f.colors = number("Colors", 1);
+    f.bits_per_component = number("BitsPerComponent", 8);
+    f.columns = number("Columns", 1);
+    result.push_back(std::move(f));
+  };
+  if (auto const name = name_of(filter)) {
+    add(*name, parameters);
+  } else if (filter && filter->kind() == Kind::array) {
+    std::uint64_t index = 0;
+    for (auto const& item : children(filter->path())) {
+      add(name_of(item.content).value_or("?"), parameters.child(Segment::item(index++)));
+    }
+  }
+  return result;
+}
+
+std::optional<Document::DecodedStream> Document::decode(Path const& stream) const {
+  if (auto const known = decoded_.find(stream); known != decoded_.end()) {
+    return known->second;
+  }
+  auto const content = find(stream);
+  if (!content || content->kind() != Kind::stream || !content->in_file()) {
+    return std::nullopt;
+  }
+  auto const filters = this->filters(stream);
+  if (!std::ranges::all_of(filters, [](Filter const& f) { return can_decode(f.name); })) {
+    return std::nullopt;
+  }
+  auto data = decrypt(stream, content->bytes()).value_or(std::string{content->bytes()});
+  auto result = walk_pdf::decode(std::move(data), filters);
+  DecodedStream decoded{std::make_shared<std::string const>(std::move(result.bytes)), result.problem};
+
+  // Keep it, and drop the oldest while over budget (but always the newest)
+  decoded_bytes_ += decoded.bytes->size();
+  decoded_.emplace(stream, decoded);
+  decoded_order_.push_back(stream);
+  while (decoded_bytes_ > decoded_budget && decoded_order_.size() > 1) {
+    auto const oldest = decoded_.find(decoded_order_.front());
+    decoded_bytes_ -= oldest->second.bytes->size();
+    decoded_.erase(oldest);
+    decoded_order_.pop_front();
+  }
+  return decoded;
+}
+
+std::shared_ptr<std::string const> Document::buffer_for(Path const& path) const {
+  auto const& segments = path.segments();
+  auto const decoded = std::ranges::find_if(segments.rbegin(), segments.rend(),
+                                            [](Segment const& s) { return s.kind == Kind::decoded; });
+  if (decoded == segments.rend()) {
+    return nullptr;
+  }
+  auto const stream = Path{std::vector<Segment>{segments.begin(), decoded.base() - 1}};
+  auto const result = decode(stream);
+  return result ? result->bytes : nullptr;
 }
 
 } // namespace walk_pdf

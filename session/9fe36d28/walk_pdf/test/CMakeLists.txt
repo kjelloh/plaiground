@@ -4,6 +4,7 @@ add_executable(walk_pdf_tests
   test_cp437.cpp
   test_crypto.cpp
   test_document.cpp
+  test_filters.cpp
   test_path.cpp
   test_peek.cpp
   test_security.cpp
@@ -12,7 +13,7 @@ add_executable(walk_pdf_tests
   test_utf16.cpp
   test_utf8.cpp
 )
-target_link_libraries(walk_pdf_tests PRIVATE walk_pdf_core walk_pdf_warnings GTest::gtest_main)
+target_link_libraries(walk_pdf_tests PRIVATE walk_pdf_core walk_pdf_warnings GTest::gtest_main ZLIB::ZLIB)
 
 include(GoogleTest)
 gtest_discover_tests(walk_pdf_tests)

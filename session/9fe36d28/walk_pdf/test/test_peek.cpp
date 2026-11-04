@@ -140,6 +140,12 @@ TEST(Peek, DecodedTextIsCutBetweenCharacters) {
   EXPECT_EQ(text, expected + "...");
 }
 
+TEST(Peek, ZerosAreBinaryNotWhitespace) {
+  Document const document{std::string{"%PDF-1.4\n1 0 obj\n<< /Length 8 >>\nstream\n"} + std::string(8, '\0') +
+                          "\nendstream\nendobj\n%%EOF\n"};
+  EXPECT_EQ(peek_at(document, "/rev[0]/obj[1]/stream/decoded"), "<8 bytes>");
+}
+
 TEST(Peek, BinaryUnknownIsDescribed) {
   Document const document{"%PDF-1.4\n\x01\x02\x03\x04\x05garbage\n%%EOF\n"};
   EXPECT_EQ(peek_at(document, "/rev[0]/unknown[0]"), "<13 bytes, binary>");
