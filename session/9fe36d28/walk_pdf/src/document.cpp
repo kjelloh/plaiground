@@ -27,6 +27,8 @@ ChildIterator& ChildIterator::operator++() {
 
 // Finds the parent's next child from position_. The child's path segment is
 // its object number for objects, and its ordinal among its kind otherwise.
+// A damaged file may define an object number twice in one revision; then the
+// path finds the first.
 void ChildIterator::find_next() {
   current_.reset();
   auto const& parent = *parent_;
@@ -60,7 +62,7 @@ void ChildIterator::find_next() {
   Segment segment;
   switch (found->kind) {
   case Kind::header: segment = Segment::header(); break;
-  case Kind::object: segment = Segment::object(found->number, found->generation); break;
+  case Kind::object: segment = Segment::object(found->number); break;
   default: segment = Segment::ordinal(found->kind, ordinal); break;
   }
   ++ordinal;

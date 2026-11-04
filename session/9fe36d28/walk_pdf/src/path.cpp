@@ -85,17 +85,6 @@ std::expected<Segment, std::string> parse_segment(std::string_view text) {
     return std::unexpected(std::format("expected '{}[...]' but got '{}'", name, text));
   }
   auto const inside = text.substr(open + 1, text.size() - open - 2);
-  if (*kind == Kind::object) {
-    auto const space = inside.find(' ');
-    auto const number = parse_number<std::uint64_t>(inside.substr(0, space));
-    auto const generation = space == std::string_view::npos
-                                ? std::nullopt
-                                : parse_number<std::uint32_t>(inside.substr(space + 1));
-    if (!number || !generation) {
-      return std::unexpected(std::format("expected 'obj[number generation]' but got '{}'", text));
-    }
-    return Segment::object(*number, *generation);
-  }
   auto const ordinal = parse_number<std::uint64_t>(inside);
   if (!ordinal) {
     return std::unexpected(std::format("expected '{}[number]' but got '{}'", name, text));
@@ -106,11 +95,10 @@ std::expected<Segment, std::string> parse_segment(std::string_view text) {
 } // namespace
 
 std::string Segment::to_string() const {
-  switch (kind) {
-  case Kind::header: return std::string{segment_name(kind)};
-  case Kind::object: return std::format("obj[{} {}]", number, generation);
-  default: return std::format("{}[{}]", segment_name(kind), number);
+  if (kind == Kind::header) {
+    return std::string{segment_name(kind)};
   }
+  return std::format("{}[{}]", segment_name(kind), number);
 }
 
 Path Path::child(Segment segment) const {

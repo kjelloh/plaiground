@@ -21,7 +21,7 @@ walk_pdf [options]
     offset       size  path                     preview
          0       1633  /rev[0]
          0          8  /rev[0]/header           %PDF-1.7
-        12        171  /rev[0]/obj[73867 0]     73867 0 obj
+        12        171  /rev[0]/obj[73867]       73867 0 obj
        187        416  /rev[0]/xref[0]          xref
        603        259  /rev[0]/trailer[0]       trailer
       1614         12  /rev[0]/startxref[0]     startxref
@@ -54,7 +54,7 @@ walk_pdf is run on the same file. `/` is the whole file.
 A PDF file is its original part followed by any updates appended to it later.
 Each of these is a *revision*, and runs up to and including its `%%EOF` line.
 An update may store a new version of an object under the same object number,
-so the revision is part of the path: `/rev[0]/obj[5 0]` and `/rev[1]/obj[5 0]`
+so the revision is part of the path: `/rev[0]/obj[5]` and `/rev[1]/obj[5]`
 are two versions of object 5.
 
 | Path segment     | Element                                              |
@@ -62,12 +62,18 @@ are two versions of object 5.
 | `rev[i]`         | Revision i of the file, counted from 0               |
 | `header`         | `%PDF-x.y`, the version line at the start of the file |
 | `comment[i]`     | A comment line, e.g. the line of binary marker bytes |
-| `obj[n g]`       | Indirect object number n, generation g: `n g obj ... endobj` |
+| `obj[n]`         | Indirect object number n: `n g obj ... endobj`       |
 | `xref[i]`        | A classic cross-reference table                      |
 | `trailer[i]`     | `trailer << ... >>`                                  |
 | `startxref[i]`   | `startxref` and the offset of its cross-reference    |
 | `eof[i]`         | `%%EOF`                                              |
 | `unknown[i]`     | Bytes walk_pdf could not recognise                   |
+
+An object is named by its object number alone: `12 0 obj` is `obj[12]`. The
+second number in the file, the generation, is left out: each revision has at
+most one object with a given number, so the revision and the number are enough.
+(The generation is 0 for nearly every object; it only goes up when an update
+reuses the number of a deleted object.) Path strings contain no blanks.
 
 Elements other than objects are numbered in file order from 0 within their
 revision, per kind.
@@ -76,7 +82,7 @@ Files made for fast web viewing ("linearized") have two revisions: a small
 first part for the first page, then the rest.
 
 PDF 1.5 and later may keep the cross-reference in a stream object
-(`/Type /XRef`) instead of an `xref` table. That is an ordinary `obj[n g]`, and
+(`/Type /XRef`) instead of an `xref` table. That is an ordinary `obj[n]`, and
 its revision has no `xref` or `trailer`.
 
 ## Options

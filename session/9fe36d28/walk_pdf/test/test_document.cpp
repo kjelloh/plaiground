@@ -47,20 +47,20 @@ TEST(Document, RevisionChildren) {
   auto const first = document.find(*Path::parse("/rev[0]"));
   ASSERT_TRUE(first);
   EXPECT_EQ(paths_of(*first),
-            (std::vector<std::string>{"/rev[0]/header", "/rev[0]/comment[0]", "/rev[0]/obj[1 0]",
-                                      "/rev[0]/obj[2 0]", "/rev[0]/xref[0]", "/rev[0]/trailer[0]",
+            (std::vector<std::string>{"/rev[0]/header", "/rev[0]/comment[0]", "/rev[0]/obj[1]",
+                                      "/rev[0]/obj[2]", "/rev[0]/xref[0]", "/rev[0]/trailer[0]",
                                       "/rev[0]/startxref[0]", "/rev[0]/eof[0]"}));
   auto const second = document.find(*Path::parse("/rev[1]"));
   ASSERT_TRUE(second);
   EXPECT_EQ(paths_of(*second),
-            (std::vector<std::string>{"/rev[1]/obj[1 0]", "/rev[1]/xref[0]", "/rev[1]/trailer[0]",
+            (std::vector<std::string>{"/rev[1]/obj[1]", "/rev[1]/xref[0]", "/rev[1]/trailer[0]",
                                       "/rev[1]/startxref[0]", "/rev[1]/eof[0]"}));
 }
 
 TEST(Document, SameObjectNumberInEachRevision) {
   Document const document{two_revisions};
-  auto const original = document.find(*Path::parse("/rev[0]/obj[1 0]"));
-  auto const updated = document.find(*Path::parse("/rev[1]/obj[1 0]"));
+  auto const original = document.find(*Path::parse("/rev[0]/obj[1]"));
+  auto const updated = document.find(*Path::parse("/rev[1]/obj[1]"));
   ASSERT_TRUE(original);
   ASSERT_TRUE(updated);
   EXPECT_EQ(original->bytes(), "1 0 obj\n<< /Type /Catalog >>\nendobj");
@@ -69,7 +69,7 @@ TEST(Document, SameObjectNumberInEachRevision) {
 
 TEST(Document, StreamDataMayContainEndobj) {
   Document const document{two_revisions};
-  auto const object = document.find(*Path::parse("/rev[0]/obj[2 0]"));
+  auto const object = document.find(*Path::parse("/rev[0]/obj[2]"));
   ASSERT_TRUE(object);
   EXPECT_TRUE(object->bytes().ends_with("endstream\nendobj"));
 }
@@ -95,9 +95,9 @@ TEST(Document, FoundContentKnowsItsPathAndOffset) {
 TEST(Document, MissingPath) {
   Document const document{two_revisions};
   EXPECT_FALSE(document.find(*Path::parse("/rev[2]")));
-  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[9 0]")));
+  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[9]")));
   EXPECT_FALSE(document.find(*Path::parse("/rev[1]/header")));
-  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[1 0]/obj[1 0]")));
+  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[1]/obj[1]")));
 }
 
 TEST(Document, UnknownBytesAreGathered) {
@@ -105,7 +105,22 @@ TEST(Document, UnknownBytesAreGathered) {
   auto const unknown = document.find(*Path::parse("/rev[0]/unknown[0]"));
   ASSERT_TRUE(unknown);
   EXPECT_EQ(unknown->bytes(), "not pdf\nstill not\n");
-  EXPECT_TRUE(document.find(*Path::parse("/rev[0]/obj[1 0]")));
+  EXPECT_TRUE(document.find(*Path::parse("/rev[0]/obj[1]")));
+}
+
+TEST(Document, ObjectPathHasNoGeneration) {
+  Document const document{"%PDF-1.4\n7 3 obj\nnull\nendobj\n%%EOF\n"};
+  auto const object = document.find(*Path::parse("/rev[0]/obj[7]"));
+  ASSERT_TRUE(object);
+  EXPECT_EQ(object->bytes(), "7 3 obj\nnull\nendobj");
+}
+
+TEST(Document, DuplicateObjectNumberInARevisionFindsTheFirst) {
+  // Only a damaged file defines an object number twice in one revision
+  Document const document{"%PDF-1.4\n1 0 obj\n(a)\nendobj\n1 0 obj\n(b)\nendobj\n%%EOF\n"};
+  auto const object = document.find(*Path::parse("/rev[0]/obj[1]"));
+  ASSERT_TRUE(object);
+  EXPECT_EQ(object->bytes(), "1 0 obj\n(a)\nendobj");
 }
 
 TEST(Document, EmptyFileHasNoRevisions) {
