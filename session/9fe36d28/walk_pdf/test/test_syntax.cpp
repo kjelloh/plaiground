@@ -122,3 +122,40 @@ TEST(Syntax, DecodeName) {
   EXPECT_EQ(walk_pdf::decode_name("/A#2"), "A#2"); // not an escape
   EXPECT_EQ(walk_pdf::decode_name("/"), "");
 }
+
+namespace {
+
+// "operands|operator" for each operation in a content stream
+std::vector<std::string> operations_of(std::string_view text) {
+  std::vector<std::string> result;
+  for (std::size_t pos = 0;;) {
+    auto const operation = walk_pdf::next_operation(text, pos, text.size());
+    if (!operation) {
+      break;
+    }
+    pos = operation->end;
+    result.push_back(std::string{text.substr(operation->begin, operation->operator_begin - operation->begin)} + "|" +
+                     std::string{operation->name});
+  }
+  return result;
+}
+
+} // namespace
+
+TEST(Syntax, ContentStreamOperations) {
+  EXPECT_EQ(operations_of("q 1 0 0 1 72 712 cm BT /F1 12 Tf (Hi) Tj T* [(A) -50 (B)] TJ ET Q"),
+            (std::vector<std::string>{"|q", "1 0 0 1 72 712 |cm", "|BT", "/F1 12 |Tf", "(Hi) |Tj", "|T*",
+                                      "[(A) -50 (B)] |TJ", "|ET", "|Q"}));
+  EXPECT_EQ(operations_of("1 2 (x) \" (y) '"), (std::vector<std::string>{"1 2 (x) |\"", "(y) |'"}));
+  EXPECT_EQ(operations_of("/P <</MCID 3>> BDC EMC"), (std::vector<std::string>{"/P <</MCID 3>> |BDC", "|EMC"}));
+  EXPECT_EQ(operations_of("% comment\n0 g"), (std::vector<std::string>{"0 |g"}));
+  EXPECT_TRUE(operations_of("  ").empty());
+}
+
+TEST(Syntax, InlineImage) {
+  std::string const text = "q BI /W 1 /H 1 ID \x00EI\xFF EI Q";
+  auto const ops = operations_of(text);
+  ASSERT_EQ(ops.size(), 3U);
+  EXPECT_EQ(ops[1], "|BI");
+  EXPECT_EQ(ops[2], "|Q");
+}

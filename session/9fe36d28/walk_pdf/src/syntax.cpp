@@ -150,6 +150,40 @@ std::optional<Value> value_at(std::string_view bytes, std::size_t pos, std::size
   return value_at(Bytes{bytes.substr(0, end)}, pos, 0);
 }
 
+std::optional<Operation> next_operation(std::string_view bytes, std::size_t pos, std::size_t end) {
+  Bytes const limited{bytes.substr(0, end)};
+  std::optional<std::size_t> begin;
+  while (true) {
+    auto const value = value_at(limited, pos, 0);
+    if (!value) {
+      // Only space left, or a stray "]" or ">>": step over it
+      auto const at = skip_space(limited, pos);
+      if (at >= limited.size()) {
+        return std::nullopt;
+      }
+      pos = at + 1;
+      continue;
+    }
+    if (value->kind != Kind::unknown || !is_regular(limited.at(value->begin))) {
+      // An operand (or a stray delimiter, kept with the operands)
+      begin = begin.value_or(value->begin);
+      pos = value->end;
+      continue;
+    }
+    auto const name = bytes.substr(value->begin, value->end - value->begin);
+    Operation operation{begin.value_or(value->begin), value->begin, value->end, name};
+    if (name == "BI") {
+      // Inline image: its parameters, "ID", one byte of space, its data, "EI"
+      operation.begin = value->begin;
+      auto const id = limited.find_keyword(value->end, "ID");
+      auto const data = id ? *id + 3 : limited.size();
+      auto const ei = limited.find_keyword(std::min(data, limited.size()), "EI");
+      operation.end = ei ? *ei + 2 : limited.size();
+    }
+    return operation;
+  }
+}
+
 std::size_t first_child_at(Value const& container) {
   return container.begin + (container.kind == Kind::dictionary ? 2 : 1);
 }

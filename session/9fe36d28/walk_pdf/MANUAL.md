@@ -6,8 +6,9 @@ the text of the PDF, so that it can be turned into plain text or Markdown.
 
 > Status: early. walk_pdf finds the file's revisions, their top-level
 > elements, and what is inside objects and trailers: dictionary entries, array
-> items and stream data. It decrypts files that open without a password, and
-> decompresses streams. It does not yet extract text.
+> items and stream data. It decrypts files that open without a password,
+> decompresses streams, and splits page content into text blocks and their
+> operators. It does not yet turn the text operators into readable text.
 
 ## Usage
 
@@ -78,6 +79,8 @@ The peek column shows what an element holds, without the keyword that opens it
 | a value inside an object: dictionary, array, name, number, reference (`12 0 R`), boolean, null | Its text |
 | string     | Text strings marked as UTF-16 or UTF-8 are shown decoded, in quotes: `"Invoice"`. Other strings as they are in the file: `(D:20261012)` |
 | stream     | The stream's data if it is text (an uncompressed page, say), otherwise `<n bytes, filters>`, e.g. `<423875 bytes, FlateDecode>` |
+| text block | The block, e.g. `BT /F8 16 Tf 1 0 0 -1 0 0 Tm 0 -775 Td <0001> Tj ET` |
+| operation  | Its operands and operator, e.g. `<0001> Tj`, or `<inline image, n bytes>` |
 | decoded    | The stream's decoded data if it is text (e.g. a page's drawing instructions), otherwise `<n bytes>`. If decoding stopped early, why, first: `(FlateDecode: data ends early, ...)` |
 
 Runs of whitespace are shown as one space, and other bytes outside printable
@@ -150,6 +153,8 @@ are two versions of object 5.
 | `[i]`            | Item i of an array, counted from 0                   |
 | `stream`         | The data of a stream object, as it is in the file    |
 | `decoded`        | A stream's data decrypted and decompressed (not in the file) |
+| `BT[i]`          | Text block i (`BT ... ET`) of a content stream, counted from 0 |
+| `op[i]`          | Operation i of a text block: operands and an operator, e.g. `/F8 16 Tf` |
 
 What is inside what:
 
@@ -160,6 +165,20 @@ What is inside what:
 - A dictionary value has its entries, and an array value its items. Other
   values have no children.
 - A stream has `decoded` as its child, when walk_pdf can apply its filters.
+- A decoded *content stream*, the drawing instructions of a page or form, has
+  its text blocks `BT[i]` as children. A text block has its operations `op[i]`
+  (without its `BT` and `ET`), and an operation has its operands `[i]`. Drawing
+  instructions outside text blocks are not listed.
+
+walk_pdf does not yet follow a page to its `/Contents`, so it tells content
+streams from other streams by their dictionary and data: a stream is taken
+as a content stream unless its `/Type` or `/Subtype` says otherwise (an image,
+font, object stream and so on), it is a font program (`/Length1`), its data
+is a CMap (`begincmap`, e.g. a font's `/ToUnicode`), or its data is binary.
+
+For example, `/rev[0]/obj[35]/stream/decoded/BT[0]/op[3]` is the fourth
+operation of the first text block of the page drawn by object 35, and
+`.../op[3]/[0]` its first operand.
 
 For example, `/rev[0]/obj[5]/Resources/Font/F8` is the `/F8` entry of the
 `/Font` dictionary of the `/Resources` dictionary of object 5, and
@@ -197,7 +216,9 @@ its revision has no `xref` or `trailer`.
 
 With the default depth of 3, walk_pdf lists revisions, their elements, and the
 entries and items of objects and trailers, but not what is nested deeper.
-`--depth 4` also lists each stream's decoded data. Give
+`--depth 4` also lists each stream's decoded data, and `--depth 7` everything
+down to the operands of text operators. To look into one page's text, start at
+its decoded stream: `walk_pdf file.pdf '/rev[0]/obj[35]/stream/decoded' --depth 2`. Give
 a path and a depth to look further into one part, e.g.
 `walk_pdf file.pdf '/rev[0]/obj[5]' --depth 3`.
 

@@ -52,6 +52,8 @@ ChildIterator::ChildIterator(Content const& parent) : parent_(parent), position_
   default: break;
   }
   decoded_ = parent.kind_ == Kind::stream && parent.in_file();
+  operations_ = (parent.kind_ == Kind::decoded && parent.document_->is_content_stream(parent.path_.parent())) ||
+                parent.kind_ == Kind::text_block;
   if (body && (body->kind == Kind::dictionary || body->kind == Kind::array)) {
     container_ = body;
     position_ = first_child_at(*body);
@@ -112,6 +114,51 @@ void ChildIterator::find_next() {
       emit(Segment::decoded(), Kind::decoded, 0, decoded->bytes->size(), decoded->bytes);
       return;
     }
+  }
+
+  // Inside a content stream: its text blocks, a block's operations, an operation's operands
+  if (operations_ && parent.kind_ == Kind::decoded) {
+    std::optional<std::size_t> block;
+    while (auto const operation = next_operation(parent.source(), position_, parent.end_)) {
+      position_ = operation->end;
+      if (operation->name == "BT") {
+        block = operation->begin;
+      } else if (operation->name == "ET" && block) {
+        auto const ordinal = ordinals_[static_cast<std::size_t>(Kind::text_block)]++;
+        emit(Segment::ordinal(Kind::text_block, ordinal), Kind::text_block, *block, operation->end);
+        return;
+      }
+    }
+    if (block) { // A text block without its ET runs to the end
+      auto const ordinal = ordinals_[static_cast<std::size_t>(Kind::text_block)]++;
+      emit(Segment::ordinal(Kind::text_block, ordinal), Kind::text_block, *block, parent.end_);
+    }
+    return;
+  }
+  if (operations_ && parent.kind_ == Kind::text_block) {
+    while (auto const operation = next_operation(parent.source(), position_, parent.end_)) {
+      position_ = operation->end;
+      if (operation->name != "BT" && operation->name != "ET") {
+        auto const ordinal = ordinals_[static_cast<std::size_t>(Kind::operation)]++;
+        emit(Segment::ordinal(Kind::operation, ordinal), Kind::operation, operation->begin, operation->end);
+        return;
+      }
+    }
+    return;
+  }
+  if (parent.kind_ == Kind::operation) {
+    auto const source = parent.source();
+    if (source.substr(parent.begin_, 2) == "BI") {
+      return; // An inline image's parameters and data are not looked into
+    }
+    auto const operand = value_at(source, position_, parent.end_);
+    if (!operand || (operand->kind == Kind::unknown && operand->end == parent.end_)) {
+      return; // The operator
+    }
+    position_ = operand->end;
+    auto const index = ordinals_[static_cast<std::size_t>(Kind::index)]++;
+    emit(Segment::item(index), operand->kind, operand->begin, operand->end);
+    return;
   }
 
   std::optional<Found> found;
@@ -455,6 +502,34 @@ std::optional<Document::DecodedStream> Document::decode(Path const& stream) cons
     decoded_order_.pop_front();
   }
   return decoded;
+}
+
+bool Document::is_content_stream(Path const& stream) const {
+  auto const object = stream.parent();
+  auto const entry = [&](std::string key) { return find(object.child(Segment::entry(std::move(key)))); };
+  if (auto const type = name_of(entry("Type")); type && type != "XObject" && type != "Pattern") {
+    return false; // e.g. ObjStm, XRef, Metadata, EmbeddedFile, CMap
+  }
+  if (auto const subtype = name_of(entry("Subtype")); subtype && subtype != "Form") {
+    return false; // e.g. Image, a font program, XML
+  }
+  if (entry("Length1") || entry("Length2") || entry("Length3")) {
+    return false; // a font program
+  }
+  auto const decoded = decode(stream);
+  if (!decoded) {
+    return false;
+  }
+  auto const start = std::string_view{*decoded->bytes}.substr(0, 4096);
+  if (start.find("begincmap") != std::string_view::npos) {
+    return false; // a CMap, e.g. a font's /ToUnicode
+  }
+  // Drawing instructions are text; more than a quarter other bytes is binary data
+  auto const other = std::ranges::count_if(start, [](char c) {
+    auto const byte = static_cast<unsigned char>(c);
+    return byte == 0 || (byte < 0x20 && c != '\n' && c != '\r' && c != '\t' && c != '\f') || byte >= 0x7F;
+  });
+  return static_cast<std::size_t>(other) * 4 <= start.size();
 }
 
 std::shared_ptr<std::string const> Document::buffer_for(Path const& path) const {

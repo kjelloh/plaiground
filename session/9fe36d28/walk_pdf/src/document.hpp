@@ -94,6 +94,7 @@ private:
   std::optional<Value> container_;                   // the dictionary or array whose children these are
   std::optional<Value> stream_;                      // a stream object's data, its last child
   bool decoded_ = false;                             // a stream's decoded data, its only child
+  bool operations_ = false;                          // the parent is a content stream
   std::optional<Element> current_;                   // nullopt at the end
 };
 
@@ -183,6 +184,11 @@ private:
   }
 
   std::optional<Security> find_security() const;
+
+  // Is the stream a content stream: drawing instructions, as a page's? Told
+  // from its dictionary and data, as walk_pdf does not yet follow a page's
+  // /Contents: not an image, font, CMap, object stream, metadata or the like.
+  bool is_content_stream(Path const& stream) const;
 
   // The decoded stream that holds the element at path, or null if it is in the file
   std::shared_ptr<std::string const> buffer_for(Path const& path) const;

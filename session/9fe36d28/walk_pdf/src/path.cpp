@@ -31,6 +31,8 @@ std::string_view to_string(Kind kind) {
   case Kind::reference: return "reference";
   case Kind::stream: return "stream";
   case Kind::decoded: return "decoded";
+  case Kind::text_block: return "text block";
+  case Kind::operation: return "operation";
   case Kind::key: return "key";
   case Kind::index: return "index";
   }
@@ -40,7 +42,7 @@ std::string_view to_string(Kind kind) {
 namespace {
 
 // How each kind is named in a path segment. The document (root) has no segment.
-constexpr std::array<std::pair<Kind, std::string_view>, 9> segment_names{{
+constexpr std::array<std::pair<Kind, std::string_view>, 11> segment_names{{
     {Kind::revision, "rev"},
     {Kind::header, "header"},
     {Kind::comment, "comment"},
@@ -50,6 +52,8 @@ constexpr std::array<std::pair<Kind, std::string_view>, 9> segment_names{{
     {Kind::startxref, "startxref"},
     {Kind::eof, "eof"},
     {Kind::unknown, "unknown"},
+    {Kind::text_block, "BT"},
+    {Kind::operation, "op"},
 }};
 
 std::string_view segment_name(Kind kind) {

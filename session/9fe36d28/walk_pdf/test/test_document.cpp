@@ -271,7 +271,52 @@ TEST(Document, StreamIsDecoded) {
   EXPECT_EQ(decoded->bytes(), page);
   EXPECT_FALSE(decoded->in_file());
   EXPECT_EQ(decoded->offset(), 0U);
-  EXPECT_TRUE(paths_of(*decoded).empty()); // not looked into yet
+  EXPECT_EQ(paths_of(*decoded), (std::vector<std::string>{"/rev[0]/obj[1]/stream/decoded/BT[0]"}));
+}
+
+TEST(Document, ContentStreamTextBlocksOperationsAndOperands) {
+  std::string const page = "q 1 0 0 1 0 0 cm\nBT /F1 12 Tf 72 712 Td (Hello) Tj [(W) 120 (orld)] TJ ET\n"
+                           "0 0 m 10 10 l S\nBT /F2 9 Tf <0001> Tj ET Q";
+  Document const document{"%PDF-1.4\n1 0 obj\n<< /Length " + std::to_string(page.size()) +
+                          " >>\nstream\n" + page + "\nendstream\nendobj\n%%EOF\n"};
+  auto const decoded = *Path::parse("/rev[0]/obj[1]/stream/decoded");
+  EXPECT_EQ(paths_of(*document.find(decoded)),
+            (std::vector<std::string>{"/rev[0]/obj[1]/stream/decoded/BT[0]", "/rev[0]/obj[1]/stream/decoded/BT[1]"}));
+  auto const block = decoded.child(walk_pdf::Segment::ordinal(Kind::text_block, 0));
+  EXPECT_EQ(document.find(block)->bytes(), "BT /F1 12 Tf 72 712 Td (Hello) Tj [(W) 120 (orld)] TJ ET");
+  std::vector<std::string> operations;
+  for (auto const& child : document.children(block)) {
+    operations.emplace_back(child.content.bytes());
+  }
+  EXPECT_EQ(operations, (std::vector<std::string>{"/F1 12 Tf", "72 712 Td", "(Hello) Tj", "[(W) 120 (orld)] TJ"}));
+  auto const tj = document.find(*Path::parse("/rev[0]/obj[1]/stream/decoded/BT[0]/op[3]/[0]/[2]"));
+  ASSERT_TRUE(tj);
+  EXPECT_EQ(tj->kind(), Kind::string);
+  EXPECT_EQ(tj->bytes(), "(orld)");
+  EXPECT_EQ(document.find(*Path::parse("/rev[0]/obj[1]/stream/decoded/BT[1]/op[1]/[0]"))->bytes(), "<0001>");
+  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[1]/stream/decoded/BT[0]/op[0]/[2]"))); // Tf itself
+}
+
+TEST(Document, OtherStreamsAreNotContentStreams) {
+  // A ToUnicode CMap and a font program decode, but have no text blocks
+  std::string const cmap = "/CIDInit /ProcSet findresource begin begincmap BT 1 beginbfchar <01> <0041> endbfchar ET";
+  Document const document{"%PDF-1.4\n1 0 obj\n<< /Length " + std::to_string(cmap.size()) + " >>\nstream\n" +
+                          cmap + "\nendstream\nendobj\n2 0 obj\n<< /Length1 9 /Length 9 >>\nstream\nBT x Tj ET\n"
+                          "endstream\nendobj\n3 0 obj\n<< /Type /XObject /Subtype /Image /Length 9 >>\nstream\n"
+                          "BT x Tj ET\nendstream\nendobj\n%%EOF\n"};
+  for (auto const* path : {"/rev[0]/obj[1]/stream/decoded", "/rev[0]/obj[2]/stream/decoded",
+                           "/rev[0]/obj[3]/stream/decoded"}) {
+    ASSERT_TRUE(document.find(*Path::parse(path))) << path;
+    EXPECT_TRUE(paths_of(*document.find(*Path::parse(path))).empty()) << path;
+  }
+}
+
+TEST(Document, InlineImageIsOneOperation) {
+  std::string const page = "BT (a) Tj ET BI /W 2 /H 1 /BPC 8 /CS /G ID \x01ET\xFF\nEI BT (b) Tj ET";
+  Document const document{"%PDF-1.4\n1 0 obj\n<< /Length " + std::to_string(page.size()) + " >>\nstream\n" +
+                          page + "\nendstream\nendobj\n%%EOF\n"};
+  EXPECT_EQ(paths_of(*document.find(*Path::parse("/rev[0]/obj[1]/stream/decoded"))).size(), 2U);
+  EXPECT_EQ(document.find(*Path::parse("/rev[0]/obj[1]/stream/decoded/BT[1]"))->bytes(), "BT (b) Tj ET");
 }
 
 TEST(Document, UndecodableStreamHasNoDecodedChild) {

@@ -11,7 +11,7 @@ See [session.md](session.md) for what the session is about, and
 - The walker understands: revisions, the top-level elements of a revision
   (header, comments, objects, xref, trailer, startxref, eof), and what is inside
   objects and trailers (dictionary entries, array items, stream data).
-- 132 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
+- 137 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
 - A `charset` library for text transcoding (Unicode, UTF-8, UTF-16, CP437).
 - PDF text strings marked as UTF-16BE or UTF-8 are shown decoded in the peek,
   e.g. `/Title "Invoice"`.
@@ -21,6 +21,8 @@ See [session.md](session.md) for what the session is about, and
 - Streams are decompressed: `.../stream/decoded` is the data decrypted and with
   its filters applied (FlateDecode with predictors, ASCIIHex, ASCII85). Pages'
   drawing instructions, with their text operators (`BT ... Tj ... ET`), are visible.
+- Content streams are split into text blocks `BT[i]`, their operations `op[i]` and
+  operands `[i]`, e.g. `/rev[0]/obj[35]/stream/decoded/BT[0]/op[3]` = `<0001> Tj`.
 - Tested on the three PDFs in `_Resources/` (two e-books, one voucher).
 
 ## Design decisions
@@ -47,6 +49,8 @@ See [session.md](session.md) for what the session is about, and
 | Decrypt with the empty user password (Standard handler, RC4); own MD5 and RC4 in a `crypto` library | What viewers do; self-contained, no OpenSSL needed. AES not yet |
 | zlib from Conan (`zlib/1.3.1`) for FlateDecode; own code for predictors, ASCIIHex, ASCII85 | zlib is the standard; the rest is small |
 | Segment `decoded` under `stream`; `Content` can view a decoded stream's bytes (shared, from a cache bounded to 64 MB) instead of the file's; offsets inside shown as `+n` | Decoded bytes are not in the file. Paths stay pure values; `stream` stays the raw file bytes |
+| Content stream children: text blocks `BT[i]` → operations `op[i]` → operands `[i]`; drawing outside text blocks not listed | The goal is text; keeps listings manageable |
+| Content streams told apart by dictionary and data (not image/font/CMap/object stream, not binary) | References (a page's `/Contents`) are not followed yet; to be replaced when they are |
 | The peek shows decrypted content; a future text output honours the "copy/extract" permission (`/P` bit 5) | The user's decision (2026-11-04): peeking for structure inspection is not extraction. Agreed that actual text extraction respects the publisher's flag |
 
 ## Done
@@ -85,6 +89,9 @@ See [session.md](session.md) for what the session is about, and
     buffer-backed `Content` (`in_file()`, `+offset` in the listing). Zero bytes count as
     binary in the peek. 16 new tests (filters against zlib round trips, hand-checked
     predictor rows, Python-made ASCII85 vectors; decrypt-then-decode).
+16. Content streams: `next_operation` tokenizer (operands + operator, inline images as one
+    operation), kinds/segments `BT[i]` and `op[i]`, operands as `[i]`,
+    `Document::is_content_stream`. 5 new tests.
 
 ## Findings about the test PDFs
 
@@ -100,6 +107,11 @@ See [session.md](session.md) for what the session is about, and
   the other 2 are JPEG images; e-books: 4183 of 4201 and 603 of 608, the rest images).
 - The voucher's fonts have `/ToUnicode` maps (uncompressed, `obj[42]` and `obj[47]`:
   `/CIDInit ... beginbfchar`), needed to turn its glyph ids into characters.
+- Text in the test PDFs (at `--depth 6`): voucher 2 text blocks, 80 `Tj` with 2-byte
+  glyph ids (`<0001>`); e-book "bokforing" 34,166 text blocks, hex glyph ids
+  (needs `/ToUnicode`); e-book "bokslutsb" 31,232 text blocks with single-byte
+  literal strings, nearly readable already (`(Civilr\344ttslig bed...)`, `\344` = ä in
+  the font's encoding).
 - Some PDFs keep objects inside object streams (`/Type /ObjStm`); those objects are
   not visible until object streams are unpacked.
 - Strings may be UTF-16 (the voucher's `/Title`, outline titles such as
@@ -110,13 +122,13 @@ See [session.md](session.md) for what the session is about, and
 
 ## Next
 
-1. Tokenize content streams: text blocks (`BT ... ET`) and text operators (`Tj`, `TJ`, ...).
-2. Follow references (`12 0 R`) via the cross-reference table; logical walk of pages,
+1. Follow references (`12 0 R`) via the cross-reference table; logical walk of pages,
    with a visited set against cycles.
-3. Map glyphs to characters through fonts' `/ToUnicode` maps.
-4. AES decryption (`/V 4` with `/AESV2`, `/V 5`), if a test PDF needs it.
-5. Unpack object streams (`/Type /ObjStm`).
-6. Decode PDFDocEncoding text strings (those without a `FE FF`/`EF BB BF` mark),
+2. Map glyphs to characters: fonts' `/ToUnicode` maps (voucher, e-book "bokforing"),
+   and single-byte encodings such as WinAnsi/MacRoman with `/Differences` (e-book "bokslutsb").
+3. AES decryption (`/V 4` with `/AESV2`, `/V 5`), if a test PDF needs it.
+4. Unpack object streams (`/Type /ObjStm`).
+5. Decode PDFDocEncoding text strings (those without a `FE FF`/`EF BB BF` mark),
    a new decoder in `charset`.
 
 ## Open questions

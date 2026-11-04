@@ -35,6 +35,10 @@ enum class Kind {
   stream,     // the data of a stream object, between "stream" and "endstream"
   decoded,    // a stream's data decrypted and with its filters applied (not in the file)
 
+  // Inside a content stream (decoded page drawing instructions)
+  text_block, // BT ... ET, a text object
+  operation,  // operands and an operator, e.g. "<0001> Tj"
+
   // Only in path segments: how a value is reached from its parent
   key,   // a dictionary entry, by its key
   index, // an array item, by its index

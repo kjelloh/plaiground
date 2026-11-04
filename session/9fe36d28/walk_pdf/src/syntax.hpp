@@ -42,6 +42,19 @@ std::optional<Child> next_child(std::string_view bytes, Value const& container, 
 // keyword follows the dictionary.
 std::optional<Value> stream_data(std::string_view bytes, std::size_t pos, std::size_t end);
 
+// One operation in a content stream (PDF 32000-1:2008, 7.8.2): its operands,
+// then its operator, e.g. "/F8 16 Tf" or "<0001> Tj". An inline image
+// ("BI ... ID data EI") is one operation, named "BI", with no operands.
+struct Operation {
+  std::size_t begin;          // its first operand, or its operator if it has none
+  std::size_t operator_begin; // its operator
+  std::size_t end;            // just after its operator ("EI" for an inline image)
+  std::string_view name;      // the operator, e.g. "Tj"
+};
+
+// The next operation at or after pos, before end, or nullopt if none is left
+std::optional<Operation> next_operation(std::string_view bytes, std::size_t pos, std::size_t end);
+
 // A name's bytes, without its '/', with #xx escapes decoded: "/A#20B" is "A B"
 std::string decode_name(std::string_view name);
 

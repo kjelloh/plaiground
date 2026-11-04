@@ -399,6 +399,10 @@ std::string peek(Content const& content, std::size_t width) {
     }
     return text;
   }
+  case Kind::text_block: return text_or_binary(bytes, width);
+  case Kind::operation:
+    return bytes.starts_with("BI") ? std::format("<inline image, {} bytes>", bytes.size())
+                                   : text_or_binary(bytes, width);
   case Kind::key:
   case Kind::index: return {}; // Only used in path segments
   }

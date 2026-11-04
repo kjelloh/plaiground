@@ -179,3 +179,13 @@ What's new:
 ```
 
 I now Vibe coded so From/To UnicodeBuffer are now named Decoder/Encoder (so at least the naming does not violate the transcoding library 'never buffer Unicode code points' rule)
+
+And now I have vibe coded parsing of text blocks into its 'parts'.
+
+* BT[i] for each text block.
+* op[i] for each operation in a block, without its BT and ET.
+* [i] for each operand, which reuses the existing array-item segment. So a TJ array's strings can be reached too, e.g. …/op[3]/[0]/[2].
+
+Now I don't fully understand this yet. But I get the gist of it.
+
+* And the important thing I focus on now is that we are now at 'Text Blocks' which is comforting!
