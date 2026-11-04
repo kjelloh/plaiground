@@ -1,6 +1,7 @@
 find_package(GTest REQUIRED)
 
 add_executable(walk_pdf_tests
+  test_api.cpp
   test_cp437.cpp
   test_crypto.cpp
   test_display.cpp

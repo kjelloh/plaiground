@@ -210,7 +210,11 @@ such files show no pages.
 `walk_pdf --text file.pdf` prints the document's text to standard output,
 each page after a `--- page n ---` line. walk_pdf writes no files; to keep the
 text, redirect it: `walk_pdf --text file.pdf > file.txt`. Errors go to
-standard error.
+standard error, and so do warnings: when no pages were found (they may be in
+object streams), or when some characters could not be mapped (shown as `�`).
+
+Other programs get the same text through walk_pdf's API, `extract_text`; see
+API.md.
 
 For example:
 
@@ -350,7 +354,7 @@ Running walk_pdf without arguments prints its name and version.
 | Code | Meaning                                                   |
 |------|-----------------------------------------------------------|
 | 0    | Success.                                                  |
-| 1    | The file could not be read, or has no element at the path, or (`--text`) its permissions do not allow copying its text. |
+| 1    | The file could not be read, or has no element at the path. With `--text`: also not a PDF, encrypted in a way walk_pdf can not open, or its permissions do not allow copying its text. |
 | 2    | Invalid command line arguments, or an invalid path.       |
 
 ## Building

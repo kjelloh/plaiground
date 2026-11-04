@@ -11,7 +11,7 @@ See [session.md](session.md) for what the session is about, and
 - The walker understands: revisions, the top-level elements of a revision
   (header, comments, objects, xref, trailer, startxref, eof), and what is inside
   objects and trailers (dictionary entries, array items, stream data).
-- 186 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
+- 197 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
 - A `charset` library for text transcoding (Unicode, UTF-8, UTF-16, CP437).
 - PDF text strings marked as UTF-16BE or UTF-8 are shown decoded in the peek,
   e.g. `/Title "Invoice"`.
@@ -33,6 +33,8 @@ See [session.md](session.md) for what the session is about, and
 - `walk_pdf --text <file>`: the document's text as plain text, laid out by where
   it is drawn (lines by baseline, words joined by glyph widths). Refused when the
   permissions do not allow copying (the e-books).
+- API for other programs (e.g. cratchit): `extract_text(file)` / `extract_text(bytes)`
+  in `src/walk_pdf.hpp`, documented in `walk_pdf/API.md`; `--text` uses it.
 - Tested on the PDFs in `_Resources/`: two e-books and (since 2026-11-04) 30 vouchers.
 
 ## Design decisions
@@ -74,6 +76,8 @@ See [session.md](session.md) for what the session is about, and
 | Layout: lines by baseline (half a font size), space when a gap > 1/5 of the size, empty line when > 1.5 lines, direction rounded to quarter turns | Simple rules, good on the vouchers; columns side by side are a known limit |
 | /ActualText of marked content replaces the glyphs' text | A voucher draws a hyphen with a glyph that maps to a space, and says "-" in /ActualText |
 | `plain_text` checks the copy/extract permission (bit 5) | As agreed: text extraction honours the publisher's flag |
+| API `extract_text` -> `std::expected<ExtractedText, TextError>`: `PlainText` + `TextReport` (pages, unmapped glyphs, encrypted), or an error kind (cannot_read, not_a_pdf, needs_password, unsupported_encryption, not_permitted) | A program can act on the reason, and know when not to trust the text |
+| The API header lives in `src/` with the rest; no separation of public and internal headers, no packaging yet | The user's decision (2026-11-04): libraries are consumed as source; clean separation postponed to a future merge |
 | The peek shows decrypted content; a future text output honours the "copy/extract" permission (`/P` bit 5) | The user's decision (2026-11-04): peeking for structure inspection is not extraction. Agreed that actual text extraction respects the publisher's flag |
 
 ## Done
@@ -133,6 +137,9 @@ See [session.md](session.md) for what the session is about, and
     /W, /DW; Type3 /FontMatrix), `src/plain_text.*` (interpreter of graphics and text
     state, forms with /Matrix, /ActualText; line layout; `PlainText`, permission check),
     `walk_pdf --text`. 16 new tests (`test/test_plain_text.cpp`).
+21. API: `src/walk_pdf.*` (`extract_text`, `ExtractedText`, `TextReport`, `TextError`),
+    `--text` through it (warnings on stderr), `API.md` with an example that was compiled
+    and run on a voucher. 11 new tests (`test/test_api.cpp`).
 
 ## Findings about the test PDFs
 
@@ -187,6 +194,9 @@ See [session.md](session.md) for what the session is about, and
 
 ## Next
 
+0. Settle how other programs build walk_pdf's sources (postponed by the user); note
+   that `charset` exists both here and in cratchit (same namespace) and must not be
+   linked twice.
 1. Unpack object streams (`/Type /ObjStm`): 7 of the 30 vouchers keep their
    pages in them and give no text yet.
 2. Columns: split a page's lines into columns before joining them.

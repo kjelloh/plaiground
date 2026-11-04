@@ -3,6 +3,7 @@
 #include "path.hpp"
 #include "peek.hpp"
 #include "plain_text.hpp"
+#include "walk_pdf.hpp"
 
 #include <charconv>
 #include <cstdio>
@@ -133,6 +134,27 @@ int main(int argc, char* argv[]) {
     return 2;
   }
 
+  if (parsed->text) {
+    // Through the API, as other programs use walk_pdf: text to stdout, the
+    // rest to stderr so that piping the text keeps only the text
+    auto const extracted = walk_pdf::extract_text(std::filesystem::path{parsed->file});
+    if (!extracted) {
+      std::println(stderr, "Error: '{}': {}", parsed->file, extracted.error().message);
+      return 1;
+    }
+    std::print("{}", extracted->text.to_string());
+    auto const& report = extracted->report;
+    if (report.pages == 0) {
+      std::println(stderr, "Warning: '{}': no pages found (they may be in object streams, not read yet)",
+                   parsed->file);
+    }
+    if (report.unmapped_glyphs > 0) {
+      std::println(stderr, "Warning: '{}': {} characters could not be mapped (shown as U+FFFD)", parsed->file,
+                   report.unmapped_glyphs);
+    }
+    return 0;
+  }
+
   auto bytes = read_file(std::filesystem::path{parsed->file});
   if (!bytes) {
     std::println(stderr, "Error: cannot read '{}'", parsed->file);
@@ -140,15 +162,6 @@ int main(int argc, char* argv[]) {
   }
 
   walk_pdf::Document const document{std::move(*bytes)};
-  if (parsed->text) {
-    auto const text = walk_pdf::plain_text(document);
-    if (!text) {
-      std::println(stderr, "Error: '{}': {}", parsed->file, text.error());
-      return 1;
-    }
-    std::print("{}", text->to_string());
-    return 0;
-  }
   if (!document.find(parsed->path)) {
     std::println(stderr, "Error: '{}' has no element {}", parsed->file, parsed->path.to_string());
     return 1;

@@ -61,6 +61,7 @@ add_library(walk_pdf_core
   src/security.cpp
   src/syntax.cpp
   src/text_string.cpp
+  src/walk_pdf.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )
 target_include_directories(walk_pdf_core PUBLIC src)

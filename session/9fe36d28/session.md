@@ -241,3 +241,5 @@ I now feel VERY GOOD about this exercise.
     * Still - It just FEELS overkill?
 
     WOW! The app now seems to be able to dump plain text from a pdf!
+
+    And as the final task for today - I vibe coded an API walk_pdf.hpp/cpp as a candidate for an entry point when merged into some cratchit or other c++ code base.
