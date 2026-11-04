@@ -6,7 +6,8 @@ the text of the PDF, so that it can be turned into plain text or Markdown.
 
 > Status: early. walk_pdf finds the file's revisions, their top-level
 > elements, and what is inside objects and trailers: dictionary entries, array
-> items and stream data. It does not yet decompress streams or extract text.
+> items and stream data. It decrypts files that open without a password. It
+> does not yet decompress streams or extract text.
 
 ## Usage
 
@@ -62,6 +63,7 @@ The peek column shows what an element holds, without the keyword that opens it
 
 | Element    | Peek                                                              |
 |------------|-------------------------------------------------------------------|
+| `/`        | How many revisions the file has, and if it is encrypted, how and which permissions it does not grant (see Encrypted files below) |
 | revision   | How many elements it has, e.g. `19 elements: 13 objects, xref, trailer` |
 | header     | The PDF version, e.g. `version 1.3`                               |
 | comment    | Its text, or `<binary marker, n bytes>` for the line that tells tools the file holds binary data |
@@ -89,8 +91,31 @@ do not decode are shown as `�` (U+FFFD). Strings without a mark use
 PDFDocEncoding, which is not decoded yet.
 
 Compressed stream data, which holds the text of most pages, is only described,
-as it can not be read yet. Nor can the strings and streams of an encrypted PDF
-(one whose trailer has `/Encrypt`): they show as `.` and escapes.
+as it can not be read yet.
+
+## Encrypted files
+
+A PDF can be encrypted (its trailer has `/Encrypt`). Most such files open
+without a password: the key is computed from values in the file itself, which
+is how a browser shows them. walk_pdf does the same, for the Standard security
+handler with RC4 (40 to 128 bits). It then shows strings and stream data
+decrypted in the peek column. Strings that are not marked as UTF-16 or UTF-8
+are shown decrypted in parentheses: `(Bilagor)`.
+
+The `/` row says how the file is encrypted, and which permissions its owner
+does not grant, e.g.
+
+```
+2 revisions; encrypted: RC4 128-bit, no password needed; not permitted: modify, copy/extract, annotate, extract for accessibility
+```
+
+The peek is a look at the structure, cut to one line per element. It is not a
+way to extract a file's text: walk_pdf will honour "copy/extract" when it gets
+a text output.
+
+Not decrypted: files that need a password, and files encrypted with AES
+(which shows as `AES-128: not supported yet` or `AES-256: not supported yet`).
+Their strings and streams are shown as they are in the file.
 
 ## Paths
 

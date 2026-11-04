@@ -1,6 +1,11 @@
 #include "document.hpp"
 
 #include "scanner.hpp"
+#include "text_string.hpp"
+
+#include "crypto/rc4.hpp"
+
+#include <charconv>
 
 #include <algorithm>
 #include <ranges>
@@ -185,6 +190,191 @@ std::optional<Content> Document::find(Path const& path) const {
     return std::nullopt;
   }
   return child->content;
+}
+
+namespace {
+
+std::optional<long long> integer_of(std::optional<Content> const& content) {
+  if (!content || content->kind() != Kind::integer) {
+    return std::nullopt;
+  }
+  auto const text = content->bytes();
+  long long value = 0;
+  auto const* first = text.data() + (text.starts_with('+') ? 1 : 0);
+  if (std::from_chars(first, text.data() + text.size(), value).ec != std::errc{}) {
+    return std::nullopt;
+  }
+  return value;
+}
+
+std::optional<std::string> name_of(std::optional<Content> const& content) {
+  if (!content || content->kind() != Kind::name) {
+    return std::nullopt;
+  }
+  return decode_name(content->bytes());
+}
+
+std::optional<std::string> string_of(std::optional<Content> const& content) {
+  if (!content || content->kind() != Kind::string) {
+    return std::nullopt;
+  }
+  return string_bytes(content->bytes());
+}
+
+// The object number of a reference "12 0 R"
+std::optional<std::uint64_t> referenced_object(std::optional<Content> const& content) {
+  if (!content || content->kind() != Kind::reference) {
+    return std::nullopt;
+  }
+  auto const text = content->bytes();
+  std::uint64_t number = 0;
+  if (std::from_chars(text.data(), text.data() + text.size(), number).ec != std::errc{}) {
+    return std::nullopt;
+  }
+  return number;
+}
+
+// The generation of an object, from its "n g obj"
+std::uint32_t generation_of(Content const& object) {
+  auto const text = object.bytes();
+  auto const space = text.find_first_of(" \t\r\n\f");
+  if (space == std::string_view::npos) {
+    return 0;
+  }
+  auto const start = text.find_first_not_of(" \t\r\n\f", space);
+  std::uint32_t generation = 0;
+  if (start != std::string_view::npos) {
+    std::from_chars(text.data() + start, text.data() + text.size(), generation);
+  }
+  return generation;
+}
+
+} // namespace
+
+std::optional<Security> const& Document::security() const {
+  if (!security_) {
+    security_ = find_security();
+  }
+  return *security_;
+}
+
+std::optional<Security> Document::find_security() const {
+  // The latest dictionaries with /Encrypt and /ID: trailers, or in files
+  // without them, cross-reference streams
+  std::optional<Path> encrypt;
+  std::optional<Path> id;
+  for (auto r = revisions_.size(); r-- > 0 && !(encrypt && id);) {
+    auto const revision = Path{}.child(Segment::revision(r));
+    std::vector<Path> holders;
+    for (auto const& child : children(revision)) {
+      if (child.content.kind() == Kind::trailer) {
+        holders.push_back(child.path);
+      }
+    }
+    if (holders.empty()) {
+      for (auto const& child : children(revision)) {
+        auto const type = find(child.path.child(Segment::entry("Type")));
+        if (child.content.kind() == Kind::object && name_of(type) == "XRef") {
+          holders.push_back(child.path);
+        }
+      }
+    }
+    for (auto holder = holders.rbegin(); holder != holders.rend(); ++holder) {
+      if (!encrypt && find(holder->child(Segment::entry("Encrypt")))) {
+        encrypt = holder->child(Segment::entry("Encrypt"));
+      }
+      if (!id && find(holder->child(Segment::entry("ID")))) {
+        id = holder->child(Segment::entry("ID"));
+      }
+    }
+  }
+  if (!encrypt) {
+    return std::nullopt;
+  }
+
+  // The encryption dictionary: usually an object of its own, in the latest
+  // revision that has it
+  Security security;
+  auto dictionary = *encrypt;
+  if (auto const number = referenced_object(find(*encrypt))) {
+    security.dictionary_object = number;
+    for (auto r = revisions_.size(); r-- > 0;) {
+      auto const object = Path{}.child(Segment::revision(r)).child(Segment::object(*number));
+      if (find(object)) {
+        dictionary = object;
+        break;
+      }
+    }
+  }
+  auto const entry = [&](std::string key) { return find(dictionary.child(Segment::entry(std::move(key)))); };
+
+  security.filter = name_of(entry("Filter")).value_or("");
+  security.version = static_cast<int>(integer_of(entry("V")).value_or(0));
+  security.revision = static_cast<int>(integer_of(entry("R")).value_or(0));
+  security.key_bytes = static_cast<std::size_t>(integer_of(entry("Length")).value_or(40)) / 8;
+  security.permissions = static_cast<std::uint32_t>(integer_of(entry("P")).value_or(0));
+  if (auto const metadata = entry("EncryptMetadata")) {
+    security.encrypt_metadata = metadata->bytes() != "false";
+  }
+
+  if (security.filter != "Standard") {
+    security.status = "security handler /" + security.filter + ": not supported";
+    return security;
+  }
+  if (security.version == 4) {
+    // Crypt filters: the one for streams must be RC4 (/V2)
+    auto const filter = name_of(entry("StmF")).value_or("Identity");
+    auto const method =
+        name_of(find(dictionary.child(Segment::entry("CF")).child(Segment::entry(filter)).child(Segment::entry("CFM"))));
+    if (method == "AESV2") {
+      security.status = "AES-128: not supported yet";
+      return security;
+    }
+    if (method != "V2") {
+      security.status = "crypt filter /" + method.value_or("?") + ": not supported";
+      return security;
+    }
+  } else if (security.version != 1 && security.version != 2) {
+    security.status = security.version == 5 ? "AES-256: not supported yet"
+                                            : "version " + std::to_string(security.version) + ": not supported";
+    return security;
+  }
+
+  auto const owner = string_of(entry("O")).value_or("");
+  auto const user = string_of(entry("U")).value_or("");
+  auto const first_id = id ? string_of(find(id->child(Segment::item(0)))).value_or("") : std::string{};
+  security.key = key_for_empty_password(security.revision, security.key_bytes, owner, user,
+                                        security.permissions, first_id, security.encrypt_metadata);
+  auto const bits = (security.revision == 2 ? 5 : std::min<std::size_t>(security.key_bytes, 16)) * 8;
+  security.status = security.key ? "RC4 " + std::to_string(bits) + "-bit, no password needed"
+                                 : "RC4 " + std::to_string(bits) + "-bit, needs a password";
+  return security;
+}
+
+std::optional<std::string> Document::decrypt(Path const& path, std::string_view bytes) const {
+  auto const& security = this->security();
+  if (!security || !security->key) {
+    return std::nullopt;
+  }
+  auto const& segments = path.segments();
+  if (segments.size() < 2 || segments[1].kind != Kind::object) {
+    return std::nullopt; // Not in an object, e.g. in a trailer
+  }
+  auto const number = segments[1].number;
+  if (security->dictionary_object == number) {
+    return std::nullopt;
+  }
+  auto const object_path = Path{{segments[0], segments[1]}};
+  auto const object = find(object_path);
+  if (!object) {
+    return std::nullopt;
+  }
+  // Cross-reference streams are never encrypted, nor metadata when it says so
+  auto const type = name_of(find(object_path.child(Segment::entry("Type"))));
+  if (type == "XRef" || (type == "Metadata" && !security->encrypt_metadata)) {
+    return std::nullopt;
+  }
+  return crypto::rc4(object_key(*security->key, number, generation_of(*object)), bytes);
 }
 
 } // namespace walk_pdf

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "path.hpp"
+#include "security.hpp"
 #include "syntax.hpp"
 
 #include <array>
@@ -23,6 +24,7 @@ class ChildIterator;
 // Looping over a Content gives its children as Elements.
 class Content {
 public:
+  Document const& document() const { return *document_; }
   Path const& path() const { return path_; }
   Kind kind() const { return kind_; }
   std::size_t offset() const { return begin_; }
@@ -113,6 +115,17 @@ public:
   // The children of the element at path, in file order
   Children children(Path const& path) const { return Children{find(path)}; }
 
+  // How the file is encrypted, or nullopt if it is not. Found on first use,
+  // from the /Encrypt and /ID entries of the latest trailer (or
+  // cross-reference stream) that has them.
+  std::optional<Security> const& security() const;
+
+  // The bytes of a string or of stream data inside the object at path,
+  // decrypted. nullopt when they are not encrypted: the file is not, or
+  // walk_pdf can not decrypt it, or path is not inside an object, or the
+  // object is the encryption dictionary or a cross-reference stream.
+  std::optional<std::string> decrypt(Path const& path, std::string_view bytes) const;
+
 private:
   friend class ChildIterator;
 
@@ -142,8 +155,11 @@ private:
     index_.try_emplace(path, Location{kind, begin, end});
   }
 
+  std::optional<Security> find_security() const;
+
   std::string bytes_;
   std::vector<Range> revisions_;                  // found when the document is opened
+  mutable std::optional<std::optional<Security>> security_; // found on first use
   mutable std::map<Path, Location> index_;        // not thread-safe
 };
 

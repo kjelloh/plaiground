@@ -34,18 +34,27 @@ add_library(charset
 target_include_directories(charset PUBLIC src)
 target_link_libraries(charset PRIVATE walk_pdf_warnings)
 
+# MD5 and RC4, as PDF's Standard security handler needs them (not for security)
+add_library(crypto
+  src/crypto/md5.cpp
+  src/crypto/rc4.cpp
+)
+target_include_directories(crypto PUBLIC src)
+target_link_libraries(crypto PRIVATE walk_pdf_warnings)
+
 # The walker and other application logic live in the core library
 add_library(walk_pdf_core
   src/document.cpp
   src/path.cpp
   src/peek.cpp
   src/scanner.cpp
+  src/security.cpp
   src/syntax.cpp
   src/text_string.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )
 target_include_directories(walk_pdf_core PUBLIC src)
-target_link_libraries(walk_pdf_core PUBLIC charset PRIVATE walk_pdf_warnings)
+target_link_libraries(walk_pdf_core PUBLIC charset crypto PRIVATE walk_pdf_warnings)
 
 # Thin executable on top of the core library
 add_executable(walk_pdf

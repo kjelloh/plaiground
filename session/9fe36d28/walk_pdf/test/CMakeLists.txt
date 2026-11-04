@@ -2,9 +2,11 @@ find_package(GTest REQUIRED)
 
 add_executable(walk_pdf_tests
   test_cp437.cpp
+  test_crypto.cpp
   test_document.cpp
   test_path.cpp
   test_peek.cpp
+  test_security.cpp
   test_syntax.cpp
   test_text_string.cpp
   test_utf16.cpp

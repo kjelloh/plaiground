@@ -11,10 +11,13 @@ See [session.md](session.md) for what the session is about, and
 - The walker understands: revisions, the top-level elements of a revision
   (header, comments, objects, xref, trailer, startxref, eof), and what is inside
   objects and trailers (dictionary entries, array items, stream data).
-- 103 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
+- 116 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
 - A `charset` library for text transcoding (Unicode, UTF-8, UTF-16, CP437).
 - PDF text strings marked as UTF-16BE or UTF-8 are shown decoded in the peek,
   e.g. `/Title "Invoice"`.
+- Encrypted files that open without a password (Standard security handler, RC4)
+  are decrypted for the peek; the `/` row shows the encryption and the denied
+  permissions. Both e-books now show readable outline titles.
 - Tested on the three PDFs in `_Resources/` (two e-books, one voucher).
 
 ## Design decisions
@@ -37,6 +40,8 @@ See [session.md](session.md) for what the session is about, and
 | Text transcoding in a separate `charset` library (namespace `charset::`), seeded from cratchit | Reuse the user's own transcoding code; keep it apart from the PDF code |
 | Every `push` in `charset` gives at most one code point (`std::optional`); a broken sequence and the unit that broke it give one U+FFFD | One API and one failure rule across UTF-8 and UTF-16. Cost: a character right after a lone UTF-16 high surrogate is lost. No surrogate pairs or broken UTF-16 in the test PDFs. If lossless is needed later: hold the extra code point and return it on the next push |
 | Decoded strings shown in quotes `"..."`, undecoded ones as in the file `(...)` | You can tell which strings were decoded |
+| Decrypt with the empty user password (Standard handler, RC4); own MD5 and RC4 in a `crypto` library | What viewers do; self-contained, no OpenSSL needed. AES not yet |
+| The peek shows decrypted content; a future text output honours the "copy/extract" permission (`/P` bit 5) | The user's decision (2026-11-04): peeking for structure inspection is not extraction. Agreed that actual text extraction respects the publisher's flag |
 
 ## Done
 
@@ -56,11 +61,21 @@ See [session.md](session.md) for what the session is about, and
     broken input; at most one code point per push, as in utf8). PDF strings decoded (`src/text_string.*`: literal escapes, hex
     strings, UTF-16BE/UTF-8 text marks). The peek rebuilds dictionaries and arrays
     from their tokens, shows decoded strings in quotes, and cuts UTF-8 between characters.
+12. UTF-16 `push` changed to give at most one code point, as utf8 (a broken sequence and
+    the unit that broke it give one U+FFFD).
+13. Decryption: `crypto` library (MD5, RC4; tested against RFC 1321 and known RC4 vectors),
+    `src/security.*` (Algorithms 1, 2, 4, 5 of PDF 32000-1), `Document::security()` and
+    `Document::decrypt(path, bytes)`. The peek decrypts strings and stream starts, and the
+    `/` row shows the encryption and denied permissions. Tested with small encrypted PDFs
+    whose expected values were computed independently (Python hashlib).
 
 ## Findings about the test PDFs
 
 - Both e-books are linearized (two revisions) and encrypted: Standard security
-  handler, 128-bit RC4 (`/V 2 /R 3`). Their strings and streams are encrypted.
+  handler, 128-bit RC4 (`/V 2 /R 3`), empty user password (they open without one).
+  Permissions `/P -572`: printing allowed; modify, copy/extract, annotate and
+  extract for accessibility not permitted. Decrypted, their outline titles read
+  e.g. "Innehållsförteckning", "Bilaga 1 - Exempel på nollkoder i klass 0".
 - The voucher's page text is in a `FlateDecode` stream (`/rev[0]/obj[35]/stream`),
   as text operators (`BT ... Tj ... ET`) showing glyph ids (`<0001>`), which need the
   font's `/ToUnicode` map to become characters.
@@ -69,8 +84,8 @@ See [session.md](session.md) for what the session is about, and
 - Strings may be UTF-16 (the voucher's `/Title`, outline titles such as
   `"249,00 SEK"`); these are now decoded. None of them has a character above
   U+FFFF (no surrogate pairs).
-- One encrypted e-book string starts with `FE FF` by chance and decodes as
-  garbage (`/rev[1]/obj[71129]/A/[0]/Headers/[0]`), until decryption is in place.
+- The e-book string that decoded as garbage before decryption
+  (`/rev[1]/obj[71129]/A/[0]/Headers/[0]`) decrypts to `(node00004768)`.
 
 ## Next
 
@@ -79,7 +94,7 @@ See [session.md](session.md) for what the session is about, and
 3. Follow references (`12 0 R`) via the cross-reference table; logical walk of pages,
    with a visited set against cycles.
 4. Map glyphs to characters through fonts' `/ToUnicode` maps.
-5. Decrypt the e-books (RC4, Standard security handler).
+5. AES decryption (`/V 4` with `/AESV2`, `/V 5`), if a test PDF needs it.
 6. Unpack object streams (`/Type /ObjStm`).
 7. Decode PDFDocEncoding text strings (those without a `FE FF`/`EF BB BF` mark),
    a new decoder in `charset`.

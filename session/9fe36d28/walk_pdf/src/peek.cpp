@@ -110,18 +110,22 @@ std::string text_or_binary(std::string_view bytes, std::size_t width) {
 }
 
 // A string token shown decoded in quotes when it is marked as UTF-16 or
-// UTF-8 text, else as it is in the file
-std::string show_string(std::string_view token, std::size_t limit) {
-  if (auto const text = text_to_utf8(string_bytes(token))) {
+// UTF-8 text. Otherwise as it is in the file, or, when it is encrypted, its
+// decrypted bytes in parentheses. content is the element the token is in.
+std::string show_string(Content const& content, std::string_view token, std::size_t limit) {
+  auto const bytes = string_bytes(token);
+  auto const decrypted = content.document().decrypt(content.path(), bytes);
+  if (auto const text = text_to_utf8(decrypted.value_or(bytes))) {
     return "\"" + display_text(*text) + "\"";
   }
-  return squeeze(token, limit);
+  return decrypted ? "(" + squeeze(*decrypted, limit) + ")" : squeeze(token, limit);
 }
 
 // A value on one line. Dictionaries and arrays are rebuilt from their
 // children, so that strings in them are shown decoded. Stops soon after out
 // is longer than limit bytes, as the rest is cut anyway.
-void render(std::string_view bytes, Value const& value, std::size_t limit, std::string& out) {
+void render(Content const& content, std::string_view bytes, Value const& value, std::size_t limit,
+            std::string& out) {
   if (out.size() > limit) {
     return;
   }
@@ -144,23 +148,24 @@ void render(std::string_view bytes, Value const& value, std::size_t limit, std::
         out += ' ';
       }
       first = false;
-      render(bytes, child->value, limit, out);
+      render(content, bytes, child->value, limit, out);
     }
     out += is_dictionary ? " >>" : "]";
     break;
   }
-  case Kind::string: out += show_string(token, limit); break;
+  case Kind::string: out += show_string(content, token, limit); break;
   default: out += squeeze(token, limit); break;
   }
 }
 
 // A value's peek; a token that is not PDF syntax may be binary
-std::string peek_value(std::string_view bytes, Value const& value, std::size_t width) {
+std::string peek_value(Content const& content, std::string_view bytes, Value const& value,
+                       std::size_t width) {
   if (value.kind == Kind::unknown) {
     return text_or_binary(bytes.substr(value.begin, value.end - value.begin), width);
   }
   std::string out;
-  render(bytes, value, 4 * width, out); // UTF-8 may take up to 4 bytes per character
+  render(content, bytes, value, 4 * width, out); // UTF-8 may take up to 4 bytes per character
   return fit(std::move(out), width);
 }
 
@@ -232,7 +237,8 @@ std::string peek_comment(std::string_view bytes, std::size_t width) {
 
 // An object's body, after "n g obj". If it holds a stream, its dictionary is
 // shown and the stream data described.
-std::string peek_object(std::string_view bytes, std::size_t width) {
+std::string peek_object(Content const& content, std::size_t width) {
+  auto const bytes = content.bytes();
   Bytes const all{bytes};
   auto const begin = all.find_keyword(0, "obj").value_or(0) + 3;
   auto end = bytes.size();
@@ -245,7 +251,8 @@ std::string peek_object(std::string_view bytes, std::size_t width) {
                           ? stream_data(bytes, body->end, end)
                           : std::nullopt;
   if (!stream) {
-    return body ? peek_value(bytes, *body, width) : text_or_binary(bytes.substr(begin, end - begin), width);
+    return body ? peek_value(content, bytes, *body, width)
+                : text_or_binary(bytes.substr(begin, end - begin), width);
   }
   auto const filters = filter_names(bytes, *body);
   auto const size = stream->end - stream->begin;
@@ -254,7 +261,7 @@ std::string peek_object(std::string_view bytes, std::size_t width) {
   // Always show the description, and the dictionary in whatever width is left
   auto const dictionary_width =
       std::max<std::size_t>(width > description.size() ? width - description.size() : 0, 20);
-  return peek_value(bytes, *body, dictionary_width) + description;
+  return peek_value(content, bytes, *body, dictionary_width) + description;
 }
 
 // Entries and object numbers from the subsection lines "first count"
@@ -323,24 +330,34 @@ std::string peek_revision(Content const& content) {
   return std::format("{}: {}", count(total, "element", "elements"), join(parts, ", "));
 }
 
+// The revisions, and how the file is encrypted
+std::string peek_document(Content const& content) {
+  std::size_t total = 0;
+  count_children(content, total);
+  auto result = count(total, "revision", "revisions");
+  if (auto const& security = content.document().security()) {
+    result += "; encrypted: " + security->status;
+    if (auto const denied = security->denied(); !denied.empty()) {
+      result += "; not permitted: " + join(denied, ", ");
+    }
+  }
+  return result;
+}
+
 } // namespace
 
 std::string peek(Content const& content, std::size_t width) {
   auto const bytes = content.bytes();
   switch (content.kind()) {
-  case Kind::document: {
-    std::size_t total = 0;
-    count_children(content, total);
-    return count(total, "revision", "revisions");
-  }
+  case Kind::document: return peek_document(content);
   case Kind::revision: return peek_revision(content);
   case Kind::header: return peek_header(bytes);
   case Kind::comment: return peek_comment(bytes, width);
-  case Kind::object: return peek_object(bytes, width);
+  case Kind::object: return peek_object(content, width);
   case Kind::xref: return peek_xref(bytes);
   case Kind::trailer: {
     auto const body = value_at(bytes, std::string_view{"trailer"}.size(), bytes.size());
-    return body ? peek_value(bytes, *body, width) : text_or_binary(after(bytes, "trailer"), width);
+    return body ? peek_value(content, bytes, *body, width) : text_or_binary(after(bytes, "trailer"), width);
   }
   case Kind::startxref: return squeeze(after(bytes, "startxref"), width);
   case Kind::eof: return {};
@@ -355,11 +372,15 @@ std::string peek(Content const& content, std::size_t width) {
   case Kind::array:
   case Kind::dictionary: {
     auto const value = value_at(bytes, 0, bytes.size());
-    return value ? peek_value(bytes, *value, width) : std::string{};
+    return value ? peek_value(content, bytes, *value, width) : std::string{};
   }
-  case Kind::stream:
-    // Stream data that is text (e.g. an uncompressed page) is shown, other data described
-    return is_binary(bytes) ? std::format("<{} bytes>", bytes.size()) : fit(squeeze(bytes, width), width);
+  case Kind::stream: {
+    // Stream data that is text (e.g. an uncompressed page) is shown, other
+    // data described. Only its start is needed, and decrypted.
+    auto const start = bytes.substr(0, 1024);
+    auto const data = content.document().decrypt(content.path(), start).value_or(std::string{start});
+    return is_binary(data) ? std::format("<{} bytes>", bytes.size()) : fit(squeeze(data, width), width);
+  }
   case Kind::key:
   case Kind::index: return {}; // Only used in path segments
   }

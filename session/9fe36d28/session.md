@@ -151,3 +151,29 @@ I also now see that Claude has implement to/from Unicode buffer.
     * So on platforms using UTF8 in terminal we can transcode from any input to UTF8 and never buffer the actual Unicode code points?
 
 I wonder if I should make Claude fix this now?
+
+I decided to adress the encryption of the text in my e-books first.
+
+* It seems the mechanism is that they decrypt with an empty password and known algorithm.
+* AND the pdf carries a 'permission' flag that states 'view and print' is ok but 'extract' is NOT.
+* And pdf readers and web browser adhere to the permission flag.
+    * This explains why I can't copy text or graphics when viewing the e-book.
+
+I do NOT like this!
+
+* I understand the business side of this encryption scheme and permission mechanism.
+* But it is MY document. I should be allowed to use the information for my own use with a bit more freedom?
+* I mean, nothing stops me from telling others about what is in my e-book?
+* And the web is full of examples based on information in the book.
+* So as long as I don't clone the book and distribute it in my own format I think I should be able to be able to at least cut-and-paste for my own use?
+
+I have to think about this.
+
+Anyhow, Claude seems to have been able to decrypt fo structure peeking for now?
+
+```text
+What's new:
+- crypto library (src/crypto/): our own MD5 and RC4. They're tested against the official MD5 test suite and known RC4 vectors, so no OpenSSL is needed.
+- src/security.*: the PDF spec's algorithms for computing the file key from the empty password, checking it against /U, and deriving each object's key. Both RC4 variants are supported (40-bit R2 and up to 128-bit R3/R4).
+...
+```
