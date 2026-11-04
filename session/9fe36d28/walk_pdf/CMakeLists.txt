@@ -26,7 +26,9 @@ configure_file(src/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
 # The walker and other application logic live in the core library
 add_library(walk_pdf_core
-  src/walker.cpp
+  src/document.cpp
+  src/path.cpp
+  src/scanner.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )
 target_include_directories(walk_pdf_core PUBLIC src)
@@ -38,3 +40,8 @@ add_executable(walk_pdf
 )
 target_link_libraries(walk_pdf PRIVATE walk_pdf_core walk_pdf_warnings)
 target_compile_definitions(walk_pdf PRIVATE WALK_PDF_VERSION="${PROJECT_VERSION}")
+
+include(CTest)
+if(BUILD_TESTING)
+  add_subdirectory(test)
+endif()

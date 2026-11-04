@@ -9,8 +9,7 @@ class WalkPdfConan(ConanFile):
     generators = "CMakeToolchain", "CMakeDeps"
 
     def requirements(self):
-        # No dependencies yet; the PDF parsing library is chosen in a later step
-        pass
+        self.test_requires("gtest/1.15.0")
 
     def validate(self):
         check_min_cppstd(self, "23")

@@ -26,4 +26,17 @@ As a test during development I will copy pdf:s into a local _Resources folder
 * Example vouchers from my company books in _vouchers
 * Example e-books in _e-books 
 
+I now browsed the web and found what seems to be the published PDF document specs?
+
+* [PDF32000_2008.pdf](https://web.archive.org/web/20141020130815/http://wwwimages.adobe.com/content/dam/Adobe/en/devnet/pdf/pdfs/PDF32000_2008.pdf)
+
+    * In here I found a graph over a pdf document structure?
+
+![alt text](image.png)
+
+Anyhow. I chatted with Claude about making an iterable pdf document model.
+
+* I wanted a path that only represents the path (and actual referenced element is looked up)
+
+I looked at the code and we are still not there?
 
