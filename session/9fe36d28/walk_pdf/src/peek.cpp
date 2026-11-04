@@ -363,12 +363,16 @@ std::string peek(Content const& content, std::size_t width) {
   case Kind::startxref: return squeeze(after(bytes, "startxref"), width);
   case Kind::eof: return {};
   case Kind::unknown: return text_or_binary(bytes, width);
+  case Kind::reference: {
+    // Where it leads
+    auto const target = content.document().resolve(content.path());
+    return squeeze(bytes, width) + " -> " + (target ? target->to_string() : std::string{"not found"});
+  }
   case Kind::null:
   case Kind::boolean:
   case Kind::integer:
   case Kind::real:
   case Kind::name:
-  case Kind::reference:
   case Kind::string:
   case Kind::array:
   case Kind::dictionary: {
@@ -400,9 +404,20 @@ std::string peek(Content const& content, std::size_t width) {
     return text;
   }
   case Kind::text_block: return text_or_binary(bytes, width);
-  case Kind::operation:
-    return bytes.starts_with("BI") ? std::format("<inline image, {} bytes>", bytes.size())
-                                   : text_or_binary(bytes, width);
+  case Kind::operation: {
+    if (bytes.starts_with("BI")) {
+      return std::format("<inline image, {} bytes>", bytes.size());
+    }
+    auto text = text_or_binary(bytes, width);
+    // "/F8 16 Tf": which font /F8 is
+    if (bytes.ends_with("Tf")) {
+      if (auto const name = value_at(bytes, 0, bytes.size()); name && name->kind == Kind::name) {
+        auto const font = content.document().font(content.path(), decode_name(bytes.substr(name->begin, name->end - name->begin)));
+        text += " -> " + (font ? font->to_string() : std::string{"font not found"});
+      }
+    }
+    return text;
+  }
   case Kind::key:
   case Kind::index: return {}; // Only used in path segments
   }

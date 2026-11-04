@@ -7,8 +7,9 @@ the text of the PDF, so that it can be turned into plain text or Markdown.
 > Status: early. walk_pdf finds the file's revisions, their top-level
 > elements, and what is inside objects and trailers: dictionary entries, array
 > items and stream data. It decrypts files that open without a password,
-> decompresses streams, and splits page content into text blocks and their
-> operators. It does not yet turn the text operators into readable text.
+> decompresses streams, splits page content into text blocks and their
+> operators, and follows references, e.g. from a text block to its font. It
+> does not yet turn the text operators into readable text.
 
 ## Usage
 
@@ -76,11 +77,12 @@ The peek column shows what an element holds, without the keyword that opens it
 | startxref  | The byte offset of the cross-reference                            |
 | eof        | Nothing                                                           |
 | unknown    | Its text, or `<n bytes, binary>`                                  |
-| a value inside an object: dictionary, array, name, number, reference (`12 0 R`), boolean, null | Its text |
+| a value inside an object: dictionary, array, name, number, boolean, null | Its text |
+| reference  | The reference and where it leads: `37 0 R -> /rev[0]/obj[37]`, or `-> not found` |
 | string     | Text strings marked as UTF-16 or UTF-8 are shown decoded, in quotes: `"Invoice"`. Other strings as they are in the file: `(D:20261012)` |
 | stream     | The stream's data if it is text (an uncompressed page, say), otherwise `<n bytes, filters>`, e.g. `<423875 bytes, FlateDecode>` |
 | text block | The block, e.g. `BT /F8 16 Tf 1 0 0 -1 0 0 Tm 0 -775 Td <0001> Tj ET` |
-| operation  | Its operands and operator, e.g. `<0001> Tj`, or `<inline image, n bytes>` |
+| operation  | Its operands and operator, e.g. `<0001> Tj`, or `<inline image, n bytes>`. A font selection also says which font: `/F8 16 Tf -> /rev[0]/obj[8]` |
 | decoded    | The stream's decoded data if it is text (e.g. a page's drawing instructions), otherwise `<n bytes>`. If decoding stopped early, why, first: `(FlateDecode: data ends early, ...)` |
 
 Runs of whitespace are shown as one space, and other bytes outside printable
@@ -125,6 +127,21 @@ a text output.
 Not decrypted: files that need a password, and files encrypted with AES
 (which shows as `AES-128: not supported yet` or `AES-256: not supported yet`).
 Their strings and streams are shown as they are in the file.
+
+## References
+
+An object refers to another with a reference: `37 0 R` is object 37. walk_pdf
+follows it to the latest revision that has object 37, and shows where it leads
+in the peek: `37 0 R -> /rev[0]/obj[37]`. Give that path to walk_pdf to look
+at the object.
+
+A text block selects a font with `Tf`, by a name such as `/F8`. The name is
+looked up in the resources the content stream draws with: its page's
+`/Resources` (or, if the page has none, the nearest one up its page tree
+through `/Parent`), or for a form its own `/Resources`. Then `/Font/F8` there
+leads to the font, shown in the peek: `/F8 16 Tf -> /rev[0]/obj[8]`.
+
+Objects stored inside object streams (`/Type /ObjStm`) are not found yet.
 
 ## Paths
 

@@ -189,3 +189,30 @@ And now I have vibe coded parsing of text blocks into its 'parts'.
 Now I don't fully understand this yet. But I get the gist of it.
 
 * And the important thing I focus on now is that we are now at 'Text Blocks' which is comforting!
+
+Now I learned that a pdf stores 'text' as ' bytes inside Tj/TJ strings are character codes in the font's own encoding'.
+
+* So to map the 'text' to a character set encoding we understand the pdf reader needs to lookup the font and apply its mapping (to Unicode it seems).
+
+I now feel VERY GOOD about this exercise.
+
+* The path-listing is now understandable about mapping to fonts and unicode mapping.
+
+    * E.g., 'object 8'
+
+    ```text
+        ...
+        487952        135  /rev[0]/obj[8]                   << /Type /Font /Subtype /Type0 /BaseFont /DejaVuSans /Enc...
+        487969          5  /rev[0]/obj[8]/Type              /Font
+        487984          6  /rev[0]/obj[8]/Subtype           /Type0
+        488001         11  /rev[0]/obj[8]/BaseFont          /DejaVuSans
+        488023         11  /rev[0]/obj[8]/Encoding          /Identity-H
+        488052          8  /rev[0]/obj[8]/DescendantFonts   [46 0 R]
+        488053          6  /rev[0]/obj[8]/DescendantFonts/[0] 46 0 R -> /rev[0]/obj[46]
+        488072          6  /rev[0]/obj[8]/ToUnicode         47 0 R -> /rev[0]/obj[47]
+        ...
+    ```
+
+    * I read this as 'decoded' shows how the parts are represented as text
+    * And 'ToUnicode' is somehow defined at '/rev[0]/obj[47]'
+    * I get the semantics I think!

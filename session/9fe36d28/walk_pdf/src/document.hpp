@@ -154,6 +154,28 @@ public:
   };
   std::optional<DecodedStream> decode(Path const& stream) const;
 
+  // References (PDF 32000-1:2008, 7.3.10): "12 0 R" refers to object 12, in
+  // the latest revision that has it. walk_pdf does not yet look into object
+  // streams, so objects stored in them are not found.
+
+  // The latest version of an object, e.g. /rev[1]/obj[12]
+  std::optional<Path> object(std::uint64_t number) const;
+
+  // The object the reference at path refers to
+  std::optional<Path> resolve(Path const& reference) const;
+
+  // The element at path, or if it is a reference, the object it refers to
+  std::optional<Path> follow(Path const& path) const;
+
+  // The resources dictionary a content stream draws with: its page's
+  // /Resources (inherited through /Parent if the page has none), or a form's
+  // own. stream is the content stream's object or anything inside it.
+  std::optional<Path> resources(Path const& stream) const;
+
+  // The font that name (e.g. "F8", as in "/F8 16 Tf") stands for in the
+  // content stream that path is in
+  std::optional<Path> font(Path const& path, std::string const& name) const;
+
 private:
   friend class ChildIterator;
 
@@ -195,6 +217,15 @@ private:
 
   std::string bytes_;
   std::vector<Range> revisions_;                  // found when the document is opened
+
+  // Every object, found when the document is opened: where it is in each
+  // revision, and the latest revision that has it
+  std::map<std::pair<std::uint64_t, std::uint64_t>, Range> objects_; // (revision, number)
+  std::map<std::uint64_t, std::uint64_t> latest_;                    // number -> revision
+
+  // Content stream object number -> its resources, found on first use
+  mutable std::optional<std::map<std::uint64_t, Path>> resources_;
+  void find_resources() const;
   mutable std::optional<std::optional<Security>> security_; // found on first use
   mutable std::map<Path, Location> index_;        // not thread-safe
 

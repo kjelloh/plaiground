@@ -6,6 +6,7 @@
 #include "crypto/rc4.hpp"
 
 #include <charconv>
+#include <set>
 
 #include <algorithm>
 #include <ranges>
@@ -202,8 +203,21 @@ namespace {
 
 // The revisions: the original file and each appended update, each running up
 // to and including its %%EOF. Bytes after the last %%EOF form a revision of their own.
-std::vector<std::pair<std::size_t, std::size_t>> find_revisions(std::string_view bytes) {
+// An object found when the file is opened
+struct FoundObject {
+  std::uint64_t revision;
+  std::uint64_t number;
+  std::size_t begin;
+  std::size_t end;
+};
+
+// The revisions: the original file and each appended update, each running up
+// to and including its %%EOF. Bytes after the last %%EOF form a revision of
+// their own. And every object in them.
+std::pair<std::vector<std::pair<std::size_t, std::size_t>>, std::vector<FoundObject>>
+find_revisions(std::string_view bytes) {
   std::vector<std::pair<std::size_t, std::size_t>> revisions;
+  std::vector<FoundObject> objects;
   std::size_t position = 0;
   std::optional<std::size_t> begin;
   while (auto const found = scan_element(bytes, position, bytes.size(), 0)) {
@@ -211,6 +225,9 @@ std::vector<std::pair<std::size_t, std::size_t>> find_revisions(std::string_view
       begin = found->begin;
     }
     position = found->end;
+    if (found->kind == Kind::object) {
+      objects.push_back({revisions.size(), found->number, found->begin, found->end});
+    }
     if (found->kind == Kind::eof) {
       revisions.emplace_back(*begin, position);
       begin.reset();
@@ -219,14 +236,20 @@ std::vector<std::pair<std::size_t, std::size_t>> find_revisions(std::string_view
   if (begin) {
     revisions.emplace_back(*begin, position);
   }
-  return revisions;
+  return {revisions, objects};
 }
 
 } // namespace
 
 Document::Document(std::string bytes) : bytes_(std::move(bytes)) {
-  for (auto const& [begin, end] : find_revisions(bytes_)) {
+  auto const [revisions, objects] = find_revisions(bytes_);
+  for (auto const& [begin, end] : revisions) {
     revisions_.push_back(Range{begin, end});
+  }
+  for (auto const& object : objects) {
+    // A damaged file may define a number twice in a revision: the first counts
+    objects_.try_emplace({object.revision, object.number}, Range{object.begin, object.end});
+    latest_[object.number] = object.revision;
   }
 }
 
@@ -244,6 +267,15 @@ std::optional<Content> Document::find(Path const& path) const {
       return std::nullopt; // Its stream can no longer be decoded
     }
     return Content{*this, path, kind, begin, end, std::move(buffer)};
+  }
+  // An object, from the table made when the file was opened
+  auto const& segments = path.segments();
+  if (segments.size() == 2 && segments[0].kind == Kind::revision && segments[1].kind == Kind::object) {
+    auto const known = objects_.find({segments[0].number, segments[1].number});
+    if (known == objects_.end()) {
+      return std::nullopt;
+    }
+    return Content{*this, path, Kind::object, known->second.begin, known->second.end};
   }
   // Otherwise find the parent, and look among its children. That scan
   // remembers every child it passes, so their lookups need no scan.
@@ -542,6 +574,111 @@ std::shared_ptr<std::string const> Document::buffer_for(Path const& path) const 
   auto const stream = Path{std::vector<Segment>{segments.begin(), decoded.base() - 1}};
   auto const result = decode(stream);
   return result ? result->bytes : nullptr;
+}
+
+std::optional<Path> Document::object(std::uint64_t number) const {
+  auto const latest = latest_.find(number);
+  if (latest == latest_.end()) {
+    return std::nullopt;
+  }
+  return Path{}.child(Segment::revision(latest->second)).child(Segment::object(number));
+}
+
+std::optional<Path> Document::resolve(Path const& reference) const {
+  auto const number = referenced_object(find(reference));
+  return number ? object(*number) : std::nullopt;
+}
+
+std::optional<Path> Document::follow(Path const& path) const {
+  auto at = path;
+  // A reference leads to an object, which is not itself a reference, so this
+  // ends after one hop; the limit is only a guard
+  for (int hops = 0; hops < 8; ++hops) {
+    auto const content = find(at);
+    if (!content) {
+      return std::nullopt;
+    }
+    if (content->kind() != Kind::reference) {
+      return at;
+    }
+    auto const target = resolve(at);
+    if (!target) {
+      return std::nullopt;
+    }
+    at = *target;
+  }
+  return std::nullopt;
+}
+
+namespace {
+
+// The object numbers a /Contents entry refers to: one reference, or an array of them
+std::vector<std::uint64_t> referenced_objects(Document const& document, Path const& contents) {
+  std::vector<std::uint64_t> result;
+  auto const content = document.find(contents);
+  if (auto const number = referenced_object(content)) {
+    result.push_back(*number);
+  } else if (content && content->kind() == Kind::array) {
+    for (auto const& item : document.children(contents)) {
+      if (auto const n = referenced_object(item.content)) {
+        result.push_back(*n);
+      }
+    }
+  }
+  return result;
+}
+
+} // namespace
+
+void Document::find_resources() const {
+  std::map<std::uint64_t, Path> found;
+  for (auto const& [number, revision] : latest_) {
+    auto const object = Path{}.child(Segment::revision(revision)).child(Segment::object(number));
+    auto const entry = [&](std::string key) { return object.child(Segment::entry(std::move(key))); };
+    if (name_of(find(entry("Type"))) == "Page") {
+      // A page's resources may be inherited from its ancestors in the page tree
+      std::optional<Path> resources;
+      std::set<Path> visited;
+      for (std::optional<Path> node = object; node && !resources && visited.insert(*node).second;) {
+        if (find(node->child(Segment::entry("Resources")))) {
+          resources = follow(node->child(Segment::entry("Resources")));
+        } else {
+          node = follow(node->child(Segment::entry("Parent")));
+        }
+      }
+      if (resources) {
+        for (auto const content : referenced_objects(*this, entry("Contents"))) {
+          found.try_emplace(content, *resources);
+        }
+      }
+    } else if (name_of(find(entry("Subtype"))) == "Form" && find(entry("Resources"))) {
+      if (auto const resources = follow(entry("Resources"))) {
+        found.try_emplace(number, *resources);
+      }
+    }
+  }
+  resources_ = std::move(found);
+}
+
+std::optional<Path> Document::resources(Path const& stream) const {
+  auto const& segments = stream.segments();
+  if (segments.size() < 2 || segments[1].kind != Kind::object) {
+    return std::nullopt;
+  }
+  if (!resources_) {
+    find_resources();
+  }
+  auto const found = resources_->find(segments[1].number);
+  return found == resources_->end() ? std::nullopt : std::optional{found->second};
+}
+
+std::optional<Path> Document::font(Path const& path, std::string const& name) const {
+  auto const resources = this->resources(path);
+  if (!resources) {
+    return std::nullopt;
+  }
+  auto const fonts = follow(resources->child(Segment::entry("Font")));
+  return fonts ? follow(fonts->child(Segment::entry(name))) : std::nullopt;
 }
 
 } // namespace walk_pdf

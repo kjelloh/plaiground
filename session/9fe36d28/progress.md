@@ -11,7 +11,7 @@ See [session.md](session.md) for what the session is about, and
 - The walker understands: revisions, the top-level elements of a revision
   (header, comments, objects, xref, trailer, startxref, eof), and what is inside
   objects and trailers (dictionary entries, array items, stream data).
-- 137 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
+- 147 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
 - A `charset` library for text transcoding (Unicode, UTF-8, UTF-16, CP437).
 - PDF text strings marked as UTF-16BE or UTF-8 are shown decoded in the peek,
   e.g. `/Title "Invoice"`.
@@ -23,6 +23,8 @@ See [session.md](session.md) for what the session is about, and
   drawing instructions, with their text operators (`BT ... Tj ... ET`), are visible.
 - Content streams are split into text blocks `BT[i]`, their operations `op[i]` and
   operands `[i]`, e.g. `/rev[0]/obj[35]/stream/decoded/BT[0]/op[3]` = `<0001> Tj`.
+- References are resolved: `37 0 R -> /rev[0]/obj[37]`; a `Tf` leads to its font
+  through the page's (inherited) or form's resources: `/F8 16 Tf -> /rev[0]/obj[8]`.
 - Tested on the three PDFs in `_Resources/` (two e-books, one voucher).
 
 ## Design decisions
@@ -51,6 +53,9 @@ See [session.md](session.md) for what the session is about, and
 | Segment `decoded` under `stream`; `Content` can view a decoded stream's bytes (shared, from a cache bounded to 64 MB) instead of the file's; offsets inside shown as `+n` | Decoded bytes are not in the file. Paths stay pure values; `stream` stays the raw file bytes |
 | Content stream children: text blocks `BT[i]` → operations `op[i]` → operands `[i]`; drawing outside text blocks not listed | The goal is text; keeps listings manageable |
 | Content streams told apart by dictionary and data (not image/font/CMap/object stream, not binary) | References (a page's `/Contents`) are not followed yet; to be replaced when they are |
+| References resolved to paths (pure values), not followed as tree children | The file-layout tree stays a tree; references can form cycles (/Parent, /Kids) |
+| Object table (revision, number) -> byte range, built when the file is opened | Resolving 100,000+ references and looking up objects without rescanning revisions |
+| A reference leads to the latest revision that has the object; generation not checked | Like a reader using the newest cross-reference section |
 | The peek shows decrypted content; a future text output honours the "copy/extract" permission (`/P` bit 5) | The user's decision (2026-11-04): peeking for structure inspection is not extraction. Agreed that actual text extraction respects the publisher's flag |
 
 ## Done
@@ -92,6 +97,10 @@ See [session.md](session.md) for what the session is about, and
 16. Content streams: `next_operation` tokenizer (operands + operator, inline images as one
     operation), kinds/segments `BT[i]` and `op[i]`, operands as `[i]`,
     `Document::is_content_stream`. 5 new tests.
+17. References: object table made when the file is opened, `Document::object(n)`,
+    `resolve(path)`, `follow(path)`, `resources(stream)` (page /Resources, inherited
+    through /Parent with a cycle guard; a form's own) and `font(path, name)`. Peek shows
+    where references and `Tf` lead. 10 new tests (`test/test_references.cpp`).
 
 ## Findings about the test PDFs
 
@@ -112,6 +121,12 @@ See [session.md](session.md) for what the session is about, and
   (needs `/ToUnicode`); e-book "bokslutsb" 31,232 text blocks with single-byte
   literal strings, nearly readable already (`(Civilr\344ttslig bed...)`, `\344` = ä in
   the font's encoding).
+- All `Tf` in the test PDFs lead to a font (voucher 2 fonts, "bokforing" 8,
+  "bokslutsb" 36), and all 289,000+ references resolve. The voucher's text font
+  is `/rev[0]/obj[8]`: Type0, DejaVuSans, `/Encoding /Identity-H` (2-byte codes),
+  `/ToUnicode -> /rev[0]/obj[47]`.
+- A full `--depth 6` walk of "bokslutsb" went from 12.9 s to 19.9 s, mostly from
+  finding every page's resources once; fine for now.
 - Some PDFs keep objects inside object streams (`/Type /ObjStm`); those objects are
   not visible until object streams are unpacked.
 - Strings may be UTF-16 (the voucher's `/Title`, outline titles such as
@@ -122,7 +137,7 @@ See [session.md](session.md) for what the session is about, and
 
 ## Next
 
-1. Follow references (`12 0 R`) via the cross-reference table; logical walk of pages,
+1. Logical walk of pages (catalog -> page tree -> pages in reading order),
    with a visited set against cycles.
 2. Map glyphs to characters: fonts' `/ToUnicode` maps (voucher, e-book "bokforing"),
    and single-byte encodings such as WinAnsi/MacRoman with `/Differences` (e-book "bokslutsb").

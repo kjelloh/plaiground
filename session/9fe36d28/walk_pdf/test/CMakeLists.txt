@@ -7,6 +7,7 @@ add_executable(walk_pdf_tests
   test_filters.cpp
   test_path.cpp
   test_peek.cpp
+  test_references.cpp
   test_security.cpp
   test_syntax.cpp
   test_text_string.cpp
