@@ -116,8 +116,8 @@ std::optional<std::string> text_to_utf8(std::string_view bytes) {
   if (bytes.starts_with("\xFE\xFF")) {
     charset::utf16::ToUnicodeBuffer decoder{charset::utf16::ByteOrder::big_endian};
     for (auto const byte : bytes.substr(2)) {
-      for (auto const code_point : decoder.push(static_cast<charset::utf16::Byte>(byte))) {
-        append_utf8(text, code_point);
+      if (auto const code_point = decoder.push(static_cast<charset::utf16::Byte>(byte))) {
+        append_utf8(text, *code_point);
       }
     }
     if (auto const code_point = decoder.finish()) {

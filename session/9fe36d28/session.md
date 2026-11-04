@@ -135,3 +135,19 @@ I now made Claude implement an API for client side recursion on path.
 
 ```
 
+I now made Claude bring in text transcoding from session/60cae9fe/cratchit.
+
+* I vibe coded UTF16 support.
+* Claude (AGAIN!) extended push to return optional surrogate pair code points.
+* I asked Claude to remove it again.
+
+I also now see that Claude has implement to/from Unicode buffer.
+
+* BUT I tried very hard when vibe coding this transcoding library to prohibit ANY unicode buffer!
+
+    * My idea is to transcode over 'push' encoding-to-unicode-to-encoding
+    * In this way we can use Unicode as the intermediate code-point
+    * But only buffer unicode code points if the target is actual Unicode!
+    * So on platforms using UTF8 in terminal we can transcode from any input to UTF8 and never buffer the actual Unicode code points?
+
+I wonder if I should make Claude fix this now?

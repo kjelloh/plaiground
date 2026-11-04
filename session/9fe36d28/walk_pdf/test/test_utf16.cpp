@@ -25,8 +25,8 @@ std::string encoded(char32_t code_point, ByteOrder order = ByteOrder::big_endian
 std::u32string decoded(ToUnicodeBuffer& buffer, std::string_view bytes) {
   std::u32string result;
   for (char const c : bytes) {
-    for (auto const code_point : buffer.push(static_cast<charset::utf16::Byte>(c))) {
-      result.push_back(code_point);
+    if (auto const code_point = buffer.push(static_cast<charset::utf16::Byte>(c))) {
+      result.push_back(*code_point);
     }
   }
   if (auto const code_point = buffer.finish()) {
@@ -89,15 +89,24 @@ TEST(Utf16, RoundTrip) {
   }
 }
 
-TEST(Utf16, LoneHighSurrogateFailsButKeepsTheNextCharacter) {
+TEST(Utf16, LoneHighSurrogateFailsWithTheUnitThatBrokeIt) {
+  // As in UTF-8: the broken sequence and the unit that broke it give one U+FFFD
   ToUnicodeBuffer buffer;
-  EXPECT_EQ(decoded(buffer, "\xD8\x3D\x00\x41"sv), U"�" U"A");
+  EXPECT_EQ(decoded(buffer, "\xD8\x3D\x00\x41\x00\x42"sv), U"�" U"B");
   EXPECT_EQ(buffer.failure_count(), 1U);
 }
 
 TEST(Utf16, TwoHighSurrogatesInARow) {
-  // The first fails; the second may still find its low surrogate
-  EXPECT_EQ(decoded("\xD8\x3D\xD8\x3D\xDE\x00"sv), U"�" U"\U0001F600");
+  // The second breaks the first; both are consumed
+  EXPECT_EQ(decoded("\xD8\x3D\xD8\x3D\xDE\x00\x00\x41"sv), U"��" U"A");
+}
+
+TEST(Utf16, EveryPushGivesAtMostOneCodePoint) {
+  ToUnicodeBuffer buffer;
+  EXPECT_FALSE(buffer.push(0xD8));
+  EXPECT_FALSE(buffer.push(0x3D)); // a high surrogate: waits for its partner
+  EXPECT_FALSE(buffer.push(0xDE));
+  EXPECT_EQ(buffer.push(0x00), U'\U0001F600');
 }
 
 TEST(Utf16, LoneLowSurrogateFails) {

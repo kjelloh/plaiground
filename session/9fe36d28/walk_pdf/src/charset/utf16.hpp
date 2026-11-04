@@ -30,15 +30,6 @@ struct Bytes {
   Byte const* end() const { return bytes.data() + size; }
 };
 
-// Up to two code points: what one pushed byte can complete
-struct CodePoints {
-  std::array<unicode::CodePoint, 2> code_points{};
-  std::size_t size = 0;
-
-  unicode::CodePoint const* begin() const { return code_points.data(); }
-  unicode::CodePoint const* end() const { return code_points.data() + size; }
-};
-
 // Takes Unicode code points one at a time and gives back their UTF-16 bytes.
 // A code point above U+FFFF becomes a surrogate pair. A surrogate
 // (U+D800-U+DFFF) or a value above U+10FFFF is not a character and gives the
@@ -55,15 +46,16 @@ private:
 
 // Takes UTF-16 bytes one at a time and gives back Unicode code points as they
 // become available. A high surrogate followed by a low surrogate makes one
-// code point. A surrogate without its partner fails and gives U+FFFD; the code
-// unit that showed it was alone is not consumed by the failure, so a lone high
-// surrogate followed by "A" gives U+FFFD and "A".
+// code point. A surrogate without its partner fails: the units so far and the
+// unit that broke them are consumed and give one U+FFFD (replacement
+// character), as in utf8::ToUnicodeBuffer. So a lone high surrogate followed
+// by "A" gives one U+FFFD, and the "A" is lost.
 class ToUnicodeBuffer {
 public:
   explicit ToUnicodeBuffer(ByteOrder order = ByteOrder::big_endian) : order_(order) {}
 
-  // The code points the bytes pushed so far complete (none, one or two)
-  CodePoints push(Byte byte);
+  // A code point once the bytes pushed so far make one, else nothing
+  std::optional<unicode::CodePoint> push(Byte byte);
 
   // Ends the input. An odd last byte or a lone high surrogate fails and gives U+FFFD.
   std::optional<unicode::CodePoint> finish();
@@ -72,7 +64,8 @@ public:
   std::size_t failure_count() const { return failure_count_; }
 
 private:
-  CodePoints take(CodeUnit unit);
+  std::optional<unicode::CodePoint> take(CodeUnit unit);
+  unicode::CodePoint fail();
 
   ByteOrder order_;
   std::optional<Byte> first_byte_;      // the first byte of a code unit, waiting for its second
