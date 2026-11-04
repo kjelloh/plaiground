@@ -1,11 +1,13 @@
 #include "document.hpp"
 
+#include "font.hpp"
 #include "scanner.hpp"
 #include "text_string.hpp"
 
 #include "crypto/rc4.hpp"
 
 #include <charconv>
+#include <cstdlib>
 #include <set>
 
 #include <algorithm>
@@ -679,6 +681,150 @@ std::optional<Path> Document::font(Path const& path, std::string const& name) co
   }
   auto const fonts = follow(resources->child(Segment::entry("Font")));
   return fonts ? follow(fonts->child(Segment::entry(name))) : std::nullopt;
+}
+
+std::shared_ptr<Font const> Document::load_font(Path const& font) const {
+  if (auto const known = fonts_.find(font); known != fonts_.end()) {
+    return known->second;
+  }
+  auto loaded = std::make_shared<Font const>(Font::load(*this, font));
+  fonts_.emplace(font, loaded);
+  return loaded;
+}
+
+std::optional<std::string> Document::font_name_at(Path const& decoded, std::size_t offset) const {
+  auto known = font_changes_.find(decoded);
+  if (known == font_changes_.end()) {
+    auto const content = find(decoded);
+    if (!content) {
+      return std::nullopt;
+    }
+    // Where the font changes: after each Tf, and after each Q that restores one
+    std::vector<std::pair<std::size_t, std::string>> changes;
+    std::string current;
+    std::vector<std::string> saved;
+    auto const bytes = content->bytes();
+    for (std::size_t pos = 0; auto const operation = next_operation(bytes, pos, bytes.size());) {
+      pos = operation->end;
+      if (operation->name == "Tf") {
+        if (auto const name = value_at(bytes, operation->begin, operation->operator_begin);
+            name && name->kind == Kind::name) {
+          current = decode_name(bytes.substr(name->begin, name->end - name->begin));
+          changes.emplace_back(operation->end, current);
+        }
+      } else if (operation->name == "q") {
+        saved.push_back(current);
+      } else if (operation->name == "Q" && !saved.empty()) {
+        current = saved.back();
+        saved.pop_back();
+        changes.emplace_back(operation->end, current);
+      }
+    }
+    if (font_changes_.size() >= 256) {
+      font_changes_.clear();
+    }
+    known = font_changes_.emplace(decoded, std::move(changes)).first;
+  }
+  auto const& changes = known->second;
+  auto const after = std::ranges::upper_bound(changes, offset, {}, &std::pair<std::size_t, std::string>::first);
+  if (after == changes.begin() || std::prev(after)->second.empty()) {
+    return std::nullopt;
+  }
+  return std::prev(after)->second;
+}
+
+std::optional<std::string> Document::shown_text(Content const& operation) const {
+  auto const bytes = operation.bytes();
+  auto const parsed = next_operation(bytes, 0, bytes.size());
+  if (!parsed || (parsed->name != "Tj" && parsed->name != "TJ" && parsed->name != "'" && parsed->name != "\"")) {
+    return std::nullopt;
+  }
+  // The decoded content stream it is in, and the font in effect there
+  auto const& segments = operation.path().segments();
+  auto const decoded = std::ranges::find_if(segments, [](Segment const& s) { return s.kind == Kind::decoded; });
+  if (decoded == segments.end()) {
+    return std::nullopt;
+  }
+  auto const stream = Path{std::vector<Segment>{segments.begin(), decoded + 1}};
+  auto const name = font_name_at(stream, operation.offset());
+  auto const font_path = name ? font(operation.path(), *name) : std::nullopt;
+  if (!font_path) {
+    return std::nullopt;
+  }
+  auto const font = load_font(*font_path);
+
+  std::string text;
+  std::optional<Value> last_string;
+  for (std::size_t pos = 0; auto const operand = value_at(bytes, pos, parsed->operator_begin);) {
+    pos = operand->end;
+    if (operand->kind == Kind::string) {
+      last_string = operand; // Tj and ' show their one string, " its third operand
+    } else if (operand->kind == Kind::array && parsed->name == "TJ") {
+      // Strings, and numbers that move the next one left (positive) or right
+      for (auto at = first_child_at(*operand); auto const item = next_child(bytes, *operand, at);) {
+        at = item->value.end;
+        auto const token = bytes.substr(item->value.begin, item->value.end - item->value.begin);
+        if (item->value.kind == Kind::string) {
+          text += font->text(string_bytes(token));
+        } else if (item->value.kind == Kind::integer || item->value.kind == Kind::real) {
+          auto const gap = std::strtod(std::string{token}.c_str(), nullptr); // no from_chars for double in libc++
+          if (gap <= -250 && !text.empty() && text.back() != ' ') {
+            text += ' '; // a gap of a quarter of the font size or more: a space between words
+          }
+        }
+      }
+    }
+  }
+  if (last_string) {
+    text += font->text(string_bytes(bytes.substr(last_string->begin, last_string->end - last_string->begin)));
+  }
+  return text;
+}
+
+std::optional<std::string> Document::text(Path const& path) const {
+  auto const content = find(path);
+  if (!content) {
+    return std::nullopt;
+  }
+  if (content->kind() == Kind::operation) {
+    return shown_text(*content);
+  }
+  if (content->kind() != Kind::text_block) {
+    return std::nullopt;
+  }
+  std::string text;
+  bool shown = false;
+  auto const new_line = [&] {
+    if (!text.empty() && text.back() != ' ') {
+      text += ' ';
+    }
+  };
+  for (auto const& child : children(path)) {
+    auto const bytes = child.content.bytes();
+    auto const parsed = next_operation(bytes, 0, bytes.size());
+    if (!parsed) {
+      continue;
+    }
+    auto const name = parsed->name;
+    if (name == "T*" || name == "'" || name == "\"" || name == "Tm") {
+      new_line();
+    } else if (name == "Td" || name == "TD") {
+      // A move down (or up) is a new line; a move along the line is not
+      auto const x = value_at(bytes, 0, parsed->operator_begin);
+      auto const y = x ? value_at(bytes, x->end, parsed->operator_begin) : std::nullopt;
+      if (y && bytes.substr(y->begin, y->end - y->begin).find_first_not_of("+-0.") != std::string_view::npos) {
+        new_line();
+      }
+    }
+    if (auto const shown_here = shown_text(child.content)) {
+      text += *shown_here;
+      shown = true;
+    }
+  }
+  if (!shown && text.empty()) {
+    return std::nullopt;
+  }
+  return text;
 }
 
 } // namespace walk_pdf

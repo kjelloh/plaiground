@@ -11,7 +11,7 @@ See [session.md](session.md) for what the session is about, and
 - The walker understands: revisions, the top-level elements of a revision
   (header, comments, objects, xref, trailer, startxref, eof), and what is inside
   objects and trailers (dictionary entries, array items, stream data).
-- 147 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
+- 162 unit tests pass in Debug and Release (`ctest --preset conan-debug`).
 - A `charset` library for text transcoding (Unicode, UTF-8, UTF-16, CP437).
 - PDF text strings marked as UTF-16BE or UTF-8 are shown decoded in the peek,
   e.g. `/Title "Invoice"`.
@@ -25,6 +25,9 @@ See [session.md](session.md) for what the session is about, and
   operands `[i]`, e.g. `/rev[0]/obj[35]/stream/decoded/BT[0]/op[3]` = `<0001> Tj`.
 - References are resolved: `37 0 R -> /rev[0]/obj[37]`; a `Tf` leads to its font
   through the page's (inherited) or form's resources: `/F8 16 Tf -> /rev[0]/obj[8]`.
+- **Text is readable**: text blocks and text-showing operators show their text
+  mapped through their fonts (/ToUnicode, or WinAnsi/MacRoman/Standard with
+  /Differences), e.g. `"Inköp av råvaror och material i Sverige,"`.
 - Tested on the three PDFs in `_Resources/` (two e-books, one voucher).
 
 ## Design decisions
@@ -56,6 +59,10 @@ See [session.md](session.md) for what the session is about, and
 | References resolved to paths (pure values), not followed as tree children | The file-layout tree stays a tree; references can form cycles (/Parent, /Kids) |
 | Object table (revision, number) -> byte range, built when the file is opened | Resolving 100,000+ references and looking up objects without rescanning revisions |
 | A reference leads to the latest revision that has the object; generation not checked | Like a reader using the newest cross-reference section |
+| Codes -> Unicode: /ToUnicode first, then a simple font's /Encoding; Type0 codes by Identity-H/V (2 bytes) or an embedded CMap's code space | The order the PDF standard recommends for extracting text |
+| WinAnsi, MacRoman and Adobe Standard as `charset` decoders; tables made from Python's cp1252 and mac_roman codecs | They are single-byte encodings, like cp437; the codecs are an independent source |
+| Glyph names: a generated subset (ASCII, Latin-1, Windows-1252, Mac OS Roman, `uniXXXX`/`uXXXX`) | No Adobe Glyph List available offline; enough for Latin text; none of the test fonts needs more |
+| Text block text: strings in content-stream order; new lines and TJ gaps of -250 or more become spaces | Simple and good on the test files; text placement (reading order) comes later |
 | The peek shows decrypted content; a future text output honours the "copy/extract" permission (`/P` bit 5) | The user's decision (2026-11-04): peeking for structure inspection is not extraction. Agreed that actual text extraction respects the publisher's flag |
 
 ## Done
@@ -101,6 +108,12 @@ See [session.md](session.md) for what the session is about, and
     `resolve(path)`, `follow(path)`, `resources(stream)` (page /Resources, inherited
     through /Parent with a cycle guard; a form's own) and `font(path, name)`. Peek shows
     where references and `Tf` lead. 10 new tests (`test/test_references.cpp`).
+18. Codes to text: `CMap` (codespace ranges, bfchar, bfrange in both forms; targets
+    UTF-16BE decoded through the `charset` pipe), `charset::winansi`, `macroman`,
+    `adobe_standard` decoders, glyph names (`src/glyph_names.*`), `Font` (code splitting
+    and mapping), `Document::load_font`, `font_name_at` (last Tf, with q/Q), and
+    `Document::text(path)` for operations and text blocks. Peek shows the text.
+    15 new tests.
 
 ## Findings about the test PDFs
 
@@ -127,6 +140,12 @@ See [session.md](session.md) for what the session is about, and
   `/ToUnicode -> /rev[0]/obj[47]`.
 - A full `--depth 6` walk of "bokslutsb" went from 12.9 s to 19.9 s, mostly from
   finding every page's resources once; fine for now.
+- Text through fonts: both e-books' text blocks (34,166 and 31,232) map with no
+  U+FFFD, e.g. "Sålda handelsvaror positiv VMB 25 %", "(4 kap. 1 § första stycket".
+- The voucher has only two text blocks: a lone space, and the OCR payment line in
+  font /OCRB, "H # 62600012236149 # 311 25 8 > 53432795#41#" (reference, amount,
+  bankgiro). Its other visible text is drawn as shapes (no characters); only the
+  outline titles ("249,00 SEK", "5343-2795") carry it as text.
 - Some PDFs keep objects inside object streams (`/Type /ObjStm`); those objects are
   not visible until object streams are unpacked.
 - Strings may be UTF-16 (the voucher's `/Title`, outline titles such as
@@ -139,11 +158,13 @@ See [session.md](session.md) for what the session is about, and
 
 1. Logical walk of pages (catalog -> page tree -> pages in reading order),
    with a visited set against cycles.
-2. Map glyphs to characters: fonts' `/ToUnicode` maps (voucher, e-book "bokforing"),
-   and single-byte encodings such as WinAnsi/MacRoman with `/Differences` (e-book "bokslutsb").
-3. AES decryption (`/V 4` with `/AESV2`, `/V 5`), if a test PDF needs it.
-4. Unpack object streams (`/Type /ObjStm`).
-5. Decode PDFDocEncoding text strings (those without a `FE FF`/`EF BB BF` mark),
+2. Text output: write a document's text as plain text (and later Markdown), page by
+   page, honouring the "copy/extract" permission of encrypted files (as agreed).
+3. Reading order by text position (Tm/Td coordinates), for pages whose content
+   stream order is not reading order.
+4. AES decryption (`/V 4` with `/AESV2`, `/V 5`), if a test PDF needs it.
+5. Unpack object streams (`/Type /ObjStm`).
+6. Decode PDFDocEncoding text strings (those without a `FE FF`/`EF BB BF` mark),
    a new decoder in `charset`.
 
 ## Open questions

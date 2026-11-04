@@ -5,10 +5,12 @@ add_executable(walk_pdf_tests
   test_crypto.cpp
   test_document.cpp
   test_filters.cpp
+  test_fonts.cpp
   test_path.cpp
   test_peek.cpp
   test_references.cpp
   test_security.cpp
+  test_single_byte.cpp
   test_syntax.cpp
   test_text_string.cpp
   test_utf16.cpp

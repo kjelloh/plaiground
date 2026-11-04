@@ -76,19 +76,16 @@ std::string fit(std::string text, std::size_t width) {
 }
 
 // Text decoded from a string, on one line: control characters and runs of
-// whitespace as one space
+// whitespace as one space (kept at the ends too, so " " shows as " ")
 std::string display_text(std::string_view utf8) {
   std::string result;
-  bool space = false;
   for (auto const c : utf8) {
     auto const byte = static_cast<unsigned char>(c);
     if (byte < 0x20 || byte == 0x7F || c == ' ') {
-      space = !result.empty();
+      if (result.empty() || result.back() != ' ') {
+        result += ' ';
+      }
       continue;
-    }
-    if (space) {
-      result += ' ';
-      space = false;
     }
     result += c;
   }
@@ -403,10 +400,21 @@ std::string peek(Content const& content, std::size_t width) {
     }
     return text;
   }
-  case Kind::text_block: return text_or_binary(bytes, width);
+  case Kind::text_block: {
+    // The text it shows, through its fonts
+    if (auto const text = content.document().text(content.path())) {
+      return fit("\"" + display_text(*text) + "\"", width);
+    }
+    return text_or_binary(bytes, width);
+  }
   case Kind::operation: {
     if (bytes.starts_with("BI")) {
       return std::format("<inline image, {} bytes>", bytes.size());
+    }
+    // A text-showing operator: its name and the text it shows, through its font
+    if (auto const shown = content.document().text(content.path())) {
+      auto const name = next_operation(bytes, 0, bytes.size());
+      return fit(std::string{name ? name->name : ""} + " \"" + display_text(*shown) + "\"", width);
     }
     auto text = text_or_binary(bytes, width);
     // "/F8 16 Tf": which font /F8 is

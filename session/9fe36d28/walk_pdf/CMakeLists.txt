@@ -26,12 +26,15 @@ configure_file(src/manual_text.cpp.in generated/manual_text.cpp @ONLY)
 
 find_package(ZLIB REQUIRED)
 
-# Text transcoding: Unicode, UTF-8, UTF-16, CP437 (seeded from cratchit, session 60cae9fe)
+# Text transcoding: Unicode, UTF-8, UTF-16, CP437, WinAnsi, MacRoman, Adobe Standard (seeded from cratchit, session 60cae9fe)
 add_library(charset
+  src/charset/adobe_standard.cpp
   src/charset/cp437.cpp
   src/charset/detect.cpp
+  src/charset/macroman.cpp
   src/charset/utf16.cpp
   src/charset/utf8.cpp
+  src/charset/winansi.cpp
 )
 target_include_directories(charset PUBLIC src)
 target_link_libraries(charset PRIVATE walk_pdf_warnings)
@@ -46,8 +49,11 @@ target_link_libraries(crypto PRIVATE walk_pdf_warnings)
 
 # The walker and other application logic live in the core library
 add_library(walk_pdf_core
+  src/cmap.cpp
   src/document.cpp
   src/filters.cpp
+  src/font.cpp
+  src/glyph_names.cpp
   src/path.cpp
   src/peek.cpp
   src/scanner.cpp

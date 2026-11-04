@@ -8,8 +8,9 @@ the text of the PDF, so that it can be turned into plain text or Markdown.
 > elements, and what is inside objects and trailers: dictionary entries, array
 > items and stream data. It decrypts files that open without a password,
 > decompresses streams, splits page content into text blocks and their
-> operators, and follows references, e.g. from a text block to its font. It
-> does not yet turn the text operators into readable text.
+> operators, follows references, e.g. from a text block to its font, and shows
+> the text each text block holds. It does not yet put pages in reading order
+> or write the text out as a whole.
 
 ## Usage
 
@@ -81,8 +82,8 @@ The peek column shows what an element holds, without the keyword that opens it
 | reference  | The reference and where it leads: `37 0 R -> /rev[0]/obj[37]`, or `-> not found` |
 | string     | Text strings marked as UTF-16 or UTF-8 are shown decoded, in quotes: `"Invoice"`. Other strings as they are in the file: `(D:20261012)` |
 | stream     | The stream's data if it is text (an uncompressed page, say), otherwise `<n bytes, filters>`, e.g. `<423875 bytes, FlateDecode>` |
-| text block | The block, e.g. `BT /F8 16 Tf 1 0 0 -1 0 0 Tm 0 -775 Td <0001> Tj ET` |
-| operation  | Its operands and operator, e.g. `<0001> Tj`, or `<inline image, n bytes>`. A font selection also says which font: `/F8 16 Tf -> /rev[0]/obj[8]` |
+| text block | The text it shows, in quotes: `"Inköp av råvaror och material i Sverige,"` (see Text below). If its font is not found, the block itself: `BT /F8 16 Tf ... ET` |
+| operation  | Its operands and operator, e.g. `1 0 0 -1 0 0 Tm`, or `<inline image, n bytes>`. A text-showing operator (`Tj`, `TJ`, `'`, `"`) shows its text: `Tj "H"`. A font selection says which font: `/F8 16 Tf -> /rev[0]/obj[8]` |
 | decoded    | The stream's decoded data if it is text (e.g. a page's drawing instructions), otherwise `<n bytes>`. If decoding stopped early, why, first: `(FlateDecode: data ends early, ...)` |
 
 Runs of whitespace are shown as one space, and other bytes outside printable
@@ -142,6 +143,32 @@ through `/Parent`), or for a form its own `/Resources`. Then `/Font/F8` there
 leads to the font, shown in the peek: `/F8 16 Tf -> /rev[0]/obj[8]`.
 
 Objects stored inside object streams (`/Type /ObjStm`) are not found yet.
+
+## Text
+
+The bytes of a text string in a page are *character codes* of the string's
+font, not text in any standard encoding. walk_pdf turns them into text the way
+the font says:
+
+1. It finds the font: the last `Tf` before the string in its content stream
+   (with `q` and `Q` saving and restoring it), and the font that name stands
+   for in the page's resources (see References).
+2. It splits the bytes into codes: two bytes each for a composite (`Type0`)
+   font with `/Identity-H` or `/Identity-V`, as an embedded CMap says, or one
+   byte each for a simple font (`Type1`, `TrueType`, `Type3`).
+3. It maps each code to Unicode by the font's `/ToUnicode` map, or for a
+   simple font without one, by its `/Encoding`: `WinAnsiEncoding`,
+   `MacRomanEncoding` or `StandardEncoding`, changed by `/Differences`. Glyph
+   names in `/Differences` are known for Latin text (`adieresis` is ä) and as
+   `uniXXXX`. A code that maps to nothing is shown as `�`.
+
+A text block's text is its strings in order. A new line (`T*`, `'`, `"`, a
+`Tm`, or a `Td`/`TD` that moves down) and a large gap in a `TJ` array (a
+quarter of the font size or more) become a space. walk_pdf does not yet look
+at where on the page text is placed, so the order is that of the content stream.
+
+Text drawn as shapes, rather than with a font, has no characters, and is not
+found. Some PDF makers draw all text that way.
 
 ## Paths
 

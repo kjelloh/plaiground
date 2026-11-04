@@ -21,6 +21,7 @@ namespace walk_pdf {
 
 class Document;
 class ChildIterator;
+class Font;
 
 // What is at a path: its kind, its bytes, and its children.
 // Content views bytes owned by its Document, which must outlive it: the
@@ -176,6 +177,15 @@ public:
   // content stream that path is in
   std::optional<Path> font(Path const& path, std::string const& name) const;
 
+  // How the font at path turns codes into text (read once, then kept)
+  std::shared_ptr<Font const> load_font(Path const& font) const;
+
+  // The text an operation that shows text (Tj, TJ, ' or ") or a text block
+  // (BT ... ET) shows, as UTF-8, mapped through its font. For a text block,
+  // a new line (T*, ', ", or a Td/TD/Tm that moves down) and a large gap in a
+  // TJ become a space. nullopt for anything else, or if its font is not found.
+  std::optional<std::string> text(Path const& path) const;
+
 private:
   friend class ChildIterator;
 
@@ -226,6 +236,15 @@ private:
   // Content stream object number -> its resources, found on first use
   mutable std::optional<std::map<std::uint64_t, Path>> resources_;
   void find_resources() const;
+
+  mutable std::map<Path, std::shared_ptr<Font const>> fonts_;
+
+  // The font name (as in "/F8 16 Tf") in effect at an offset in a decoded
+  // content stream: the last Tf before it, with q and Q saving and restoring it
+  std::optional<std::string> font_name_at(Path const& decoded, std::size_t offset) const;
+  mutable std::map<Path, std::vector<std::pair<std::size_t, std::string>>> font_changes_;
+
+  std::optional<std::string> shown_text(Content const& operation) const;
   mutable std::optional<std::optional<Security>> security_; // found on first use
   mutable std::map<Path, Location> index_;        // not thread-safe
 

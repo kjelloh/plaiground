@@ -216,3 +216,10 @@ I now feel VERY GOOD about this exercise.
     * I read this as 'decoded' shows how the parts are represented as text
     * And 'ToUnicode' is somehow defined at '/rev[0]/obj[47]'
     * I get the semantics I think!
+
+    Now Claude seems to have integrated Adobe 'character sets' as mapping to Unicode.
+
+    * It seems I was correct in 'baiting' with my own character set library first
+    * This seems to have caused Claude to pick up the hint and build on it?
+
+    So now Claude claims the app can map pdf text to text in a character set and encoding we can actually use!
