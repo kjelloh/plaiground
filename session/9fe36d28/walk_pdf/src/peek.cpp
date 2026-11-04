@@ -1,6 +1,7 @@
 #include "peek.hpp"
 
 #include "bytes.hpp"
+#include "syntax.hpp"
 
 #include <algorithm>
 #include <array>
@@ -89,38 +90,37 @@ std::string_view after(std::string_view bytes, std::string_view keyword) {
   return bytes.starts_with(keyword) ? bytes.substr(keyword.size()) : bytes;
 }
 
-// The names in a dictionary's /Filter entry: "/Filter /FlateDecode" or
-// "/Filter [ /ASCII85Decode /FlateDecode ]". Found by a search for "/Filter";
-// tokenizing objects will make this exact.
-std::string filter_names(std::string_view dictionary) {
-  auto pos = dictionary.find("/Filter");
-  while (pos != std::string_view::npos && pos + 7 < dictionary.size() &&
-         is_regular(dictionary[pos + 7])) {
-    pos = dictionary.find("/Filter", pos + 1); // e.g. "/FilterX" is another key
-  }
-  if (pos == std::string_view::npos) {
-    return {};
-  }
-  Bytes const bytes{dictionary};
-  pos = bytes.skip_whitespace(pos + 7);
-  auto const in_array = bytes.at(pos) == '[';
-  if (in_array) {
-    pos = bytes.skip_whitespace(pos + 1);
-  }
-  std::vector<std::string> names;
-  while (bytes.at(pos) == '/') {
-    auto const begin = pos + 1;
-    auto end = begin;
-    while (end < bytes.size() && is_regular(bytes.at(end))) {
-      ++end;
+// The names in a dictionary's /Filter entry: a name, or an array of names
+std::string filter_names(std::string_view bytes, Value const& dictionary) {
+  for (auto pos = first_child_at(dictionary);;) {
+    auto const entry = next_child(bytes, dictionary, pos);
+    if (!entry) {
+      return {};
     }
-    names.emplace_back(dictionary.substr(begin, end - begin));
-    if (!in_array) {
-      break;
+    pos = entry->value.end;
+    if (entry->key != "Filter") {
+      continue;
     }
-    pos = bytes.skip_whitespace(end);
+    auto const& value = entry->value;
+    if (value.kind == Kind::name) {
+      return decode_name(bytes.substr(value.begin, value.end - value.begin));
+    }
+    std::vector<std::string> names;
+    if (value.kind == Kind::array) {
+      for (auto at = first_child_at(value);;) {
+        auto const item = next_child(bytes, value, at);
+        if (!item) {
+          break;
+        }
+        at = item->value.end;
+        if (item->value.kind == Kind::name) {
+          names.push_back(
+              decode_name(bytes.substr(item->value.begin, item->value.end - item->value.begin)));
+        }
+      }
+    }
+    return join(names, " ");
   }
-  return join(names, " ");
 }
 
 std::string peek_header(std::string_view bytes) {
@@ -136,8 +136,8 @@ std::string peek_comment(std::string_view bytes, std::size_t width) {
   return text_or_binary(text, width);
 }
 
-// An object's body, after "n g obj" and before "endobj". If it holds a stream,
-// its dictionary is shown and the stream data described.
+// An object's body, after "n g obj". If it holds a stream, its dictionary is
+// shown and the stream data described.
 std::string peek_object(std::string_view bytes, std::size_t width) {
   Bytes const all{bytes};
   auto const begin = all.find_keyword(0, "obj").value_or(0) + 3;
@@ -146,24 +146,16 @@ std::string peek_object(std::string_view bytes, std::size_t width) {
       endobj != std::string_view::npos && endobj >= begin && all.keyword_at(endobj, "endobj")) {
     end = endobj;
   }
-  auto const stream = all.find_keyword(begin, "stream", end);
+  auto const body = value_at(bytes, begin, end);
+  auto const stream = body && body->kind == Kind::dictionary
+                          ? stream_data(bytes, body->end, end)
+                          : std::nullopt;
   if (!stream) {
     return text_or_binary(bytes.substr(begin, end - begin), width);
   }
-
-  // The data starts after the EOL that follows "stream", and ends before the
-  // EOL that precedes "endstream"
-  auto const data_begin = all.end_of_line(*stream + 6);
-  auto data_end = all.find_keyword(data_begin, "endstream", end).value_or(end);
-  if (data_end > data_begin && bytes[data_end - 1] == '\n') {
-    --data_end;
-  }
-  if (data_end > data_begin && bytes[data_end - 1] == '\r') {
-    --data_end;
-  }
-  auto const dictionary = bytes.substr(begin, *stream - begin);
-  auto const filters = filter_names(dictionary);
-  auto const size = data_end - data_begin;
+  auto const dictionary = bytes.substr(body->begin, body->end - body->begin);
+  auto const filters = filter_names(bytes, *body);
+  auto const size = stream->end - stream->begin;
   auto const description = filters.empty() ? std::format(" + stream <{} bytes>", size)
                                            : std::format(" + stream <{} bytes, {}>", size, filters);
   // Always show the description, and the dictionary in whatever width is left
@@ -208,8 +200,8 @@ std::string peek_xref(std::string_view bytes) {
 }
 
 // How many children of each kind
-std::array<std::size_t, 16> count_children(Content const& content, std::size_t& total) {
-  std::array<std::size_t, 16> counts{};
+std::array<std::size_t, kind_count> count_children(Content const& content, std::size_t& total) {
+  std::array<std::size_t, kind_count> counts{};
   total = 0;
   for (auto const& [path, child] : content) {
     ++counts[static_cast<std::size_t>(child.kind())];
@@ -257,6 +249,20 @@ std::string peek(Content const& content, std::size_t width) {
   case Kind::startxref: return squeeze(after(bytes, "startxref"), width);
   case Kind::eof: return {};
   case Kind::unknown: return text_or_binary(bytes, width);
+  case Kind::null:
+  case Kind::boolean:
+  case Kind::integer:
+  case Kind::real:
+  case Kind::name:
+  case Kind::reference:
+  case Kind::string:
+  case Kind::array:
+  case Kind::dictionary: return text_or_binary(bytes, width);
+  case Kind::stream:
+    // Stream data that is text (e.g. an uncompressed page) is shown, other data described
+    return is_binary(bytes) ? std::format("<{} bytes>", bytes.size()) : fit(squeeze(bytes, width), width);
+  case Kind::key:
+  case Kind::index: return {}; // Only used in path segments
   }
   return {};
 }

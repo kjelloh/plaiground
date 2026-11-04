@@ -20,6 +20,18 @@ std::string_view to_string(Kind kind) {
   case Kind::startxref: return "startxref";
   case Kind::eof: return "eof";
   case Kind::unknown: return "unknown";
+  case Kind::null: return "null";
+  case Kind::boolean: return "boolean";
+  case Kind::integer: return "integer";
+  case Kind::real: return "real";
+  case Kind::name: return "name";
+  case Kind::string: return "string";
+  case Kind::array: return "array";
+  case Kind::dictionary: return "dictionary";
+  case Kind::reference: return "reference";
+  case Kind::stream: return "stream";
+  case Kind::key: return "key";
+  case Kind::index: return "index";
   }
   return "?";
 }
@@ -68,8 +80,89 @@ template <typename T> std::optional<T> parse_number(std::string_view text) {
   return value;
 }
 
+// Bytes a key can be written with as they are: printable ASCII that is not
+// whitespace, a PDF delimiter (which includes '/', '[' and ']'), or '#'
+bool is_plain_key_byte(char c) {
+  return c > ' ' && c <= '~' && c != '#' && c != '(' && c != ')' && c != '<' && c != '>' &&
+         c != '[' && c != ']' && c != '{' && c != '}' && c != '/' && c != '%';
+}
+
+bool is_reserved_word(std::string_view text) { return text == "header" || text == "stream"; }
+
+std::string escape_key(std::string_view key) {
+  if (key.empty()) {
+    return "#"; // PDF allows the empty name "/"
+  }
+  std::string result;
+  for (auto const c : key) {
+    if (is_plain_key_byte(c)) {
+      result += c;
+    } else {
+      result += std::format("#{:02X}", static_cast<unsigned char>(c));
+    }
+  }
+  if (is_reserved_word(result)) {
+    result = std::format("#{:02X}", static_cast<unsigned char>(result[0])) + result.substr(1);
+  }
+  return result;
+}
+
+std::optional<int> hex_digit(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return std::nullopt;
+}
+
+std::expected<std::string, std::string> unescape_key(std::string_view text) {
+  if (text == "#") {
+    return std::string{};
+  }
+  std::string key;
+  for (std::size_t i = 0; i < text.size(); ++i) {
+    auto const c = text[i];
+    if (c == '#') {
+      auto const high = i + 1 < text.size() ? hex_digit(text[i + 1]) : std::nullopt;
+      auto const low = i + 2 < text.size() ? hex_digit(text[i + 2]) : std::nullopt;
+      if (!high || !low) {
+        return std::unexpected(std::format("'#' must be followed by two hex digits in '{}'", text));
+      }
+      key += static_cast<char>(*high * 16 + *low);
+      i += 2;
+    } else if (is_plain_key_byte(c)) {
+      key += c;
+    } else {
+      return std::unexpected(std::format("'{}' must be written #{:02X} in '{}'", c,
+                                         static_cast<unsigned char>(c), text));
+    }
+  }
+  return key;
+}
+
 std::expected<Segment, std::string> parse_segment(std::string_view text) {
+  if (text.empty()) {
+    return std::unexpected(std::string{"empty segment"});
+  }
+  if (text == "stream") {
+    return Segment::stream();
+  }
+  if (text.starts_with('[')) {
+    auto const index = text.ends_with(']') && text.size() > 2
+                           ? parse_number<std::uint64_t>(text.substr(1, text.size() - 2))
+                           : std::nullopt;
+    if (!index) {
+      return std::unexpected(std::format("expected '[index]' but got '{}'", text));
+    }
+    return Segment::item(*index);
+  }
   auto const open = text.find('[');
+  if (open == std::string_view::npos && text != "header") {
+    auto key = unescape_key(text);
+    if (!key) {
+      return std::unexpected(key.error());
+    }
+    return Segment::entry(std::move(*key));
+  }
   auto const name = text.substr(0, open);
   auto const kind = segment_kind(name);
   if (!kind) {
@@ -95,10 +188,13 @@ std::expected<Segment, std::string> parse_segment(std::string_view text) {
 } // namespace
 
 std::string Segment::to_string() const {
-  if (kind == Kind::header) {
-    return std::string{segment_name(kind)};
+  switch (kind) {
+  case Kind::header: return "header";
+  case Kind::stream: return "stream";
+  case Kind::key: return escape_key(key);
+  case Kind::index: return std::format("[{}]", number);
+  default: return std::format("{}[{}]", segment_name(kind), number);
   }
-  return std::format("{}[{}]", segment_name(kind), number);
 }
 
 Path Path::child(Segment segment) const {

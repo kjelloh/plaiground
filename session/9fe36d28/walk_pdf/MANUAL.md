@@ -4,32 +4,41 @@ walk_pdf walks the structure of a PDF file and shows each part it visits as a
 *path* (where in the file it is) and *content* (what is there). The main aim is
 the text of the PDF, so that it can be turned into plain text or Markdown.
 
-> Status: early. walk_pdf finds the file's revisions and their top-level
-> elements. It does not yet look inside objects or extract text.
+> Status: early. walk_pdf finds the file's revisions, their top-level
+> elements, and what is inside objects and trailers: dictionary entries, array
+> items and stream data. It does not yet decompress streams or extract text.
 
 ## Usage
 
 ```
-walk_pdf <file.pdf>          list the whole file
-walk_pdf <file.pdf> <path>   list the element at path and what is inside it
+walk_pdf <file.pdf> [<path>] [--depth N]
 walk_pdf [options]
 ```
+
+walk_pdf lists the element at `path` and what is inside it, `N` levels down,
+depth first: each element is followed by its children before its next
+sibling. Without a path it starts at `/`, the whole file. Without `--depth` it
+goes 3 levels down.
 
 `walk_pdf <file.pdf>` prints one line per element:
 
 ```
-    offset       size  path                     peek
-         0      16575  /rev[0]                  19 elements: 13 objects, xref, trailer
-         0          8  /rev[0]/header           version 1.3
-         9         12  /rev[0]/comment[0]       <binary marker, 11 bytes>
-        22        488  /rev[0]/obj[3]           << /Filter /FlateDecode... + stream <417 bytes, FlateDecode>
-       511        113  /rev[0]/obj[1]           << /Type /Page /Parent 2 0 R /Resources 4 0 R /Contents 3...
-       625        107  /rev[0]/obj[4]           << /ProcSet [ /PDF /Text ] /ColorSpace << /Cs1 5 0 R /Cs2...
+    offset       size  path                             peek
+         0     489247  /                                1 revision
+         0     489246  /rev[0]                          53 elements: 48 objects, xref, trailer
+         0          8  /rev[0]/header                   version 1.4
+         9        167  /rev[0]/obj[1]                   << /Title (.. I n v o i c e) /Creator (.. w k h t m l t o...
+        27         18  /rev[0]/obj[1]/Title             (.. I n v o i c e)
+        55         40  /rev[0]/obj[1]/Creator           (.. w k h t m l t o p d f 0 . 1 2 . 4)
        ...
-     16137        290  /rev[0]/xref[0]          14 entries, objects 0-13
-     16427        126  /rev[0]/trailer[0]       << /Size 14 /Root 10 0 R /Info 13 0 R /ID [ <d261359c6942...
-     16554         15  /rev[0]/startxref[0]     16137
-     16570          5  /rev[0]/eof[0]
+     55726        120  /rev[0]/obj[5]                   << /Type /Page /Parent 2 0 R /Contents 35 0 R /Resources ...
+     55743          5  /rev[0]/obj[5]/Type              /Page
+     55757          5  /rev[0]/obj[5]/Parent            2 0 R
+       ...
+     56069     423950  /rev[0]/obj[35]                  << /Length 36 0 R /F... + stream <423875 bytes, FlateDecode>
+     56089          6  /rev[0]/obj[35]/Length           36 0 R
+     56104         12  /rev[0]/obj[35]/Filter           /FlateDecode
+     56127     423875  /rev[0]/obj[35]/stream           <423875 bytes>
 ```
 
 (The heading line is shown here for explanation only; walk_pdf does not print it.)
@@ -38,12 +47,12 @@ walk_pdf [options]
 - *path* says which element it is (see Paths below).
 - *peek* is a short look at what the element holds (see Peek below).
 
-`walk_pdf <file.pdf> <path>` prints the same kind of lines, for the element at
-`path` and everything inside it. Quote the path in the shell, as `[` and `]`
-mean something to most shells:
+`walk_pdf <file.pdf> <path>` starts at the element at `path`. Quote the path in
+the shell, as `[` and `]` mean something to most shells:
 
 ```
 walk_pdf book.pdf '/rev[1]/trailer[0]'
+walk_pdf book.pdf '/rev[1]' --depth 0     # only the revision itself
 ```
 
 ## Peek
@@ -62,15 +71,18 @@ The peek column shows what an element holds, without the keyword that opens it
 | startxref  | The byte offset of the cross-reference                            |
 | eof        | Nothing                                                           |
 | unknown    | Its text, or `<n bytes, binary>`                                  |
+| a value inside an object: dictionary, array, name, number, string, reference (`12 0 R`), boolean, null | Its text |
+| stream     | The stream's data if it is text (an uncompressed page, say), otherwise `<n bytes>` |
 
 Runs of whitespace are shown as one space, and other bytes outside printable
 ASCII as `.`. Text that is too long is cut and ends with `...`. A peek is at
 most 60 characters, except that a stream's description is always shown in
 full, so an object with a stream can be a little wider.
 
-Stream data is never shown, only described. Compressed streams, which hold
-the text of most pages, can not be read yet. Nor can the strings and streams
-of an encrypted PDF (one whose trailer has `/Encrypt`): they show as `.`.
+Compressed stream data, which holds the text of most pages, is only described,
+as it can not be read yet. Nor can the strings and streams of an encrypted PDF
+(one whose trailer has `/Encrypt`): they show as `.`. Strings stored as UTF-16
+show their zero bytes as spaces: `(.. I n v o i c e)`.
 
 ## Paths
 
@@ -95,6 +107,29 @@ are two versions of object 5.
 | `startxref[i]`   | `startxref` and the offset of its cross-reference    |
 | `eof[i]`         | `%%EOF`                                              |
 | `unknown[i]`     | Bytes walk_pdf could not recognise                   |
+| *key*            | The value of a dictionary entry, e.g. `Type`, `Resources` |
+| `[i]`            | Item i of an array, counted from 0                   |
+| `stream`         | The data of a stream object                          |
+
+What is inside what:
+
+- A revision holds its header, comments, objects, xref, trailer, startxref and eof.
+- An object holding a dictionary has the dictionary's entries as children,
+  followed by `stream` if it is a stream object. An object holding an array
+  has its items. A trailer has its dictionary's entries.
+- A dictionary value has its entries, and an array value its items. Other
+  values have no children.
+
+For example, `/rev[0]/obj[5]/Resources/Font/F8` is the `/F8` entry of the
+`/Font` dictionary of the `/Resources` dictionary of object 5, and
+`/rev[0]/obj[5]/MediaBox/[2]` is the third number of its `/MediaBox` array.
+
+A key is written as it is, except that a byte which would clash with the path
+syntax (whitespace, `/`, `[`, `]` and other PDF delimiters, `#`, or a byte
+outside printable ASCII) is written `#` and two hex digits, as in PDF names:
+the key `A B` is `A#20B`. Keys that are spelled like the reserved segments
+`header` and `stream` get their first letter written that way: `#68eader`.
+The empty key is `#`.
 
 An object is named by its object number alone: `12 0 obj` is `obj[12]`. The
 second number in the file, the generation, is left out: each revision has at
@@ -102,8 +137,8 @@ most one object with a given number, so the revision and the number are enough.
 (The generation is 0 for nearly every object; it only goes up when an update
 reuses the number of a deleted object.) Path strings contain no blanks.
 
-Elements other than objects are numbered in file order from 0 within their
-revision, per kind.
+Elements of a revision other than objects are numbered in file order from 0
+within their revision, per kind.
 
 Files made for fast web viewing ("linearized") have two revisions: a small
 first part for the first page, then the rest.
@@ -114,9 +149,15 @@ its revision has no `xref` or `trailer`.
 
 ## Options
 
-| Option         | What it does                  |
-|----------------|-------------------------------|
-| `-h`, `--help` | Print this manual and exit.   |
+| Option         | What it does                                                    |
+|----------------|-----------------------------------------------------------------|
+| `--depth N`    | How many levels below the path to list. 0 lists only the element at the path, 1 adds its children, and so on. Default 3. |
+| `-h`, `--help` | Print this manual and exit.                                     |
+
+With the default depth of 3, walk_pdf lists revisions, their elements, and the
+entries and items of objects and trailers, but not what is nested deeper. Give
+a path and a depth to look further into one part, e.g.
+`walk_pdf file.pdf '/rev[0]/obj[5]' --depth 3`.
 
 Running walk_pdf without arguments prints its name and version.
 

@@ -1,11 +1,13 @@
 #pragma once
 
 #include "path.hpp"
+#include "syntax.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -68,14 +70,31 @@ private:
   friend class Content;
   explicit ChildIterator(Content const& parent);
   void find_next();
+  void emit(Segment segment, Kind kind, std::size_t begin, std::size_t end);
 
   std::optional<Content> parent_;
-  std::size_t position_ = 0;                       // where the search for the next child starts
-  std::array<std::uint64_t, 16> ordinals_{};       // children seen so far, per kind
-  std::optional<Element> current_;                 // nullopt at the end
+  std::size_t position_ = 0;                         // where the search for the next child starts
+  std::array<std::uint64_t, kind_count> ordinals_{}; // children seen so far, per kind
+  std::optional<Value> container_;                   // the dictionary or array whose children these are
+  std::optional<Value> stream_;                      // a stream object's data, its last child
+  std::optional<Element> current_;                   // nullopt at the end
 };
 
-// One PDF file, and the lookup of paths in it
+// The children of the element at a path; empty if there is no such element
+class Children {
+public:
+  explicit Children(std::optional<Content> parent) : parent_(std::move(parent)) {}
+
+  ChildIterator begin() const;
+  std::default_sentinel_t end() const { return {}; }
+
+private:
+  std::optional<Content> parent_;
+};
+
+// One PDF file, and the lookup of paths in it.
+// Clients act on paths only: find(path) looks up an element, and
+// children(path) gives its children, each with its own path.
 class Document {
 public:
   explicit Document(std::string bytes);
@@ -91,6 +110,9 @@ public:
   // What the path refers to, or nullopt if the file has no such element
   std::optional<Content> find(Path const& path) const;
 
+  // The children of the element at path, in file order
+  Children children(Path const& path) const { return Children{find(path)}; }
+
 private:
   friend class ChildIterator;
 
@@ -99,8 +121,30 @@ private:
     std::size_t end;
   };
 
+  // Where an element found by a scan is, so that looking up its path again
+  // does not scan again. Filled whenever children are found; a path's meaning
+  // never depends on it, it only makes lookups fast.
+  //
+  // It is a cache of the most recently found elements, not a record of all:
+  // a client walking the file looks each element up just after the scan that
+  // found it, so recent ones are enough. When full it starts over, which keeps
+  // memory bounded for files with millions of elements.
+  struct Location {
+    Kind kind;
+    std::size_t begin;
+    std::size_t end;
+  };
+  static constexpr std::size_t index_capacity = 65536;
+  void remember(Path const& path, Kind kind, std::size_t begin, std::size_t end) const {
+    if (index_.size() >= index_capacity) {
+      index_.clear();
+    }
+    index_.try_emplace(path, Location{kind, begin, end});
+  }
+
   std::string bytes_;
-  std::vector<Range> revisions_; // found when the document is opened
+  std::vector<Range> revisions_;                  // found when the document is opened
+  mutable std::map<Path, Location> index_;        // not thread-safe
 };
 
 } // namespace walk_pdf

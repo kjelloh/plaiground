@@ -21,24 +21,50 @@ enum class Kind {
   startxref, // startxref n
   eof,       // %%EOF
   unknown,   // bytes the walker could not make sense of
+
+  // Inside objects (PDF 32000-1:2008, 7.3 Objects)
+  null,       // null
+  boolean,    // true or false
+  integer,    // 12, -3
+  real,       // 3.14, -.5
+  name,       // /Type
+  string,     // (text) or <hex>
+  array,      // [ ... ]
+  dictionary, // << /Key value ... >>
+  reference,  // 12 0 R, a reference to object 12
+  stream,     // the data of a stream object, between "stream" and "endstream"
+
+  // Only in path segments: how a value is reached from its parent
+  key,   // a dictionary entry, by its key
+  index, // an array item, by its index
 };
+
+inline constexpr std::size_t kind_count = static_cast<std::size_t>(Kind::index) + 1;
 
 std::string_view to_string(Kind kind);
 
 // One step in a path: which child of its parent an element is.
-// An object is named by its object number, the header by its kind alone, and
-// anything else by its ordinal among siblings of the same kind. An object
+// An object is named by its object number, the header and a stream's data by
+// their kind alone, a dictionary entry by its key, an array item by its index,
+// and anything else by its ordinal among siblings of the same kind. An object
 // number occurs at most once per revision, so the generation is not needed.
 struct Segment {
   Kind kind = Kind::document;
-  std::uint64_t number = 0; // object number, or ordinal
+  std::uint64_t number = 0; // object number, array index, or ordinal
+  std::string key;          // dictionary key, as decoded bytes (Kind::key only)
 
-  static Segment revision(std::uint64_t ordinal) { return {Kind::revision, ordinal}; }
-  static Segment header() { return {Kind::header, 0}; }
-  static Segment object(std::uint64_t number) { return {Kind::object, number}; }
-  static Segment ordinal(Kind kind, std::uint64_t ordinal) { return {kind, ordinal}; }
+  static Segment revision(std::uint64_t ordinal) { return {Kind::revision, ordinal, {}}; }
+  static Segment header() { return {Kind::header, 0, {}}; }
+  static Segment object(std::uint64_t number) { return {Kind::object, number, {}}; }
+  static Segment ordinal(Kind kind, std::uint64_t ordinal) { return {kind, ordinal, {}}; }
+  static Segment entry(std::string key) { return {Kind::key, 0, std::move(key)}; }
+  static Segment item(std::uint64_t index) { return {Kind::index, index, {}}; }
+  static Segment stream() { return {Kind::stream, 0, {}}; }
 
-  // "rev[1]", "header", "obj[12]", "xref[0]"
+  // "rev[1]", "header", "obj[12]", "xref[0]", "Type" (a key), "[3]" (an index), "stream".
+  // A key is written as is, except that bytes which would clash with the path
+  // syntax are written #xx, as PDF names do: "A B" is "A#20B". A key that is
+  // a reserved word ("header", "stream") gets its first letter escaped.
   std::string to_string() const;
 
   auto operator<=>(Segment const&) const = default;
@@ -57,7 +83,7 @@ public:
   Path child(Segment segment) const;
   Path parent() const;
 
-  // "/rev[0]/obj[12]"; the root is "/". Path strings contain no blanks.
+  // "/rev[0]/obj[12]/Resources/Font"; the root is "/". Path strings contain no blanks.
   std::string to_string() const;
 
   // Reads the string form back; parse(p.to_string()) == p for every path p

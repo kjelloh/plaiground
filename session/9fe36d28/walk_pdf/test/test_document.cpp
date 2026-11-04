@@ -123,6 +123,132 @@ TEST(Document, DuplicateObjectNumberInARevisionFindsTheFirst) {
   EXPECT_EQ(object->bytes(), "1 0 obj\n(a)\nendobj");
 }
 
+TEST(Document, ChildrenOfAPath) {
+  Document const document{two_revisions};
+  std::vector<std::string> paths;
+  for (auto const& child : document.children(*Path::parse("/rev[1]"))) {
+    paths.push_back(child.path.to_string());
+  }
+  EXPECT_EQ(paths, paths_of(*document.find(*Path::parse("/rev[1]"))));
+  EXPECT_EQ(paths.front(), "/rev[1]/obj[1]");
+}
+
+TEST(Document, ChildrenOfAMissingPathAreNone) {
+  Document const document{two_revisions};
+  auto const children = document.children(*Path::parse("/rev[7]"));
+  EXPECT_TRUE(children.begin() == children.end());
+}
+
+TEST(Document, ChildrenOfALeafAreNone) {
+  Document const document{two_revisions};
+  auto const children = document.children(*Path::parse("/rev[0]/eof[0]"));
+  EXPECT_TRUE(children.begin() == children.end());
+}
+
+TEST(Document, FindGivesTheSameBeforeAndAfterItsParentIsScanned) {
+  Document const document{two_revisions};
+  auto const path = *Path::parse("/rev[1]/trailer[0]");
+  auto const first = document.find(path); // finds it by scanning
+  for ([[maybe_unused]] auto const& child : document.children(path.parent())) {
+  }
+  auto const again = document.find(path); // finds it in the index
+  ASSERT_TRUE(first);
+  ASSERT_TRUE(again);
+  EXPECT_EQ(first->bytes(), again->bytes());
+  EXPECT_EQ(first->offset(), again->offset());
+  EXPECT_EQ(again->kind(), Kind::trailer);
+  EXPECT_EQ(again->path(), path);
+}
+
+TEST(Document, MissingSiblingOfAFoundElement) {
+  Document const document{two_revisions};
+  ASSERT_TRUE(document.find(*Path::parse("/rev[0]/obj[1]")));
+  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[3]")));
+  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[3]")));
+}
+
+TEST(Document, ClientDepthFirstWalkOnPaths) {
+  // How a client walks the file: on paths, with its own depth counter
+  Document const document{two_revisions};
+  std::vector<std::string> visited;
+  auto walk = [&](auto const& self, Path const& path, int depth) -> void {
+    visited.push_back(path.to_string());
+    if (depth == 0) {
+      return;
+    }
+    for (auto const& child : document.children(path)) {
+      self(self, child.path, depth - 1);
+    }
+  };
+  walk(walk, Path{}, 1);
+  EXPECT_EQ(visited, (std::vector<std::string>{"/", "/rev[0]", "/rev[1]"}));
+  visited.clear();
+  walk(walk, *Path::parse("/rev[1]"), 1);
+  EXPECT_EQ(visited.size(), 6U);
+  EXPECT_EQ(visited.back(), "/rev[1]/eof[0]");
+}
+
+TEST(Document, ObjectChildrenAreItsEntriesThenItsStream) {
+  Document const document{two_revisions};
+  EXPECT_EQ(paths_of(*document.find(*Path::parse("/rev[0]/obj[2]"))),
+            (std::vector<std::string>{"/rev[0]/obj[2]/Length", "/rev[0]/obj[2]/stream"}));
+  auto const data = document.find(*Path::parse("/rev[0]/obj[2]/stream"));
+  ASSERT_TRUE(data);
+  EXPECT_EQ(data->kind(), Kind::stream);
+  EXPECT_EQ(data->bytes(), "endobj xyz");
+}
+
+TEST(Document, TrailerChildrenAreItsEntries) {
+  Document const document{two_revisions};
+  EXPECT_EQ(paths_of(*document.find(*Path::parse("/rev[0]/trailer[0]"))),
+            (std::vector<std::string>{"/rev[0]/trailer[0]/Size", "/rev[0]/trailer[0]/Root",
+                                      "/rev[0]/trailer[0]/Info"}));
+  auto const root = document.find(*Path::parse("/rev[0]/trailer[0]/Root"));
+  ASSERT_TRUE(root);
+  EXPECT_EQ(root->kind(), Kind::reference);
+  EXPECT_EQ(root->bytes(), "1 0 R");
+}
+
+TEST(Document, NestedDictionariesAndArrays) {
+  Document const document{"%PDF-1.4\n5 0 obj\n<< /Type /Page /MediaBox [0 0 595 842]\n"
+                          "/Resources << /Font << /F8 9 0 R >> >> >>\nendobj\n%%EOF\n"};
+  auto const font = document.find(*Path::parse("/rev[0]/obj[5]/Resources/Font/F8"));
+  ASSERT_TRUE(font);
+  EXPECT_EQ(font->bytes(), "9 0 R");
+  auto const width = document.find(*Path::parse("/rev[0]/obj[5]/MediaBox/[2]"));
+  ASSERT_TRUE(width);
+  EXPECT_EQ(width->kind(), Kind::integer);
+  EXPECT_EQ(width->bytes(), "595");
+  EXPECT_EQ(document.find(*Path::parse("/rev[0]/obj[5]/Type"))->kind(), Kind::name);
+  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[5]/MediaBox/[4]")));
+  EXPECT_FALSE(document.find(*Path::parse("/rev[0]/obj[5]/Missing")));
+}
+
+TEST(Document, ScalarObjectHasNoChildren) {
+  Document const document{"%PDF-1.4\n1 0 obj\n42\nendobj\n%%EOF\n"};
+  EXPECT_TRUE(paths_of(*document.find(*Path::parse("/rev[0]/obj[1]"))).empty());
+}
+
+TEST(Document, WalkBeyondTheIndexCapacity) {
+  // More elements than the index holds: lookups during a walk still succeed
+  std::string text = "%PDF-1.4\n1 0 obj\n[";
+  for (int i = 0; i < 70000; ++i) {
+    text += std::to_string(i) + " ";
+  }
+  text += "]\nendobj\n%%EOF\n";
+  Document const document{text};
+  auto const array = *Path::parse("/rev[0]/obj[1]");
+  std::size_t found = 0;
+  for (auto const& child : document.children(array)) {
+    auto const content = document.find(child.path);
+    ASSERT_TRUE(content) << child.path.to_string();
+    EXPECT_EQ(content->bytes(), std::to_string(found));
+    ++found;
+  }
+  EXPECT_EQ(found, 70000U);
+  EXPECT_EQ(document.find(*Path::parse("/rev[0]/obj[1]/[3]"))->bytes(), "3"); // after the index started over
+}
+
 TEST(Document, EmptyFileHasNoRevisions) {
   Document const document{""};
   EXPECT_TRUE(paths_of(document.root()).empty());

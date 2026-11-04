@@ -16,8 +16,49 @@ std::string_view Content::bytes() const {
 
 ChildIterator Content::begin() const { return ChildIterator{*this}; }
 
+ChildIterator Children::begin() const { return parent_ ? parent_->begin() : ChildIterator{}; }
+
+namespace {
+
+// The value an object or trailer holds: what follows "n g obj" or "trailer"
+std::optional<Value> body_of(std::string_view bytes, Content const& content,
+                             std::string_view keyword) {
+  auto const text = bytes.substr(content.offset(), content.bytes().size());
+  auto const at = text.find(keyword);
+  if (at == std::string_view::npos) {
+    return std::nullopt;
+  }
+  return value_at(bytes, content.offset() + at + keyword.size(),
+                  content.offset() + content.bytes().size());
+}
+
+} // namespace
+
 ChildIterator::ChildIterator(Content const& parent) : parent_(parent), position_(parent.begin_) {
+  auto const bytes = parent.document_->bytes();
+  std::optional<Value> body;
+  switch (parent.kind_) {
+  case Kind::object: body = body_of(bytes, parent, "obj"); break;
+  case Kind::trailer: body = body_of(bytes, parent, "trailer"); break;
+  case Kind::dictionary:
+  case Kind::array: body = Value{parent.kind_, parent.begin_, parent.end_}; break;
+  default: break;
+  }
+  if (body && (body->kind == Kind::dictionary || body->kind == Kind::array)) {
+    container_ = body;
+    position_ = first_child_at(*body);
+    if (parent.kind_ == Kind::object && body->kind == Kind::dictionary) {
+      stream_ = stream_data(bytes, body->end, parent.end_);
+    }
+  }
   find_next();
+}
+
+void ChildIterator::emit(Segment segment, Kind kind, std::size_t begin, std::size_t end) {
+  auto const& document = *parent_->document_;
+  auto path = parent_->path_.child(std::move(segment));
+  document.remember(path, kind, begin, end);
+  current_.emplace(path, Content{document, path, kind, begin, end});
 }
 
 ChildIterator& ChildIterator::operator++() {
@@ -33,6 +74,23 @@ void ChildIterator::find_next() {
   current_.reset();
   auto const& parent = *parent_;
   auto const& document = *parent.document_;
+
+  // Inside objects: a dictionary's entries or an array's items, then a stream's data
+  if (container_) {
+    if (auto const child = next_child(document.bytes(), *container_, position_)) {
+      position_ = child->value.end;
+      auto const index = ordinals_[static_cast<std::size_t>(Kind::index)]++;
+      emit(container_->kind == Kind::dictionary ? Segment::entry(child->key) : Segment::item(index),
+           child->value.kind, child->value.begin, child->value.end);
+      return;
+    }
+    container_.reset();
+  }
+  if (stream_) {
+    emit(Segment::stream(), Kind::stream, stream_->begin, stream_->end);
+    stream_.reset();
+    return;
+  }
 
   std::optional<Found> found;
   switch (parent.kind_) {
@@ -67,9 +125,8 @@ void ChildIterator::find_next() {
   }
   ++ordinal;
 
-  auto path = parent.path_.child(segment);
-  current_.emplace(path, Content{document, path, found->kind, found->begin, found->end});
   position_ = found->end;
+  emit(segment, found->kind, found->begin, found->end);
 }
 
 namespace {
@@ -107,18 +164,27 @@ Document::Document(std::string bytes) : bytes_(std::move(bytes)) {
 Content Document::root() const { return Content{*this, Path{}, Kind::document, 0, bytes_.size()}; }
 
 std::optional<Content> Document::find(Path const& path) const {
-  // Look up one segment at a time, among the children of the previous one
-  auto content = root();
-  for (auto const& segment : path.segments()) {
-    auto const child = std::ranges::find_if(content, [&](Element const& element) {
-      return element.path.segments().back() == segment;
-    });
-    if (child == content.end()) {
-      return std::nullopt;
-    }
-    content = child->content;
+  if (path.is_root()) {
+    return root();
   }
-  return content;
+  // Found before (or a sibling of something found before)
+  if (auto const known = index_.find(path); known != index_.end()) {
+    auto const& [kind, begin, end] = known->second;
+    return Content{*this, path, kind, begin, end};
+  }
+  // Otherwise find the parent, and look among its children. That scan
+  // remembers every child it passes, so their lookups need no scan.
+  auto const parent = find(path.parent());
+  if (!parent) {
+    return std::nullopt;
+  }
+  auto const& segment = path.segments().back();
+  auto const child = std::ranges::find_if(
+      *parent, [&](Element const& element) { return element.path.segments().back() == segment; });
+  if (child == parent->end()) {
+    return std::nullopt;
+  }
+  return child->content;
 }
 
 } // namespace walk_pdf

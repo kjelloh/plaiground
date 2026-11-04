@@ -30,6 +30,7 @@ add_library(walk_pdf_core
   src/path.cpp
   src/peek.cpp
   src/scanner.cpp
+  src/syntax.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )
 target_include_directories(walk_pdf_core PUBLIC src)
