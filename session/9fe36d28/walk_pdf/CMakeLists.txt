@@ -18,8 +18,16 @@ else()
   target_compile_options(walk_pdf_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()
 
+# Build MANUAL.md into the program as bytes; CMake re-runs when the manual changes
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS MANUAL.md)
+file(READ MANUAL.md manual_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${manual_hex}")
+configure_file(src/manual_text.cpp.in generated/manual_text.cpp @ONLY)
+
 add_executable(walk_pdf
   src/main.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/manual_text.cpp
 )
+target_include_directories(walk_pdf PRIVATE src)
 target_link_libraries(walk_pdf PRIVATE walk_pdf_warnings)
 target_compile_definitions(walk_pdf PRIVATE WALK_PDF_VERSION="${PROJECT_VERSION}")
