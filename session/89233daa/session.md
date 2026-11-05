@@ -92,10 +92,44 @@ So where can we start?
 
 So already here we know pyroceph needs to 'talk' to the current view state if a key is an option?
 
-* I started by askling Claude to initiate a specification.
+* I started by asking Claude to initiate a specification.
 * And I got [specification](./specification.md)
 
 I have now taken a coffee break and a short run.
 
 * I decided to ask Claude to split the code into one pyroceph 'Orchestrator' and one TUI KeyLoop.
 * I am betting this pins down a separation enough for now?
+
+OK. So what is the next design decision to make?
+
+Here are some thinking of mine.
+
+* The orchestrator is to impose the navigation and buffer editing.
+* So it needs to be able to map a key to an option.
+* It is also to allow the client to configure the DAG of states to navigate.
+* So it seems we at least need the concept of a 'path'?
+
+So maybe the orchestrator shall provide the client with means to register a 'state' at a 'path' of the navigable UI?
+
+* We can make pyroceph define a Path type as a vector of Unicode code points.
+* Then we can make the orchestrator allow the client to register a 'State' at a 'Path'
+* Now, the 'State' need to be a descriptor (We can't store pointers to volatile objects in the client)
+* In this way the orchestrator can respond back to the client to enter a new state (and prodive the new state descriptor)
+
+So for a key we now have some things we know can happen.
+
+* If in buffer edit mode: Process the key to mutate the buffer
+* If not in buffer edit mode: Pyroceph can extend current path with the key to see if there is a registered next state at that path.
+    * If it does it answer back to the client 'new_state path'
+    * It also sets this as the current path.
+    * Otherwise it stores the key in the input buffer edit mode (enters edit buffer mode)
+* The client look up the new state and use it to produce a new view and renders it.
+
+So this did NOT work!
+
+* I vibe coded so the orchestrator could register paths for navigable states.
+* And aimed for making the client receive state changes as a path to the new state.
+    * The idea was to allow the client to view and render the new state.
+    * BUT: The client is UNABLE to render the options list (this is known by pyroceph)
+
+I have to revert and re-define the design.
