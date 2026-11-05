@@ -75,32 +75,38 @@ Pressing `1` then shows items 10..19 as options 0..9, and pressing `7` picks ite
 - **ARC-6** pyroceph code is kept separate from the console app code.
 - **ARC-7** pyroceph acts on one key at a time, given as a Unicode code point.
 - **ARC-8** pyroceph administers the input buffer when a key does not trigger an option.
-- **ARC-9** The first API stays much simpler than full TEA. It is there to find out how a client injects behaviour without pyroceph knowing what is inside its app state and view states. The TEA wishes below wait until that works.
+- **ARC-9** The code starts with no client API: only `pyroceph::core::Orchestrator`, which decides what a key means, and `pyroceph::tui::KeyLoop`, which handles the console. How a client injects behaviour is parked, and the TEA wishes below wait until that is worked out.
+- **ARC-10** `core` knows nothing about the terminal or the screen. `tui` depends on `core`, never the reverse.
 - **ARC-2** *Wish:* the engine fits into `update` in The Elm Architecture, with a single Model holding the whole app state. View states also operate on a Model instance.
 - **ARC-3** *Wish:* the Model is built on `immer` persistent data types, so copying a Model is cheap.
 - **ARC-4** *Wish:* stored Models give a state history, with keys for undo and redo.
 - **ARC-5** `-` changes to the previous state, while undo restores the whole Model. Both update the view.
 
-### First API sketch (proposal, see Q13)
+Parked for now: ARC-1 and every other rule that needs a view state or a client. These rules remain the goal, but are not being built yet.
+
+### Current types
 
 ```cpp
-namespace pyroceph {
+namespace pyroceph::core {
 
-// Implemented by the client. pyroceph knows nothing else about a state.
-struct ViewState {
-  virtual ~ViewState() = default;
-  // Acts on the key and returns true if it is an option in this state.
-  virtual bool try_option(CodePoint key) = 0;
-};
+enum class KeyResult { Continue, Quit };
 
-class Engine {
+class Orchestrator {
 public:
-  explicit Engine(ViewState& head);
-  void on_key(CodePoint key); // the view state gets the key first; otherwise it goes in the buffer
-  std::u32string const& input_buffer() const;
+  KeyResult on_key(CodePoint key);
 };
 
-} // namespace pyroceph
+} // namespace pyroceph::core
+
+namespace pyroceph::tui {
+
+class KeyLoop {
+public:
+  explicit KeyLoop(core::Orchestrator& orchestrator);
+  int run(); // returns the process exit code
+};
+
+} // namespace pyroceph::tui
 ```
 
 ## 8. Platform and build
@@ -124,10 +130,10 @@ Each proposal below is Claude's suggestion and not yet agreed. A settled questio
 | Q4 | How do non-character keys behave, such as arrows and function keys? On macOS and Linux an arrow arrives as three code points (`ESC`, `[`, `A`), which would land in the buffer. On Windows the code skips them. | Ignore them on all platforms for now, and never let them reach the buffer. |
 | Q5 | In a drill-down, are item numbers zero-padded, and what happens to a group with a single item, like item 20 of 21? | Pad to the width of the highest index. A group with one item is picked at once, with no extra digit. |
 | Q6 | Which keys are clear, undo and redo? They must not take away common typed characters. | Control keys: `Ctrl-U` clear, `Ctrl-Z` undo, `Ctrl-Y` redo. `Ctrl-Z` is end of input on Windows and suspend on Unix today, so this needs handling in the terminal code. |
-| Q7 | What does the client get when an item is picked or the buffer is posted, and can it change the Model and the next state? | To be designed in the client API step. |
-| Q8 | What does a client write: view states as data, as functions over the Model, or both? | Decide after Q13 has been tried in code. |
+| Q7 | *Parked.* What does the client get when an item is picked or the buffer is posted, and can it change the Model and the next state? | To be designed in the client API step. |
+| Q8 | *Parked.* What does a client write: view states as data, as functions over the Model, or both? | Decide after Q13 has been tried in code. |
 | Q9 | Does the TEA `update` also return commands for side effects, such as file reads? | Decide when TEA is taken up (ARC-9). |
 | Q10 | Does the engine check that the client's graph has no cycles? | No. The stack works anyway, so the client answers for its own graph. |
 | Q11 | Is each frame drawn by clearing the screen or by appending below the last one? | Clear and redraw, so only the head is on screen. |
 | Q12 | Does the undo history survive a new action after an undo, and does it survive quitting? | A new action discards the redo branch. History lives only in memory. |
-| Q13 | How does pyroceph find out whether a key is an option? This is the next question to settle. | It asks the view state, with the one function in the sketch in section 7. The state acts on the key itself, so pyroceph never sees what an option does. The stack, the screen and `q` / `-` are added in later steps. |
+| Q13 | *Parked.* How does pyroceph find out whether a key is an option? | It asks the view state, through a function like `bool try_option(CodePoint key)` that the client implements. The state acts on the key itself, so pyroceph never sees what an option does. |

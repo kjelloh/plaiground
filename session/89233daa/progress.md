@@ -5,19 +5,20 @@ All files stay inside `session/89233daa/`.
 
 ## Current status
 
-Step 1 is built and waiting for the user's test.
+Step 2 is built and waiting for the user's test.
 
 ## Steps
 
 | # | Step | Status |
 |---|------|--------|
-| 1 | CMake/Conan skeleton: raw keys to Unicode code points, `q` quits | Waiting for user test |
+| 1 | CMake/Conan skeleton: raw keys to Unicode code points, `q` quits | Done, confirmed by user |
+| 2 | Refactor with the same behaviour: `pyroceph::core::Orchestrator` decides that `q` quits, `pyroceph::tui::KeyLoop` handles the console | Waiting for user test |
 
 ## Specification
 
 Agreed behaviour and open questions now live in `specification.md`.
 
-## Known limits of step 1
+## Known limits
 
 - Input is always decoded as UTF-8. Detecting the platform's encoding is a later step
   (see `60cae9fe/cratchit/src/core/terminal_encoding.*`).

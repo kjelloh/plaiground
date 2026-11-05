@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <optional>
 
-namespace pyroceph::terminal {
+namespace pyroceph::tui {
 
 // Puts the console into single-key mode (no Enter needed, no echo) while alive.
 // Does nothing when stdin is not a terminal, e.g. when input is piped.
@@ -23,4 +23,4 @@ private:
   bool is_raw_ = false;
 };
 
-} // namespace pyroceph::terminal
+} // namespace pyroceph::tui

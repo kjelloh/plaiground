@@ -24,9 +24,16 @@ add_library(charset
 target_include_directories(charset PUBLIC src)
 target_link_libraries(charset PRIVATE pyroceph_warnings)
 
+# The engine core. Must not depend on the terminal or the screen.
+add_library(pyroceph_core
+  src/core/orchestrator.cpp
+)
+target_link_libraries(pyroceph_core PUBLIC charset PRIVATE pyroceph_warnings)
+
 add_executable(pyroceph
   src/main.cpp
-  src/terminal/raw_terminal.cpp
+  src/tui/key_loop.cpp
+  src/tui/raw_terminal.cpp
 )
 target_include_directories(pyroceph PRIVATE src)
-target_link_libraries(pyroceph PRIVATE charset pyroceph_warnings)
+target_link_libraries(pyroceph PRIVATE pyroceph_core charset pyroceph_warnings)

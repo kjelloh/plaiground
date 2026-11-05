@@ -1,4 +1,4 @@
-#include "terminal/raw_terminal.hpp"
+#include "tui/raw_terminal.hpp"
 
 #include <cstdio>
 
@@ -10,7 +10,7 @@
 #include <unistd.h>
 #endif
 
-namespace pyroceph::terminal {
+namespace pyroceph::tui {
 
 #ifdef _WIN32
 
@@ -73,4 +73,4 @@ std::optional<std::uint8_t> RawTerminal::read_byte() {
 
 #endif
 
-} // namespace pyroceph::terminal
+} // namespace pyroceph::tui

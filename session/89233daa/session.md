@@ -94,3 +94,8 @@ So already here we know pyroceph needs to 'talk' to the current view state if a 
 
 * I started by askling Claude to initiate a specification.
 * And I got [specification](./specification.md)
+
+I have now taken a coffee break and a short run.
+
+* I decided to ask Claude to split the code into one pyroceph 'Orchestrator' and one TUI KeyLoop.
+* I am betting this pins down a separation enough for now?
