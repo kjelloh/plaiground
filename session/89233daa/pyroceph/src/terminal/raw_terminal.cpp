@@ -1,0 +1,76 @@
+#include "terminal/raw_terminal.hpp"
+
+#include <cstdio>
+
+#ifdef _WIN32
+#include <conio.h>
+#include <io.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#endif
+
+namespace pyroceph::terminal {
+
+#ifdef _WIN32
+
+// _getch() already reads one key without echo, so there is no mode to set
+RawTerminal::RawTerminal() : is_raw_(_isatty(_fileno(stdin)) != 0) {}
+
+RawTerminal::~RawTerminal() = default;
+
+std::optional<std::uint8_t> RawTerminal::read_byte() {
+  if (!is_raw_) {
+    int const c = std::getchar();
+    return c == EOF ? std::nullopt : std::optional(static_cast<std::uint8_t>(c));
+  }
+  while (true) {
+    int const c = _getch();
+    if (c == 0 || c == 0xE0) {
+      // Function and arrow keys come as two codes; skip both. In CP437 and
+      // CP850, 0xE0 is also a character, which therefore cannot be typed.
+      _getch();
+      continue;
+    }
+    if (c == 0x1A) {
+      return std::nullopt; // Ctrl-Z is end of input on Windows
+    }
+    return static_cast<std::uint8_t>(c);
+  }
+}
+
+#else
+
+namespace {
+termios saved_mode{};
+}
+
+RawTerminal::RawTerminal() {
+  if (isatty(STDIN_FILENO) == 0 || tcgetattr(STDIN_FILENO, &saved_mode) != 0) {
+    return;
+  }
+  termios raw = saved_mode;
+  // Keep ISIG so Ctrl-C still interrupts
+  raw.c_lflag &= ~static_cast<tcflag_t>(ICANON | ECHO);
+  raw.c_cc[VMIN] = 1;
+  raw.c_cc[VTIME] = 0;
+  is_raw_ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == 0;
+}
+
+RawTerminal::~RawTerminal() {
+  if (is_raw_) {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_mode);
+  }
+}
+
+std::optional<std::uint8_t> RawTerminal::read_byte() {
+  std::uint8_t byte{};
+  if (read(STDIN_FILENO, &byte, 1) != 1) {
+    return std::nullopt;
+  }
+  return byte;
+}
+
+#endif
+
+} // namespace pyroceph::terminal

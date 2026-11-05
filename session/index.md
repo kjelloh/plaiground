@@ -7,6 +7,7 @@
 1. [Consider take 2 on eml-to-chime python mechanism?](aa98c723/session.md)
 1. [Consider to vibe code a pdf-walker C++ console app?](9fe36d28/session.md)
 1. [Consider to vibe code a working emls-to-chimes and to_site integration?](afaa732d/session.md)
+1. [Consider to vibe code the pyroceph TUI engine?](89233daa/session.md)
 1. [Consider vibe coded book keeping app cratchit take 1?](62c6984e/session.md)
 1. [Consider ways to mirror Jekyll Github Pages generation on local git repos?](b214e74e/session.md)
 1. [Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?](71388c86/session.md)
