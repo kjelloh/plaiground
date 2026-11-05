@@ -70,3 +70,27 @@ Wow, that was a mouthful! Am I ready to start this journey? What do I tell Claud
 * I want Claude to keep a 'progress.md' to keep track of progress.
 
 Here we go!
+
+Claude have now implemented the first base console app.
+
+* It is a cmake/conan C++ app
+* It uses text transcode code from cratchit
+* It reads single keys and acts on them by printing Unicode code point.
+
+But then the next step got tricky quickly.
+
+* I wanted separation of pyroceph code from the console app code so we did not mix them up.
+* But this exposed the problem of what API we should go for?
+* And then a discussion on how much TEA (The Elm Architecture) to consider already at this point?
+
+I decided to start over. We need a much simpler API for now to flesh out how pyroceph can inject the behavior without knowing about whats inside the app state and view states the client provides?
+
+So where can we start?
+
+* pyroceph shall act on a key as a Unicode code point.
+* It shall administrate teh input buffer when a key dos not trigger an option
+
+So already here we know pyroceph needs to 'talk' to the current view state if a key is an option?
+
+* I started by askling Claude to initiate a specification.
+* And I got [specification](./specification.md)
