@@ -30,7 +30,18 @@ jobs:
         shell: bash
         working-directory: session/0a37da4b/cratchit
     steps:
+      # Other sessions hold file names Windows does not allow (e.g. with '?'). Git on
+      # Windows refuses such names even when they are not checked out, so turn that
+      # check off here, and the checkout below takes only this session, so they are never written.
+      - name: Allow other sessions' file names in the Git index
+        if: runner.os == 'Windows'
+        working-directory: ${{ github.workspace }}
+        run: git config --system core.protectNTFS false
+
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: /session/0a37da4b/ # Only this session's files, on every platform
+          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:

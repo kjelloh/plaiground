@@ -37,3 +37,9 @@ Så har jag kommit igång med ett vibe-kodat tomt C++ project 'cratchit' ok.
 * Vibe-kodat terminal_encoding från walk_pdf
 * Vibe-kodat loggning fron 'take 3'
 * Vibe-kodat dot-mapp i användarens hemmakatalog (Claude säger att det nu skall funka cross-platform?)
+
+Nu haf jag blivit lockad att aktivera 'Github Actions' för att bygga för macOS, Linux och Windows uppe på Github.
+
+* Frågan är om detta är en 'bra' ide?
+* Hur mycket jobb har jag nu att hela tiden hålla dessa byggen fungerande?
+* Å andra sidan, ganska coolt om jag på detta sätt kan hålla cratchit byggbar och testad på alla tre plattformar? 
