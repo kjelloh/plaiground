@@ -10,6 +10,7 @@
 * Steg 6: `open_dot_folder` och `core/path_value` med tester. `main` öppnar `.cratchit` i startmappen och loggar till `log.txt`.
 * Steg 7: Provkört att `runtime` i `framework.txt` följs och att loggen hamnar i runtime-mappens `.cratchit`. Ingen kod behövde ändras.
 * Steg 8: `.cratchit` öppnas i hemkatalogen, med kod för macOS, Linux och Windows.
+* Steg 9: Workflow för GitHub Actions i `.github/workflows/cratchit-0a37da4b.yml`. Inte körd än.
 
 ## Bygg och kör
 
@@ -34,8 +35,8 @@ Utan `HOME=...` används den riktiga `~/.cratchit`.
 * När utmatningen faller tillbaka till UTF-8 på en terminal som inte är UTF-8 kan å, ä och ö i den svenska varningen bli fel, eftersom varningen själv skrivs som UTF-8.
 
 * Programmet skapar `.cratchit` i hemkatalogen, om den saknas. Startmappen spelar ingen roll.
-* Bara macOS-grenen är byggd och körd. Windows- och Linux-grenarna i `dot_folder` och `terminal_encoding` är inte provade.
+* Bara macOS-grenen är byggd och körd lokalt. Windows- och Linux-grenarna i `dot_folder` och `terminal_encoding` provas först när `.github/workflows/cratchit-0a37da4b.yml` har körts på GitHub.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 8.
+* Bestäms av användaren. Väntar på användarens test av steg 9 och första körningen på GitHub.
