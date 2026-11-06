@@ -33,10 +33,26 @@ target_link_libraries(charset PRIVATE cratchit_warnings)
 
 # Application logic (from take 3, session 60cae9fe)
 add_library(cratchit_core
+  src/core/dot_folder.cpp
+  src/core/log.cpp
+  src/core/path_value.cpp
   src/core/terminal_encoding.cpp
 )
 target_include_directories(cratchit_core PUBLIC src)
 target_link_libraries(cratchit_core PRIVATE cratchit_warnings)
+
+# LOG_DEVELOPMENT_TRACE is compiled in when CRATCHIT_DEVELOPMENT_TRACE is ON,
+# left out when OFF, and DEBUG (the default) compiles it into Debug builds only
+set(CRATCHIT_DEVELOPMENT_TRACE DEBUG CACHE STRING "Compile in LOG_DEVELOPMENT_TRACE: ON, OFF or DEBUG")
+set_property(CACHE CRATCHIT_DEVELOPMENT_TRACE PROPERTY STRINGS ON OFF DEBUG)
+if(CRATCHIT_DEVELOPMENT_TRACE STREQUAL "DEBUG")
+  set(development_trace "$<CONFIG:Debug>")
+elseif(CRATCHIT_DEVELOPMENT_TRACE)
+  set(development_trace 1)
+else()
+  set(development_trace 0)
+endif()
+target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${development_trace})
 
 add_executable(cratchit
   src/main.cpp

@@ -1,2 +1,5 @@
 # Ignore the local cratchit project
 The ITfied AB/
+
+# Ignore cratchit dot-folders from test runs
+.cratchit

@@ -6,6 +6,10 @@
 * Steg 2: Biblioteket `charset` i `cratchit/src/charset/` med tester i `cratchit/test/`. `gtest` är första Conan-paketet. `main` är fortfarande tom och använder inte `charset`.
 * Steg 3: `terminal_encoding` i `cratchit/src/core/` med tester, i biblioteket `cratchit_core`.
 * Steg 4: `main` anropar `terminal_encoding` och skriver varningar till stderr. Utan varningar skriver programmet inget.
+* Steg 5: Loggningen `core/log` med tester, inklusive CMake-flaggan `CRATCHIT_DEVELOPMENT_TRACE`.
+* Steg 6: `open_dot_folder` och `core/path_value` med tester. `main` öppnar `.cratchit` i startmappen och loggar till `log.txt`.
+* Steg 7: Provkört att `runtime` i `framework.txt` följs och att loggen hamnar i runtime-mappens `.cratchit`. Ingen kod behövde ändras.
+* Steg 8: `.cratchit` öppnas i hemkatalogen, med kod för macOS, Linux och Windows.
 
 ## Bygg och kör
 
@@ -15,8 +19,11 @@ conan install . --build=missing -s build_type=Debug -s compiler.cppstd=23
 cmake --preset conan-debug
 cmake --build --preset conan-debug
 ctest --preset conan-debug
-./build/Debug/cratchit
+mkdir -p ../_dev_home   # en gång
+HOME="$PWD/../_dev_home" ./build/Debug/cratchit
 ```
+
+Utan `HOME=...` används den riktiga `~/.cratchit`.
 
 ## Att känna till
 
@@ -26,6 +33,9 @@ ctest --preset conan-debug
 
 * När utmatningen faller tillbaka till UTF-8 på en terminal som inte är UTF-8 kan å, ä och ö i den svenska varningen bli fel, eftersom varningen själv skrivs som UTF-8.
 
+* Programmet skapar `.cratchit` i hemkatalogen, om den saknas. Startmappen spelar ingen roll.
+* Bara macOS-grenen är byggd och körd. Windows- och Linux-grenarna i `dot_folder` och `terminal_encoding` är inte provade.
+
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 4.
+* Bestäms av användaren. Väntar på användarens test av steg 8.

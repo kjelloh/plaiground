@@ -35,3 +35,5 @@ Så har jag kommit igång med ett vibe-kodat tomt C++ project 'cratchit' ok.
 
 * Vibe-kodat charset från walk_pdf (senaste versionen av text transcoding) ok.
 * Vibe-kodat terminal_encoding från walk_pdf
+* Vibe-kodat loggning fron 'take 3'
+* Vibe-kodat dot-mapp i användarens hemmakatalog (Claude säger att det nu skall funka cross-platform?)
