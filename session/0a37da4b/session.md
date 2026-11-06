@@ -30,3 +30,5 @@ Det verkar som om det första steget är att återskapa cratchit i ny form som k
 * Skapa ett fräscht modernt C++ projekt som använder cmake och konsumerar från Conan package manager.
 * Återskapar begränsat UI som bara kan navigera till att öppna det lokala projektet.
 * INTE återskapa någon annan funktionalitet i detta steg!
+
+Så har jag kommit igång med ett vibe-kodat tomt C++ project 'cratchit' ok.
