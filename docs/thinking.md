@@ -5,6 +5,14 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
 
+## 20261106
+
+Ok, so these AI sessions kind-of work I think.
+
+Now I wonder how I shall navigate Claude to put together a production ready cratchit book keeping app from the parts I have developed in sessions?
+
+
+
 ## 20261016
 
 I have now initiated session 62c6984e [Consider vibe coded book keeping app cratchit take 1?](../session/62c6984e/session.md) to vibe code on my book keeping app cratchit.

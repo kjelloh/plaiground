@@ -12,3 +12,4 @@
 1. [Consider ways to mirror Jekyll Github Pages generation on local git repos?](b214e74e/session.md)
 1. [Consider ways to transform a mail eml-file into a chime folder with chime.md and image files?](71388c86/session.md)
 1. [Vibe code a Swedish book keeping app named cratchit - take 3 (Drop feed Claude)](60cae9fe/session.md)
+1. [Överväg att vibe-koda cratchit bokslut på svenska från senaste cratchit-sessioner](0a37da4b/session.md)
