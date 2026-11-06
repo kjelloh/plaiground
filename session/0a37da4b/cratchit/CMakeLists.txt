@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# The Swedish UI texts are UTF-8 in the source; MSVC must be told so
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
 # Warnings are errors for all targets (CMake's own setting, so it applies to
 # every compiler). Override once with: cmake --compile-no-warning-as-error ...
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
@@ -27,6 +30,13 @@ add_library(charset
 )
 target_include_directories(charset PUBLIC src)
 target_link_libraries(charset PRIVATE cratchit_warnings)
+
+# Application logic (from take 3, session 60cae9fe)
+add_library(cratchit_core
+  src/core/terminal_encoding.cpp
+)
+target_include_directories(cratchit_core PUBLIC src)
+target_link_libraries(cratchit_core PRIVATE cratchit_warnings)
 
 add_executable(cratchit
   src/main.cpp
