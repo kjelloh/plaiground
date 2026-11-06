@@ -38,12 +38,12 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: git config --system core.protectNTFS false
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: /session/0a37da4b/ # Only this session's files, on every platform
           sparse-checkout-cone-mode: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
