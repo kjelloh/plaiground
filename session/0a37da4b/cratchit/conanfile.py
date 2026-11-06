@@ -7,6 +7,9 @@ class CratchitConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain", "CMakeDeps"
 
+    def requirements(self):
+        self.test_requires("gtest/1.15.0")
+
     def validate(self):
         check_min_cppstd(self, "23")
 
