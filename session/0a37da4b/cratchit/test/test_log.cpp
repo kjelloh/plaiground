@@ -8,7 +8,7 @@
 #include <string>
 
 namespace fs = std::filesystem;
-namespace log = cratchit::log;
+namespace logging = cratchit::log; // not "log": that name is the math function on Windows
 
 namespace {
 
@@ -23,7 +23,7 @@ protected:
     file = root / "log.txt";
   }
   void TearDown() override {
-    log::close();
+    logging::close();
     fs::remove_all(root);
   }
 
@@ -42,27 +42,27 @@ protected:
 
 TEST(LogLine, HasTimeKindPlaceAndMessage) {
   auto const where = std::source_location::current();
-  auto const line = log::format_line("2026-10-21T14:03:12", log::Kind::Business, where, "Opened workspace /x");
+  auto const line = logging::format_line("2026-10-21T14:03:12", logging::Kind::Business, where, "Opened workspace /x");
   EXPECT_EQ(line, std::format("2026-10-21T14:03:12 BUSINESS test_log.cpp:{} Opened workspace /x", where.line()));
 }
 
 TEST(LogLine, NamesEachKind) {
   auto const where = std::source_location::current();
-  EXPECT_NE(log::format_line("t", log::Kind::DevelopmentTrace, where, "m").find(" DEVELOPMENT_TRACE "),
+  EXPECT_NE(logging::format_line("t", logging::Kind::DevelopmentTrace, where, "m").find(" DEVELOPMENT_TRACE "),
             std::string::npos);
-  EXPECT_NE(log::format_line("t", log::Kind::DesignInsufficiency, where, "m").find(" DESIGN_INSUFFICIENCY "),
+  EXPECT_NE(logging::format_line("t", logging::Kind::DesignInsufficiency, where, "m").find(" DESIGN_INSUFFICIENCY "),
             std::string::npos);
 }
 
 TEST(LogLine, KeepsAnEventOnOneLine) {
-  auto const line = log::format_line("t", log::Kind::Business, std::source_location::current(), "a\r\nb");
+  auto const line = logging::format_line("t", logging::Kind::Business, std::source_location::current(), "a\r\nb");
   EXPECT_TRUE(line.ends_with(" a\\nb"));
 }
 
 TEST_F(LogTest, EventsBeforeOpenAreWrittenOnOpen) {
   LOG_BUSINESS("first {}", 1);
   EXPECT_FALSE(fs::exists(file));
-  ASSERT_TRUE(log::open(file));
+  ASSERT_TRUE(logging::open(file));
   LOG_DESIGN_INSUFFICIENCY("second");
   auto const text = read_log();
   auto const first = text.find(" BUSINESS test_log.cpp:");
@@ -76,7 +76,7 @@ TEST_F(LogTest, EventsBeforeOpenAreWrittenOnOpen) {
 
 TEST_F(LogTest, AppendsToAnExistingLog) {
   std::ofstream(file) << "earlier\n";
-  ASSERT_TRUE(log::open(file));
+  ASSERT_TRUE(logging::open(file));
   LOG_BUSINESS("later");
   auto const text = read_log();
   EXPECT_TRUE(text.starts_with("earlier\n"));
@@ -84,14 +84,14 @@ TEST_F(LogTest, AppendsToAnExistingLog) {
 }
 
 TEST_F(LogTest, DevelopmentTraceFollowsTheBuildFlag) {
-  ASSERT_TRUE(log::open(file));
+  ASSERT_TRUE(logging::open(file));
   LOG_DEVELOPMENT_TRACE("traced");
   bool const traced = read_log().find(" DEVELOPMENT_TRACE ") != std::string::npos;
   EXPECT_EQ(traced, CRATCHIT_DEVELOPMENT_TRACE != 0);
 }
 
 TEST_F(LogTest, OpenFailsForAMissingFolder) {
-  auto const opened = log::open(root / "missing" / "log.txt");
+  auto const opened = logging::open(root / "missing" / "log.txt");
   ASSERT_FALSE(opened);
   EXPECT_NE(opened.error().find("Kan inte öppna loggen"), std::string::npos);
 }
