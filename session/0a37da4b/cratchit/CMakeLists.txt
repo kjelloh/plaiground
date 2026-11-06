@@ -41,7 +41,7 @@ target_link_libraries(cratchit_core PRIVATE cratchit_warnings)
 add_executable(cratchit
   src/main.cpp
 )
-target_link_libraries(cratchit PRIVATE cratchit_warnings)
+target_link_libraries(cratchit PRIVATE cratchit_core cratchit_warnings)
 
 include(CTest)
 if(BUILD_TESTING)

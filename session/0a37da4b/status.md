@@ -4,7 +4,8 @@
 
 * Steg 1: Tomt C++-projekt i `cratchit/` med CMake som konsument av Conan-paket.
 * Steg 2: Biblioteket `charset` i `cratchit/src/charset/` med tester i `cratchit/test/`. `gtest` är första Conan-paketet. `main` är fortfarande tom och använder inte `charset`.
-* Steg 3: `terminal_encoding` i `cratchit/src/core/` med tester, i biblioteket `cratchit_core`. `main` använder den inte än.
+* Steg 3: `terminal_encoding` i `cratchit/src/core/` med tester, i biblioteket `cratchit_core`.
+* Steg 4: `main` anropar `terminal_encoding` och skriver varningar till stderr. Utan varningar skriver programmet inget.
 
 ## Bygg och kör
 
@@ -23,6 +24,8 @@ ctest --preset conan-debug
 * `terminal_encoding` frågar inte macOS, utan antar UTF-8 där. Windows- och Linux-grenarna är inte byggda eller testade här.
 * 'Take 3' använder de gamla namnen `FromUnicodeBuffer` och `ToUnicodeBuffer`. Här heter de `Encoder` och `Decoder`.
 
+* När utmatningen faller tillbaka till UTF-8 på en terminal som inte är UTF-8 kan å, ä och ö i den svenska varningen bli fel, eftersom varningen själv skrivs som UTF-8.
+
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 3.
+* Bestäms av användaren. Väntar på användarens test av steg 4.
