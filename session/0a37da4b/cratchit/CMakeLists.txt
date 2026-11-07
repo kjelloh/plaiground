@@ -40,6 +40,7 @@ add_library(pyroceph
   src/pyroceph/tui/key_reader.cpp
   src/pyroceph/tui/prompt_loop.cpp
   src/pyroceph/tui/raw_mode.cpp
+  src/pyroceph/tui/state.cpp
 )
 target_include_directories(pyroceph PUBLIC src)
 target_link_libraries(pyroceph PUBLIC charset PRIVATE cratchit_warnings)

@@ -42,3 +42,7 @@ Kort logg över vad vi beslutat och varför.
 * `RawMode` stänger av radbuffring, eko och signaler. Ctrl-C, Ctrl-D och Ctrl-Z kommer då som tecken och avslutar loopen, så att terminalen alltid ställs tillbaka. Avviker från förslaget att behålla signalerna: Ctrl-C hade dödat programmet med terminalen kvar i rått läge.
 * På Windows läses en konsol med `ReadConsoleW` som UTF-16, oavsett kodtabell. Från en pipe läses bytes i den valda kodningen.
 * Promptloopen skriver bara ASCII (`U+00E5 (inget val)`), så att kodningen av utdata kan vänta. `Choice` är tom och uppslaget hittar aldrig något. Piltangenter med mera kommer som flera kodpunkter (ESC `[` `A`) och tolkas i ett senare steg.
+* Användargränssnittet är ett träd av `State` (namn och val) i `pyroceph/tui/state`. Ett `Choice` har en nyckel (`CodePoint`, helst '0'..'9'), en text och sitt mål-`State` som värde. Trädet är bara data, utan pekare och id.
+* `Navigator` håller vägen från roten till aktuellt state som en stack. Ett val går in i sitt state, `-` (`back_key`) går tillbaka och gör ingenting på roten. Ett val med nyckeln `-` kan inte nås. Trädet måste leva längre än navigatorn.
+* Promptloopen visar aktuellt state och dess val, och visar det nya varje gång state byts. Tangenter som inte är val ignoreras tyst. `Lookup` och den tomma `Choice` från steg 13 är borta.
+* Namn och val skrivs som UTF-8 rakt ut. Att skriva i terminalens kodning (med `Transcoder`) blir ett eget steg.

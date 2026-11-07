@@ -1,27 +1,23 @@
 #pragma once
 
 #include "pyroceph/tui/key_reader.hpp"
+#include "pyroceph/tui/state.hpp"
 
 #include <cstdio>
-#include <functional>
-#include <optional>
 
 namespace pyroceph::tui {
-
-// A choice a key can be mapped to. Empty for now: what a choice holds is
-// decided in a later step.
-struct Choice {};
-
-// The choice a code point is mapped to, if any
-using Lookup = std::function<std::optional<Choice>(CodePoint)>;
 
 // True for the keys that end the prompt loop: Ctrl-C (U+0003), Ctrl-D (U+0004)
 // and Ctrl-Z (U+001A), since RawMode makes them come as characters
 bool is_quit(CodePoint code_point);
 
-// Reads one code point at a time, looks it up and writes one ASCII line per
-// key to `out`, as "U+00E5 (inget val)". Ends at a quit key or when the
-// input ends.
-void run_prompt_loop(KeyReader& keys, Lookup const& lookup, std::FILE* out);
+// Writes the state's name and its choices, one per line, as UTF-8.
+// "- Tillbaka" is listed when the navigator can go back.
+void show(Navigator const& navigator, std::FILE* out);
+
+// Shows the current state, then reads one code point at a time and presses it
+// on the navigator. Shows the new state each time the state changes. Keys
+// that are not choices are ignored. Ends at a quit key or when the input ends.
+void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out);
 
 } // namespace pyroceph::tui

@@ -4,10 +4,10 @@
 #include "pyroceph/tui/key_reader.hpp"
 #include "pyroceph/tui/prompt_loop.hpp"
 #include "pyroceph/tui/raw_mode.hpp"
+#include "pyroceph/tui/state.hpp"
 
 #include <cstdio>
 #include <filesystem>
-#include <optional>
 #include <print>
 
 namespace {
@@ -18,8 +18,15 @@ charset::Encoding encoding_of(cratchit::Charset charset) {
   return charset == cratchit::Charset::Cp437 ? charset::Encoding::cp437 : charset::Encoding::utf8;
 }
 
-// No key is mapped to a choice yet
-std::optional<pyroceph::tui::Choice> lookup_choice(pyroceph::tui::CodePoint) { return std::nullopt; }
+// A first tree of states to navigate. The choices only move between states.
+pyroceph::tui::State make_menu() {
+  using pyroceph::tui::State;
+  return State{"Huvudmeny",
+               {
+                   {U'1', "Projekt", State{"Projekt", {{U'1', "Öppna", State{"Öppna projekt", {}}}}}},
+                   {U'2', "Bokslut", State{"Bokslut", {}}},
+               }};
+}
 
 } // namespace
 
@@ -53,9 +60,11 @@ int main() {
   {
     pyroceph::tui::RawMode raw_mode;
     auto keys = pyroceph::tui::terminal_key_reader(encoding_of(terminal_encoding.in));
-    std::println("Tryck en tangent i taget. Ctrl-C, Ctrl-D eller Ctrl-Z avslutar.");
+    auto const menu = make_menu();
+    pyroceph::tui::Navigator navigator(menu);
+    std::println("Välj med en tangent. Ctrl-C, Ctrl-D eller Ctrl-Z avslutar.");
     LOG_BUSINESS("Promptloopen startade");
-    pyroceph::tui::run_prompt_loop(keys, lookup_choice, stdout);
+    pyroceph::tui::run_prompt_loop(keys, navigator, stdout);
     if (keys.failure_count() > 0) LOG_DESIGN_INSUFFICIENCY("{} tangenter kunde inte avkodas", keys.failure_count());
   }
   LOG_BUSINESS("cratchit avslutades");

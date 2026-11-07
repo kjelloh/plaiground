@@ -15,6 +15,7 @@
 * Steg 11: Alla decoders har `failure_count()` (fel i parsningen av indata, alltid 0 för CP437). Alla encoders har `unmapped_count()` (kodpunkter utan mappning).
 * Steg 12: `BasicTranscoder` och `Transcoder` lämnar ut `failure_count()` och `unmapped_count()`.
 * Steg 13: `pyroceph::tui` med `RawMode`, `KeyReader` och `run_prompt_loop`, plus `charset::Decoder`. `main` kör promptloopen sist. Provkört med pipe på macOS, inte i en riktig terminal.
+* Steg 14: Träd av `State` och `Navigator` i `pyroceph/tui/state`. Promptloopen navigerar ett demoträd i `main` (Huvudmeny, Projekt, Öppna projekt, Bokslut). Provkört med pipe på macOS.
 
 ## Bygg och kör
 
@@ -43,4 +44,4 @@ Utan `HOME=...` används den riktiga `~/.cratchit`.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 13 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 14 i en riktig terminal.
