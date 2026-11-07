@@ -2,6 +2,22 @@
 
 ```#0a37da4b```
 
+## 20261107
+
+Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.
+
+* Jag bad Claude föreslå och implementera an 'Transcoder' för text-kodning.
+* Det såg bra ut på papperet.
+* MEN: Då jag hav OK så skapade Claude en typ som returnerade en struct!
+
+    * I mitt huvud borde det gå att para ihop en Decoder med en Encoder till en Transcode?
+    * Och bara ha en push av bytes i 'encoder'ändan'.
+    * Och få den att producera nullopt eller ut-bytes från Encoder-delen?
+    * Varför krånglade Claude till det?
+
+Jag backade och gjorde omtag.
+
+
 ## 20261106
 
 Så var det dags att testa att vibe-koda med Claude på svenska.
