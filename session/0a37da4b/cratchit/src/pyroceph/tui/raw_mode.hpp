@@ -8,6 +8,8 @@ namespace pyroceph::tui {
 // echo, and Ctrl-C and Ctrl-D come as characters (U+0003, U+0004) instead of
 // stopping the program or ending the input. That way the terminal is always
 // set back when this is destroyed. Does nothing when stdin is not a terminal.
+// On Windows it also asks the console for escape sequences for arrows and
+// other keys, as terminals on macOS and Linux send.
 class RawMode {
 public:
   RawMode();

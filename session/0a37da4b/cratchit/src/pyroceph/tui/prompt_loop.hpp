@@ -67,13 +67,15 @@ void show(Navigator const& navigator, std::FILE* out);
 // choices again. Any other printable key starts the input with that key.
 //
 // Typing input: printable keys go into the input and are echoed. Backspace
-// erases one; when the input becomes empty, navigating starts again. Ctrl-U
-// empties the input and navigating starts again. Enter gives the input to
+// and Delete erase one; when the input becomes empty, navigating starts
+// again. Esc and Ctrl-U empty the input and navigating starts again. Enter gives the input to
 // the state's on_input: when accepted, the reply is shown, the input is
 // emptied and navigating starts again; when not, the error text is shown and
 // the input is kept, so the user can correct it.
 //
-// Ends at a quit key or when the input ends, and then ends the prompt line.
+// Arrows and other function keys are read whole (see KeyParser) and do
+// nothing yet. Ends at a quit key or when the input ends, and then ends the
+// prompt line.
 void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out);
 
 } // namespace pyroceph::tui

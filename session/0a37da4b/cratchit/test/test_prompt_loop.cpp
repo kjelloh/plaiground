@@ -82,7 +82,7 @@ TEST(PromptLoop, HelpListsCommonKeysAndKeepsTheState) {
             "\n  -       Tillbaka"
             "\n  ?       Visa gemensamma val"
             "\n  Enter   Visa valen igen"
-            "\n  Ctrl-U  Töm indata"
+            "\n  Esc     Töm indata (även Ctrl-U)"
             "\n  Ctrl-D  Avsluta (även Ctrl-C och Ctrl-Z)"
             "\nHuvudmeny > Bokslut> "
             "\n");
@@ -258,7 +258,37 @@ TEST(PromptLoop, BackAtRootIsNoInput) {
 TEST(PromptLoop, ControlKeyThatIsNoActionIsIgnored) {
   auto const root = tree_with_input();
   Navigator navigator(root);
-  auto keys = keys_of({0x1B, 0x15, 0x7F, '1'});
+  auto keys = keys_of({0x15, 0x7F, '1'});
   run(keys, navigator);
   EXPECT_EQ(navigator.current().name, "Bokslut");
+}
+
+TEST(PromptLoop, ArrowsDoNotGoIntoTheInput) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'x', 0x1B, '[', 'A', 0x1B, '[', '1', '5', '~', 'y'}); // x, up, F5, y
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \b\b: xy\n");
+}
+
+TEST(PromptLoop, ArrowsDoNothingWhileNavigating) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({0x1B, '[', 'B', '1'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \nHuvudmeny > Bokslut> \n");
+}
+
+TEST(PromptLoop, EscEmptiesTheInput) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'x', 'y', 0x1B, '1'}); // Esc then 1: 1 is a choice again
+  EXPECT_EQ(run(keys, navigator),
+            "\n  1 Bokslut\nHuvudmeny> \b\b: xy\b \b\b \b\b\b> "
+            "\nHuvudmeny > Bokslut> \n");
+}
+
+TEST(PromptLoop, DeleteErasesLikeBackspace) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'x', 'y', 0x1B, '[', '3', '~'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \b\b: xy\b \b\n");
 }

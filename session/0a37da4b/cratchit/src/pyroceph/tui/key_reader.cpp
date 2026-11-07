@@ -10,9 +10,11 @@
 #include <windows.h>
 #else
 #include <cerrno>
+#include <poll.h>
 #include <unistd.h>
 #endif
 
+#include <memory>
 #include <utility>
 
 namespace pyroceph::tui {
@@ -45,6 +47,11 @@ public:
     if (!ReadConsoleW(input_, &unit, 1, &read, nullptr) || read == 0) return std::nullopt;
     high_ = static_cast<std::uint8_t>(unit >> 8);
     return static_cast<std::uint8_t>(unit & 0xFF);
+  }
+
+  bool ready(std::chrono::milliseconds wait) const {
+    if (high_) return true;
+    return WaitForSingleObject(input_, static_cast<DWORD>(wait.count())) == WAIT_OBJECT_0;
   }
 
 private:
@@ -80,6 +87,11 @@ std::optional<std::uint8_t> read_stdin_byte() {
   }
 }
 
+bool stdin_ready(std::chrono::milliseconds wait) {
+  pollfd fd{STDIN_FILENO, POLLIN, 0};
+  return ::poll(&fd, 1, static_cast<int>(wait.count())) != 0;
+}
+
 #endif
 
 } // namespace
@@ -88,10 +100,14 @@ KeyReader terminal_key_reader(charset::Encoding encoding) {
 #if defined(_WIN32)
   auto const input = GetStdHandle(STD_INPUT_HANDLE);
   DWORD mode = 0;
-  if (GetConsoleMode(input, &mode)) return KeyReader(ConsoleSource(input), charset::Encoding::utf16le);
+  if (GetConsoleMode(input, &mode)) {
+    auto console = std::make_shared<ConsoleSource>(input);
+    return KeyReader([console] { return (*console)(); }, charset::Encoding::utf16le,
+                     [console](std::chrono::milliseconds wait) { return console->ready(wait); });
+  }
   return KeyReader(FileSource(input), encoding);
 #else
-  return KeyReader(read_stdin_byte, encoding);
+  return KeyReader(read_stdin_byte, encoding, stdin_ready);
 #endif
 }
 

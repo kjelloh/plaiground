@@ -2,6 +2,7 @@
 
 #include "charset/utf8.hpp"
 #include "pyroceph/tui/input_buffer.hpp"
+#include "pyroceph/tui/key_parser.hpp"
 
 #include <print>
 #include <string>
@@ -39,6 +40,20 @@ void to_navigation_prompt(std::FILE* out) { std::print(out, "\b\b> "); }
 // Moves back over one code point on the terminal and blanks it
 void unecho(std::FILE* out) { std::print(out, "\b \b"); }
 
+// Erases the last code point of the input. Navigating starts again when it becomes empty.
+void erase_one(InputBuffer& input, std::FILE* out) {
+  input.erase();
+  unecho(out);
+  if (input.empty()) to_navigation_prompt(out);
+}
+
+// Empties the input, and navigating starts again
+void erase_all(InputBuffer& input, std::FILE* out) {
+  for (std::size_t i = 0; i < input.size(); ++i) unecho(out);
+  input.clear();
+  to_navigation_prompt(out);
+}
+
 // Handles a key while navigating. Starts the input with it when it is no action.
 void navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE* out) {
   if (key == help_key) {
@@ -58,13 +73,9 @@ void navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE
 // Handles a key while typing input
 void edit(CodePoint key, Navigator const& navigator, InputBuffer& input, std::FILE* out) {
   if (is_backspace(key)) {
-    input.erase();
-    unecho(out);
-    if (input.empty()) to_navigation_prompt(out);
+    erase_one(input, out);
   } else if (key == clear_key) {
-    for (std::size_t i = 0; i < input.size(); ++i) unecho(out);
-    input.clear();
-    to_navigation_prompt(out);
+    erase_all(input, out);
   } else if (is_enter(key)) {
     auto const& on_input = navigator.current().on_input;
     auto const result = on_input ? on_input(input.text()) : InputResult(std::unexpected(std::string(no_input_error)));
@@ -77,6 +88,15 @@ void edit(CodePoint key, Navigator const& navigator, InputBuffer& input, std::FI
     }
   } else if (input.push(key)) {
     std::print(out, "{}", utf8_of(key));
+  }
+}
+
+// Handles a function key while typing input. Function keys do nothing while navigating.
+void edit(FunctionKey key, InputBuffer& input, std::FILE* out) {
+  if (key == FunctionKey::escape) {
+    erase_all(input, out);
+  } else if (key == FunctionKey::del) {
+    erase_one(input, out); // the cursor is always at the end
   }
 }
 
@@ -95,7 +115,7 @@ std::vector<CommonKey> common_keys(Navigator const& navigator) {
   if (navigator.can_go_back()) keys.push_back({utf8_of(back_key), "Tillbaka"});
   keys.push_back({utf8_of(help_key), "Visa gemensamma val"});
   keys.push_back({"Enter", "Visa valen igen"});
-  keys.push_back({"Ctrl-U", "Töm indata"});
+  keys.push_back({"Esc", "Töm indata (även Ctrl-U)"});
   keys.push_back({"Ctrl-D", "Avsluta (även Ctrl-C och Ctrl-Z)"});
   return keys;
 }
@@ -123,14 +143,19 @@ void show(Navigator const& navigator, std::FILE* out) {
 }
 
 void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out) {
+  KeyParser parser(keys);
   InputBuffer input;
   show(navigator, out);
-  while (auto const key = keys.next()) {
-    if (is_quit(*key)) break;
-    if (input.empty()) {
-      navigate(*key, navigator, input, out);
-    } else {
-      edit(*key, navigator, input, out);
+  while (auto const key = parser.next()) {
+    if (auto const* code_point = std::get_if<CodePoint>(&*key)) {
+      if (is_quit(*code_point)) break;
+      if (input.empty()) {
+        navigate(*code_point, navigator, input, out);
+      } else {
+        edit(*code_point, navigator, input, out);
+      }
+    } else if (!input.empty()) {
+      edit(std::get<FunctionKey>(*key), input, out);
     }
     std::fflush(out);
   }

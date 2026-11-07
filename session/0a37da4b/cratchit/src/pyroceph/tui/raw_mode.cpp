@@ -8,6 +8,9 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#ifndef ENABLE_VIRTUAL_TERMINAL_INPUT
+#define ENABLE_VIRTUAL_TERMINAL_INPUT 0x0200
+#endif
 #else
 #include <termios.h>
 #include <unistd.h>
@@ -27,7 +30,9 @@ RawMode::RawMode() {
   DWORD mode = 0;
   if (input == INVALID_HANDLE_VALUE || !GetConsoleMode(input, &mode)) return;
   auto const raw = mode & ~static_cast<DWORD>(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
-  if (!SetConsoleMode(input, raw)) return;
+  // Arrows and other keys as escape sequences, as on macOS and Linux (Windows 10
+  // and later). Without it they give no characters at all.
+  if (!SetConsoleMode(input, raw | ENABLE_VIRTUAL_TERMINAL_INPUT) && !SetConsoleMode(input, raw)) return;
   saved_ = std::make_unique<Saved>(Saved{input, mode});
 }
 
