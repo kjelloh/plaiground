@@ -161,7 +161,7 @@ MEN GUD VILKEN FRIKTION!!
 * Det är filer och mappar som jag inte vet varifrån de kommer (nya av Claud eller gamla från felkörningar)
 * OSV, OSV OSV...
 
-
+Så, nu är allt grönt uppe hos Github!
 
 ## 20261106
 

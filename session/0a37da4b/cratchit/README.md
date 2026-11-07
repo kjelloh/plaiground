@@ -71,7 +71,7 @@ cmake --preset conan-default
 cmake --install build --config Release --prefix <folder>
 ```
 
-Add `<folder>\bin` to `PATH` yourself. The Windows install steps are not tried yet.
+Add `<folder>\bin` to `PATH` yourself. GitHub Actions installs a Debug build this way on Windows, Linux and macOS and runs it via `PATH`; `install.py` itself is only tried on macOS.
 
 ## Build for development
 

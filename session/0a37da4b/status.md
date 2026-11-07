@@ -31,6 +31,7 @@
 * Steg 27: `cratchit/framework/` heter nu `cratchit/resources/`.
 * Steg 28: MSVC-felet C4702 i `charset/decoder.cpp` rättat. Windows-bygget har troligen aldrig kommit förbi `charset`, så fler fel kan komma i `pyroceph`, `main.cpp` och testerna.
 * Steg 29: Med MSVC kompilerar nu `charset`, `cratchit_core`, `pyroceph` och `main.cpp` (enligt CI-loggen). Två varningar i `test/test_prompt_loop.cpp` rättade (C4996 `tmpfile`, C4244). Länkning och körning av testerna på Windows ännu inte sedda.
+* 2026-11-07: GitHub Actions grönt på Linux, macOS och Windows: bygge, alla tester, körning från byggmappen och installation (Debug) med körning via `PATH`. Därmed är Windows- och Linux-grenarna i `dot_folder` (`program_folder`, `user_home`), `terminal_encoding`, `RawMode` och `KeyReader` byggda och körda i CI (utan riktig terminal). `install.py` är inte körd på Windows eller Linux.
 
 ## Bygg, kör och installera
 
@@ -39,14 +40,14 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 ## Att känna till
 
 * `detect` innehåller bara `is_utf8`, som testar om bytes är UTF-8. Plattformens och terminalens kodning tas reda på av `terminal_encoding`.
-* `terminal_encoding` frågar inte macOS, utan antar UTF-8 där. Windows- och Linux-grenarna är inte byggda eller testade här.
+* `terminal_encoding` frågar inte macOS, utan antar UTF-8 där. Windows- och Linux-grenarna är byggda och körda i GitHub Actions, inte lokalt.
 * 'Take 3' använder de gamla namnen `FromUnicodeBuffer` och `ToUnicodeBuffer`. Här heter de `Encoder` och `Decoder`.
 
 * När utmatningen faller tillbaka till UTF-8 på en terminal som inte är UTF-8 kan å, ä och ö i den svenska varningen bli fel, eftersom varningen själv skrivs som UTF-8.
 
 * Programmet skapar `.cratchit` med `runtime.txt` i hemkatalogen, om den saknas. Startmappen spelar ingen roll. Framework läses från `.cratchit` bredvid programmet.
-* Bara macOS-grenen är byggd och körd lokalt. Windows- och Linux-grenarna i `dot_folder` och `terminal_encoding` provas först när `.github/workflows/cratchit-0a37da4b.yml` har körts på GitHub.
+* Bara macOS är byggt och kört lokalt. Linux och Windows byggs, testas och installeras i `.github/workflows/cratchit-0a37da4b.yml`, men utan en riktig terminal (indata från en tom pipe).
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 26 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 29 i en riktig terminal.
