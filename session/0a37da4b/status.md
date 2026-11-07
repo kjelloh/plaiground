@@ -29,6 +29,7 @@
 * Steg 25: GitHub Actions kontrollerar att framework ligger bredvid programmet och att runtime skapas i HOME (utan `framework.txt`). Nytt steg installerar (Debug) och kör det installerade programmet via `PATH` från en annan mapp, på alla tre plattformar. Stegets kommandon provade lokalt på macOS, workflow inte körd.
 * Steg 26: `cratchit/install.py` (`--prefix`, `--try`, `--no-tests`). Provkört på macOS: `--try` från `/tmp`, `--try` i en flyttad kopia (byggmappen gjordes om, andra gången inte), `--prefix` till en tillfällig mapp. Inte installerat i `~/.local` på riktigt. Windows-grenen (`conan-default`, `--config Release`, `cratchit.exe`) inte provad.
 * Steg 27: `cratchit/framework/` heter nu `cratchit/resources/`.
+* Steg 28: MSVC-felet C4702 i `charset/decoder.cpp` rättat. Windows-bygget har troligen aldrig kommit förbi `charset`, så fler fel kan komma i `pyroceph`, `main.cpp` och testerna.
 
 ## Bygg, kör och installera
 

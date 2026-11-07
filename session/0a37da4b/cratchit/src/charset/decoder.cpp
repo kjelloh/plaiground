@@ -19,8 +19,12 @@ std::optional<unicode::CodePoint> Decoder::push(std::uint8_t byte) {
 std::optional<unicode::CodePoint> Decoder::finish() {
   return std::visit(
       [](auto& decoder) -> std::optional<unicode::CodePoint> {
-        if constexpr (requires { decoder.finish(); }) return decoder.finish();
-        return std::nullopt;
+        // else, so that the other return is discarded rather than unreachable (MSVC C4702)
+        if constexpr (requires { decoder.finish(); }) {
+          return decoder.finish();
+        } else {
+          return std::nullopt;
+        }
       },
       decoder_);
 }
