@@ -25,6 +25,7 @@ endif()
 # and Transcoder that pairs a decoder with an encoder
 add_library(charset
   src/charset/cp437.cpp
+  src/charset/decoder.cpp
   src/charset/detect.cpp
   src/charset/transcoder.cpp
   src/charset/utf16.cpp
@@ -32,6 +33,16 @@ add_library(charset
 )
 target_include_directories(charset PUBLIC src)
 target_link_libraries(charset PRIVATE cratchit_warnings)
+
+# The terminal UI library pyroceph, namespace pyroceph::tui. Knows nothing of
+# cratchit, so that it can become a library of its own.
+add_library(pyroceph
+  src/pyroceph/tui/key_reader.cpp
+  src/pyroceph/tui/prompt_loop.cpp
+  src/pyroceph/tui/raw_mode.cpp
+)
+target_include_directories(pyroceph PUBLIC src)
+target_link_libraries(pyroceph PUBLIC charset PRIVATE cratchit_warnings)
 
 # Application logic (from take 3, session 60cae9fe)
 add_library(cratchit_core
@@ -59,7 +70,7 @@ target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${dev
 add_executable(cratchit
   src/main.cpp
 )
-target_link_libraries(cratchit PRIVATE cratchit_core cratchit_warnings)
+target_link_libraries(cratchit PRIVATE cratchit_core pyroceph cratchit_warnings)
 
 include(CTest)
 if(BUILD_TESTING)

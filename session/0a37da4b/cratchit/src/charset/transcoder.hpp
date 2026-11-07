@@ -1,6 +1,7 @@
 #pragma once
 
 #include "charset/cp437.hpp"
+#include "charset/encoding.hpp"
 #include "charset/unicode.hpp"
 #include "charset/utf16.hpp"
 #include "charset/utf8.hpp"
@@ -23,9 +24,6 @@ struct Bytes {
   std::uint8_t const* begin() const { return bytes.data(); }
   std::uint8_t const* end() const { return bytes.data() + size; }
 };
-
-// The encodings make_transcoder can read from and write to
-enum class Encoding { utf8, utf16be, utf16le, cp437 };
 
 // Pairs a decoder with an encoder. Takes bytes in one encoding one at a time
 // and gives back the bytes of each character in the other encoding as it

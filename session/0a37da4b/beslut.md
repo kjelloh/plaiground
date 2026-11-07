@@ -36,3 +36,9 @@ Kort logg över vad vi beslutat och varför.
 * För UTF-8 och UTF-16 räknas ett surrogat eller ett värde över U+10FFFF som omappat: det blir U+FFFD. U+FFFD i sig är ett riktigt tecken och räknas inte.
 * En Encoder ger ingenting för en kodpunkt den saknar mappning för, bara en uppräkning av `unmapped_count()`. Det gäller även U+FFFD till CP437. Ett försök med `?` för U+FFFD backades (ett `?` kan inte skiljas från ett äkta `?`, och det blev ett specialfall). Hur något bättre ska produceras beslutas senare.
 * `BasicTranscoder` och `Transcoder` lämnar ut `failure_count()` från decodern och `unmapped_count()` från encodern, rakt igenom utan egen räkning. Ingen summa, eftersom samma tecken kan räknas i båda (trasig UTF-8 till CP437).
+* TUI-biblioteket heter `pyroceph`, med namespace `pyroceph::tui` och kod i `src/pyroceph/tui/`. Det beror bara på `charset`, inte på `cratchit_core`, så att det kan bli ett eget bibliotek. `main` översätter `cratchit::Charset` till `charset::Encoding`.
+* Tangenter blir Unicode-kodpunkter direkt vid gränsen mot terminalen (`KeyReader`). Bytekällan skickas in som funktion, så att loopen kan testas utan terminal.
+* `charset::Decoder` väljs när programmet körs, med `Encoding`. `Encoding` ligger nu i `charset/encoding.hpp`, och `make_any_decoder` delas med `make_transcoder`.
+* `RawMode` stänger av radbuffring, eko och signaler. Ctrl-C, Ctrl-D och Ctrl-Z kommer då som tecken och avslutar loopen, så att terminalen alltid ställs tillbaka. Avviker från förslaget att behålla signalerna: Ctrl-C hade dödat programmet med terminalen kvar i rått läge.
+* På Windows läses en konsol med `ReadConsoleW` som UTF-16, oavsett kodtabell. Från en pipe läses bytes i den valda kodningen.
+* Promptloopen skriver bara ASCII (`U+00E5 (inget val)`), så att kodningen av utdata kan vänta. `Choice` är tom och uppslaget hittar aldrig något. Piltangenter med mera kommer som flera kodpunkter (ESC `[` `A`) och tolkas i ett senare steg.

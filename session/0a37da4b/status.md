@@ -14,6 +14,7 @@
 * Steg 10: `Transcoder`, `BasicTranscoder` och `make_transcoder` i `cratchit/src/charset/transcoder.*` med tester i `test/test_transcoder.cpp`. Används ännu inte av `main`.
 * Steg 11: Alla decoders har `failure_count()` (fel i parsningen av indata, alltid 0 för CP437). Alla encoders har `unmapped_count()` (kodpunkter utan mappning).
 * Steg 12: `BasicTranscoder` och `Transcoder` lämnar ut `failure_count()` och `unmapped_count()`.
+* Steg 13: `pyroceph::tui` med `RawMode`, `KeyReader` och `run_prompt_loop`, plus `charset::Decoder`. `main` kör promptloopen sist. Provkört med pipe på macOS, inte i en riktig terminal.
 
 ## Bygg och kör
 
@@ -42,4 +43,4 @@ Utan `HOME=...` används den riktiga `~/.cratchit`.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 10.
+* Bestäms av användaren. Väntar på användarens test av steg 13 i en riktig terminal.
