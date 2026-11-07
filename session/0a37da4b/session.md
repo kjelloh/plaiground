@@ -51,6 +51,38 @@ Nu har jag itererat en mängd små ändringar och skaffat mig en intuitiv känsl
     * Claude är dålig på att välja kod som också 'passar ihop' med 'befintligt beteende' (ungefär)
     * Det är svårt att sätta ord på det. Men Claude 'förstår inte konsekvenserna'. Det måste jag håla koll på och styra efter. 
 
+Jag gjorde ett försök till att med hjälp av Claude införa state för listor som skapas och numrerar i runtime.
+
+* Men den kod som Claude skrev blev för tungrodd?
+* Jag tror heller inte att den kommer att fungera för de behov vi har?
+
+Jag tog en promenad och insåg att jag redan klöst detta problem tidigare.
+
+* Så jag får nog be Claude återskapa den design jag redan provat och som fungerar.
+* Nämligen att låta trädet av state växa via aktuellt state hela tiden.
+* Aktuellt state vet vilka nästa state det stöder.
+* Och aktuellt state vet hur nästa state kan skapas ur aktuellt state.
+* Så TUI behöver fråga aktuellt state hur aktuella val skall visas för användaren.
+* Och TUI skall fråga state hur det agerar på en tangent och returnera ett nytt state när så är aktuellt.
+* TUI kan då fortfarande ha ett träd av de state som just nu ligger på stacken.
+
+Låt oss se om Claude kan skapa koden som gör detta istället? Jag fråga Claude.
+
+```text
+Jag har nu insett att vi inte kan låta TUI ha ett statiskt träd av state från början. TUI behöver be aktuellt state skapa nästa state på tangent när så skall ske. Anledningen är att många state visar en lista av val som vi vet först när programmet körs. Vi har exempel som vilka projekt vi kan välja att öppna. Vilka financiella år vi kan öppna. Vilka verifikation som finns i bokföringen osv.  Jag tänker mig att TUI får fråga state hur listan med val skall se ut för användaren. Frågan till dig blir om detta är görligt i aktuell kod? Hur stor ändring är det? Hur styår sig mitt förslag på hur andrqa TUI navigerar state? Vilka för och nackdelar har denna lösning. Vad kan du föreslå?
+```
+
+NEJ. Det här fungerade inte heller.
+
+* Jag fick en konstig lösning med factory i State?
+* Men mitt förslag var ju att TUI frågar state efter nytt state på tangent.
+* Men jag inser nu att jag var otydlig?
+    * Jag skulle ha specat att on_key skall returnera nytt state eller nullptr?
+    * Och att frågan efter vilka options som finns kan returnera en vektor av strängar?
+* Jag chattade fram och tillbaka och plötsligt drog Claude igång att koda fast jag bett om att ge mig ett förslag först!
+
+Så jag avbryt, använde git för att reversera och startade om IGEN!
+
 ## 20261106
 
 Så var det dags att testa att vibe-koda med Claude på svenska.
