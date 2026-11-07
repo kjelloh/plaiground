@@ -14,12 +14,12 @@ namespace pyroceph::tui {
 // and Ctrl-Z (U+001A), since RawMode makes them come as characters
 bool is_quit(CodePoint code_point);
 
-// The key that lists the common keys. A choice with this key cannot be reached.
+// The key that lists the common keys, unless the current state maps it itself
 inline constexpr CodePoint help_key = U'?';
 
-// True for Enter, which shows the current state's choices again. Enter comes
+// True for Enter, which shows the current state's options again. Enter comes
 // as U+000A on macOS and Linux (the terminal turns CR into LF) and as U+000D
-// from a Windows console. A choice with either key cannot be reached.
+// from a Windows console.
 bool is_enter(CodePoint code_point);
 
 // True for Backspace, which erases the last code point of the input. It comes
@@ -28,9 +28,6 @@ bool is_backspace(CodePoint code_point);
 
 // Ctrl-U (U+0015) empties the input and goes back to navigating
 inline constexpr CodePoint clear_key = 0x15;
-
-// The error text when a state without on_input gets text
-inline constexpr std::string_view no_input_error = "Här finns inget att göra med indata.";
 
 // A key that works the same in every state, as listed by help_key
 struct CommonKey {
@@ -55,16 +52,17 @@ std::string prompt_of(Navigator const& navigator);
 // As prompt_of but ending in ": ", shown while the user types input
 std::string edit_prompt_of(Navigator const& navigator);
 
-// Writes the current state's choices, one per line, then the prompt with no
-// line end, as UTF-8. Only the choices that lead to another state are listed,
-// not the common keys.
+// Writes the current state's options, one per line as key and caption, then
+// the prompt with no line end, as UTF-8. The common keys are not listed.
 void show(Navigator const& navigator, std::FILE* out);
 
 // Shows the current state, then reads one code point at a time.
 //
-// Navigating: a choice moves to its state and shows it, back_key goes back
-// (nothing at the root), help_key shows the common keys and Enter shows the
-// choices again. Any other printable key starts the input with that key.
+// Navigating: a quit key ends the loop. Any other key goes to the current
+// state first, and when it answers with a new state, that state is shown.
+// When the state has no mapping for the key, the common keys apply: back_key
+// goes back (nothing at the root), help_key shows the common keys and Enter
+// shows the options again. Any other printable key starts the input with that key.
 //
 // Typing input: printable keys go into the input and are echoed. Backspace
 // and Delete erase one; when the input becomes empty, navigating starts

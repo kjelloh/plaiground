@@ -25,9 +25,9 @@ std::string utf8_of(std::u32string const& text) {
 
 std::string path_of(Navigator const& navigator) {
   std::string path;
-  for (auto const* state : navigator.path()) {
+  for (auto const& state : navigator.path()) {
     if (!path.empty()) path += path_separator;
-    path += state->name;
+    path += state->name();
   }
   return path;
 }
@@ -54,15 +54,16 @@ void erase_all(InputBuffer& input, std::FILE* out) {
   to_navigation_prompt(out);
 }
 
-// Handles a key while navigating. Starts the input with it when it is no action.
+// Handles a key while navigating: the current state first, then the common
+// keys. Starts the input with the key when it is no action.
 void navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE* out) {
-  if (key == help_key) {
-    show_common_keys(navigator, out);
-  } else if (is_enter(key)) {
+  if (navigator.press(key)) {
     show(navigator, out);
   } else if (key == back_key) {
-    if (navigator.press(key)) show(navigator, out);
-  } else if (navigator.press(key)) {
+    if (navigator.back()) show(navigator, out);
+  } else if (key == help_key) {
+    show_common_keys(navigator, out);
+  } else if (is_enter(key)) {
     show(navigator, out);
   } else if (input.push(key)) {
     to_edit_prompt(out);
@@ -71,14 +72,13 @@ void navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE
 }
 
 // Handles a key while typing input
-void edit(CodePoint key, Navigator const& navigator, InputBuffer& input, std::FILE* out) {
+void edit(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE* out) {
   if (is_backspace(key)) {
     erase_one(input, out);
   } else if (key == clear_key) {
     erase_all(input, out);
   } else if (is_enter(key)) {
-    auto const& on_input = navigator.current().on_input;
-    auto const result = on_input ? on_input(input.text()) : InputResult(std::unexpected(std::string(no_input_error)));
+    auto const result = navigator.current().on_input(input.text());
     if (result) {
       input.clear();
       if (!result->empty()) std::print(out, "\n{}", *result);
@@ -135,8 +135,8 @@ std::string edit_prompt_of(Navigator const& navigator) { return path_of(navigato
 
 void show(Navigator const& navigator, std::FILE* out) {
   std::print(out, "\n");
-  for (auto const& choice : navigator.current().choices) {
-    std::print(out, "  {} {}\n", utf8_of(choice.key), choice.caption);
+  for (auto const& [key, caption] : navigator.current().options()) {
+    std::print(out, "  {} {}\n", utf8_of(key), caption);
   }
   std::print(out, "{}", prompt_of(navigator));
   std::fflush(out);

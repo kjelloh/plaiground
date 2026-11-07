@@ -21,6 +21,7 @@
 * Steg 17: Enter visar valen igen (`is_enter`). Provkört med pipe på macOS.
 * Steg 18: Indata i `InputBuffer` och `State::on_input`. Redigering börjar när en tangent inte är en handling. Demo: `Bokslut` tar emot ett år. Provkört med pipe på macOS.
 * Steg 19: `KeyParser` och `FunctionKey`. Esc tömmer indata, Delete suddar, pilar med mera känns igen men gör inget. Provkört med pipe och med pseudoterminal (`script`) på macOS. Windows-delen är bara skriven, inte byggd.
+* Steg 20: `State` är en basklass, och trädet byggs medan användaren navigerar (`on_key` ger `OnKeyResult`, `options()` ger `OptionsList`). `Navigator` äger statena och förstör dem när användaren lämnar dem. Provkört med pipe på macOS.
 
 ## Bygg och kör
 
@@ -49,4 +50,4 @@ Utan `HOME=...` används den riktiga `~/.cratchit`.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 19 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 20 i en riktig terminal.

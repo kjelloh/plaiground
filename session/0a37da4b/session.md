@@ -83,6 +83,26 @@ NEJ. Det här fungerade inte heller.
 
 Så jag avbryt, använde git för att reversera och startade om IGEN!
 
+Jag prövade en ny prompt.
+
+```text
+Nu skall jag vara extra tydlig eftersom det verkar som om du blir förvirrad av mina beskrivningar. Jag vill nu att vi gör om koden så att TUI bygger trädet av State dynamiskt. Jag vill att TUI exponerar en basklass State som en 'klient-del' kan ärva ifrån för sina konklreta states. TUI frågart aktuellt state efter en vector<string> att visa för användarern som listar vilka val statet själv definierar. När TUI skicakr en tangent till State får den tillbaka State* eller nullptr och uppdaterar sitt träd efter svaret. Här betyder nullptr att ingen mappning finns i state. TUI frågar då 'sig själv' om en generell mappning finns. PÅ detta sätt föreställer jag mig att vi kan bygga trädet av State dynamiskt allt eftersom användar navigera sig in på en väg. TUI äger fortfarande skapade states men destruerar dom då användaren lämnar det. Vad tror du? Kan du göra om koden till detta beteende? Vad föreslår du?
+```
+
+Idag är en sådan dag då jag inte tror AI-agenter för kodning är tillräckligt bra än?
+
+* Jag har nu hamnat i ett läge då det är svårt att få Claude att skapa kod som jag tycker är tillräckligt bra?
+* Jag undrar om det beror på att Claude läser denna session.md och min besvikelse smutsar ner Claud:s context-fönster?
+* Något skaver i alla fall idag?
+* Kanske borde jag vara mer konstruktiv i min kritik av de förslag Clade ger mig?
+* Så kan jag hitta ett sätt så att Claude resonerar i ett 'bättre' spår?
+
+Nu gick det vägen!
+
+* Claude gav mig nu något som beter sig som förut och som på papperet borde vara det jag vill ha.
+
+Vi märker det när vi försöker igen att skapa numrerade listor av element.
+
 ## 20261106
 
 Så var det dags att testa att vibe-koda med Claude på svenska.

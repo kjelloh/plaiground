@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <format>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <print>
@@ -22,26 +23,58 @@ charset::Encoding encoding_of(cratchit::Charset charset) {
   return charset == cratchit::Charset::Cp437 ? charset::Encoding::cp437 : charset::Encoding::utf8;
 }
 
-// Demo: Bokslut takes a year of four digits
-pyroceph::tui::InputResult bokslut_year(std::u32string_view text) {
-  auto const is_digit = [](char32_t c) { return c >= U'0' && c <= U'9'; };
-  if (text.size() != 4 || !std::ranges::all_of(text, is_digit)) {
-    return std::unexpected(std::string("Ange ett år med fyra siffror, till exempel 2025."));
-  }
-  std::string year;
-  for (auto const c : text) year.push_back(static_cast<char>(c));
-  return std::format("Bokslut för {} noterat.", year);
-}
+using pyroceph::tui::CodePoint;
+using pyroceph::tui::InputResult;
+using pyroceph::tui::OnKeyResult;
+using pyroceph::tui::OptionsList;
+using pyroceph::tui::State;
 
-// A first tree of states to navigate. The choices only move between states.
-pyroceph::tui::State make_menu() {
-  using pyroceph::tui::State;
-  return State{"Huvudmeny",
-               {
-                   {U'1', "Projekt", State{"Projekt", {{U'1', "Öppna", State{"Öppna projekt"}}}}},
-                   {U'2', "Bokslut", State{"Bokslut", {}, bokslut_year}},
-               }};
-}
+// Demo states. Each state creates the next one when the user goes there.
+
+class OppnaProjektState : public State {
+public:
+  std::string name() const override { return "Öppna projekt"; }
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+};
+
+class ProjektState : public State {
+public:
+  std::string name() const override { return "Projekt"; }
+  OptionsList options() const override { return {{U'1', "Öppna"}}; }
+  OnKeyResult on_key(CodePoint key) override {
+    if (key == U'1') return std::make_unique<OppnaProjektState>();
+    return nullptr;
+  }
+};
+
+// Takes a year of four digits
+class BokslutState : public State {
+public:
+  std::string name() const override { return "Bokslut"; }
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  InputResult on_input(std::u32string_view text) override {
+    auto const is_digit = [](char32_t c) { return c >= U'0' && c <= U'9'; };
+    if (text.size() != 4 || !std::ranges::all_of(text, is_digit)) {
+      return std::unexpected(std::string("Ange ett år med fyra siffror, till exempel 2025."));
+    }
+    std::string year;
+    for (auto const c : text) year.push_back(static_cast<char>(c));
+    return std::format("Bokslut för {} noterat.", year);
+  }
+};
+
+class HuvudmenyState : public State {
+public:
+  std::string name() const override { return "Huvudmeny"; }
+  OptionsList options() const override { return {{U'1', "Projekt"}, {U'2', "Bokslut"}}; }
+  OnKeyResult on_key(CodePoint key) override {
+    if (key == U'1') return std::make_unique<ProjektState>();
+    if (key == U'2') return std::make_unique<BokslutState>();
+    return nullptr;
+  }
+};
 
 } // namespace
 
@@ -75,8 +108,7 @@ int main() {
   {
     pyroceph::tui::RawMode raw_mode;
     auto keys = pyroceph::tui::terminal_key_reader(encoding_of(terminal_encoding.in));
-    auto const menu = make_menu();
-    pyroceph::tui::Navigator navigator(menu);
+    pyroceph::tui::Navigator navigator(std::make_unique<HuvudmenyState>());
     std::println("Tryck ? för gemensamma val.");
     LOG_BUSINESS("Promptloopen startade");
     pyroceph::tui::run_prompt_loop(keys, navigator, stdout);

@@ -3,7 +3,7 @@
 #include "pyroceph/tui/key_reader.hpp"
 
 #include <expected>
-#include <functional>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -11,67 +11,76 @@
 
 namespace pyroceph::tui {
 
-// The key that goes back to the state before. A choice with this key cannot be reached.
+// The key that goes back to the state before, unless the current state maps it itself
 inline constexpr CodePoint back_key = U'-';
 
-struct Choice;
+// The error text when a state that takes no input gets text
+inline constexpr std::string_view no_input_error = "Här finns inget att göra med indata.";
+
+class State;
+
+// What a state answers to a key: the next state, or nullptr when the state has
+// no mapping for the key. The TUI takes over the new state.
+using OnKeyResult = std::unique_ptr<State>;
+
+// One option a state offers: its key and its caption (UTF-8, e.g. "Bokslut")
+using Option = std::pair<CodePoint, std::string>;
+
+// The options a state offers, in display order. The TUI formats the list.
+using OptionsList = std::vector<Option>;
 
 // What a state answers to text the user entered: a reply to show (may be
 // empty) when it accepts the text, or an error text when it does not. All UTF-8.
 using InputResult = std::expected<std::string, std::string>;
 
-// Acts on text the user entered in a state
-using OnInput = std::function<InputResult(std::u32string_view)>;
+// One place in the UI. The client derives its concrete states from it.
+//
+// A state creates the next state itself, in on_key, when the user goes there.
+// So the tree of states grows as the user navigates, and a state can offer
+// options that are only known when the program runs (projects, years, ...).
+class State {
+public:
+  virtual ~State() = default;
 
-// One place in the UI: its name, the choices it offers and what it does with
-// text the user enters there
-struct State {
-  // Overloads rather than default arguments, since Choice is not complete yet
-  explicit State(std::string name);
-  State(std::string name, std::vector<Choice> choices);
-  State(std::string name, std::vector<Choice> choices, OnInput on_input);
+  // The place's name, e.g. "Huvudmeny". Shown in the path, so keep it short. UTF-8.
+  virtual std::string name() const = 0;
 
-  std::string name;            // UTF-8, e.g. "Huvudmeny". Shown in the path, so keep it short.
-  std::vector<Choice> choices; // in display order
-  OnInput on_input;            // empty: the state takes no input
+  // The options to show the user. The state keeps them in step with on_key.
+  virtual OptionsList options() const = 0;
+
+  // The next state for the key, or nullptr when the state has no mapping for it
+  virtual OnKeyResult on_key(CodePoint key) = 0;
+
+  // Acts on text the user entered. By default the state takes no input and
+  // answers with no_input_error.
+  virtual InputResult on_input(std::u32string_view text);
 };
 
-// A key that leads to another state
-struct Choice {
-  CodePoint key;       // preferably '0'..'9', but any code point
-  std::string caption; // UTF-8, e.g. "Bokslut". Shown in the menu only.
-  State target;
-};
-
-inline State::State(std::string name) : name(std::move(name)) {}
-
-inline State::State(std::string name, std::vector<Choice> choices)
-    : name(std::move(name)), choices(std::move(choices)) {}
-
-inline State::State(std::string name, std::vector<Choice> choices, OnInput on_input)
-    : name(std::move(name)), choices(std::move(choices)), on_input(std::move(on_input)) {}
-
-// Where the user is in a tree of states, and the way there
+// The states from the root to the current one. Owns them: a state is
+// destroyed when the user leaves it.
 class Navigator {
 public:
-  // The tree must outlive the navigator
-  explicit Navigator(State const& root) : path_{&root} {}
-  explicit Navigator(State&&) = delete;
+  // root must not be empty
+  explicit Navigator(std::unique_ptr<State> root);
 
-  State const& current() const { return *path_.back(); }
+  State& current() const { return *path_.back(); }
 
   // The states from the root to the current state, in order
-  std::vector<State const*> const& path() const { return path_; }
+  std::vector<std::unique_ptr<State>> const& path() const { return path_; }
 
   // True when there is a state before the current one
   bool can_go_back() const { return path_.size() > 1; }
 
-  // A key that is a choice moves to its state, back_key moves back to the
-  // state before. True when the state changed.
+  // Gives the key to the current state. When it answers with a new state,
+  // that becomes the current state. True when the state changed.
   bool press(CodePoint key);
 
+  // Leaves the current state, which is destroyed, for the state before. Does
+  // nothing at the root. True when the state changed.
+  bool back();
+
 private:
-  std::vector<State const*> path_; // front() is the root, back() is the current state
+  std::vector<std::unique_ptr<State>> path_; // front() is the root, back() is the current state
 };
 
 } // namespace pyroceph::tui
