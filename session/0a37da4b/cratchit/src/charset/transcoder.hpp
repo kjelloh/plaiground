@@ -30,6 +30,9 @@ enum class Encoding { utf8, utf16be, utf16le, cp437 };
 // Pairs a decoder with an encoder. Takes bytes in one encoding one at a time
 // and gives back the bytes of each character in the other encoding as it
 // becomes available. A character the encoder cannot represent gives nothing.
+// failure_count() and unmapped_count() tell the two kinds of trouble apart:
+// input the decoder could not parse, and characters the encoder has no
+// mapping for.
 template <class Decoder, class Encoder>
 class BasicTranscoder {
 public:
@@ -49,6 +52,12 @@ public:
     }
     return std::nullopt;
   }
+
+  // Number of failed input sequences so far, from the decoder
+  std::size_t failure_count() const { return decoder_.failure_count(); }
+
+  // Number of characters so far that the encoder has no mapping for
+  std::size_t unmapped_count() const { return encoder_.unmapped_count(); }
 
 private:
   // Turns the encoder's answer into Bytes: either an optional single byte
@@ -79,12 +88,16 @@ public:
 
   std::optional<Bytes> push(std::uint8_t byte) { return impl_->push(byte); }
   std::optional<Bytes> finish() { return impl_->finish(); }
+  std::size_t failure_count() const { return impl_->failure_count(); }
+  std::size_t unmapped_count() const { return impl_->unmapped_count(); }
 
 private:
   struct Interface {
     virtual ~Interface() = default;
     virtual std::optional<Bytes> push(std::uint8_t byte) = 0;
     virtual std::optional<Bytes> finish() = 0;
+    virtual std::size_t failure_count() const = 0;
+    virtual std::size_t unmapped_count() const = 0;
   };
 
   template <class Decoder, class Encoder>
@@ -92,6 +105,8 @@ private:
     explicit Model(BasicTranscoder<Decoder, Encoder> transcoder) : transcoder_(std::move(transcoder)) {}
     std::optional<Bytes> push(std::uint8_t byte) override { return transcoder_.push(byte); }
     std::optional<Bytes> finish() override { return transcoder_.finish(); }
+    std::size_t failure_count() const override { return transcoder_.failure_count(); }
+    std::size_t unmapped_count() const override { return transcoder_.unmapped_count(); }
     BasicTranscoder<Decoder, Encoder> transcoder_;
   };
 

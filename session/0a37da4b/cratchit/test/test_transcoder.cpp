@@ -82,6 +82,35 @@ TEST(Transcoder, Utf16leToCp437) {
   EXPECT_EQ(transcode(transcoder, {0xD6, 0x00, 'l'}), (ByteVector{0x99})); // Ö, then an odd byte
 }
 
+TEST(BasicTranscoder, CountsUnmappedApartFromFailures) {
+  BasicTranscoder<charset::utf8::Decoder, charset::cp437::Encoder> transcoder;
+  EXPECT_EQ(transcode(transcoder, {'a', 0xE2, 0x82, 0xAC, 'b'}), (ByteVector{'a', 'b'})); // a€b
+  EXPECT_EQ(transcoder.failure_count(), 0U);
+  EXPECT_EQ(transcoder.unmapped_count(), 1U);
+}
+
+TEST(BasicTranscoder, CountsFailuresApartFromUnmapped) {
+  BasicTranscoder<charset::utf8::Decoder, charset::utf8::Encoder> transcoder;
+  transcode(transcoder, {'a', 0xFF, 'b'}); // 0xFF is never UTF-8
+  EXPECT_EQ(transcoder.failure_count(), 1U);
+  EXPECT_EQ(transcoder.unmapped_count(), 0U);
+}
+
+TEST(Transcoder, BrokenUtf8ToCp437CountsBoth) {
+  // The broken byte fails in the decoder as U+FFFD, which CP437 has no mapping for
+  auto transcoder = make_transcoder(Encoding::utf8, Encoding::cp437);
+  EXPECT_EQ(transcode(transcoder, {'a', 0xFF, 'b'}), (ByteVector{'a', 'b'}));
+  EXPECT_EQ(transcoder.failure_count(), 1U);
+  EXPECT_EQ(transcoder.unmapped_count(), 1U);
+}
+
+TEST(Transcoder, NothingWrongCountsNothing) {
+  auto transcoder = make_transcoder(Encoding::cp437, Encoding::utf16le);
+  transcode(transcoder, {'a', 0x86, 0x84, 0x94}); // aåäö
+  EXPECT_EQ(transcoder.failure_count(), 0U);
+  EXPECT_EQ(transcoder.unmapped_count(), 0U);
+}
+
 TEST(Transcoder, EveryPairCanBeMade) {
   for (auto from : {Encoding::utf8, Encoding::utf16be, Encoding::utf16le, Encoding::cp437}) {
     for (auto to : {Encoding::utf8, Encoding::utf16be, Encoding::utf16le, Encoding::cp437}) {
