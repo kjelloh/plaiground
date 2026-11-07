@@ -53,3 +53,4 @@ Kort logg över vad vi beslutat och varför.
 * `?` är inget state: listan skrivs ut och sedan samma prompt igen, så sökvägen och `-` påverkas inte. `?` hanteras i promptloopen, inte i `Navigator`, eftersom det är I/O. Ett val med nyckeln `?` kan inte nås.
 * `common_keys(navigator)` ger listan. `-` och `?` tas från `back_key` och `help_key`, men texten för Ctrl-D/C/Z är skriven för sig och måste hållas i takt med `is_quit`.
 * Introtexten är `Tryck ? för gemensamma val.` och skrivs en gång vid start.
+* Enter visar valen till nya states igen, utan att statet byts. Enter är både U+000A (macOS och Linux, där terminalen gör CR till LF) och U+000D (Windows-konsol), se `is_enter`. Enter finns med bland de gemensamma valen.

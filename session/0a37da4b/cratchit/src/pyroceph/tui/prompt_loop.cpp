@@ -21,10 +21,13 @@ bool is_quit(CodePoint code_point) {
   return code_point == 0x03 || code_point == 0x04 || code_point == 0x1A;
 }
 
+bool is_enter(CodePoint code_point) { return code_point == U'\n' || code_point == U'\r'; }
+
 std::vector<CommonKey> common_keys(Navigator const& navigator) {
   std::vector<CommonKey> keys;
   if (navigator.can_go_back()) keys.push_back({utf8_of(back_key), "Tillbaka"});
   keys.push_back({utf8_of(help_key), "Visa gemensamma val"});
+  keys.push_back({"Enter", "Visa valen igen"});
   keys.push_back({"Ctrl-D", "Avsluta (även Ctrl-C och Ctrl-Z)"});
   return keys;
 }
@@ -62,6 +65,10 @@ void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out) {
     if (is_quit(*code_point)) break;
     if (*code_point == help_key) {
       show_common_keys(navigator, out);
+      continue;
+    }
+    if (is_enter(*code_point)) {
+      show(navigator, out);
       continue;
     }
     if (navigator.press(*code_point)) show(navigator, out);

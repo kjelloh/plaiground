@@ -18,6 +18,7 @@
 * Steg 14: Träd av `State` och `Navigator` i `pyroceph/tui/state`. Promptloopen navigerar ett demoträd i `main` (Huvudmeny, Projekt, Öppna projekt, Bokslut). Provkört med pipe på macOS.
 * Steg 15: Prompten visar sökvägen med statens namn (`Navigator::path()`, `prompt_of`). Provkört med pipe på macOS.
 * Steg 16: Gemensamma val listas inte i menyn. `?` visar dem (`common_keys`, `show_common_keys`). Provkört med pipe på macOS.
+* Steg 17: Enter visar valen igen (`is_enter`). Provkört med pipe på macOS.
 
 ## Bygg och kör
 
@@ -46,4 +47,4 @@ Utan `HOME=...` används den riktiga `~/.cratchit`.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 16 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 17 i en riktig terminal.

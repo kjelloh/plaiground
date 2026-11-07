@@ -79,9 +79,19 @@ TEST(PromptLoop, HelpListsCommonKeysAndKeepsTheState) {
             "\n  \u00E5 År\nHuvudmeny > Bokslut> "
             "\n  -       Tillbaka"
             "\n  ?       Visa gemensamma val"
+            "\n  Enter   Visa valen igen"
             "\n  Ctrl-D  Avsluta (även Ctrl-C och Ctrl-Z)"
             "\nHuvudmeny > Bokslut> "
             "\n");
+  EXPECT_EQ(navigator.current().name, "Bokslut");
+}
+
+TEST(PromptLoop, EnterShowsTheChoicesAgain) {
+  auto const root = tree();
+  Navigator navigator(root);
+  auto keys = keys_of({'1', '\n', '\r'}); // LF as on macOS and Linux, CR as from a Windows console
+  auto const bokslut = std::string("\n  \u00E5 År\nHuvudmeny > Bokslut> ");
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> " + bokslut + bokslut + bokslut + "\n");
   EXPECT_EQ(navigator.current().name, "Bokslut");
 }
 
