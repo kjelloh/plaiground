@@ -55,8 +55,9 @@ void erase_all(InputBuffer& input, std::FILE* out) {
 }
 
 // Handles a key while navigating: the current state first, then the common
-// keys. Starts the input with the key when it is no action.
-void navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE* out) {
+// keys. Starts the input with the key when it is no action. False when the
+// key ends the loop.
+bool navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE* out) {
   if (navigator.press(key)) {
     show(navigator, out);
   } else if (key == back_key) {
@@ -65,10 +66,13 @@ void navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE
     show_common_keys(navigator, out);
   } else if (is_enter(key)) {
     show(navigator, out);
+  } else if (key == quit_key) {
+    return false;
   } else if (input.push(key)) {
     to_edit_prompt(out);
     std::print(out, "{}", utf8_of(key));
   }
+  return true;
 }
 
 // Handles a key while typing input
@@ -116,6 +120,7 @@ std::vector<CommonKey> common_keys(Navigator const& navigator) {
   keys.push_back({utf8_of(help_key), "Visa gemensamma val"});
   keys.push_back({"Enter", "Visa valen igen"});
   keys.push_back({"Esc", "Töm indata (även Ctrl-U)"});
+  keys.push_back({utf8_of(quit_key), "Avsluta"});
   keys.push_back({"Ctrl-D", "Avsluta (även Ctrl-C och Ctrl-Z)"});
   return keys;
 }
@@ -150,7 +155,7 @@ void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out) {
     if (auto const* code_point = std::get_if<CodePoint>(&*key)) {
       if (is_quit(*code_point)) break;
       if (input.empty()) {
-        navigate(*code_point, navigator, input, out);
+        if (!navigate(*code_point, navigator, input, out)) break;
       } else {
         edit(*code_point, navigator, input, out);
       }

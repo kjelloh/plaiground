@@ -81,6 +81,7 @@ TEST(PromptLoop, HelpListsCommonKeysAndKeepsTheState) {
             "\n  ?       Visa gemensamma val"
             "\n  Enter   Visa valen igen"
             "\n  Esc     Töm indata (även Ctrl-U)"
+            "\n  q       Avsluta"
             "\n  Ctrl-D  Avsluta (även Ctrl-C och Ctrl-Z)"
             "\nHuvudmeny > Bokslut> "
             "\n");
@@ -272,4 +273,24 @@ TEST(PromptLoop, DeleteErasesLikeBackspace) {
   Navigator navigator(tree_with_input());
   auto keys = keys_of({'x', 'y', 0x1B, '[', '3', '~'});
   EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \b\b: xy\b \b\n");
+}
+
+TEST(PromptLoop, QuitKeyEndsTheLoopWhileNavigating) {
+  Navigator navigator(tree());
+  auto keys = keys_of({'1', 'q', '-'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \n  \u00E5 År\nHuvudmeny > Bokslut> \n");
+  EXPECT_EQ(navigator.current().name(), "Bokslut");
+}
+
+TEST(PromptLoop, QuitKeyIsTextWhileTyping) {
+  Navigator navigator(tree_with_input());
+  auto keys = keys_of({'x', 'q'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \b\b: xq\n");
+}
+
+TEST(PromptLoop, StateIsAskedBeforeTheQuitKey) {
+  Navigator navigator(menu("Rot", {{U'q', "Kvar", [] { return menu("Kvar"); }}}));
+  auto keys = keys_of({'q', 'q', '-'}); // the root maps q, Kvar does not, so the second q ends the loop
+  run(keys, navigator);
+  EXPECT_EQ(navigator.current().name(), "Kvar");
 }
