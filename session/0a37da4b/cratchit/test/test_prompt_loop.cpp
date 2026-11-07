@@ -48,7 +48,7 @@ TEST(PromptLoop, ShowsTheFirstStateAtOnce) {
   auto const root = tree();
   Navigator navigator(root);
   auto keys = keys_of({});
-  EXPECT_EQ(run(keys, navigator), "\nHuvudmeny\n  1 Bokslut\n");
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \n");
 }
 
 TEST(PromptLoop, ShowsEachNewStateWithBack) {
@@ -56,9 +56,10 @@ TEST(PromptLoop, ShowsEachNewStateWithBack) {
   Navigator navigator(root);
   auto keys = keys_of({'1', 'x', '-'}); // x is no choice and is ignored
   EXPECT_EQ(run(keys, navigator),
-            "\nHuvudmeny\n  1 Bokslut\n"
-            "\nBokslut\n  \u00E5 År\n  - Tillbaka\n"
-            "\nHuvudmeny\n  1 Bokslut\n");
+            "\n  1 Bokslut\nHuvudmeny> "
+            "\n  \u00E5 År\n  - Tillbaka\nHuvudmeny > Bokslut> "
+            "\n  1 Bokslut\nHuvudmeny> "
+            "\n");
 }
 
 TEST(PromptLoop, NonAsciiKeyIsAChoice) {
@@ -67,6 +68,23 @@ TEST(PromptLoop, NonAsciiKeyIsAChoice) {
   auto keys = keys_of({'1', 0xC3, 0xA5});
   run(keys, navigator);
   EXPECT_EQ(navigator.current().name, "År");
+}
+
+TEST(PromptOf, RootIsItsName) {
+  auto const root = tree();
+  Navigator navigator(root);
+  EXPECT_EQ(pyroceph::tui::prompt_of(navigator), "Huvudmeny> ");
+}
+
+TEST(PromptOf, StateNamesFromTheRoot) {
+  auto const root = State{"Huvudmeny", {{U'1', "Öppna", State{"Projekt", {{U'2', "Välj år", State{"År 2025", {}}}}}}}};
+  Navigator navigator(root);
+  navigator.press(U'1');
+  EXPECT_EQ(pyroceph::tui::prompt_of(navigator), "Huvudmeny > Projekt> "); // the state's name, not the caption
+  navigator.press(U'2');
+  EXPECT_EQ(pyroceph::tui::prompt_of(navigator), "Huvudmeny > Projekt > År 2025> ");
+  navigator.press(U'-');
+  EXPECT_EQ(pyroceph::tui::prompt_of(navigator), "Huvudmeny > Projekt> ");
 }
 
 TEST(PromptLoop, QuitKeysEndTheLoop) {

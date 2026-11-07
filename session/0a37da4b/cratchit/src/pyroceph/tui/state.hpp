@@ -14,14 +14,14 @@ struct Choice;
 
 // One place in the UI: its name and the choices it offers
 struct State {
-  std::string name;            // UTF-8, e.g. "Huvudmeny"
+  std::string name;            // UTF-8, e.g. "Huvudmeny". Shown in the path, so keep it short.
   std::vector<Choice> choices; // in display order
 };
 
 // A key that leads to another state
 struct Choice {
   CodePoint key;       // preferably '0'..'9', but any code point
-  std::string caption; // UTF-8, e.g. "Bokslut"
+  std::string caption; // UTF-8, e.g. "Bokslut". Shown in the menu only.
   State target;
 };
 
@@ -33,6 +33,9 @@ public:
   explicit Navigator(State&&) = delete;
 
   State const& current() const { return *path_.back(); }
+
+  // The states from the root to the current state, in order
+  std::vector<State const*> const& path() const { return path_; }
 
   // True when there is a state before the current one
   bool can_go_back() const { return path_.size() > 1; }

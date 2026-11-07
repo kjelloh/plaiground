@@ -60,6 +60,20 @@ TEST(Navigator, BackGoesToTheStateBefore) {
   EXPECT_EQ(navigator.current().name, "Rot");
 }
 
+TEST(Navigator, PathFollowsChoicesAndBack) {
+  auto const root = tree();
+  Navigator navigator(root);
+  ASSERT_EQ(navigator.path().size(), 1U);
+  EXPECT_EQ(navigator.path().front(), &root);
+  navigator.press(U'1');
+  navigator.press(U'1');
+  ASSERT_EQ(navigator.path().size(), 3U);
+  EXPECT_EQ(navigator.path()[1]->name, "Ett");
+  EXPECT_EQ(navigator.path()[2]->name, "Djup");
+  navigator.press(U'-');
+  EXPECT_EQ(navigator.path().size(), 2U);
+}
+
 TEST(Navigator, BackAtRootChangesNothing) {
   auto const root = tree();
   Navigator navigator(root);

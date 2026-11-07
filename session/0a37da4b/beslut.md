@@ -46,3 +46,6 @@ Kort logg över vad vi beslutat och varför.
 * `Navigator` håller vägen från roten till aktuellt state som en stack. Ett val går in i sitt state, `-` (`back_key`) går tillbaka och gör ingenting på roten. Ett val med nyckeln `-` kan inte nås. Trädet måste leva längre än navigatorn.
 * Promptloopen visar aktuellt state och dess val, och visar det nya varje gång state byts. Tangenter som inte är val ignoreras tyst. `Lookup` och den tomma `Choice` från steg 13 är borta.
 * Namn och val skrivs som UTF-8 rakt ut. Att skriva i terminalens kodning (med `Transcoder`) blir ett eget steg.
+* Prompten visar sökvägen till aktuellt state med `State::name` för varje state från roten, åtskilda av ` > ` och följda av `> `, t.ex. `Huvudmeny > Projekt> `. `State::name` är platsens namn (håll det kort), `Choice::caption` är hur man kommer dit och visas bara i menyn. Rubriken med statets namn ovanför menyn är borta.
+* ` > ` i stället för `/`, så att sökvägen inte förväxlas med sökvägar på disk och så att `/` kan stå i ett namn.
+* Öppen fråga: `Navigator` pekar in i ett träd som inte får ändras. När states ska skapas under körning (projekt från disk, år, konton) behöver ett val kunna skapa sitt state, och stacken med pekare får troligen göras om.
