@@ -31,9 +31,25 @@ KeyReader keys_of(std::vector<std::uint8_t> bytes) {
       Encoding::utf8);
 }
 
+// A temporary file, removed when closed. MSVC marks std::tmpfile as unsafe
+// (C4996) and wants tmpfile_s, which only it has.
+std::FILE* temporary_file() {
+#ifdef _MSC_VER
+  std::FILE* file = nullptr;
+  if (tmpfile_s(&file) != 0) return nullptr;
+  return file;
+#else
+  return std::tmpfile();
+#endif
+}
+
 // Runs the loop and gives back what it wrote
 std::string run(KeyReader& keys, Navigator& navigator) {
-  auto* out = std::tmpfile();
+  auto* out = temporary_file();
+  if (out == nullptr) {
+    ADD_FAILURE() << "No temporary file";
+    return {};
+  }
   pyroceph::tui::run_prompt_loop(keys, navigator, out);
   std::rewind(out);
   std::string written;
@@ -136,7 +152,7 @@ TEST(PromptOf, StateNamesFromTheRoot) {
 }
 
 TEST(PromptLoop, QuitKeysEndTheLoop) {
-  for (std::uint8_t quit : {0x03, 0x04, 0x1A}) {
+  for (std::uint8_t quit : {std::uint8_t{0x03}, std::uint8_t{0x04}, std::uint8_t{0x1A}}) {
     Navigator navigator(tree());
     auto keys = keys_of({quit, '1'});
     run(keys, navigator);
