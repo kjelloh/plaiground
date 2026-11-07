@@ -12,6 +12,7 @@
 * Steg 8: `.cratchit` öppnas i hemkatalogen, med kod för macOS, Linux och Windows.
 * Steg 9: Workflow för GitHub Actions i `.github/workflows/cratchit-0a37da4b.yml`. Inte körd än.
 * Steg 10: `Transcoder`, `BasicTranscoder` och `make_transcoder` i `cratchit/src/charset/transcoder.*` med tester i `test/test_transcoder.cpp`. Används ännu inte av `main`.
+* Steg 11: Alla decoders har `failure_count()` (fel i parsningen av indata, alltid 0 för CP437). Alla encoders har `unmapped_count()` (kodpunkter utan mappning). `Transcoder` lämnar ännu inte ut räknarna.
 
 ## Bygg och kör
 

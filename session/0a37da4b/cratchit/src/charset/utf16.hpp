@@ -33,15 +33,19 @@ struct Bytes {
 // Takes Unicode code points one at a time and gives back their UTF-16 bytes.
 // A code point above U+FFFF becomes a surrogate pair. A surrogate
 // (U+D800-U+DFFF) or a value above U+10FFFF is not a character and gives the
-// bytes of U+FFFD (replacement character).
+// bytes of U+FFFD (replacement character), counted in unmapped_count().
 class Encoder {
 public:
   explicit Encoder(ByteOrder order = ByteOrder::big_endian) : order_(order) {}
 
   Bytes push(unicode::CodePoint code_point);
 
+  // Number of code points so far that are not characters
+  std::size_t unmapped_count() const { return unmapped_count_; }
+
 private:
   ByteOrder order_;
+  std::size_t unmapped_count_ = 0;
 };
 
 // Takes UTF-16 bytes one at a time and gives back Unicode code points as they

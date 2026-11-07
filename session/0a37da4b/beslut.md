@@ -32,3 +32,6 @@ Kort logg över vad vi beslutat och varför.
 * `charset::Bytes` (1–4 bytes) är gemensam returtyp. Encoderna ändras inte, mallen gör om deras svar.
 * Ett tecken som målkodningen saknar (t.ex. `€` till CP437) ger `nullopt` och försvinner tyst.
 * `Encoding` har `utf8`, `utf16be`, `utf16le` och `cp437`.
+* Två sorters fel hålls isär: en Decoder kan alltid mappa till Unicode men kan misslyckas att parsa sin indata, och räknar det i `failure_count()`. En Encoder kan alltid skriva sin kodning men kan sakna mappning för en kodpunkt, och räknar det i `unmapped_count()`. Olika namn så att skillnaden syns i koden.
+* För UTF-8 och UTF-16 räknas ett surrogat eller ett värde över U+10FFFF som omappat: det blir U+FFFD. U+FFFD i sig är ett riktigt tecken och räknas inte.
+* En Encoder ger ingenting för en kodpunkt den saknar mappning för, bara en uppräkning av `unmapped_count()`. Det gäller även U+FFFD till CP437. Ett försök med `?` för U+FFFD backades (ett `?` kan inte skiljas från ett äkta `?`, och det blev ett specialfall). Hur något bättre ska produceras beslutas senare.

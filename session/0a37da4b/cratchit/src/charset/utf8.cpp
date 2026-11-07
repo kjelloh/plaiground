@@ -26,6 +26,7 @@ Bytes Encoder::push(unicode::CodePoint code_point) {
     return encode(code_point, 2, 0xC0);
   }
   if ((code_point >= 0xD800 && code_point <= 0xDFFF) || code_point > 0x10FFFF) {
+    ++unmapped_count_;
     return encode(unicode::replacement_character, 3, 0xE0);
   }
   if (code_point < 0x10000) {

@@ -69,6 +69,17 @@ TEST(Utf16, EncodesNonCharactersAsReplacementCharacter) {
   EXPECT_EQ(encoded(0x110000), "\xFF\xFD"sv);
 }
 
+TEST(Utf16, EncoderCountsNonCharacters) {
+  charset::utf16::Encoder encoder;
+  encoder.push(U'A');
+  encoder.push(U'\U0001F600');
+  encoder.push(0xFFFD); // a real character, though it stands in for others
+  EXPECT_EQ(encoder.unmapped_count(), 0U);
+  encoder.push(0xD800);
+  encoder.push(0x110000);
+  EXPECT_EQ(encoder.unmapped_count(), 2U);
+}
+
 TEST(Utf16, DecodesBigEndian) {
   EXPECT_EQ(decoded("\x00I\x00n\x00v\x00o\x00i\x00\x63\x00\x65"sv), U"Invoice");
   EXPECT_EQ(decoded("\x00M\x00\x61\x00l\x00m\x00\xF6"sv), U"Malmö");

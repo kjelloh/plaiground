@@ -79,6 +79,17 @@ TEST(Utf8, NonCharactersGiveReplacementCharacter) {
   EXPECT_EQ(encoded(0x110000), "\xEF\xBF\xBD");
 }
 
+TEST(Utf8, EncoderCountsNonCharacters) {
+  charset::utf8::Encoder encoder;
+  encoder.push(U'A');
+  encoder.push(U'\U0001F600');
+  encoder.push(0xFFFD); // a real character, though it stands in for others
+  EXPECT_EQ(encoder.unmapped_count(), 0U);
+  encoder.push(0xDFFF);
+  encoder.push(0x110000);
+  EXPECT_EQ(encoder.unmapped_count(), 2U);
+}
+
 // Each code point goes straight from one buffer into the other
 TEST(Utf8, TranscodesCp437ToUtf8) {
   charset::cp437::Decoder to_unicode;

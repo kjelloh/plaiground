@@ -25,6 +25,18 @@ Jag backade och gjorde omtag.
 
 * Och nu ser det ut som om Claude 'förstår' bättre vad jag siktar på?
 
+Jag har nu en Transcoder.
+
+* Den har push i ena ändan.
+* Och producerar nullopt eller 'bytes' så som de alstras av Encoder för varje Unicode code point.
+* Parsningsfel till Unicode producerar Unicodes 'mysslyckad tolkning tecken' ( U+FFFD, Srr ut som '?')
+* Parsningefel (Decoder) och misslyckad mappning (Encoder) räknas nu separat.
+* NOTERA: Parsningefel till  U+FFFD till 256-bytes-encoding som CP437 räknas två gånger (parsningsfel + ingen mappning)
+
+    * Vi kan senare frestas att skapa en representation typ ```<U+FFFD>```.
+    * Men vi behöver tänka igenom detta då sådan representation beror på vilket teckenset vi kodar till (e.g., hur gör vi på ryska, grekiska, kinesiska?)
+
+Ser bra ut för nu tror jag?!
 
 ## 20261106
 

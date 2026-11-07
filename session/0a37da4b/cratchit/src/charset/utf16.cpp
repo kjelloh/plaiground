@@ -19,6 +19,7 @@ void append(Bytes& bytes, CodeUnit unit, ByteOrder order) {
 Bytes Encoder::push(unicode::CodePoint code_point) {
   Bytes result;
   if ((code_point >= 0xD800 && code_point <= 0xDFFF) || code_point > 0x10FFFF) {
+    ++unmapped_count_;
     code_point = unicode::replacement_character;
   }
   if (code_point < 0x10000) {

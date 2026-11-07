@@ -61,3 +61,20 @@ TEST(Cp437, CodePointsOutsideCp437GiveNothing) {
   EXPECT_FALSE(from_unicode.push(0x20AC).has_value()); // euro sign
   EXPECT_FALSE(from_unicode.push(0x00C3).has_value()); // A tilde
 }
+
+TEST(Cp437, EncoderCountsUnmappedCodePoints) {
+  charset::cp437::Encoder from_unicode;
+  EXPECT_EQ(from_unicode.unmapped_count(), 0U);
+  from_unicode.push(U'\u00E5');  // å, in CP437
+  from_unicode.push(U'A');
+  EXPECT_EQ(from_unicode.unmapped_count(), 0U);
+  from_unicode.push(0x20AC);      // euro sign, not in CP437
+  from_unicode.push(0xFFFD);      // replacement character, not in CP437
+  EXPECT_EQ(from_unicode.unmapped_count(), 2U);
+}
+
+TEST(Cp437, DecoderNeverFails) {
+  charset::cp437::Decoder to_unicode;
+  for (int byte = 0; byte < 256; ++byte) to_unicode.push(static_cast<charset::cp437::CodePoint>(byte));
+  EXPECT_EQ(to_unicode.failure_count(), 0U);
+}

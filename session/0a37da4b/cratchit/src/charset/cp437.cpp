@@ -53,6 +53,7 @@ std::optional<CodePoint> Encoder::push(unicode::CodePoint code_point) {
       return static_cast<CodePoint>(0x80 + i);
     }
   }
+  ++unmapped_count_;
   return std::nullopt;
 }
 

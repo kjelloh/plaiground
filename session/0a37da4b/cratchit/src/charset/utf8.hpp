@@ -24,10 +24,17 @@ struct Bytes {
 
 // Takes Unicode code points one at a time and gives back their UTF-8 bytes.
 // A surrogate (U+D800-U+DFFF) or a value above U+10FFFF is not a character
-// and gives the bytes of U+FFFD (replacement character).
+// and gives the bytes of U+FFFD (replacement character), counted in
+// unmapped_count(). Every character has a UTF-8 form.
 class Encoder {
 public:
   Bytes push(unicode::CodePoint code_point);
+
+  // Number of code points so far that are not characters
+  std::size_t unmapped_count() const { return unmapped_count_; }
+
+private:
+  std::size_t unmapped_count_ = 0;
 };
 
 // Takes UTF-8 bytes one at a time and gives back Unicode code points as they
