@@ -51,13 +51,13 @@ TEST(PromptLoop, ShowsTheFirstStateAtOnce) {
   EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \n");
 }
 
-TEST(PromptLoop, ShowsEachNewStateWithBack) {
+TEST(PromptLoop, ShowsEachNewStateWithoutCommonKeys) {
   auto const root = tree();
   Navigator navigator(root);
   auto keys = keys_of({'1', 'x', '-'}); // x is no choice and is ignored
   EXPECT_EQ(run(keys, navigator),
             "\n  1 Bokslut\nHuvudmeny> "
-            "\n  \u00E5 År\n  - Tillbaka\nHuvudmeny > Bokslut> "
+            "\n  \u00E5 År\nHuvudmeny > Bokslut> "
             "\n  1 Bokslut\nHuvudmeny> "
             "\n");
 }
@@ -68,6 +68,43 @@ TEST(PromptLoop, NonAsciiKeyIsAChoice) {
   auto keys = keys_of({'1', 0xC3, 0xA5});
   run(keys, navigator);
   EXPECT_EQ(navigator.current().name, "År");
+}
+
+TEST(PromptLoop, HelpListsCommonKeysAndKeepsTheState) {
+  auto const root = tree();
+  Navigator navigator(root);
+  auto keys = keys_of({'1', '?'});
+  EXPECT_EQ(run(keys, navigator),
+            "\n  1 Bokslut\nHuvudmeny> "
+            "\n  \u00E5 År\nHuvudmeny > Bokslut> "
+            "\n  -       Tillbaka"
+            "\n  ?       Visa gemensamma val"
+            "\n  Ctrl-D  Avsluta (även Ctrl-C och Ctrl-Z)"
+            "\nHuvudmeny > Bokslut> "
+            "\n");
+  EXPECT_EQ(navigator.current().name, "Bokslut");
+}
+
+TEST(CommonKeys, BackOnlyWhenTheNavigatorCanGoBack) {
+  auto const root = tree();
+  Navigator navigator(root);
+  auto has_back = [&] {
+    for (auto const& common : pyroceph::tui::common_keys(navigator)) {
+      if (common.key == "-") return true;
+    }
+    return false;
+  };
+  EXPECT_FALSE(has_back());
+  navigator.press(U'1');
+  EXPECT_TRUE(has_back());
+}
+
+TEST(PromptLoop, ChoiceWithHelpKeyCannotBeReached) {
+  auto const root = State{"Rot", {{U'?', "Nås aldrig", State{"Nås aldrig", {}}}}};
+  Navigator navigator(root);
+  auto keys = keys_of({'?'});
+  run(keys, navigator);
+  EXPECT_EQ(navigator.current().name, "Rot");
 }
 
 TEST(PromptOf, RootIsItsName) {

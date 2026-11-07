@@ -4,6 +4,7 @@
 
 #include <print>
 #include <string>
+#include <vector>
 
 namespace pyroceph::tui {
 
@@ -20,6 +21,23 @@ bool is_quit(CodePoint code_point) {
   return code_point == 0x03 || code_point == 0x04 || code_point == 0x1A;
 }
 
+std::vector<CommonKey> common_keys(Navigator const& navigator) {
+  std::vector<CommonKey> keys;
+  if (navigator.can_go_back()) keys.push_back({utf8_of(back_key), "Tillbaka"});
+  keys.push_back({utf8_of(help_key), "Visa gemensamma val"});
+  keys.push_back({"Ctrl-D", "Avsluta (även Ctrl-C och Ctrl-Z)"});
+  return keys;
+}
+
+void show_common_keys(Navigator const& navigator, std::FILE* out) {
+  std::print(out, "\n");
+  for (auto const& common : common_keys(navigator)) {
+    std::print(out, "  {:<7} {}\n", common.key, common.caption);
+  }
+  std::print(out, "{}", prompt_of(navigator));
+  std::fflush(out);
+}
+
 std::string prompt_of(Navigator const& navigator) {
   std::string prompt;
   for (auto const* state : navigator.path()) {
@@ -34,7 +52,6 @@ void show(Navigator const& navigator, std::FILE* out) {
   for (auto const& choice : navigator.current().choices) {
     std::print(out, "  {} {}\n", utf8_of(choice.key), choice.caption);
   }
-  if (navigator.can_go_back()) std::print(out, "  {} Tillbaka\n", utf8_of(back_key));
   std::print(out, "{}", prompt_of(navigator));
   std::fflush(out);
 }
@@ -43,6 +60,10 @@ void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out) {
   show(navigator, out);
   while (auto const code_point = keys.next()) {
     if (is_quit(*code_point)) break;
+    if (*code_point == help_key) {
+      show_common_keys(navigator, out);
+      continue;
+    }
     if (navigator.press(*code_point)) show(navigator, out);
   }
   std::print(out, "\n");

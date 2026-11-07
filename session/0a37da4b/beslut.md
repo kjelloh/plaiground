@@ -49,3 +49,7 @@ Kort logg över vad vi beslutat och varför.
 * Prompten visar sökvägen till aktuellt state med `State::name` för varje state från roten, åtskilda av ` > ` och följda av `> `, t.ex. `Huvudmeny > Projekt> `. `State::name` är platsens namn (håll det kort), `Choice::caption` är hur man kommer dit och visas bara i menyn. Rubriken med statets namn ovanför menyn är borta.
 * ` > ` i stället för `/`, så att sökvägen inte förväxlas med sökvägar på disk och så att `/` kan stå i ett namn.
 * Öppen fråga: `Navigator` pekar in i ett träd som inte får ändras. När states ska skapas under körning (projekt från disk, år, konton) behöver ett val kunna skapa sitt state, och stacken med pekare får troligen göras om.
+* Menyn listar bara valen som leder till ett nytt state från det state vi står i. Gemensamma val (`-` Tillbaka, `?` Visa gemensamma val, Ctrl-D/C/Z Avsluta) listas inte i menyn utan visas när användaren trycker `?` (`help_key`).
+* `?` är inget state: listan skrivs ut och sedan samma prompt igen, så sökvägen och `-` påverkas inte. `?` hanteras i promptloopen, inte i `Navigator`, eftersom det är I/O. Ett val med nyckeln `?` kan inte nås.
+* `common_keys(navigator)` ger listan. `-` och `?` tas från `back_key` och `help_key`, men texten för Ctrl-D/C/Z är skriven för sig och måste hållas i takt med `is_quit`.
+* Introtexten är `Tryck ? för gemensamma val.` och skrivs en gång vid start.

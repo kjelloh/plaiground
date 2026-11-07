@@ -62,7 +62,7 @@ int main() {
     auto keys = pyroceph::tui::terminal_key_reader(encoding_of(terminal_encoding.in));
     auto const menu = make_menu();
     pyroceph::tui::Navigator navigator(menu);
-    std::println("Välj med en tangent. Ctrl-C, Ctrl-D eller Ctrl-Z avslutar.");
+    std::println("Tryck ? för gemensamma val.");
     LOG_BUSINESS("Promptloopen startade");
     pyroceph::tui::run_prompt_loop(keys, navigator, stdout);
     if (keys.failure_count() > 0) LOG_DESIGN_INSUFFICIENCY("{} tangenter kunde inte avkodas", keys.failure_count());
