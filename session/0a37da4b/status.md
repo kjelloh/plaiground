@@ -23,20 +23,12 @@
 * Steg 19: `KeyParser` och `FunctionKey`. Esc tömmer indata, Delete suddar, pilar med mera känns igen men gör inget. Provkört med pipe och med pseudoterminal (`script`) på macOS. Windows-delen är bara skriven, inte byggd.
 * Steg 20: `State` är en basklass, och trädet byggs medan användaren navigerar (`on_key` ger `OnKeyResult`, `options()` ger `OptionsList`). `Navigator` äger statena och förstör dem när användaren lämnar dem. Provkört med pipe på macOS.
 * Steg 21: `q` avslutar vid navigering (`quit_key`). Provkört med pipe på macOS.
+* Steg 22: `install()`-regel i `CMakeLists.txt` och Release-bygge. Provinstallerat till en tillfällig mapp på macOS och kört från `PATH`. Inte installerat i `~/.local` på riktigt. Windows och Linux inte provade.
+* Steg 23: `cratchit/README.md` på engelska, för den som bygger och installerar. Byggstegen flyttade dit från `status.md`.
 
-## Bygg och kör
+## Bygg, kör och installera
 
-```sh
-cd cratchit
-conan install . --build=missing -s build_type=Debug -s compiler.cppstd=23
-cmake --preset conan-debug
-cmake --build --preset conan-debug
-ctest --preset conan-debug
-mkdir -p ../_dev_home   # en gång
-HOME="$PWD/../_dev_home" ./build/Debug/cratchit
-```
-
-Utan `HOME=...` används den riktiga `~/.cratchit`.
+Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Att känna till
 
@@ -51,4 +43,4 @@ Utan `HOME=...` används den riktiga `~/.cratchit`.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 21 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 22 i en riktig terminal.

@@ -75,6 +75,11 @@ add_executable(cratchit
 )
 target_link_libraries(cratchit PRIVATE cratchit_core pyroceph cratchit_warnings)
 
+# Installs only the program, into <prefix>/bin (e.g. ~/.local/bin). The
+# libraries are static and built into it, so nothing else is needed.
+include(GNUInstallDirs)
+install(TARGETS cratchit RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
 include(CTest)
 if(BUILD_TESTING)
   add_subdirectory(test)

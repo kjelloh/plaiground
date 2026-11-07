@@ -103,6 +103,35 @@ Nu gick det vägen!
 
 Vi märker det när vi försöker igen att skapa numrerade listor av element.
 
+Nu har jag gjort 'q' som quit.
+
+* MEn märker att Claude gjort Esc som 'töm buffer'.
+* Vill jag det?
+* Jo kanske det är bra i alla fall?
+* Jag låter det vara för nu.
+
+Jag har nu en teori (hypotes) att givet att vi använder en LLM som tränats på språk-till-kod, så finns det en koppling mellan hur jag utrycker mig och påstår mig känna - och den kod Claude kommer att generera?
+
+* Så jag behöver nog vara noggrann med vad jag skriver här i session.md?
+* Claude läser den vilket jag vill.
+* Men därför måste jag inse att det som står här också påverkar hur Claude 'beter sig'
+
+Nu bad jag Claude göra cratchit installerbar.
+
+* Jag valde på CClaudes förslag att börja med cmake install-stödet.
+
+```text
+cd cratchit
+conan install . --build=missing -s build_type=Release -s compiler.cppstd=23
+cmake --preset conan-release
+cmake --build --preset conan-release
+cmake --install build/Release --prefix ~/.local
+```
+
+Jag inser nu att jag fortfarande inte kommer ihåg (eller kan hålla isär) vad dessa olika kommandon gör?
+
+* Så jag bar Claude skapa en README för cratchit så vi kan dokumentera detta.
+
 ## 20261106
 
 Så var det dags att testa att vibe-koda med Claude på svenska.
