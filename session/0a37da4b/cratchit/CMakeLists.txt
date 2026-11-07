@@ -21,10 +21,12 @@ else()
   target_compile_options(cratchit_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()
 
-# Text transcoding: Unicode, UTF-8, UTF-16, CP437 and detection (from walk_pdf, session 9fe36d28)
+# Text transcoding: Unicode, UTF-8, UTF-16, CP437 and detection (from walk_pdf, session 9fe36d28),
+# and Transcoder that pairs a decoder with an encoder
 add_library(charset
   src/charset/cp437.cpp
   src/charset/detect.cpp
+  src/charset/transcoder.cpp
   src/charset/utf16.cpp
   src/charset/utf8.cpp
 )

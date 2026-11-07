@@ -24,3 +24,11 @@ Kort logg över vad vi beslutat och varför.
 * GitHub Actions: en workflow per session i `.github/workflows/`. Här `cratchit-0a37da4b.yml`, som bara startar vid ändringar i `session/0a37da4b/cratchit/**` och i workflow-filen. Användaren gav uttryckligt tillstånd att skriva i `.github/workflows/`, annars gäller sandlådan.
 * GitHub Actions använder Conan 2.34.0, eftersom 2.17.1 inte känner till Apple clang 21 på `macos-latest`. Lokalt är Conan 2.17.1 kvar.
 * GitHub Actions hämtar alltid bara sessionens filer, `session/0a37da4b/`, på alla plattformar (sparse checkout utan cone mode). På Windows stängs `core.protectNTFS` av på den tillfälliga maskinen, eftersom andra sessioner har filnamn som Windows inte tillåter.
+
+## 2026-11-07
+
+* `Transcoder` i `charset/transcoder`: parar ihop en Decoder med en Encoder. `push(byte)` ger `std::optional<Bytes>`, alltså de färdiga bytes för ett tecken eller `nullopt`. `finish()` tömmer det som decodern har kvar. Inga structar med fler fält i svaret (första försöket backades av den anledningen).
+* `BasicTranscoder<Decoder, Encoder>` är öppen och kan användas direkt. `Transcoder` väljs när programmet körs via `make_transcoder(Encoding from, Encoding to)` och lägger en `BasicTranscoder` bakom ett virtuellt gränssnitt.
+* `charset::Bytes` (1–4 bytes) är gemensam returtyp. Encoderna ändras inte, mallen gör om deras svar.
+* Ett tecken som målkodningen saknar (t.ex. `€` till CP437) ger `nullopt` och försvinner tyst.
+* `Encoding` har `utf8`, `utf16be`, `utf16le` och `cp437`.

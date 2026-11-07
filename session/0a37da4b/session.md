@@ -17,6 +17,14 @@ Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får e
 
 Jag backade och gjorde omtag.
 
+* Jag prövade en ny prompt baserad på att första försöket misslyckades.
+
+```text
+ Jag vill att vi gör ett nytt försök att skapa en 'Transcoder' som parar ihop en Decoder med en Encoder och producerar push-to-endoded-bytes i ett steg. Vi prövar att designa en dynamisk 'Trasncoder' som tillverkas run-time av 'make_transcoder()' och returnerar en 'Transcoder'. Den borde kunna vata en template av 'Decoder' och 'Encoder' då de alla har stöd för de anrop en Transcoder behöver? Jag spekulerar, Transcoder::push annropar Decoder::push. Om en Unicode code point tillvertkas så annropar den Encoder::push och får bytes att returnera. Det känns som om Transcoder::push returnerar en optional 'bytes' med ut-representationen? Håller du med? Skulle detta fungera? Kan du göra det? Coh hur ser till förslag till lösning ut?
+```
+
+* Och nu ser det ut som om Claude 'förstår' bättre vad jag siktar på?
+
 
 ## 20261106
 

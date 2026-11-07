@@ -7,6 +7,7 @@ add_executable(cratchit_tests
   test_log.cpp
   test_path_value.cpp
   test_terminal_encoding.cpp
+  test_transcoder.cpp
   test_utf16.cpp
   test_utf8.cpp
 )

@@ -11,6 +11,7 @@
 * Steg 7: Provkört att `runtime` i `framework.txt` följs och att loggen hamnar i runtime-mappens `.cratchit`. Ingen kod behövde ändras.
 * Steg 8: `.cratchit` öppnas i hemkatalogen, med kod för macOS, Linux och Windows.
 * Steg 9: Workflow för GitHub Actions i `.github/workflows/cratchit-0a37da4b.yml`. Inte körd än.
+* Steg 10: `Transcoder`, `BasicTranscoder` och `make_transcoder` i `cratchit/src/charset/transcoder.*` med tester i `test/test_transcoder.cpp`. Används ännu inte av `main`.
 
 ## Bygg och kör
 
@@ -39,4 +40,4 @@ Utan `HOME=...` används den riktiga `~/.cratchit`.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 9 och första körningen på GitHub.
+* Bestäms av användaren. Väntar på användarens test av steg 10.
