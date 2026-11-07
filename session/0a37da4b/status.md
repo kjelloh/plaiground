@@ -25,6 +25,8 @@
 * Steg 21: `q` avslutar vid navigering (`quit_key`). Provkört med pipe på macOS.
 * Steg 22: `install()`-regel i `CMakeLists.txt` och Release-bygge. Provinstallerat till en tillfällig mapp på macOS och kört från `PATH`. Inte installerat i `~/.local` på riktigt. Windows och Linux inte provade.
 * Steg 23: `cratchit/README.md` på engelska, för den som bygger och installerar. Byggstegen flyttade dit från `status.md`.
+* Steg 24: Framework bredvid programmet (`<prefix>/bin/.cratchit/framework.txt` med `version`), runtime i HOME. `program_folder()` per plattform. Provkört på macOS: utvecklarbygget, installerat i en tillfällig mapp och startat via `PATH` från en annan mapp, via en symbolisk länk, och med framework borttaget (fel, exit 1). Linux- och Windows-grenarna av `program_folder()` är skrivna men inte byggda.
+* Steg 25: GitHub Actions kontrollerar att framework ligger bredvid programmet och att runtime skapas i HOME (utan `framework.txt`). Nytt steg installerar (Debug) och kör det installerade programmet via `PATH` från en annan mapp, på alla tre plattformar. Stegets kommandon provade lokalt på macOS, workflow inte körd.
 
 ## Bygg, kör och installera
 
@@ -38,9 +40,9 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 * När utmatningen faller tillbaka till UTF-8 på en terminal som inte är UTF-8 kan å, ä och ö i den svenska varningen bli fel, eftersom varningen själv skrivs som UTF-8.
 
-* Programmet skapar `.cratchit` i hemkatalogen, om den saknas. Startmappen spelar ingen roll.
+* Programmet skapar `.cratchit` med `runtime.txt` i hemkatalogen, om den saknas. Startmappen spelar ingen roll. Framework läses från `.cratchit` bredvid programmet.
 * Bara macOS-grenen är byggd och körd lokalt. Windows- och Linux-grenarna i `dot_folder` och `terminal_encoding` provas först när `.github/workflows/cratchit-0a37da4b.yml` har körts på GitHub.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 22 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 24 i en riktig terminal.

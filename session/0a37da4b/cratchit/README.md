@@ -4,7 +4,7 @@ A Swedish bookkeeping app for the terminal.
 
 * The user interface is in Swedish. cratchit is made for Swedish bookkeeping (SIE files, *bokslut* — year-end closing — and *årsredovisning* — annual report).
 * The code and the developer documentation are in English.
-* Early work in progress: so far cratchit opens its settings folder and lets you navigate a small demo menu.
+* Early work in progress: so far cratchit opens its framework and its settings folder and lets you navigate a small demo menu.
 
 ## Requirements
 
@@ -33,13 +33,14 @@ cmake --build --preset conan-release
 # 4. Run the tests (optional, but a good check before installing).
 ctest --preset conan-release
 
-# 5. Copy the program to <prefix>/bin, here ~/.local/bin/cratchit. Builds nothing.
+# 5. Copy the program and its framework to <prefix>/bin, here ~/.local/bin/cratchit
+#    and ~/.local/bin/.cratchit/. Builds nothing.
 cmake --install build/Release --prefix ~/.local
 ```
 
 The folder `<prefix>/bin` must be in your `PATH`. After a code change, run steps 3 to 5 again; otherwise the old program stays installed.
 
-Only the single program file is installed. The libraries are static and built into it.
+The program file and its framework folder (see [Where cratchit keeps its files](#where-cratchit-keeps-its-files)) are installed. The libraries are static and built into the program.
 
 ### Windows
 
@@ -63,7 +64,7 @@ cmake --build --preset conan-debug
 ctest --preset conan-debug
 ```
 
-To run it without touching your real `~/.cratchit`, point `HOME` to a folder of its own for that run:
+It finds its framework in `build/Debug/.cratchit/`. To run it without touching your real `~/.cratchit`, point `HOME` to a folder of its own for that run:
 
 ```sh
 mkdir -p ../_dev_home   # once
@@ -74,13 +75,36 @@ In Debug builds `LOG_DEVELOPMENT_TRACE` is compiled in; in Release builds it is 
 
 ## Where cratchit keeps its files
 
-cratchit keeps its settings in `.cratchit` in your home folder (`HOME`, on Windows `USERPROFILE`), no matter where the program is installed or started from. It is created on the first run.
+cratchit has two `.cratchit` folders:
+
+| Folder | Holds | Written by |
+| --- | --- | --- |
+| *Framework*: `.cratchit` next to the program, e.g. `~/.local/bin/.cratchit/` | What comes with the installation. Later the rules for Swedish bookkeeping, tax, *bokslut* and *årsredovisning*. | The installation only. cratchit only reads it. |
+| *Runtime*: `.cratchit` in your home folder (`HOME`, on Windows `USERPROFILE`) | Your own files. Created on the first run. | cratchit |
 
 | File | Holds |
 | --- | --- |
-| `framework.txt` | `created` and `runtime`, the folder whose `.cratchit` holds `runtime.txt` (`.` is the home folder itself) |
-| `runtime.txt` | `created` |
-| `log.txt` | The log, next to `runtime.txt` |
+| `<program folder>/.cratchit/framework.txt` | `version`, the cratchit version the framework belongs to |
+| `~/.cratchit/runtime.txt` | `created`, the day it was created |
+| `~/.cratchit/log.txt` | The log, next to `runtime.txt` |
+
+When the framework is missing, cratchit stops with an error: the installation is not whole.
+
+The framework's sources are in `framework/`. CMake puts them together in the build folder (`framework.txt` gets the version from `project()` in `CMakeLists.txt`), copies them next to the built program on every build, and installs them next to the installed program. So a development build and an installed program find their framework the same way.
+
+### How cratchit finds its own folder
+
+To find the framework, cratchit needs the folder of the program file that is running. `argv[0]` cannot tell it: it is only what the starter (usually the shell) passed, and the shell passes what you typed. Started from `PATH`, `argv[0]` is the bare name `cratchit`; started via a link, it is the link's path; and the starter may pass anything at all.
+
+So cratchit asks the platform (`program_folder()` in `src/core/dot_folder.cpp`):
+
+| Platform | Asks |
+| --- | --- |
+| macOS | `_NSGetExecutablePath` (from dyld, the macOS loader) |
+| Linux | the link `/proc/self/exe` |
+| Windows | `GetModuleFileNameW` |
+
+Then `std::filesystem::canonical` resolves links and `..` (on macOS and Linux like POSIX `realpath`, on Windows like `GetFinalPathNameByHandleW`). So a link to cratchit in another folder still leads to the framework next to the real program file. The folder of the resolved file is the program folder.
 
 ## Using cratchit
 
@@ -99,7 +123,7 @@ A key that is no option starts text input, ended with Enter. While typing, Backs
 
 ## Uninstall
 
-Delete the program file, e.g. `~/.local/bin/cratchit`. To remove all settings and logs as well, delete `~/.cratchit`.
+Delete the program file and the framework next to it, e.g. `~/.local/bin/cratchit` and `~/.local/bin/.cratchit/`. To remove your own files and logs as well, delete `~/.cratchit`.
 
 ## Licence
 

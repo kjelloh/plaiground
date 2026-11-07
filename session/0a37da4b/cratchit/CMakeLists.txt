@@ -75,10 +75,25 @@ add_executable(cratchit
 )
 target_link_libraries(cratchit PRIVATE cratchit_core pyroceph cratchit_warnings)
 
-# Installs only the program, into <prefix>/bin (e.g. ~/.local/bin). The
-# libraries are static and built into it, so nothing else is needed.
+# The framework comes with the program: a .cratchit folder next to it, which
+# cratchit only reads. framework/ holds its sources; framework.txt gets the
+# project version. It is put together in the build folder at configure time.
+set(framework_folder ${CMAKE_CURRENT_BINARY_DIR}/framework/.cratchit)
+configure_file(framework/framework.txt.in ${framework_folder}/framework.txt @ONLY)
+
+# Copies the framework next to the built program on every build, so that a
+# development build finds it just like an installed one
+add_custom_target(cratchit_framework ALL
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${framework_folder} $<TARGET_FILE_DIR:cratchit>/.cratchit
+  COMMENT "Copying the framework next to cratchit"
+)
+add_dependencies(cratchit_framework cratchit)
+
+# Installs the program and its framework into <prefix>/bin (e.g. ~/.local/bin):
+# bin/cratchit and bin/.cratchit/. The libraries are static and built into the program.
 include(GNUInstallDirs)
 install(TARGETS cratchit RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY ${framework_folder} DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 include(CTest)
 if(BUILD_TESTING)

@@ -21,10 +21,13 @@ jobs:
         include:
           - os: ubuntu-24.04
             configure_preset: conan-debug
+            build_folder: build/Debug
           - os: macos-latest
             configure_preset: conan-debug
+            build_folder: build/Debug
           - os: windows-latest
             configure_preset: conan-default # Visual Studio is a multi-config generator
+            build_folder: build # one folder for all configurations, chosen with --config
     defaults:
       run:
         shell: bash
@@ -71,12 +74,26 @@ jobs:
       - name: Test
         run: ctest --preset conan-debug --output-on-failure
 
-      # Runs the real program on each platform, on the runner's throwaway home folder
+      # Runs the real program on each platform, on the runner's throwaway home folder.
+      # The framework is next to the program; the runtime is created in the home folder.
       - name: Run cratchit
         run: |
+          test -f ./build/Debug/.cratchit/framework.txt
           ./build/Debug/cratchit
           ./build/Debug/cratchit
           home="${USERPROFILE:-$HOME}"
-          test -f "$home/.cratchit/framework.txt"
           test -f "$home/.cratchit/runtime.txt"
+          test ! -e "$home/.cratchit/framework.txt"
           cat "$home/.cratchit/log.txt"
+
+      # Installs the program and its framework, then runs the installed program
+      # via PATH from another folder, so it must find its framework by itself
+      - name: Install and run installed cratchit
+        run: |
+          cmake --install ${{ matrix.build_folder }} --config Debug --prefix installed
+          test -f installed/bin/.cratchit/framework.txt
+          mkdir -p elsewhere
+          cd elsewhere
+          PATH="$PWD/../installed/bin:$PATH" cratchit
+          home="${USERPROFILE:-$HOME}"
+          grep "Framework .* från .*installed" "$home/.cratchit/log.txt"

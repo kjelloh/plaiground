@@ -2,6 +2,7 @@
 
 #include "core/path_value.hpp"
 
+#include <cstdint>
 #include <ctime>
 #include <format>
 #include <fstream>
@@ -16,6 +17,10 @@
 #include <windows.h>
 #else
 #include <cstdlib>
+#endif
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
 #endif
 
 namespace cratchit {
@@ -58,9 +63,55 @@ std::optional<fs::path> environment_user_home() {
 }
 #endif
 
+// Where the running program file is, as the platform tells it. Not yet
+// resolved: it may be a link.
+#if defined(_WIN32)
+std::expected<fs::path, std::string> program_file() {
+  std::wstring buffer(MAX_PATH, L'\0');
+  for (;;) {
+    auto const size = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    if (size == 0) return std::unexpected(std::string("GetModuleFileNameW misslyckades"));
+    if (size < buffer.size()) {
+      buffer.resize(size);
+      return fs::path(buffer);
+    }
+    buffer.resize(buffer.size() * 2); // the path did not fit
+  }
+}
+#elif defined(__APPLE__)
+std::expected<fs::path, std::string> program_file() {
+  std::uint32_t size = 0;
+  _NSGetExecutablePath(nullptr, &size); // gives the size needed
+  std::string buffer(size, '\0');
+  if (_NSGetExecutablePath(buffer.data(), &size) != 0) {
+    return std::unexpected(std::string("_NSGetExecutablePath misslyckades"));
+  }
+  buffer.resize(std::char_traits<char>::length(buffer.c_str()));
+  return fs::path(buffer);
+}
+#elif defined(__linux__)
+std::expected<fs::path, std::string> program_file() {
+  std::error_code ec;
+  auto path = fs::read_symlink("/proc/self/exe", ec);
+  if (ec) return std::unexpected(std::format("Kan inte läsa /proc/self/exe: {}", ec.message()));
+  return path;
+}
+#else
+#error "program_file() is not written for this platform"
+#endif
+
 } // namespace
 
-std::expected<fs::path, std::string> choose_dot_folder_root(std::optional<fs::path> const& user_home) {
+std::expected<fs::path, std::string> program_folder() {
+  auto const file = program_file();
+  if (!file) return std::unexpected(std::format("Hittar inte programmets mapp: {}", file.error()));
+  std::error_code ec;
+  auto const resolved = fs::canonical(*file, ec);
+  if (ec) return std::unexpected(std::format("Hittar inte programmets mapp: {}: {}", file->string(), ec.message()));
+  return resolved.parent_path();
+}
+
+std::expected<fs::path, std::string> choose_user_home(std::optional<fs::path> const& user_home) {
   if (!user_home || user_home->empty()) {
     return std::unexpected(std::format("Hittar inte hemkatalogen. {} är inte satt.", user_home_variable));
   }
@@ -74,58 +125,48 @@ std::expected<fs::path, std::string> choose_dot_folder_root(std::optional<fs::pa
   return *user_home;
 }
 
-std::expected<fs::path, std::string> dot_folder_root() { return choose_dot_folder_root(environment_user_home()); }
+std::expected<fs::path, std::string> user_home() { return choose_user_home(environment_user_home()); }
 
-std::expected<DotFolder, std::string> open_dot_folder(fs::path const& root, std::string_view today) {
-  DotFolder result;
-  auto const folder = root / ".cratchit";
-  auto const framework_name = fs::path(".cratchit") / "framework.txt";
+std::expected<Framework, std::string> open_framework(fs::path const& program_folder) {
+  Framework result;
+  result.file = program_folder / ".cratchit" / "framework.txt";
+  std::error_code ec;
+  if (!fs::is_regular_file(result.file, ec)) {
+    return std::unexpected(std::format("{} saknas. Installationen av cratchit är inte hel.", result.file.string()));
+  }
+  auto const entries = read_path_values(result.file);
+  if (!entries) return std::unexpected(entries.error());
+  auto version = find_value(*entries, "version");
+  if (!version || version->empty()) {
+    return std::unexpected(std::format("{}: 'version' saknas", result.file.string()));
+  }
+  result.version = std::move(*version);
+  return result;
+}
+
+std::expected<Runtime, std::string> open_runtime(fs::path const& home, std::string_view today) {
+  Runtime result;
+  auto const folder = home / ".cratchit";
   auto const runtime_name = fs::path(".cratchit") / "runtime.txt";
-  result.framework_file = root / framework_name;
+  result.file = home / runtime_name;
 
   std::error_code ec;
   if (fs::exists(folder, ec)) {
     if (!fs::is_directory(folder, ec)) {
       return std::unexpected(std::format("{} finns men är inte en mapp", folder.string()));
     }
-    if (!fs::is_regular_file(result.framework_file, ec)) {
-      return std::unexpected(std::format("{} saknar filen framework.txt", folder.string()));
-    }
-  } else {
-    if (!fs::create_directory(folder, ec)) {
-      return std::unexpected(std::format("Kan inte skapa {}: {}", folder.string(), ec.message()));
-    }
-    if (auto written = write_new_file(result.framework_file, std::format("created = {}\nruntime = .\n", today)); !written) {
-      return std::unexpected(written.error());
-    }
-    result.initiated.push_back({root, framework_name});
+  } else if (!fs::create_directory(folder, ec)) {
+    return std::unexpected(std::format("Kan inte skapa {}: {}", folder.string(), ec.message()));
   }
 
-  auto const framework = read_path_values(result.framework_file);
-  if (!framework) {
-    return std::unexpected(framework.error());
+  if (fs::is_regular_file(result.file, ec)) return result;
+  if (fs::exists(result.file, ec)) {
+    return std::unexpected(std::format("{} finns men är inte en fil", result.file.string()));
   }
-  auto const runtime_entry = find_value(*framework, "runtime").value_or(".");
-  if (runtime_entry.empty()) {
-    return std::unexpected(std::format("{}: 'runtime' anger ingen mapp", result.framework_file.string()));
-  }
-  auto const runtime_root = (root / runtime_entry).lexically_normal(); // an absolute entry replaces root
-  if (!fs::is_directory(runtime_root, ec)) {
-    return std::unexpected(std::format("Runtime-mappen {} finns inte", runtime_root.string()));
-  }
-  bool const is_self = fs::equivalent(runtime_root, root, ec);
-  result.runtime_file = (is_self ? root : runtime_root) / runtime_name;
-
-  if (fs::is_regular_file(result.runtime_file, ec)) {
-    return result;
-  }
-  if (!is_self || fs::exists(result.runtime_file, ec)) {
-    return std::unexpected(std::format("Ingen .cratchit/runtime.txt i runtime-mappen {}", runtime_root.string()));
-  }
-  if (auto written = write_new_file(result.runtime_file, std::format("created = {}\n", today)); !written) {
+  if (auto written = write_new_file(result.file, std::format("created = {}\n", today)); !written) {
     return std::unexpected(written.error());
   }
-  result.initiated.push_back({root, runtime_name});
+  result.initiated.push_back({home, runtime_name});
   return result;
 }
 

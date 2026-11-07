@@ -132,6 +132,14 @@ Jag inser nu att jag fortfarande inte kommer ihåg (eller kan hålla isär) vad 
 
 * Så jag bar Claude skapa en README för cratchit så vi kan dokumentera detta.
 
+Nu lärde jag mig att cratchit inte får den kompletta sökvägen till 'sig självt'!
+
+* Men det finns ett sätt för cratchit att ändå 'ta reda' på det?
+
+Jag tror jag förstår nu och lät Claude göra så cratchit använder 'framework' i sin installations-mapp.
+
+* Jag lät också Claude uppdatera Github ACtions workflow så vi får detta testat på alla plattformar på Github.
+
 ## 20261106
 
 Så var det dags att testa att vibe-koda med Claude på svenska.

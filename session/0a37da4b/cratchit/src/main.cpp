@@ -86,22 +86,35 @@ int main() {
     std::println(stderr, "{}", warning);
     LOG_DESIGN_INSUFFICIENCY("{}", warning);
   }
-  auto const root = cratchit::dot_folder_root();
-  if (!root) {
-    std::println(stderr, "Fel: {}", root.error());
+  // The framework comes with the installation, next to the program
+  auto const program_folder = cratchit::program_folder();
+  if (!program_folder) {
+    std::println(stderr, "Fel: {}", program_folder.error());
     return 1;
   }
-  auto const dot_folder = cratchit::open_dot_folder(*root, cratchit::today_iso());
-  if (!dot_folder) {
-    std::println(stderr, "Fel: {}", dot_folder.error());
+  auto const framework = cratchit::open_framework(*program_folder);
+  if (!framework) {
+    std::println(stderr, "Fel: {}", framework.error());
+    return 1;
+  }
+  // The runtime is the user's own, in the home folder
+  auto const home = cratchit::user_home();
+  if (!home) {
+    std::println(stderr, "Fel: {}", home.error());
+    return 1;
+  }
+  auto const runtime = cratchit::open_runtime(*home, cratchit::today_iso());
+  if (!runtime) {
+    std::println(stderr, "Fel: {}", runtime.error());
     return 1;
   }
   // One log for every run, next to runtime.txt
-  auto const log_file = dot_folder->runtime_file.parent_path() / "log.txt";
+  auto const log_file = runtime->file.parent_path() / "log.txt";
   if (auto const opened = cratchit::log::open(log_file); !opened) {
     std::println(stderr, "Varning: {}. Inget loggas.", opened.error());
   }
-  for (auto const& entry : dot_folder->initiated) {
+  LOG_BUSINESS("Framework {} från {}", framework->version, framework->file.string());
+  for (auto const& entry : runtime->initiated) {
     std::println("Skapade {} i {}", entry.file.generic_string(), entry.folder.string());
     LOG_BUSINESS("Skapade {} i {}", entry.file.generic_string(), entry.folder.string());
   }
