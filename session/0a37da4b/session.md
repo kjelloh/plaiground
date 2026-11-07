@@ -2,6 +2,9 @@
 
 ```#0a37da4b```
 
+* [Claude beslut.md](./beslut.md)
+* [Claude status.md](./status.md)
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.
@@ -139,6 +142,26 @@ Nu lärde jag mig att cratchit inte får den kompletta sökvägen till 'sig sjä
 Jag tror jag förstår nu och lät Claude göra så cratchit använder 'framework' i sin installations-mapp.
 
 * Jag lät också Claude uppdatera Github ACtions workflow så vi får detta testat på alla plattformar på Github.
+
+Nu bad jag om ett stöd för att enkelt kunna installera cratchit utan att behöva köra alla de separat conan och cmake annropen.
+
+* Claude föreslog ett pyton-skript.
+* DCey lät bra tyckte jag.
+* MEN: DÅ visar det sig att vi hamnar lite i ett 'sökvägseldorado'?
+
+    * Jag är inte riktigt säker på exakt hur krångligt detta är.
+    * Men Claude satte igång att testa om skriptet fungerar om jag flyttar på mappen cratchit?
+    * Vilket jag ju kommer vilja när jag migrerar detta till riktiga cratchit-repot!
+    * Se belsut 26 i [beslut.md](./beslut.md)
+
+MEN GUD VILKEN FRIKTION!!
+
+* Det är lokala filer som inte skall versionshanteras
+* Det är generade filer som skall städas bort ibland
+* Det är filer och mappar som jag inte vet varifrån de kommer (nya av Claud eller gamla från felkörningar)
+* OSV, OSV OSV...
+
+
 
 ## 20261106
 

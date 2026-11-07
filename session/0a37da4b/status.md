@@ -27,6 +27,8 @@
 * Steg 23: `cratchit/README.md` på engelska, för den som bygger och installerar. Byggstegen flyttade dit från `status.md`.
 * Steg 24: Framework bredvid programmet (`<prefix>/bin/.cratchit/framework.txt` med `version`), runtime i HOME. `program_folder()` per plattform. Provkört på macOS: utvecklarbygget, installerat i en tillfällig mapp och startat via `PATH` från en annan mapp, via en symbolisk länk, och med framework borttaget (fel, exit 1). Linux- och Windows-grenarna av `program_folder()` är skrivna men inte byggda.
 * Steg 25: GitHub Actions kontrollerar att framework ligger bredvid programmet och att runtime skapas i HOME (utan `framework.txt`). Nytt steg installerar (Debug) och kör det installerade programmet via `PATH` från en annan mapp, på alla tre plattformar. Stegets kommandon provade lokalt på macOS, workflow inte körd.
+* Steg 26: `cratchit/install.py` (`--prefix`, `--try`, `--no-tests`). Provkört på macOS: `--try` från `/tmp`, `--try` i en flyttad kopia (byggmappen gjordes om, andra gången inte), `--prefix` till en tillfällig mapp. Inte installerat i `~/.local` på riktigt. Windows-grenen (`conan-default`, `--config Release`, `cratchit.exe`) inte provad.
+* Steg 27: `cratchit/framework/` heter nu `cratchit/resources/`.
 
 ## Bygg, kör och installera
 
@@ -45,4 +47,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 24 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 26 i en riktig terminal.

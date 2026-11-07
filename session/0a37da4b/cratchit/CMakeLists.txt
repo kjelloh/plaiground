@@ -76,10 +76,10 @@ add_executable(cratchit
 target_link_libraries(cratchit PRIVATE cratchit_core pyroceph cratchit_warnings)
 
 # The framework comes with the program: a .cratchit folder next to it, which
-# cratchit only reads. framework/ holds its sources; framework.txt gets the
+# cratchit only reads. resources/ holds its sources; framework.txt gets the
 # project version. It is put together in the build folder at configure time.
 set(framework_folder ${CMAKE_CURRENT_BINARY_DIR}/framework/.cratchit)
-configure_file(framework/framework.txt.in ${framework_folder}/framework.txt @ONLY)
+configure_file(resources/framework.txt.in ${framework_folder}/framework.txt @ONLY)
 
 # Copies the framework next to the built program on every build, so that a
 # development build finds it just like an installed one

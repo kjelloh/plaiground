@@ -6,3 +6,6 @@ CMakeUserPresets.json
 
 # Ignore cratchit dot-folders from test runs
 .cratchit
+
+# Ignore the trial installs of install.py --try
+_try/
