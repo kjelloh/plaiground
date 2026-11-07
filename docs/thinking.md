@@ -4,6 +4,7 @@ I find that thinking by writing helps me focus on my goals and what may be done 
 
 * [sessions](../session/index.md)
 * [chimes](../chime/index.md)
+* [Notes](../note/index.md) 
 
 ## 20261106
 
