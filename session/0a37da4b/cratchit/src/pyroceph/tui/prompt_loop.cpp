@@ -1,6 +1,7 @@
 #include "pyroceph/tui/prompt_loop.hpp"
 
 #include "charset/utf8.hpp"
+#include "pyroceph/tui/input_buffer.hpp"
 
 #include <print>
 #include <string>
@@ -15,6 +16,70 @@ std::string utf8_of(CodePoint code_point) {
   return std::string(bytes.begin(), bytes.end());
 }
 
+std::string utf8_of(std::u32string const& text) {
+  std::string result;
+  for (auto const code_point : text) result += utf8_of(code_point);
+  return result;
+}
+
+std::string path_of(Navigator const& navigator) {
+  std::string path;
+  for (auto const* state : navigator.path()) {
+    if (!path.empty()) path += path_separator;
+    path += state->name;
+  }
+  return path;
+}
+
+// The prompt ends in "> " while navigating and ": " while typing input. Both
+// are two ASCII characters, so the one can be turned into the other in place.
+void to_edit_prompt(std::FILE* out) { std::print(out, "\b\b: "); }
+void to_navigation_prompt(std::FILE* out) { std::print(out, "\b\b> "); }
+
+// Moves back over one code point on the terminal and blanks it
+void unecho(std::FILE* out) { std::print(out, "\b \b"); }
+
+// Handles a key while navigating. Starts the input with it when it is no action.
+void navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE* out) {
+  if (key == help_key) {
+    show_common_keys(navigator, out);
+  } else if (is_enter(key)) {
+    show(navigator, out);
+  } else if (key == back_key) {
+    if (navigator.press(key)) show(navigator, out);
+  } else if (navigator.press(key)) {
+    show(navigator, out);
+  } else if (input.push(key)) {
+    to_edit_prompt(out);
+    std::print(out, "{}", utf8_of(key));
+  }
+}
+
+// Handles a key while typing input
+void edit(CodePoint key, Navigator const& navigator, InputBuffer& input, std::FILE* out) {
+  if (is_backspace(key)) {
+    input.erase();
+    unecho(out);
+    if (input.empty()) to_navigation_prompt(out);
+  } else if (key == clear_key) {
+    for (std::size_t i = 0; i < input.size(); ++i) unecho(out);
+    input.clear();
+    to_navigation_prompt(out);
+  } else if (is_enter(key)) {
+    auto const& on_input = navigator.current().on_input;
+    auto const result = on_input ? on_input(input.text()) : InputResult(std::unexpected(std::string(no_input_error)));
+    if (result) {
+      input.clear();
+      if (!result->empty()) std::print(out, "\n{}", *result);
+      show(navigator, out);
+    } else {
+      std::print(out, "\n{}\n{}{}", result.error(), edit_prompt_of(navigator), utf8_of(input.text()));
+    }
+  } else if (input.push(key)) {
+    std::print(out, "{}", utf8_of(key));
+  }
+}
+
 } // namespace
 
 bool is_quit(CodePoint code_point) {
@@ -23,11 +88,14 @@ bool is_quit(CodePoint code_point) {
 
 bool is_enter(CodePoint code_point) { return code_point == U'\n' || code_point == U'\r'; }
 
+bool is_backspace(CodePoint code_point) { return code_point == 0x7F || code_point == 0x08; }
+
 std::vector<CommonKey> common_keys(Navigator const& navigator) {
   std::vector<CommonKey> keys;
   if (navigator.can_go_back()) keys.push_back({utf8_of(back_key), "Tillbaka"});
   keys.push_back({utf8_of(help_key), "Visa gemensamma val"});
   keys.push_back({"Enter", "Visa valen igen"});
+  keys.push_back({"Ctrl-U", "Töm indata"});
   keys.push_back({"Ctrl-D", "Avsluta (även Ctrl-C och Ctrl-Z)"});
   return keys;
 }
@@ -41,14 +109,9 @@ void show_common_keys(Navigator const& navigator, std::FILE* out) {
   std::fflush(out);
 }
 
-std::string prompt_of(Navigator const& navigator) {
-  std::string prompt;
-  for (auto const* state : navigator.path()) {
-    if (!prompt.empty()) prompt += path_separator;
-    prompt += state->name;
-  }
-  return prompt + "> ";
-}
+std::string prompt_of(Navigator const& navigator) { return path_of(navigator) + "> "; }
+
+std::string edit_prompt_of(Navigator const& navigator) { return path_of(navigator) + ": "; }
 
 void show(Navigator const& navigator, std::FILE* out) {
   std::print(out, "\n");
@@ -60,18 +123,16 @@ void show(Navigator const& navigator, std::FILE* out) {
 }
 
 void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out) {
+  InputBuffer input;
   show(navigator, out);
-  while (auto const code_point = keys.next()) {
-    if (is_quit(*code_point)) break;
-    if (*code_point == help_key) {
-      show_common_keys(navigator, out);
-      continue;
+  while (auto const key = keys.next()) {
+    if (is_quit(*key)) break;
+    if (input.empty()) {
+      navigate(*key, navigator, input, out);
+    } else {
+      edit(*key, navigator, input, out);
     }
-    if (is_enter(*code_point)) {
-      show(navigator, out);
-      continue;
-    }
-    if (navigator.press(*code_point)) show(navigator, out);
+    std::fflush(out);
   }
   std::print(out, "\n");
   std::fflush(out);

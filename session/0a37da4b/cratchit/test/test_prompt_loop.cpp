@@ -5,7 +5,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <expected>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using charset::Encoding;
@@ -54,7 +56,7 @@ TEST(PromptLoop, ShowsTheFirstStateAtOnce) {
 TEST(PromptLoop, ShowsEachNewStateWithoutCommonKeys) {
   auto const root = tree();
   Navigator navigator(root);
-  auto keys = keys_of({'1', 'x', '-'}); // x is no choice and is ignored
+  auto keys = keys_of({'1', '-'});
   EXPECT_EQ(run(keys, navigator),
             "\n  1 Bokslut\nHuvudmeny> "
             "\n  \u00E5 År\nHuvudmeny > Bokslut> "
@@ -80,6 +82,7 @@ TEST(PromptLoop, HelpListsCommonKeysAndKeepsTheState) {
             "\n  -       Tillbaka"
             "\n  ?       Visa gemensamma val"
             "\n  Enter   Visa valen igen"
+            "\n  Ctrl-U  Töm indata"
             "\n  Ctrl-D  Avsluta (även Ctrl-C och Ctrl-Z)"
             "\nHuvudmeny > Bokslut> "
             "\n");
@@ -142,4 +145,120 @@ TEST(PromptLoop, QuitKeysEndTheLoop) {
     run(keys, navigator);
     EXPECT_EQ(navigator.current().name, "Huvudmeny") << int{quit};
   }
+}
+
+namespace {
+
+// Bokslut takes four digits and refuses anything else
+State tree_with_input() {
+  auto year = [](std::u32string_view text) -> pyroceph::tui::InputResult {
+    if (text == U"2025") return std::string("Noterat.");
+    if (text == U"tyst") return std::string();
+    return std::unexpected(std::string("Fel år."));
+  };
+  return State{"Huvudmeny", {{U'1', "Bokslut", State{"Bokslut", {}, year}}}};
+}
+
+} // namespace
+
+TEST(PromptLoop, KeyThatIsNoActionStartsInput) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'9', 'x'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \b\b: 9x\n");
+}
+
+TEST(PromptLoop, ActionKeysAreTextWhileTyping) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'9', '1', '-', '?'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \b\b: 91-?\n");
+  EXPECT_EQ(navigator.current().name, "Huvudmeny");
+}
+
+TEST(PromptLoop, BackspaceToEmptyGoesBackToNavigating) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'9', 0x7F, '1'}); // after erasing, 1 is a choice again
+  run(keys, navigator);
+  EXPECT_EQ(navigator.current().name, "Bokslut");
+}
+
+TEST(PromptLoop, WindowsBackspaceErasesToo) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'9', 'x', 0x08, 0x08});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \b\b: 9x\b \b\b \b\b\b> \n");
+}
+
+TEST(PromptLoop, CtrlUEmptiesInputAndGoesBackToNavigating) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'9', 'x', 0x15, '1'});
+  run(keys, navigator);
+  EXPECT_EQ(navigator.current().name, "Bokslut");
+}
+
+TEST(PromptLoop, AcceptedInputShowsReplyAndGoesBackToNavigating) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'1', '2', '0', '2', '5', '\n', '-'});
+  EXPECT_EQ(run(keys, navigator),
+            "\n  1 Bokslut\nHuvudmeny> "
+            "\nHuvudmeny > Bokslut> \b\b: 2025"
+            "\nNoterat."
+            "\nHuvudmeny > Bokslut> "
+            "\n  1 Bokslut\nHuvudmeny> " // - went back, so navigating again
+            "\n");
+}
+
+TEST(PromptLoop, EmptyReplyShowsNothingButTheState) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'1', 't', 'y', 's', 't', '\n'});
+  EXPECT_EQ(run(keys, navigator),
+            "\n  1 Bokslut\nHuvudmeny> "
+            "\nHuvudmeny > Bokslut> \b\b: tyst"
+            "\nHuvudmeny > Bokslut> "
+            "\n");
+}
+
+TEST(PromptLoop, RefusedInputShowsErrorAndKeepsTheInput) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'1', '2', '0', '2', '\n', '5', '\n'}); // 2 0 2, refused, then 5 makes 2025
+  EXPECT_EQ(run(keys, navigator),
+            "\n  1 Bokslut\nHuvudmeny> "
+            "\nHuvudmeny > Bokslut> \b\b: 202"
+            "\nFel år.\nHuvudmeny > Bokslut: 202"
+            "5"
+            "\nNoterat."
+            "\nHuvudmeny > Bokslut> "
+            "\n");
+}
+
+TEST(PromptLoop, StateWithoutOnInputRefusesInput) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'x', '\n'});
+  EXPECT_EQ(run(keys, navigator),
+            "\n  1 Bokslut\nHuvudmeny> \b\b: x"
+            "\nHär finns inget att göra med indata.\nHuvudmeny: x"
+            "\n");
+}
+
+TEST(PromptLoop, BackAtRootIsNoInput) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({'-', '1'});
+  run(keys, navigator);
+  EXPECT_EQ(navigator.current().name, "Bokslut");
+}
+
+TEST(PromptLoop, ControlKeyThatIsNoActionIsIgnored) {
+  auto const root = tree_with_input();
+  Navigator navigator(root);
+  auto keys = keys_of({0x1B, 0x15, 0x7F, '1'});
+  run(keys, navigator);
+  EXPECT_EQ(navigator.current().name, "Bokslut");
 }

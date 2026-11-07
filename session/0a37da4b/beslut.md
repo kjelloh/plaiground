@@ -54,3 +54,10 @@ Kort logg över vad vi beslutat och varför.
 * `common_keys(navigator)` ger listan. `-` och `?` tas från `back_key` och `help_key`, men texten för Ctrl-D/C/Z är skriven för sig och måste hållas i takt med `is_quit`.
 * Introtexten är `Tryck ? för gemensamma val.` och skrivs en gång vid start.
 * Enter visar valen till nya states igen, utan att statet byts. Enter är både U+000A (macOS och Linux, där terminalen gör CR till LF) och U+000D (Windows-konsol), se `is_enter`. Enter finns med bland de gemensamma valen.
+* Indata: en skrivbar tangent som inte är en handling (val, `-`, `?`, Enter, avsluta) börjar redigering och läggs i en `InputBuffer` av kodpunkter. Det beror inte på om statet tar emot indata. Styrtecken utan handling ignoreras. `-` är alltid en handling i navigeringsläget och gör ingenting på roten.
+* Under redigering är alla skrivbara tangenter text, även `-`, `?` och siffror. Backspace (U+007F, eller U+0008 från Windows-konsol) suddar ett tecken, och när bufferten blir tom navigerar man igen. Ctrl-U tömmer bufferten och går tillbaka till navigering. Ctrl-C/D/Z avslutar.
+* Enter ger bufferten till `State::on_input`, som svarar `std::expected<std::string, std::string>`. Godkänt: svaret skrivs (om det inte är tomt), bufferten töms och man navigerar igen. Fel: feltexten skrivs, bufferten behålls och man står kvar i redigering för att rätta. Ett state utan `on_input` svarar med felet `Här finns inget att göra med indata.`
+* Prompten slutar med `> ` vid navigering och `: ` vid redigering. Bytet görs på plats med två backsteg, och suddning med `\b \b`. Det fungerar för å, ä och ö men inte för breda tecken.
+* `State` har konstruktorer i stället för att vara ett aggregat, så att `on_input` kan utelämnas utan varningar om saknade fält.
+* Känd begränsning: indata kan inte börja med en tangent som är ett val i aktuellt state (t.ex. ett år som börjar med `2` där `2` är ett val). Piltangenter lägger `[` och `A` i bufferten (ESC ignoreras).
+* Ett svar från `on_input` kan inte byta state ännu. Väntar.

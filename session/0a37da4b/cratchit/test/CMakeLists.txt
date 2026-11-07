@@ -5,6 +5,7 @@ add_executable(cratchit_tests
   test_decoder.cpp
   test_detect.cpp
   test_dot_folder.cpp
+  test_input_buffer.cpp
   test_key_reader.cpp
   test_log.cpp
   test_path_value.cpp

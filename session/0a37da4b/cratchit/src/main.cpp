@@ -7,7 +7,11 @@
 #include "pyroceph/tui/state.hpp"
 
 #include <cstdio>
+#include <algorithm>
 #include <filesystem>
+#include <format>
+#include <string>
+#include <string_view>
 #include <print>
 
 namespace {
@@ -18,13 +22,24 @@ charset::Encoding encoding_of(cratchit::Charset charset) {
   return charset == cratchit::Charset::Cp437 ? charset::Encoding::cp437 : charset::Encoding::utf8;
 }
 
+// Demo: Bokslut takes a year of four digits
+pyroceph::tui::InputResult bokslut_year(std::u32string_view text) {
+  auto const is_digit = [](char32_t c) { return c >= U'0' && c <= U'9'; };
+  if (text.size() != 4 || !std::ranges::all_of(text, is_digit)) {
+    return std::unexpected(std::string("Ange ett år med fyra siffror, till exempel 2025."));
+  }
+  std::string year;
+  for (auto const c : text) year.push_back(static_cast<char>(c));
+  return std::format("Bokslut för {} noterat.", year);
+}
+
 // A first tree of states to navigate. The choices only move between states.
 pyroceph::tui::State make_menu() {
   using pyroceph::tui::State;
   return State{"Huvudmeny",
                {
-                   {U'1', "Projekt", State{"Projekt", {{U'1', "Öppna", State{"Öppna projekt", {}}}}}},
-                   {U'2', "Bokslut", State{"Bokslut", {}}},
+                   {U'1', "Projekt", State{"Projekt", {{U'1', "Öppna", State{"Öppna projekt"}}}}},
+                   {U'2', "Bokslut", State{"Bokslut", {}, bokslut_year}},
                }};
 }
 

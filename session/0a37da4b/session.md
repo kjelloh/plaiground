@@ -38,6 +38,19 @@ Jag har nu en Transcoder.
 
 Ser bra ut för nu tror jag?!
 
+Nu har jag itererat en mängd små ändringar och skaffat mig en intuitiv känsla av vad Claude är bra på och vad den nästan alltid missar.
+
+* Den missar nästan alltid att föreslå en lösning som passar bra 'i det stora hela'.
+
+    * Som när jag bad om att starta edit-mode då en tangent saknar mappning till option.
+    * Då föreslog den att gå in i edit_mode om state saknar on_input.
+    * Men den enkla lösningen är ju att trigga på att ingen option mapar till rangenten.
+    * Då jag påpekade detta så nappade den direkt.
+    * Så det är hela tiden jag som måste ha helikopter-perspektivet och arkitekturen i beaktande.
+    * Claude är duktig på att 'slå upp' vilken kod som åstadkommer det resultat jag vill ha.
+    * Claude är dålig på att välja kod som också 'passar ihop' med 'befintligt beteende' (ungefär)
+    * Det är svårt att sätta ord på det. Men Claude 'förstår inte konsekvenserna'. Det måste jag håla koll på och styra efter. 
+
 ## 20261106
 
 Så var det dags att testa att vibe-koda med Claude på svenska.
