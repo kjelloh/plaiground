@@ -219,15 +219,37 @@ TEST(WorkspaceMenu, PlusLeadsToAddWithOpenExistingAndNew) {
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
 }
 
-TEST(AddProjectMenu, OpenExistingAndNewAreNotThereYet) {
-  for (auto const& [key, option] : {std::pair{U'1', "Öppna befintlig"}, std::pair{U'2', "Ny bokföring"}}) {
+TEST(AddProjectMenu, OpenExistingIsNotThereYet) {
+  Navigator navigator(cratchit::ui::make_add_project_menu());
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Inte än (Öppna befintlig)");
+  ASSERT_EQ(navigator.current().view().size(), 1u);
+  EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att "));
+  EXPECT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Lägg till");
+}
+
+TEST(AddProjectMenu, NewOffersFromSieAndFromDetails) {
+  Navigator navigator(cratchit::ui::make_add_project_menu());
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Ny bokföring");
+  EXPECT_TRUE(navigator.current().view().empty());
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Från SIE"}, {U'2', "Från uppgifter"}}));
+  EXPECT_EQ(navigator.current().on_key(U'3'), nullptr);
+  EXPECT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Lägg till");
+}
+
+TEST(AddProjectMenu, FromSieAndFromDetailsAreNotThereYet) {
+  for (auto const& [key, option] : {std::pair{U'1', "Från SIE"}, std::pair{U'2', "Från uppgifter"}}) {
     Navigator navigator(cratchit::ui::make_add_project_menu());
+    ASSERT_TRUE(navigator.press(U'2'));
     ASSERT_TRUE(navigator.press(key));
     EXPECT_EQ(navigator.current().name(), std::format("Inte än ({})", option));
     ASSERT_EQ(navigator.current().view().size(), 1u);
-    EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att "));
+    EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att skapa en ny bokföring från "));
     EXPECT_TRUE(navigator.back());
-    EXPECT_EQ(navigator.current().name(), "Lägg till");
+    EXPECT_EQ(navigator.current().name(), "Ny bokföring");
   }
 }
 

@@ -44,6 +44,7 @@
 * Steg 39: `Samlingsmapp` har `+ Lägg till bokföring` sist, som leder till `Lägg till` med `1 Öppna befintlig` och `2 Ny bokföring`. Båda är tomma states för nu (`make_add_project_menu` i `src/ui/add_project_menu`). Samlingsmappens texter säger nu bokföring i stället för projekt. 201 tester. Provkört med pipe på macOS.
 * Steg 40: State för funktioner som inte finns än, `make_design_insufficiency_state(description)` i `src/ui/design_insufficiency` med tester i `test/test_design_insufficiency.cpp`. Namnet i sökvägen är `Inte än` och vyn är beskrivningen. Statet loggar `DESIGN_INSUFFICIENCY` med filen och raden där det skapas. `Öppna befintlig` och `Ny bokföring` under `Lägg till` leder nu dit. 203 tester. Provkört med pipe på macOS.
 * Steg 41: `make_design_insufficiency_state(option, what)`: namnet i sökvägen är `Inte än (<menyval>)` och vyn `Utvecklaren av cratchit har inte infört <what> ännu.`. Loggen får `<menyval>: <what>`. Texterna till användaren i menyerna, `main`, varningarna om terminalens teckenkodning och `no_input_error` är omskrivna till aktiv form. 203 tester. Provkört med pipe på macOS.
+* Steg 42: `Ny bokföring` under `Lägg till` är ett eget state (`NewProjectState` i `src/ui/add_project_menu.cpp`) med `1 Från SIE` och `2 Från uppgifter` (namn, organisationsnummer och räkenskapsår). Båda leder till `Inte än`. 205 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 
