@@ -17,10 +17,14 @@ using pyroceph::tui::View;
 
 namespace {
 
-// A project folder in workspace_folder with project.txt holding text
-void add_project(fs::path const& workspace_folder, std::string const& folder_name, std::string const& text) {
+// A project folder with project.txt holding text, remembered in workspace.txt of
+// the workspace in workspace_folder as `project.<uuid> = <folder_name>`
+void add_project(fs::path const& workspace_folder, std::string const& folder_name, std::string const& uuid,
+                 std::string const& text) {
   fs::create_directories(workspace_folder / folder_name / ".cratchit");
   std::ofstream(workspace_folder / folder_name / ".cratchit" / "project.txt") << text;
+  std::ofstream(workspace_folder / ".cratchit" / "workspace.txt", std::ios::app)
+      << "project." << uuid << " = " << folder_name << '\n';
 }
 
 // An empty folder of its own for each test, standing in for Documents, removed afterwards
@@ -134,8 +138,11 @@ TEST(TestMenu, BokslutTakesAYearOfFourDigits) {
 TEST_F(RootMenuTest, WorkspaceListsItsProjectsAndOpensOne) {
   auto const folder = documents / "cratchit";
   ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-08"));
-  add_project(folder, "itfied", "created = 2026-10-23\nname = The ITfied AB\n");
-  add_project(folder, "annat", "name = Annat AB\n");
+  add_project(folder, "itfied", "1", "created = 2026-10-23\nuuid = 1\nname = The ITfied AB\n");
+  add_project(folder, "annat", "2", "uuid = 2\nname = Annat AB\n");
+  add_project(folder, "not remembered", "3", "uuid = 3\nname = Glömt AB\n");
+  // The workspace lists only what it remembers: forget the last one again
+  std::ofstream(folder / ".cratchit" / "workspace.txt") << "created = 2026-11-08\nproject.1 = itfied\nproject.2 = annat\n";
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Annat AB"}, {U'2', "The ITfied AB"}}));
@@ -150,7 +157,7 @@ TEST_F(RootMenuTest, WorkspaceListsItsProjectsAndOpensOne) {
 TEST_F(RootMenuTest, ProjectThatCannotBeOpenedLeadsToAnError) {
   auto const folder = documents / "cratchit";
   ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-08"));
-  add_project(folder, "Utan namn", "created = 2026-10-23\n");
+  add_project(folder, "Utan namn", "1", "uuid = 1\n");
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Utan namn"}}));
@@ -182,7 +189,7 @@ TEST(WorkspaceMenu, WithoutProjectsShowsItsFolderAndHasNoOptions) {
 
 TEST(WorkspaceMenu, OffersNineProjectsAndSaysWhenThereAreMore) {
   std::vector<cratchit::ListedProject> projects;
-  for (char c = 'a'; c <= 'j'; ++c) projects.push_back({fs::path("/x/cratchit") / std::string(1, c), std::string(1, c)});
+  for (char c = 'a'; c <= 'j'; ++c) projects.push_back({std::string(1, c), fs::path("/x/cratchit") / std::string(1, c), std::string(1, c)});
   auto workspace = cratchit::ui::make_workspace_menu(workspace_at("/x/cratchit"), projects);
   auto const options = workspace->options();
   ASSERT_EQ(options.size(), 9u);
@@ -192,7 +199,7 @@ TEST(WorkspaceMenu, OffersNineProjectsAndSaysWhenThereAreMore) {
 }
 
 TEST(ProjectMenu, IsNamedByTheProjectAndShowsItsFolder) {
-  auto project = cratchit::ui::make_project_menu({"/x/p", "/x/p/.cratchit/project.txt", "The ITfied AB"});
+  auto project = cratchit::ui::make_project_menu({"/x/p", "/x/p/.cratchit/project.txt", "1", "The ITfied AB"});
   EXPECT_EQ(project->name(), "The ITfied AB");
   EXPECT_EQ(project->view(), (View{fs::path("/x/p").string()}));
   EXPECT_TRUE(project->options().empty());

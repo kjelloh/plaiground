@@ -109,3 +109,7 @@ Kort logg över vad vi beslutat och varför.
 * Går `project.txt` inte att läsa när listan görs, eller saknar den `name`, listas projektet med mappens namn. Felet visas först när användaren väljer projektet (`Fel`-statet med `Kunde inte öppna projektet: <orsak>`).
 * Kan samlingsmappen inte läsas när projekten ska listas, leder `0` i roten till `Fel` som när den inte kan öppnas.
 * Ett öppnat projekt har sitt `name` som namn i sökvägen, t.ex. `Cratchit > Samlingsmapp > The ITfied AB> `. Vyn visar mappen. Inga val än.
+* Steg 38: Ersätter beslutet i steg 37 om att projekten hittas genom att undermapparna gås igenom. Samlingsmappen kommer i stället ihåg sina projekt i `workspace.txt`, som i 'take 3': en rad `project.<uuid> = <mapp>` per projekt. Mappen kan stå som hel sökväg eller relativt samlingsmappen, och projektet får ligga var som helst. Undermappar som inte står i `workspace.txt` syns inte.
+* `uuid` i projektets `project.txt` måste vara samma som i `workspace.txt`, annars hamnar man i `Fel` när projektet väljs. Det fångar en rad som pekar på fel mapp. Ett projekt utan `uuid` kan inte öppnas.
+* En rad `project.` utan uuid, eller utan mapp, gör att samlingsmappen inte kan öppnas (`Fel` från roten). Ett projekt vars mapp saknas eller inte går att öppna listas med mappens namn, och felet visas när man väljer det.
+* cratchit skriver ännu inget i `workspace.txt`. `project = <uuid>` (senast öppnade projektet i 'take 3') väntar.

@@ -13,40 +13,51 @@ namespace fs = std::filesystem;
 
 namespace {
 
-fs::path project_file_of(fs::path const& folder) { return folder / ".cratchit" / "project.txt"; }
+// The key prefix of a remembered project in workspace.txt
+constexpr std::string_view project_prefix = "project.";
 
 } // namespace
 
-std::expected<std::vector<ListedProject>, std::string> list_projects(fs::path const& workspace_folder) {
+std::expected<std::vector<ListedProject>, std::string> list_projects(Workspace const& workspace) {
+  auto const entries = read_path_values(workspace.file);
+  if (!entries) return std::unexpected(entries.error());
   std::vector<ListedProject> result;
-  std::error_code ec;
-  fs::directory_iterator entries(workspace_folder, ec);
-  if (ec) return std::unexpected(std::format("Kan inte läsa {}: {}", workspace_folder.string(), ec.message()));
-  for (auto const& entry : entries) {
-    std::error_code entry_ec;
-    if (!entry.is_directory(entry_ec)) continue;
-    auto const folder = entry.path();
-    if (!fs::is_regular_file(project_file_of(folder), entry_ec)) continue;
+  for (auto const& entry : *entries) {
+    if (!entry.path.starts_with(project_prefix)) continue;
+    auto uuid = entry.path.substr(project_prefix.size());
+    if (uuid.empty()) return std::unexpected(std::format("{}: '{}' saknar uuid", workspace.file.string(), entry.path));
+    if (entry.value.empty()) {
+      return std::unexpected(std::format("{}: '{}' saknar mapp", workspace.file.string(), entry.path));
+    }
+    fs::path folder(entry.value);
+    if (folder.is_relative()) folder = workspace.folder / folder;
     auto caption = folder.filename().string();
-    if (auto const opened = open_project(folder)) caption = opened->name;
-    result.push_back({folder, std::move(caption)});
+    if (auto const opened = open_project(folder, uuid)) caption = opened->name;
+    result.push_back({std::move(uuid), std::move(folder), std::move(caption)});
   }
   std::ranges::sort(result, {}, [](ListedProject const& p) { return std::tie(p.caption, p.folder); });
   return result;
 }
 
-std::expected<Project, std::string> open_project(fs::path const& folder) {
+std::expected<Project, std::string> open_project(fs::path const& folder, std::string_view uuid) {
   Project result;
   result.folder = folder;
-  result.file = project_file_of(folder);
+  result.file = folder / ".cratchit" / "project.txt";
   std::error_code ec;
   if (!fs::is_regular_file(result.file, ec)) {
     return std::unexpected(std::format("{} saknas", result.file.string()));
   }
   auto const entries = read_path_values(result.file);
   if (!entries) return std::unexpected(entries.error());
+  auto found_uuid = find_value(*entries, "uuid");
+  if (!found_uuid || found_uuid->empty()) return std::unexpected(std::format("{}: 'uuid' saknas", result.file.string()));
+  if (*found_uuid != uuid) {
+    return std::unexpected(
+        std::format("{}: uuid {} är inte {} som samlingsmappen har för mappen", result.file.string(), *found_uuid, uuid));
+  }
   auto name = find_value(*entries, "name");
   if (!name || name->empty()) return std::unexpected(std::format("{}: 'name' saknas", result.file.string()));
+  result.uuid = std::move(*found_uuid);
   result.name = std::move(*name);
   return result;
 }

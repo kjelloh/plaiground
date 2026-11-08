@@ -49,7 +49,7 @@ private:
   static CodePoint key_of(std::size_t index) { return static_cast<CodePoint>(U'1' + index); }
 
   static OnKeyResult open(ListedProject const& listed) {
-    auto project = open_project(listed.folder);
+    auto project = open_project(listed.folder, listed.uuid);
     if (!project) {
       LOG_BUSINESS("Kunde inte öppna projektet i {}: {}", listed.folder.string(), project.error());
       return pyroceph::tui::make_error_state(std::format("Kunde inte öppna projektet: {}", project.error()));

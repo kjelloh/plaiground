@@ -98,9 +98,17 @@ Nu har jag vibe-kodat 'öppna samlingsmapp'
 
 * Ännu ej infört: Öppna samlingsmapp på ett annat ställe (och minnas det stället) 
 * Ännu ej infört: 'öppna bokföring' för att peka ut ett projekt på annat ställe (och minnas det stället)
-* Ännu ej innfört: Skapa ny bokföring (och peka ut en mapp där nytt projekt skapas)
+* Ännu ej infört: Skapa ny bokföring (och peka ut en mapp där nytt projekt skapas)
 
     * Ännu ej infört: Skapa ny bokföring från SIE-fil
+
+MEN: Det här blev för stort att ta i ett steg!
+
+* Claude hittade på en superkomplex lösning med steg och övertänkta felfall mm.
+* Så jag bad att få begränsa mig.
+
+    * Jag tog bort skanning av undermappar
+    * Och badd om att cratchit kommer ihåg vilka bokföringar som tidigare öppnats
 
 ## 20261107
 

@@ -46,7 +46,7 @@ private:
     for (auto const& entry : workspace->initiated) {
       LOG_BUSINESS("Skapade {} i {}", entry.file.generic_string(), entry.folder.string());
     }
-    auto projects = list_projects(workspace->folder);
+    auto projects = list_projects(*workspace);
     if (!projects) return cannot_open_workspace(projects.error());
     LOG_BUSINESS("Öppnade samlingsmappen {} med {} projekt", workspace->folder.string(), projects->size());
     return make_workspace_menu(std::move(*workspace), std::move(*projects));

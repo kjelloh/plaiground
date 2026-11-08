@@ -40,6 +40,7 @@
 * Steg 35: `0 Samlingsmapp` öppnar `<Dokument>/cratchit` och skapar den första gången (`open_workspace`, `documents_folder`, `default_workspace_folder` i `core/dot_folder`). Vyn visar mappen, och `Ny samlingsmapp skapad.` när den skapades. Går det inte att öppna mappen kommer man till `Fel` med orsaken. 182 tester. Provkört med pipe på macOS med HOME i en tillfällig mapp (skapad, öppnad igen, och `Documents` saknas leder till `Fel`). Inte provat mot den riktiga `~/Documents`, där macOS först frågar om Terminal får använda mappen. Windows-grenen (`SHGetKnownFolderPath`) är skriven men inte byggd.
 * Steg 36: GitHub Actions sparar Conans paket (`~/.conan2/p`) mellan körningarna med `actions/cache@v6`. Orsak: macOS-bygget föll när github.com inte svarade (503, timeout) då `gtest` skulle hämtas för att byggas från källkoden. Conan-versionen står en gång, i `CONAN_VERSION`. Workflow inte körd.
 * Steg 37: `Samlingsmapp` listar projekten (undermappar med `.cratchit/project.txt`) som 1–9 och öppnar dem (`list_projects`, `open_project` i `core/project`, `make_project_menu` i `src/ui/project_menu`). Projektets state har projektets namn i sökvägen och mappen som vy, inga val än. Ett projekt som inte går att öppna leder till `Fel`. 194 tester. Provkört med pipe på macOS med HOME i en tillfällig mapp och en kopia av `The ITfied AB`.
+* Steg 38: Samlingsmappen söker inte längre i sina undermappar. Den listar projekten den kommer ihåg i `workspace.txt` (`project.<uuid> = <mapp>`, som i 'take 3'), och mappen kan ligga var som helst. `open_project` kontrollerar att `uuid` i `project.txt` stämmer. cratchit skriver ännu inget i `workspace.txt`, så projekt läggs dit för hand. 198 tester. Provkört med pipe på macOS (HOME i en tillfällig mapp, `The ITfied AB` utanför samlingsmappen och ihågkommen, och ett projekt i en undermapp som inte var ihågkommet och inte syntes).
 
 ## Bygg, kör och installera
 
@@ -58,4 +59,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bestäms av användaren. Troliga steg: `0 Nytt projekt` i samlingsmappen, kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), och vad ett öppnat projekt ska erbjuda.
+* Bestäms av användaren. Troliga steg: att cratchit själv lägger till ett projekt i `workspace.txt` (öppna bokföring på annat ställe, eller ny bokföring), och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`).
