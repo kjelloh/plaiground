@@ -41,6 +41,22 @@ Nu bad jag om alternativ '0' för att öppna ett 'workspace'.
 * Claude frågade om ett svenskt namn för alternativet.
 * Jag valde 'Samlingsmapp' (är lite kluven men det kanske är ok ändå?)
 
+Jag gick nu vidare med att faktiskt kunna öppna en samlingsmapp.
+
+* jag märker nu att jag hela tiden missar att Claude redan tänkt på saker jag vill styra upp.
+* Jag behöver bli mer noggrann att först förstå vad Claude föreslår.
+* Och sedan peta så lite som möjligt (Claude blir förvirrad...)
+
+Nu blev det krångligt igen.
+
+* Befintlig kod har inget sätt att meddela ett fel att gåå in i ett state.
+* EN tangent resulterar antingen i ett nytt state eller nullptr (inte kopplad till ett alternativ)
+* Så vad händer om användaren väljer att öppna en samlingsmapp som inte 'går' att öppna av någon anledning?
+
+Jag hade en diskussion  med Claude men kände att vi trassalde in oss olika lösningar som växte i komplexitet.
+
+* Så jag avslutade Claude och backade alla filer för att göra ett omtag.
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.
