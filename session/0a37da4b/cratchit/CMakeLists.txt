@@ -75,6 +75,7 @@ target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${dev
 add_library(cratchit_ui
   src/ui/root_menu.cpp
   src/ui/test_menu.cpp
+  src/ui/workspace_menu.cpp
 )
 target_include_directories(cratchit_ui PUBLIC src)
 target_link_libraries(cratchit_ui PUBLIC pyroceph PRIVATE cratchit_warnings)

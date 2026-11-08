@@ -6,8 +6,9 @@
 
 namespace cratchit::ui {
 
-// The root of cratchit's UI, named "Cratchit" in the prompt. The real menus
-// come here as 1, 2, ...; 9 leads to the test menu (see test_menu.hpp).
+// The root of cratchit's UI, named "Cratchit" in the prompt. 0 leads to the
+// workspace (see workspace_menu.hpp), 9 to the test menu (see test_menu.hpp).
+// More real menus come here as 1, 2, ...
 std::unique_ptr<pyroceph::tui::State> make_root_menu();
 
 } // namespace cratchit::ui

@@ -1,6 +1,7 @@
 #include "ui/root_menu.hpp"
 
 #include "ui/test_menu.hpp"
+#include "ui/workspace_menu.hpp"
 
 #include <string>
 
@@ -16,8 +17,9 @@ using pyroceph::tui::State;
 class RootState : public State {
 public:
   std::string name() const override { return "Cratchit"; }
-  OptionsList options() const override { return {{U'9', "Testmeny"}}; }
+  OptionsList options() const override { return {{U'0', "Samlingsmapp"}, {U'9', "Testmeny"}}; }
   OnKeyResult on_key(CodePoint key) override {
+    if (key == U'0') return make_workspace_menu();
     if (key == U'9') return make_test_menu();
     return nullptr;
   }

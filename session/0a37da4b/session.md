@@ -29,12 +29,17 @@ Låt oss prova?
 * Användaren får inte skapa ett projekt i en mapp som 'är' ett workspace.
 * Användaren måste skapa ett projekt i en undermapp till ett workspace.
 
-Jag valde nu att be Claude skapa en ny root och flytta befintliga menyn till valety '9 Testmeny'
+Jag valde nu att be Claude skapa en ny root och flytta befintliga menyn till valet '9 Testmeny'
 
 * Det visade sig vara rätt beslut!
 * För nu avslöjade Claude hur hård-kodat allting va i main.
 * Så för att göra detta föreslog Claude att skap en fil per state.
 * Och kalla gamla roten för 'TextMenu' i filen test_menu.cpp/hpp
+
+Nu bad jag om alternativ '0' för att öppna ett 'workspace'.
+
+* Claude frågade om ett svenskt namn för alternativet.
+* Jag valde 'Samlingsmapp' (är lite kluven men det kanske är ok ändå?)
 
 ## 20261107
 
