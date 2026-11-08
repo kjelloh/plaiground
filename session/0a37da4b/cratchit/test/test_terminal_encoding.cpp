@@ -48,7 +48,7 @@ TEST(TerminalEncoding, AdaptsInEachDirectionOnItsOwn) {
   EXPECT_EQ(chosen.in, Charset::Cp437);
   EXPECT_EQ(chosen.out, Charset::Utf8);
   ASSERT_EQ(chosen.warnings.size(), 1u);
-  EXPECT_EQ(chosen.warnings[0], "Varning: Terminalens teckenkodning för utmatning, code page 437 (CP437), stöds inte än. Använder UTF-8.");
+  EXPECT_EQ(chosen.warnings[0], "Varning: cratchit stöder inte terminalens teckenkodning för utmatning, code page 437 (CP437), än. cratchit använder UTF-8.");
 }
 
 TEST(TerminalEncoding, UnsupportedFallsBackToUtf8WithWarning) {
@@ -57,8 +57,8 @@ TEST(TerminalEncoding, UnsupportedFallsBackToUtf8WithWarning) {
   EXPECT_EQ(chosen.in, Charset::Utf8);
   EXPECT_EQ(chosen.out, Charset::Utf8);
   ASSERT_EQ(chosen.warnings.size(), 2u);
-  EXPECT_EQ(chosen.warnings[0], "Varning: Terminalens teckenkodning för inmatning, GB18030 (GB18030), stöds inte än. Använder UTF-8.");
-  EXPECT_EQ(chosen.warnings[1], "Varning: Terminalens teckenkodning för utmatning, GB18030 (GB18030), stöds inte än. Använder UTF-8.");
+  EXPECT_EQ(chosen.warnings[0], "Varning: cratchit stöder inte terminalens teckenkodning för inmatning, GB18030 (GB18030), än. cratchit använder UTF-8.");
+  EXPECT_EQ(chosen.warnings[1], "Varning: cratchit stöder inte terminalens teckenkodning för utmatning, GB18030 (GB18030), än. cratchit använder UTF-8.");
 }
 
 TEST(TerminalEncoding, UnknownFallsBackToUtf8WithWarning) {
@@ -66,7 +66,7 @@ TEST(TerminalEncoding, UnknownFallsBackToUtf8WithWarning) {
   auto const chosen = choose_terminal_encoding({koi8, koi8});
   EXPECT_EQ(chosen.in, Charset::Utf8);
   ASSERT_EQ(chosen.warnings.size(), 2u);
-  EXPECT_EQ(chosen.warnings[0], "Varning: Terminalens teckenkodning för inmatning, KOI8-R, är okänd. Använder UTF-8.");
+  EXPECT_EQ(chosen.warnings[0], "Varning: cratchit känner inte igen terminalens teckenkodning för inmatning, KOI8-R. cratchit använder UTF-8.");
 }
 
 TEST(TerminalEncoding, ThisPlatformReportsSomething) {

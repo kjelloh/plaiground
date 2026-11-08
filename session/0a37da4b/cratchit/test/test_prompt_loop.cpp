@@ -255,7 +255,7 @@ TEST(PromptLoop, StateWithoutOnInputRefusesInput) {
   auto keys = keys_of({'x', '\n'});
   EXPECT_EQ(run(keys, navigator),
             "\n  1 Bokslut\nHuvudmeny> \b\b: x"
-            "\nHär finns inget att göra med indata.\nHuvudmeny: x"
+            "\nProgrammet tar inte emot text här.\nHuvudmeny: x"
             "\n");
 }
 

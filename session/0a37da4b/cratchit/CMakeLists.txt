@@ -80,6 +80,7 @@ target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${dev
 # so that the tests can reach the states.
 add_library(cratchit_ui
   src/ui/add_project_menu.cpp
+  src/ui/design_insufficiency.cpp
   src/ui/project_menu.cpp
   src/ui/root_menu.cpp
   src/ui/test_menu.cpp

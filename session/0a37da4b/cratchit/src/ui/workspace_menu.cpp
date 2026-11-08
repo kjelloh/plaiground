@@ -28,9 +28,9 @@ public:
   std::string name() const override { return "Samlingsmapp"; }
   View view() const override {
     View lines;
-    if (!workspace_.initiated.empty()) lines.push_back("Ny samlingsmapp skapad.");
+    if (!workspace_.initiated.empty()) lines.push_back("cratchit skapade en ny samlingsmapp.");
     lines.push_back(workspace_.folder.string());
-    if (projects_.size() > max_listed_projects) lines.push_back("Fler bokföringar finns.");
+    if (projects_.size() > max_listed_projects) lines.push_back("Samlingsmappen har fler bokföringar än cratchit visar här.");
     return lines;
   }
   OptionsList options() const override {
@@ -55,7 +55,7 @@ private:
     auto project = open_project(listed.folder, listed.uuid);
     if (!project) {
       LOG_BUSINESS("Kunde inte öppna projektet i {}: {}", listed.folder.string(), project.error());
-      return pyroceph::tui::make_error_state(std::format("Kunde inte öppna bokföringen: {}", project.error()));
+      return pyroceph::tui::make_error_state(std::format("cratchit kunde inte öppna bokföringen: {}", project.error()));
     }
     LOG_BUSINESS("Öppnade projektet {} i {}", project->name, project->folder.string());
     return make_project_menu(std::move(*project));

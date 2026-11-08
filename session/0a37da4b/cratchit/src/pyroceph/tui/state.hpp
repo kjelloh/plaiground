@@ -15,7 +15,7 @@ namespace pyroceph::tui {
 inline constexpr CodePoint back_key = U'-';
 
 // The error text when a state that takes no input gets text
-inline constexpr std::string_view no_input_error = "Här finns inget att göra med indata.";
+inline constexpr std::string_view no_input_error = "Programmet tar inte emot text här.";
 
 class State;
 

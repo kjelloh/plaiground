@@ -42,6 +42,8 @@
 * Steg 37: `Samlingsmapp` listar projekten (undermappar med `.cratchit/project.txt`) som 1–9 och öppnar dem (`list_projects`, `open_project` i `core/project`, `make_project_menu` i `src/ui/project_menu`). Projektets state har projektets namn i sökvägen och mappen som vy, inga val än. Ett projekt som inte går att öppna leder till `Fel`. 194 tester. Provkört med pipe på macOS med HOME i en tillfällig mapp och en kopia av `The ITfied AB`.
 * Steg 38: Samlingsmappen söker inte längre i sina undermappar. Den listar projekten den kommer ihåg i `workspace.txt` (`project.<uuid> = <mapp>`, som i 'take 3'), och mappen kan ligga var som helst. `open_project` kontrollerar att `uuid` i `project.txt` stämmer. cratchit skriver ännu inget i `workspace.txt`, så projekt läggs dit för hand. 198 tester. Provkört med pipe på macOS (HOME i en tillfällig mapp, `The ITfied AB` utanför samlingsmappen och ihågkommen, och ett projekt i en undermapp som inte var ihågkommet och inte syntes).
 * Steg 39: `Samlingsmapp` har `+ Lägg till bokföring` sist, som leder till `Lägg till` med `1 Öppna befintlig` och `2 Ny bokföring`. Båda är tomma states för nu (`make_add_project_menu` i `src/ui/add_project_menu`). Samlingsmappens texter säger nu bokföring i stället för projekt. 201 tester. Provkört med pipe på macOS.
+* Steg 40: State för funktioner som inte finns än, `make_design_insufficiency_state(description)` i `src/ui/design_insufficiency` med tester i `test/test_design_insufficiency.cpp`. Namnet i sökvägen är `Inte än` och vyn är beskrivningen. Statet loggar `DESIGN_INSUFFICIENCY` med filen och raden där det skapas. `Öppna befintlig` och `Ny bokföring` under `Lägg till` leder nu dit. 203 tester. Provkört med pipe på macOS.
+* Steg 41: `make_design_insufficiency_state(option, what)`: namnet i sökvägen är `Inte än (<menyval>)` och vyn `Utvecklaren av cratchit har inte infört <what> ännu.`. Loggen får `<menyval>: <what>`. Texterna till användaren i menyerna, `main`, varningarna om terminalens teckenkodning och `no_input_error` är omskrivna till aktiv form. 203 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 
@@ -60,4 +62,5 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
+* Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden.
 * Bestäms av användaren. Troliga steg: fylla `Öppna befintlig` och `Ny bokföring`, så att cratchit själv lägger till en rad i `workspace.txt` (kräver att indata kan leda till ett nytt state, och att `Samlingsmapp` läser om sin lista när man går tillbaka till den). Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.

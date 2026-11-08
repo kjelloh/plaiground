@@ -55,11 +55,11 @@ int main() {
   // One log for every run, next to runtime.txt
   auto const log_file = runtime->file.parent_path() / "log.txt";
   if (auto const opened = cratchit::log::open(log_file); !opened) {
-    std::println(stderr, "Varning: {}. Inget loggas.", opened.error());
+    std::println(stderr, "Varning: {}. cratchit loggar ingenting.", opened.error());
   }
   LOG_BUSINESS("Framework {} från {}", framework->version, framework->file.string());
   for (auto const& entry : runtime->initiated) {
-    std::println("Skapade {} i {}", entry.file.generic_string(), entry.folder.string());
+    std::println("cratchit skapade {} i {}", entry.file.generic_string(), entry.folder.string());
     LOG_BUSINESS("Skapade {} i {}", entry.file.generic_string(), entry.folder.string());
   }
   {

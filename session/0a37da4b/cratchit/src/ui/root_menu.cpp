@@ -22,8 +22,8 @@ using pyroceph::tui::State;
 using pyroceph::tui::View;
 
 OnKeyResult cannot_open_workspace(std::string const& reason) {
-  LOG_BUSINESS("Kunde inte öppna samlingsmappen: {}", reason);
-  return pyroceph::tui::make_error_state(std::format("Kunde inte öppna samlingsmappen: {}", reason));
+  LOG_BUSINESS("cratchit kunde inte öppna samlingsmappen: {}", reason);
+  return pyroceph::tui::make_error_state(std::format("cratchit kunde inte öppna samlingsmappen: {}", reason));
 }
 
 class RootState : public State {

@@ -11,8 +11,8 @@ inline constexpr pyroceph::tui::CodePoint add_key = U'+';
 
 // Adds a project to the workspace, named "Lägg till" in the path: 1 opens an
 // existing project that the workspace does not list yet ("Öppna befintlig"),
-// 2 creates a new one ("Ny bokföring"). Both lead to empty states for now. No
-// input. Reached by + from the workspace.
+// 2 creates a new one ("Ny bokföring"). Neither is there yet: both lead to the
+// design insufficiency state (see design_insufficiency.hpp). No input. Reached by + from the workspace.
 std::unique_ptr<pyroceph::tui::State> make_add_project_menu();
 
 } // namespace cratchit::ui

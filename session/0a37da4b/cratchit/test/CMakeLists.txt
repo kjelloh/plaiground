@@ -3,6 +3,7 @@ find_package(GTest REQUIRED)
 add_executable(cratchit_tests
   test_cp437.cpp
   test_decoder.cpp
+  test_design_insufficiency.cpp
   test_detect.cpp
   test_error_state.cpp
   test_dot_folder.cpp

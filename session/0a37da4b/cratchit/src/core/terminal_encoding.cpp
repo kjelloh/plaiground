@@ -80,10 +80,10 @@ Charset chosen(Reported const& reported, bool usable, std::string_view direction
     return reported.charset;
   }
   if (reported.charset == Charset::Unknown) {
-    warnings.push_back(std::format("Varning: Terminalens teckenkodning för {}, {}, är okänd. Använder UTF-8.", direction,
+    warnings.push_back(std::format("Varning: cratchit känner inte igen terminalens teckenkodning för {}, {}. cratchit använder UTF-8.", direction,
                                    reported.as_reported));
   } else {
-    warnings.push_back(std::format("Varning: Terminalens teckenkodning för {}, {} ({}), stöds inte än. Använder UTF-8.",
+    warnings.push_back(std::format("Varning: cratchit stöder inte terminalens teckenkodning för {}, {} ({}), än. cratchit använder UTF-8.",
                                    direction, reported.as_reported, charset_name(reported.charset)));
   }
   return Charset::Utf8;

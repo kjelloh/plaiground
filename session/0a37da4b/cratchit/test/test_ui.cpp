@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <string>
 
@@ -56,7 +57,7 @@ TEST_F(RootMenuTest, ZeroCreatesTheWorkspaceTheFirstTime) {
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
-  EXPECT_EQ(navigator.current().view(), (View{"Ny samlingsmapp skapad.", folder.string()}));
+  EXPECT_EQ(navigator.current().view(), (View{"cratchit skapade en ny samlingsmapp.", folder.string()}));
   EXPECT_TRUE(fs::is_regular_file(folder / ".cratchit" / "workspace.txt"));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Cratchit");
@@ -78,7 +79,7 @@ TEST_F(RootMenuTest, ZeroLeadsToAnErrorWhenTheWorkspaceCannotBeOpened) {
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Fel");
   ASSERT_EQ(navigator.current().view().size(), 1u);
-  EXPECT_TRUE(navigator.current().view()[0].starts_with("Kunde inte öppna samlingsmappen: "));
+  EXPECT_TRUE(navigator.current().view()[0].starts_with("cratchit kunde inte öppna samlingsmappen: "));
   EXPECT_FALSE(fs::exists(documents / "saknas"));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Cratchit");
@@ -88,7 +89,7 @@ TEST(RootMenu, ZeroLeadsToAnErrorWhenTheWorkspaceFolderIsNotKnown) {
   Navigator navigator(cratchit::ui::make_root_menu(std::unexpected(std::string("Hittar inte mappen Dokument"))));
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Fel");
-  EXPECT_EQ(navigator.current().view(), (View{"Kunde inte öppna samlingsmappen: Hittar inte mappen Dokument"}));
+  EXPECT_EQ(navigator.current().view(), (View{"cratchit kunde inte öppna samlingsmappen: Hittar inte mappen Dokument"}));
 }
 
 TEST_F(RootMenuTest, NineLeadsToTheTestMenu) {
@@ -165,7 +166,7 @@ TEST_F(RootMenuTest, ProjectThatCannotBeOpenedLeadsToAnError) {
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Fel");
   ASSERT_EQ(navigator.current().view().size(), 1u);
-  EXPECT_TRUE(navigator.current().view()[0].starts_with("Kunde inte öppna bokföringen: "));
+  EXPECT_TRUE(navigator.current().view()[0].starts_with("cratchit kunde inte öppna bokföringen: "));
   EXPECT_TRUE(navigator.current().view()[0].ends_with("'name' saknas"));
 }
 
@@ -197,7 +198,7 @@ TEST(WorkspaceMenu, OffersNineProjectsAndSaysWhenThereAreMore) {
   EXPECT_EQ(options[0], (pyroceph::tui::Option{U'1', "a"}));
   EXPECT_EQ(options[8], (pyroceph::tui::Option{U'9', "i"}));
   EXPECT_EQ(options[9], (pyroceph::tui::Option{U'+', "Lägg till bokföring"}));
-  EXPECT_EQ(workspace->view(), (View{fs::path("/x/cratchit").string(), "Fler bokföringar finns."}));
+  EXPECT_EQ(workspace->view(), (View{fs::path("/x/cratchit").string(), "Samlingsmappen har fler bokföringar än cratchit visar här."}));
 }
 
 TEST(ProjectMenu, IsNamedByTheProjectAndShowsItsFolder) {
@@ -218,15 +219,13 @@ TEST(WorkspaceMenu, PlusLeadsToAddWithOpenExistingAndNew) {
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
 }
 
-TEST(AddProjectMenu, OpenExistingAndNewAreEmptyForNow) {
-  for (auto const& [key, name] : {std::pair{U'1', "Öppna befintlig"}, std::pair{U'2', "Ny bokföring"}}) {
+TEST(AddProjectMenu, OpenExistingAndNewAreNotThereYet) {
+  for (auto const& [key, option] : {std::pair{U'1', "Öppna befintlig"}, std::pair{U'2', "Ny bokföring"}}) {
     Navigator navigator(cratchit::ui::make_add_project_menu());
     ASSERT_TRUE(navigator.press(key));
-    EXPECT_EQ(navigator.current().name(), name);
-    EXPECT_TRUE(navigator.current().view().empty());
-    EXPECT_TRUE(navigator.current().options().empty());
-    EXPECT_EQ(navigator.current().on_key(U'1'), nullptr);
-    EXPECT_FALSE(navigator.current().on_input(U"x"));
+    EXPECT_EQ(navigator.current().name(), std::format("Inte än ({})", option));
+    ASSERT_EQ(navigator.current().view().size(), 1u);
+    EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att "));
     EXPECT_TRUE(navigator.back());
     EXPECT_EQ(navigator.current().name(), "Lägg till");
   }
