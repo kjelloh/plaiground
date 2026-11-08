@@ -6,29 +6,25 @@ Manualen beskriver det som finns i cratchit i dag och växer i takt med programm
 
 ## Innehåll
 
-1. [Installera och starta](#installera-och-starta)
+1. [Starta och avsluta](#starta-och-avsluta)
 2. [Att använda cratchit](#att-använda-cratchit)
 3. [Samlingsmappen](#samlingsmappen)
 4. [Bokföringar](#bokföringar)
-5. [Var cratchit sparar sina filer](#var-cratchit-sparar-sina-filer)
-6. [Kommer senare](#kommer-senare)
-7. [Ordlista](#ordlista)
+5. [Kommer senare](#kommer-senare)
+6. [Ordlista](#ordlista)
 
-## Installera och starta
+## Starta och avsluta
 
-Hur du bygger och installerar cratchit står i [README.md](../README.md) (på engelska). I korthet: kör `python3 install.py` i mappen `cratchit`, så installeras programmet i `~/.local/bin`.
-
-Starta cratchit med kommandot `cratchit` i en terminal. Det spelar ingen roll vilken mapp du står i.
-
-Första gången skapar cratchit sin egen mapp `.cratchit` i din hemkatalog och berättar det:
+Skriv `cratchit` i en terminal och tryck Enter:
 
 ```text
-cratchit skapade .cratchit/runtime.txt i /Users/anna
 Tryck ? för gemensamma val.
 
   0 Samlingsmapp
 Cratchit> 
 ```
+
+Tryck `q` för att avsluta.
 
 ## Att använda cratchit
 
@@ -60,7 +56,7 @@ Några tangenter fungerar överallt. De står inte bland valen. Tryck `?` så vi
 
 | Tangent | Gör |
 |---|---|
-| `-` | Tillbaka till platsen före (syns inte när du står i början) |
+| `-` | Tillbaka till platsen före |
 | `?` | Visa de gemensamma valen |
 | Enter | Visa valen igen |
 | Esc | Töm raden du skriver på (även Ctrl-U) |
@@ -92,7 +88,7 @@ Cratchit > Samlingsmapp > Lägg till: x
 
 När cratchit vill ha en mapp står en sökväg redan på raden, och du fortsätter skriva därifrån.
 
-* **Tab** fyller i resten av ett mappnamn. Passar flera mappar fyller cratchit i så långt deras namn är lika. Kan cratchit inte fylla i mer listar den mapparna och skriver raden igen under listan. Mappar vars namn börjar med punkt syns bara när du själv har skrivit punkten.
+* **Tab** fyller i resten av ett mappnamn. Passar flera mappar fyller cratchit i så långt deras namn är lika. Kan cratchit inte fylla i mer listar den mapparna och skriver raden igen under listan.
 * **`-`** går tillbaka så länge du inte har ändrat sökvägen som stod där. Har du ändrat den tömmer du först raden med Esc, och sedan går `-` tillbaka.
 * **Enter** lämnar sökvägen till cratchit. Går det inte att använda den visar cratchit varför, och sökvägen står kvar så att du kan rätta den.
 
@@ -113,18 +109,7 @@ Tryck `-` för att gå tillbaka.
 
 ## Samlingsmappen
 
-Samlingsmappen är den mapp där cratchit håller reda på dina bokföringar. Den är mappen `cratchit` i din Dokument-mapp.
-
-Tryck `0` i början för att öppna den. Första gången skapar cratchit mappen:
-
-```text
-cratchit skapade en ny samlingsmapp.
-/Users/anna/Documents/cratchit
-  + Lägg till bokföring
-Cratchit > Samlingsmapp> 
-```
-
-På macOS kan systemet först fråga om terminalen får använda mappen Dokument. Svara ja, annars kan cratchit inte öppna samlingsmappen.
+Samlingsmappen håller reda på dina bokföringar. Tryck `0` i början för att öppna den.
 
 Samlingsmappen listar de bokföringar den kommer ihåg, med tangenterna `1` till `9`, i bokstavsordning efter namn:
 
@@ -135,15 +120,15 @@ Samlingsmappen listar de bokföringar den kommer ihåg, med tangenterna `1` till
 Cratchit > Samlingsmapp> 
 ```
 
-En bokföring kan ligga var som helst på datorn. Den behöver inte ligga i samlingsmappen. Har du fler än nio bokföringar visar cratchit de nio första och säger att det finns fler.
+Har du fler än nio bokföringar visar cratchit de nio första och säger att det finns fler.
 
 ## Bokföringar
 
-En bokföring är bokföringen för en juridisk person, till exempel ett aktiebolag. Den ligger i en egen mapp, som cratchit känner igen på filen `.cratchit/project.txt` i mappen.
+En bokföring är bokföringen för en juridisk person, till exempel ett aktiebolag. Den ligger i en egen mapp, som kan ligga var som helst på datorn.
 
 ### Öppna en bokföring
 
-Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen:
+Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen den ligger i:
 
 ```text
 /Users/anna/Documents/Bokföringar/The ITfied AB
@@ -158,12 +143,10 @@ Har du en bokföring som samlingsmappen inte listar tar du in den så här:
 
 1. Tryck `+` (*Lägg till bokföring*) i samlingsmappen.
 2. Tryck `1` (*Öppna befintlig*).
-3. Skriv sökvägen till bokföringens mapp. Den börjar i din Dokument-mapp, och Tab fyller i mappnamnen (se [Skriva en sökväg](#skriva-en-sökväg)).
+3. Skriv sökvägen till mappen som bokföringen ligger i. Tab fyller i mappnamnen (se [Skriva en sökväg](#skriva-en-sökväg)).
 4. Tryck Enter.
 
 ```text
-Skriv sökvägen till mappen med bokföringen (den som har .cratchit/project.txt).
-Tab fyller i mappnamn och Enter öppnar. - går tillbaka innan du skrivit något, Esc tömmer raden.
 Cratchit > Samlingsmapp > Lägg till > Öppna befintlig: /Users/anna/Documents/Bokföringar/The ITfied AB/
 Samlingsmappen kommer ihåg The ITfied AB.
 /Users/anna/Documents/Bokföringar/The ITfied AB
@@ -172,11 +155,11 @@ Cratchit > Samlingsmapp > Lägg till > Öppna befintlig > The ITfied AB>
 
 cratchit öppnar bokföringen, och samlingsmappen kommer ihåg den. När du går tillbaka till samlingsmappen finns bokföringen i listan.
 
-Saknar mappen `.cratchit/project.txt` säger cratchit det, och sökvägen står kvar så att du kan rätta den:
+Ligger det ingen bokföring i mappen säger cratchit det, och sökvägen står kvar så att du kan rätta den.
 
-```text
-cratchit kunde inte öppna bokföringen: /Users/anna/Documents/Bokföringar/.cratchit/project.txt saknas
-```
+### Flytta en bokföring
+
+Allt som hör till en bokföring ligger i dess mapp. Flytta eller kopiera mappen dit du vill ha den, och lägg sedan till den på det nya stället med *Öppna befintlig*. Samlingsmappen kommer då ihåg det nya stället i stället för det gamla.
 
 ### Ny bokföring
 
@@ -186,18 +169,6 @@ Tryck `+` och sedan `2` (*Ny bokföring*). Där finns två val:
 * `2` *Från uppgifter*: skapa bokföringen från namn, organisationsnummer och räkenskapsår.
 
 Inget av dem finns än. Båda leder till [Inte än](#inte-än).
-
-## Var cratchit sparar sina filer
-
-cratchit sparar sina uppgifter i mappar som heter `.cratchit`. Mappar som börjar med punkt syns normalt inte i Finder eller Utforskaren.
-
-| Mapp | Innehåll |
-|---|---|
-| `.cratchit` i din hemkatalog | `runtime.txt` och loggen `log.txt` |
-| `.cratchit` i samlingsmappen | `workspace.txt`, med de bokföringar samlingsmappen kommer ihåg |
-| `.cratchit` i bokföringens mapp | `project.txt`, med bokföringens namn och id |
-
-Dokument-mappen är `Documents` i hemkatalogen på macOS och Linux, och mappen *Dokument* på Windows (även om den är flyttad till OneDrive).
 
 ## Kommer senare
 
@@ -211,6 +182,6 @@ Det här finns som val men leder till [Inte än](#inte-än):
 | Ord | Betyder |
 |---|---|
 | bokföring | Bokföringen för en juridisk person, i en egen mapp |
-| samlingsmapp | Mappen där cratchit håller reda på dina bokföringar |
-| sökväg | Var en mapp eller fil ligger på datorn, till exempel `/Users/anna/Documents` |
+| samlingsmapp | Där cratchit håller reda på dina bokföringar |
+| sökväg | Var en mapp ligger på datorn, till exempel `/Users/anna/Documents` |
 | prompt | Raden där cratchit väntar på din tangent eller text |

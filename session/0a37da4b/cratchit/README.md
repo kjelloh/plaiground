@@ -128,6 +128,17 @@ cratchit has two `.cratchit` folders:
 
 When the framework is missing, cratchit stops with an error: the installation is not whole.
 
+The workspace (*samlingsmapp*) and each project (*bokföring*, the books of one juridical person) have a `.cratchit` folder of their own:
+
+| File | Holds |
+| --- | --- |
+| `<Documents>/cratchit/.cratchit/workspace.txt` | `created`, and one `project.<uuid> = <folder>` per project the workspace remembers. A project folder may be anywhere. |
+| `<project folder>/.cratchit/project.txt` | The project's `uuid` and `name` (and more, in the format of take 3). cratchit only reads it so far. |
+
+The workspace and its `.cratchit` are created the first time the user opens it. *Öppna befintlig* adds or replaces the project's line in `workspace.txt`, so a moved project folder is remembered at its new place (same `uuid`).
+
+`<Documents>` is `$HOME/Documents` on macOS, `XDG_DOCUMENTS_DIR` (else `$HOME/Documents`) on Linux, and the Documents known folder on Windows (it follows a move to OneDrive). macOS may ask the user once whether the terminal may use Documents; when denied, cratchit cannot open the workspace.
+
 The framework's sources are in `resources/`. CMake puts them together in the build folder (`framework.txt` gets the version from `project()` in `CMakeLists.txt`), copies them next to the built program on every build, and installs them next to the installed program. So a development build and an installed program find their framework the same way.
 
 ### How cratchit finds its own folder

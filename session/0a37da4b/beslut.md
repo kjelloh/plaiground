@@ -131,7 +131,9 @@ Kort logg över vad vi beslutat och varför.
 * Backspace över radbrytning: med terminalens bredd (`terminal_width()`) suddas sista kolumnen med escape-sekvenser. Varje kodpunkt antas ta en kolumn. Utan känd bredd (pipe, tester utan bredd) blir det `\b \b` som förut.
 * `Öppna befintlig` börjar i Dokument-mappen. Den öppnade bokföringen hamnar efter `Öppna befintlig` i sökvägen, och samlingsmappen läser om sin lista i `on_return()`.
 * Steg 44: Användarmanualen ligger i `cratchit/docs/anvandarmanual.md`, på svenska och för den som bokför. `README.md` förblir på engelska för den som bygger.
+* Manualen är spartansk: den beskriver bara vad användaren ser och gör när programmet körs. Bygge, installation, filer, `.cratchit`-mappar, plattformarnas skillnader och hur datorn beter sig (t.ex. att macOS frågar om lov för Dokument) står i README. Det användaren lär sig om datorn hör inte hemma i manualen.
+* Att en bokföring flyttas genom att man flyttar eller kopierar dess mapp och lägger till den med *Öppna befintlig* står i manualen.
 * Varje steg som ändrar det användaren ser uppdaterar manualen i samma steg. Manualen beskriver bara de states som finns. Bokföringstermer (räkenskapsår, verifikation, ...) tas in när en funktion som använder dem finns.
 * Testmenyn (`9`) nämns inte i manualen. Den försvinner när den riktiga menyn är stabil.
 * Val som leder till `Inte än` listas under *Kommer senare*. Listan tas fram genom att söka efter `make_design_insufficiency_state` i koden.
-* Exemplen i manualen bygger på riktiga körningar. Långa sökvägar är bytta mot exempel som `/Users/anna/Documents`, och `9 Testmeny` är borttagen ur utskriften.
+* Exemplen i manualen bygger på riktiga körningar. Långa sökvägar är bytta mot exempel som `/Users/anna/Documents`, och tekniska rader (`9 Testmeny`, `cratchit skapade .cratchit/runtime.txt …`, vytexten om `.cratchit/project.txt`) är borttagna ur utskrifterna.
