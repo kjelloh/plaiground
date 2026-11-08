@@ -94,6 +94,14 @@ Nu råkade jag trycka 'vänsterpil' i Claude.
 
 SÅ KÄNSLIGT OCH BRÄCKLIGT ALLTING ÄR!!
 
+Nu har jag vibe-kodat 'öppna samlingsmapp'
+
+* Ännu ej infört: Öppna samlingsmapp på ett annat ställe (och minnas det stället) 
+* Ännu ej infört: 'öppna bokföring' för att peka ut ett projekt på annat ställe (och minnas det stället)
+* Ännu ej innfört: Skapa ny bokföring (och peka ut en mapp där nytt projekt skapas)
+
+    * Ännu ej infört: Skapa ny bokföring från SIE-fil
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.

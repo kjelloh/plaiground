@@ -2,6 +2,7 @@
 
 #include "core/dot_folder.hpp"
 #include "core/log.hpp"
+#include "core/project.hpp"
 #include "pyroceph/tui/error_state.hpp"
 #include "ui/test_menu.hpp"
 #include "ui/workspace_menu.hpp"
@@ -45,8 +46,10 @@ private:
     for (auto const& entry : workspace->initiated) {
       LOG_BUSINESS("Skapade {} i {}", entry.file.generic_string(), entry.folder.string());
     }
-    LOG_BUSINESS("Öppnade samlingsmappen {}", workspace->folder.string());
-    return make_workspace_menu(std::move(*workspace));
+    auto projects = list_projects(workspace->folder);
+    if (!projects) return cannot_open_workspace(projects.error());
+    LOG_BUSINESS("Öppnade samlingsmappen {} med {} projekt", workspace->folder.string(), projects->size());
+    return make_workspace_menu(std::move(*workspace), std::move(*projects));
   }
 
   WorkspaceFolder workspace_folder_;

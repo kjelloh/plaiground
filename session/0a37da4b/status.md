@@ -39,6 +39,7 @@
 * Steg 34: Testmenyns `Projekt` har `1 Öppna` (lyckas) och `2 Öppna (misslyckas)`, som leder till felstatet med "Kunde inte öppna projektet.". 172 tester. Provkört med pipe på macOS.
 * Steg 35: `0 Samlingsmapp` öppnar `<Dokument>/cratchit` och skapar den första gången (`open_workspace`, `documents_folder`, `default_workspace_folder` i `core/dot_folder`). Vyn visar mappen, och `Ny samlingsmapp skapad.` när den skapades. Går det inte att öppna mappen kommer man till `Fel` med orsaken. 182 tester. Provkört med pipe på macOS med HOME i en tillfällig mapp (skapad, öppnad igen, och `Documents` saknas leder till `Fel`). Inte provat mot den riktiga `~/Documents`, där macOS först frågar om Terminal får använda mappen. Windows-grenen (`SHGetKnownFolderPath`) är skriven men inte byggd.
 * Steg 36: GitHub Actions sparar Conans paket (`~/.conan2/p`) mellan körningarna med `actions/cache@v6`. Orsak: macOS-bygget föll när github.com inte svarade (503, timeout) då `gtest` skulle hämtas för att byggas från källkoden. Conan-versionen står en gång, i `CONAN_VERSION`. Workflow inte körd.
+* Steg 37: `Samlingsmapp` listar projekten (undermappar med `.cratchit/project.txt`) som 1–9 och öppnar dem (`list_projects`, `open_project` i `core/project`, `make_project_menu` i `src/ui/project_menu`). Projektets state har projektets namn i sökvägen och mappen som vy, inga val än. Ett projekt som inte går att öppna leder till `Fel`. 194 tester. Provkört med pipe på macOS med HOME i en tillfällig mapp och en kopia av `The ITfied AB`.
 
 ## Bygg, kör och installera
 
@@ -57,4 +58,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bestäms av användaren. Troliga steg: lista projekten i samlingsmappen, skapa ett projekt i en undermapp, och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`).
+* Bestäms av användaren. Troliga steg: `0 Nytt projekt` i samlingsmappen, kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), och vad ett öppnat projekt ska erbjuda.
