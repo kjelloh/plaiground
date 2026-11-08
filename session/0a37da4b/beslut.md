@@ -147,3 +147,5 @@ Kort logg över vad vi beslutat och varför.
 * Skälet: det vanliga fallet blir kort, och hjälptexten får bli längre eftersom den bara visas när användaren ber om den.
 * En hjälptext börjar efter `<!-- hjälp: <ämne> -->` och slutar vid `<!-- /hjälp -->`, nästa kommentar eller nästa rubrik. Den får ha flera stycken, listor och kodblock. Kodblock visas som de är, utan staketen. En hjälptext ska rymmas på en skärm.
 * Promptloopen minns om förra tangenten visade de gemensamma valen (`help_next_`). Det är det enda nya tillståndet.
+* Steg 47: En öppnad bokföring har `1 Räkenskapsår` och `2 Kvartal`. De är skilda val eftersom ett kvartal kan gå omlott på två räkenskapsår (brutet räkenskapsår). Båda leder till `Inte än` tills de är införda. Användaren bad om "Finansiella år"; i gränssnittet står den svenska bokföringstermen `Räkenskapsår`, enligt beslutet att använda svenska bokföringstermer.
+* Manualen har fått räkenskapsår och kvartal i ordlistan nu när menyn använder orden.

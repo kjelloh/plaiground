@@ -154,7 +154,7 @@ TEST_F(RootMenuTest, WorkspaceListsItsProjectsAndOpensOne) {
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
   EXPECT_EQ(navigator.current().view(), (View{(folder / "itfied").string()}));
-  EXPECT_TRUE(navigator.current().options().empty());
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Räkenskapsår"}, {U'2', "Kvartal"}}));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
 }
@@ -208,8 +208,20 @@ TEST(ProjectMenu, IsNamedByTheProjectAndShowsItsFolder) {
   auto project = cratchit::ui::make_project_menu({"/x/p", "/x/p/.cratchit/project.txt", "1", "The ITfied AB"});
   EXPECT_EQ(project->name(), "The ITfied AB");
   EXPECT_EQ(project->view(), (View{fs::path("/x/p").string()}));
-  EXPECT_TRUE(project->options().empty());
-  EXPECT_EQ(project->on_key(U'1'), nullptr);
+  EXPECT_EQ(project->options(), (OptionsList{{U'1', "Räkenskapsår"}, {U'2', "Kvartal"}}));
+  EXPECT_EQ(project->on_key(U'3'), nullptr);
+}
+
+TEST(ProjectMenu, FiscalYearsAndQuartersAreNotThereYet) {
+  for (auto const& [key, option] : {std::pair{U'1', "Räkenskapsår"}, std::pair{U'2', "Kvartal"}}) {
+    Navigator navigator(cratchit::ui::make_project_menu({"/x/p", "/x/p/.cratchit/project.txt", "1", "The ITfied AB"}));
+    ASSERT_TRUE(navigator.press(key));
+    EXPECT_EQ(navigator.current().name(), std::format("Inte än ({})", option));
+    ASSERT_EQ(navigator.current().view().size(), 1u);
+    EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att välja "));
+    EXPECT_TRUE(navigator.back());
+    EXPECT_EQ(navigator.current().name(), "The ITfied AB");
+  }
 }
 
 TEST(WorkspaceMenu, PlusLeadsToAddWithOpenExistingAndNew) {

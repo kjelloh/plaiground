@@ -149,17 +149,24 @@ En bokföring är bokföringen för en juridisk person, till exempel ett aktiebo
 ### Öppna en bokföring
 
 <!-- hjälp: bokforing -->
-Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Än så länge finns det inga val här. Tryck `-` för att gå tillbaka.
+Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Tryck `1` för att välja ett räkenskapsår eller `2` för att välja ett kvartal. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
 Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen den ligger i:
 
 ```text
 /Users/anna/Documents/Bokföringar/The ITfied AB
+  1 Räkenskapsår
+  2 Kvartal
 Cratchit > Samlingsmapp > The ITfied AB> 
 ```
 
-Än så länge finns det inga val i en öppnad bokföring.
+I en öppnad bokföring väljer du vilken period du vill arbeta med:
+
+* `1` *Räkenskapsår*: välj ett räkenskapsår.
+* `2` *Kvartal*: välj ett kvartal.
+
+Räkenskapsår och kvartal är skilda val, eftersom ett kvartal kan ligga över gränsen mellan två räkenskapsår. Inget av dem finns än. Båda leder till [Inte än](#inte-än).
 
 ### Lägg till
 
@@ -216,6 +223,8 @@ Det här finns som val men leder till [Inte än](#inte-än):
 
 * Skapa en ny bokföring från en SIE-fil.
 * Skapa en ny bokföring från namn, organisationsnummer och räkenskapsår.
+* Välja räkenskapsår i en bokföring.
+* Välja kvartal i en bokföring.
 
 ## Ordlista
 
@@ -225,3 +234,5 @@ Det här finns som val men leder till [Inte än](#inte-än):
 | samlingsmapp | Där cratchit håller reda på dina bokföringar |
 | sökväg | Var en mapp ligger på datorn, till exempel `/Users/anna/Documents` |
 | prompt | Raden där cratchit väntar på din tangent eller text |
+| räkenskapsår | Den period, oftast tolv månader, som bokföringen räknas och avslutas för |
+| kvartal | En period på tre månader, till exempel januari–mars |

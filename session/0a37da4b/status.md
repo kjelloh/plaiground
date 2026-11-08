@@ -54,6 +54,7 @@
 * Steg 44: Användarmanual på svenska i `cratchit/docs/anvandarmanual.md`, med de states som finns (utom Testmenyn), bara det användaren ser och gör när programmet körs. `README.md` hänvisar dit och har fått det tekniska (`workspace.txt`, `project.txt`, Dokument-mappen per plattform, macOS fråga om Dokument). Från och med nu uppdateras manualen i varje steg som ändrar det användaren ser.
 * Steg 45: `?` visar ett hjälpstycke ur manualen för statet man står i, och sedan de gemensamma valen (`State::help_topic()`, `HelpSource`, `show_help` i `pyroceph`, `core/manual`, `ui/help_topics.hpp`). Manualen har fått ett märkt stycke per state och följer med i framework. Startraden säger `Tryck ? för hjälp.` 243 tester. Provkört med pipe på macOS.
 * Steg 46: `?` visar de gemensamma valen, och `?` direkt igen visar statets hjälptext ur manualen (sedan växlar det). Hjälptexten slutar vid `<!-- /hjälp -->` och får ha flera stycken, listor och kodblock. Manualens märken har fått slutmärken. 246 tester. Provkört med pipe på macOS.
+* Steg 47: Öppnad bokföring har `1 Räkenskapsår` och `2 Kvartal`, båda till `Inte än` (`project_menu.cpp`). Manualen uppdaterad (hjälptext, avsnitt, Kommer senare, ordlista). 247 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 
