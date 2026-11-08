@@ -108,7 +108,52 @@ MEN: Det här blev för stort att ta i ett steg!
 * Så jag bad att få begränsa mig.
 
     * Jag tog bort skanning av undermappar
-    * Och badd om att cratchit kommer ihåg vilka bokföringar som tidigare öppnats
+    * Och bad om att cratchit kommer ihåg vilka bokföringar som tidigare öppnats
+
+Ok. Nu har det skett en del.
+
+* Vi har nu menyval för att öppna befintlig bokföring.
+* Då stöter vi på behovet av 'guidad inmatning av sökväg'
+* 'take 3' har ju startsökväg + buffrad inmatning + tab-komplettering
+* Något vi inte stödjer med vårt nya tänkt med pyroceph tui.
+
+Jag fösökte diskutera med Claude men det blev uppenbart att den inte 'förstår' meta-koncept?
+
+* Jag försökte fiska efter en arkitektur för att separera ut vem som genomför guadad sökvägsinmatning?
+* Och också hur state skall kunna signalera att sådan inmatning skall ske?
+
+Jag valde att starta om Claude och försöka adressera detta 'från scratch'.
+
+* Vi har nu ett state 'öppna befintlig bokföring'
+* Detta state skall få pyroceph/tui att genomföra en guidad sökvägsinmatning.
+* Problemet är att jag inte vet hur textinmatning sker idag?
+* Byter tui inmatningssätt i terminalen?
+* Eller har TUI en egen buffert?
+
+Jag tror jag har fått Claude att implementera en egen buffert (av Unicode code points)?
+
+* kanske kan jag börja där och fråga hur prompten speglar innehållet i bufferten?
+
+Nu gick det bättre.
+
+* Claude berättar att buffert och prompt synkas genom att båda uppdareas tecken för teck var för sig.
+* En Code point pushas till bufferten och skruvs ut på terminalraden.
+* Backspace poppar från bufferten och skriver ut '\b' (kontrolltecknet för backspace)
+
+Nu visar det sig att detta är SUPERKOMPLICERAT!!
+
+* 'Take 3' använde också kontrolltecken (och escape-sekvenser) för att rendera prompten.
+* Claude verkar antyda att 'take 3' inte heller kan hantera tab-komplettering (eller en inmatning av sökväg) som radbryter?
+
+    * Mekanismen bygger på '\r' (return) som ställer markören på början av aktuell rad.
+    * Så vid radbrytning blir rad ovanför felaktigt 'kvar'
+
+* Claude berättar också att vi möjligen kan räkna ut att radbrytning skett genom att ta reda på terminalens bredd.
+
+    * Men jag känner att det blir alldeles för bräckligt?
+    * Eller är det så all TUI måste hålla på?
+
+Det här med AI-kodning har sina BAKSIDOR!!
 
 ## 20261107
 
