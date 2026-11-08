@@ -77,7 +77,7 @@ int main() {
     auto keys = pyroceph::tui::terminal_key_reader(encoding_of(terminal_encoding.in));
     // The workspace is opened when the user chooses it (0 in the root)
     pyroceph::tui::Navigator navigator(cratchit::ui::make_root_menu(cratchit::default_workspace_folder()));
-    std::println("Tryck ? för hjälp.");
+    std::println("Tryck ? för gemensamma val.");
     LOG_BUSINESS("Promptloopen startade");
     pyroceph::tui::run_prompt_loop(keys, navigator, stdout, pyroceph::tui::terminal_width, help);
     if (keys.failure_count() > 0) LOG_DESIGN_INSUFFICIENCY("{} tangenter kunde inte avkodas", keys.failure_count());

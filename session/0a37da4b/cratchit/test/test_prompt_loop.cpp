@@ -103,7 +103,7 @@ TEST(PromptLoop, HelpListsCommonKeysAndKeepsTheState) {
             "\n  1 Bokslut\nHuvudmeny> "
             "\n  \u00E5 År\nHuvudmeny > Bokslut> "
             "\n  -       Tillbaka"
-            "\n  ?       Visa hjälp och gemensamma val"
+            "\n  ?       Visa gemensamma val"
             "\n  Enter   Visa valen igen"
             "\n  Esc     Töm indata (även Ctrl-U)"
             "\n  q       Avsluta"
@@ -429,24 +429,46 @@ pyroceph::tui::View help_of(std::string_view topic) {
 
 } // namespace
 
-TEST(PromptLoop, HelpKeyShowsTheStatesInstructionAndTheCommonKeys) {
-  Navigator navigator(menu("Rot", {{U'1', "Ord", [] { return std::make_unique<HelpedWordState>(); }}}));
-  auto keys = keys_of({'1', '-', '?'});
+namespace {
+
+std::string const common_keys_after_back =
+    "  Enter   Visa valen igen\n  Esc     Töm indata (även Ctrl-U)\n  q       Avsluta\n"
+    "  Ctrl-D  Avsluta (även Ctrl-C och Ctrl-Z)\n";
+
+std::unique_ptr<pyroceph::tui::State> helped() {
+  return menu("Rot", {{U'1', "Ord", [] { return std::make_unique<HelpedWordState>(); }}});
+}
+
+} // namespace
+
+TEST(PromptLoop, HelpKeyShowsOnlyTheCommonKeysWhereThereIsNoHelp) {
+  Navigator navigator(helped());
+  auto keys = keys_of({'?', '?'});
+  auto const once = "\n  ?       Visa gemensamma val\n" + common_keys_after_back + "Rot> ";
+  EXPECT_EQ(run(keys, navigator, {}, help_of), "\n  1 Ord\nRot> " + once + once + "\n");
+}
+
+TEST(PromptLoop, HelpKeyAgainShowsTheHelpThenTheCommonKeysAgain) {
+  Navigator navigator(helped());
+  auto keys = keys_of({'1', 0x1B, '?', '?', '?'}); // Esc empties the start text, so Ord is navigated
+  auto const keys_once = "\n  -       Tillbaka\n  ?       Visa gemensamma val, tryck igen för hjälp om Ord\n" +
+                         common_keys_after_back + "Rot > Ord> ";
+  EXPECT_EQ(run(keys, navigator, {}, help_of), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /\b \b\b\b> " + keys_once +
+                                                   "\nSkriv ett ord.\nRot > Ord> " + keys_once + "\n");
+}
+
+TEST(PromptLoop, AnotherKeyBetweenStartsTheHelpOver) {
+  Navigator navigator(helped());
+  auto keys = keys_of({'1', 0x1B, '?', '\n', '?'});
   auto const written = run(keys, navigator, {}, help_of);
-  // At the root, which has no topic, only the common keys
-  EXPECT_TRUE(written.ends_with("Rot> \n  ?       Visa hjälp och gemensamma val\n"
-                                "  Enter   Visa valen igen\n  Esc     Töm indata (även Ctrl-U)\n  q       Avsluta\n"
-                                "  Ctrl-D  Avsluta (även Ctrl-C och Ctrl-Z)\nRot> \n"))
-      << written;
+  EXPECT_EQ(written.find("Skriv ett ord."), std::string::npos) << written;
 }
 
 TEST(PromptLoop, HelpKeyWorksWhileTheStartTextIsUntouched) {
-  Navigator navigator(menu("Rot", {{U'1', "Ord", [] { return std::make_unique<HelpedWordState>(); }}}));
-  auto keys = keys_of({'1', '?', 'x', '?'});
-  auto const written = run(keys, navigator, {}, help_of);
-  EXPECT_EQ(written, "\n  1 Ord\nRot> \nRot > Ord> \b\b: /"
-                     "\nSkriv ett ord.\n\n  -       Tillbaka\n  ?       Visa hjälp och gemensamma val\n"
-                     "  Enter   Visa valen igen\n  Esc     Töm indata (även Ctrl-U)\n  q       Avsluta\n"
-                     "  Ctrl-D  Avsluta (även Ctrl-C och Ctrl-Z)\n"
-                     "Rot > Ord: /x?\n");
+  Navigator navigator(helped());
+  auto keys = keys_of({'1', '?', '?', 'x', '?'});
+  EXPECT_EQ(run(keys, navigator, {}, help_of),
+            "\n  1 Ord\nRot> \nRot > Ord> \b\b: /"
+            "\n  -       Tillbaka\n  ?       Visa gemensamma val, tryck igen för hjälp om Ord\n" +
+                common_keys_after_back + "Rot > Ord: /" + "\nSkriv ett ord.\nRot > Ord: /x?\n");
 }

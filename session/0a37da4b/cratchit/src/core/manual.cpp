@@ -71,19 +71,29 @@ std::string plain_text_of(std::string_view markdown) {
 
 std::vector<std::string> Manual::help(std::string_view topic) const {
   std::vector<std::string> result;
-  bool in_paragraph = false;
-  for (auto const line : lines_of(text_)) {
-    if (!in_paragraph) {
-      in_paragraph = topic_of(line) == topic;
+  bool in_help = false;
+  bool in_code = false;
+  for (auto line : lines_of(text_)) {
+    if (!in_help) {
+      in_help = topic_of(line) == topic;
       continue;
     }
     auto const text = trimmed(line);
-    if (text.empty() || text.starts_with('#') || text.starts_with("<!--")) {
-      if (text.empty() && result.empty()) continue; // blank lines before the paragraph
-      break;
+    if (text.starts_with('#') || text.starts_with(comment_start)) break;
+    if (text.starts_with("```")) {
+      in_code = !in_code;
+      continue;
     }
+    if (in_code) {
+      // The lines of a code block show as they are
+      if (line.ends_with('\r')) line.remove_suffix(1);
+      result.emplace_back(line);
+      continue;
+    }
+    if (text.empty() && result.empty()) continue; // blank lines before the text
     result.push_back(plain_text_of(text));
   }
+  while (!result.empty() && result.back().empty()) result.pop_back();
   return result;
 }
 

@@ -17,11 +17,12 @@ Manualen beskriver det som finns i cratchit i dag och växer i takt med programm
 
 <!-- hjälp: start -->
 Du står i början av cratchit. Tryck `0` för att öppna samlingsmappen med dina bokföringar. Tryck `q` för att avsluta.
+<!-- /hjälp -->
 
 Starta cratchit genom att skriva `cratchit` i en terminal och trycka Enter:
 
 ```text
-Tryck ? för hjälp.
+Tryck ? för gemensamma val.
 
   0 Samlingsmapp
 Cratchit> 
@@ -55,7 +56,7 @@ Här tar `1` dig till *Öppna befintlig* och `2` till *Ny bokföring*.
 
 ### Hjälp
 
-Tryck `?` var du än står. cratchit visar då ett kort stycke ur den här manualen om platsen du står på, och sedan de gemensamma valen.
+Tryck `?` var du än står, så visar cratchit de gemensamma valen. Har platsen en hjälptext säger cratchit det, och trycker du `?` en gång till visar cratchit hjälptexten ur den här manualen. Trycker du `?` ännu en gång visas de gemensamma valen igen.
 
 ### Gemensamma val
 
@@ -64,7 +65,7 @@ Några tangenter fungerar överallt. De står inte bland valen. Tryck `?` så vi
 | Tangent | Gör |
 |---|---|
 | `-` | Tillbaka till platsen före |
-| `?` | Visa hjälp och de gemensamma valen |
+| `?` | Visa de gemensamma valen. Tryck igen för hjälp om platsen du står på. |
 | Enter | Visa valen igen |
 | Esc | Töm raden du skriver på (även Ctrl-U) |
 | `q` | Avsluta |
@@ -103,6 +104,7 @@ När cratchit vill ha en mapp står en sökväg redan på raden, och du fortsät
 
 <!-- hjälp: fel -->
 cratchit kunde inte göra det du valde, och orsaken står ovanför prompten. Tryck `-` för att gå tillbaka.
+<!-- /hjälp -->
 
 Kan cratchit inte göra det du valde hamnar du alltså på platsen *Fel*.
 
@@ -110,6 +112,7 @@ Kan cratchit inte göra det du valde hamnar du alltså på platsen *Fel*.
 
 <!-- hjälp: inte-an -->
 Valet du gjorde finns i menyn men cratchit kan inte utföra det än. Vad som saknas står ovanför prompten. Tryck `-` för att gå tillbaka.
+<!-- /hjälp -->
 
 Några val finns i menyerna innan cratchit kan utföra dem. De leder till platsen *Inte än*, som säger vad som saknas:
 
@@ -124,6 +127,7 @@ Tryck `-` för att gå tillbaka.
 
 <!-- hjälp: samlingsmapp -->
 Samlingsmappen listar de bokföringar cratchit kommer ihåg. Tryck en bokförings siffra för att öppna den. Tryck `+` för att lägga till en bokföring.
+<!-- /hjälp -->
 
 Tryck `0` i början för att öppna samlingsmappen.
 
@@ -146,6 +150,7 @@ En bokföring är bokföringen för en juridisk person, till exempel ett aktiebo
 
 <!-- hjälp: bokforing -->
 Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Än så länge finns det inga val här. Tryck `-` för att gå tillbaka.
+<!-- /hjälp -->
 
 Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen den ligger i:
 
@@ -160,6 +165,7 @@ Cratchit > Samlingsmapp > The ITfied AB>
 
 <!-- hjälp: lagg-till -->
 Tryck `1` för att lägga till en bokföring som redan finns, eller `2` för att skapa en ny.
+<!-- /hjälp -->
 
 Du kommer hit med `+` i samlingsmappen.
 
@@ -167,6 +173,7 @@ Du kommer hit med `+` i samlingsmappen.
 
 <!-- hjälp: oppna-befintlig -->
 Skriv sökvägen till mappen som bokföringen ligger i och tryck Enter. Tab fyller i mappnamn. Så länge du inte har ändrat sökvägen går `-` tillbaka. Annars tömmer Esc raden först.
+<!-- /hjälp -->
 
 Har du en bokföring som samlingsmappen inte listar tar du in den så här:
 
@@ -194,6 +201,7 @@ Allt som hör till en bokföring ligger i dess mapp. Flytta eller kopiera mappen
 
 <!-- hjälp: ny-bokforing -->
 Välj hur den nya bokföringen ska skapas: `1` från en SIE-fil eller `2` från namn, organisationsnummer och räkenskapsår. Inget av dem finns än.
+<!-- /hjälp -->
 
 Tryck `+` och sedan `2` (*Ny bokföring*). Där finns två val:
 

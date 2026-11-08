@@ -143,3 +143,7 @@ Kort logg över vad vi beslutat och varför.
 * Testerna läser manualen i källträdet och kräver ett stycke för varje ämne och inget stycke för okända ämnen. Så kan manualen och programmet inte glida isär utan att ett test faller.
 * Manualen kopieras till framework (`<programmapp>/.cratchit/anvandarmanual.md`) när CMake konfigureras och installeras med programmet. Saknas den visar `?` att cratchit inte hittar manualen, och de gemensamma valen.
 * Hjälpstycket skrivs så att det går att läsa ensamt i terminalen: vad platsen är och vilka tangenter som gäller. Resten av avsnittet i manualen fördjupar.
+* Steg 46: Ersätter delar av steg 45. `?` visar de gemensamma valen, som före steg 45. Har statet en hjälptext säger `?`-raden det (`Visa gemensamma val, tryck igen för hjälp om <namn>`), och `?` direkt igen visar hjälptexten. Ett tredje `?` visar de gemensamma valen igen. Varje annan tangent emellan börjar om. Startraden är åter `Tryck ? för gemensamma val.`
+* Skälet: det vanliga fallet blir kort, och hjälptexten får bli längre eftersom den bara visas när användaren ber om den.
+* En hjälptext börjar efter `<!-- hjälp: <ämne> -->` och slutar vid `<!-- /hjälp -->`, nästa kommentar eller nästa rubrik. Den får ha flera stycken, listor och kodblock. Kodblock visas som de är, utan staketen. En hjälptext ska rymmas på en skärm.
+* Promptloopen minns om förra tangenten visade de gemensamma valen (`help_next_`). Det är det enda nya tillståndet.

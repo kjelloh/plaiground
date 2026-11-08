@@ -11,9 +11,9 @@
 using cratchit::Manual;
 using cratchit::plain_text_of;
 
-TEST(Manual, HelpIsTheParagraphAfterItsMarker) {
-  Manual manual("# Rubrik\n\n<!-- hjälp: a -->\nFörsta raden.\nAndra raden.\n\nInte med.\n");
-  EXPECT_EQ(manual.help("a"), (std::vector<std::string>{"Första raden.", "Andra raden."}));
+TEST(Manual, HelpEndsAtItsEndMarker) {
+  Manual manual("# Rubrik\n\n<!-- hjälp: a -->\nFörsta raden.\n\n* Punkt\n<!-- /hjälp -->\nInte med.\n");
+  EXPECT_EQ(manual.help("a"), (std::vector<std::string>{"Första raden.", "", "- Punkt"}));
 }
 
 TEST(Manual, HelpEndsAtAHeadingOrAnotherMarker) {
@@ -23,9 +23,14 @@ TEST(Manual, HelpEndsAtAHeadingOrAnotherMarker) {
   EXPECT_EQ(manual.help("c"), (std::vector<std::string>{"C."}));
 }
 
-TEST(Manual, BlankLinesAfterTheMarkerAreSkipped) {
-  Manual manual("<!-- hjälp: a -->\n\nA.\n");
+TEST(Manual, BlankLinesAroundTheHelpAreLeftOut) {
+  Manual manual("<!-- hjälp: a -->\n\nA.\n\n<!-- /hjälp -->\n");
   EXPECT_EQ(manual.help("a"), (std::vector<std::string>{"A."}));
+}
+
+TEST(Manual, CodeBlockShowsAsItIsWithoutItsFences) {
+  Manual manual("<!-- hjälp: a -->\nSå här:\n```text\n  1 `Ord`\nCratchit> \n```\n<!-- /hjälp -->\n");
+  EXPECT_EQ(manual.help("a"), (std::vector<std::string>{"Så här:", "  1 `Ord`", "Cratchit> "}));
 }
 
 TEST(Manual, UnknownTopicHasNoHelp) {
@@ -49,7 +54,7 @@ TEST(Manual, MissingFileIsAnError) {
   EXPECT_FALSE(cratchit::read_manual("/no/such/folder/anvandarmanual.md"));
 }
 
-// The manual that comes with cratchit has a help paragraph for every state's topic
+// The manual that comes with cratchit has a help text for every state's topic
 TEST(Manual, HasHelpForEveryTopic) {
   auto const manual = cratchit::read_manual(CRATCHIT_MANUAL_FILE);
   ASSERT_TRUE(manual) << manual.error();
@@ -58,7 +63,7 @@ TEST(Manual, HasHelpForEveryTopic) {
   }
 }
 
-// ... and no help paragraph that no state uses
+// ... and no help text that no state uses
 TEST(Manual, HasNoHelpForUnknownTopics) {
   auto const manual = cratchit::read_manual(CRATCHIT_MANUAL_FILE);
   ASSERT_TRUE(manual) << manual.error();

@@ -12,20 +12,22 @@ namespace cratchit {
 inline constexpr std::string_view manual_file_name = "anvandarmanual.md";
 
 // The user manual (docs/anvandarmanual.md, Markdown in Swedish), read for its
-// help paragraphs. A help paragraph is marked by a line of its own
-// `<!-- hjälp: <topic> -->` (invisible when the Markdown is shown) and is the
-// paragraph that follows it: its lines up to the first blank line, a heading
-// or another comment.
+// help texts. A help text starts after a line of its own
+// `<!-- hjälp: <topic> -->` and ends at the next comment (usually
+// `<!-- /hjälp -->`), the next heading or the end of the manual. Comments are
+// invisible when the Markdown is shown. A help text may hold several
+// paragraphs and lists; keep it within one screen.
 class Manual {
 public:
   explicit Manual(std::string text) : text_(std::move(text)) {}
 
-  // The help paragraph of topic as plain text lines for the terminal: no
-  // `**`, `*` or backticks, and a link shows only its text. Empty when the
-  // manual has no help paragraph for topic.
+  // The help text of topic as plain text lines for the terminal: no `**`,
+  // `*` or backticks, a link shows only its text, and the ``` lines of a code
+  // block are left out. Blank lines between paragraphs are kept as empty
+  // lines. Empty when the manual has no help text for topic.
   std::vector<std::string> help(std::string_view topic) const;
 
-  // The topics the manual has help paragraphs for, in order
+  // The topics the manual has help texts for, in order
   std::vector<std::string> topics() const;
 
 private:

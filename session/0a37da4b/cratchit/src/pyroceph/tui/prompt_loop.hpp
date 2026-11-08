@@ -20,8 +20,8 @@ bool is_quit(CodePoint code_point);
 // state maps it itself. While typing input it is text.
 inline constexpr CodePoint quit_key = U'q';
 
-// The key that shows the current state's user instruction and the common
-// keys, unless the current state maps it itself
+// The key that shows the common keys, and pressed again right after, the
+// current state's user instruction. Unless the current state maps it itself.
 inline constexpr CodePoint help_key = U'?';
 
 // Gives the lines (UTF-8) of the user instruction for a help topic (see
@@ -55,14 +55,15 @@ struct CommonKey {
 };
 
 // The common keys that work in the navigator's current state. Back is only
-// listed when the navigator can go back.
-std::vector<CommonKey> common_keys(Navigator const& navigator);
+// listed when the navigator can go back. has_help: the state has a user
+// instruction, so the caption of help_key tells to press it again for it.
+std::vector<CommonKey> common_keys(Navigator const& navigator, bool has_help = false);
 
 // Writes the common keys, one per line, then the prompt with no line end
 void show_common_keys(Navigator const& navigator, std::FILE* out);
 
-// Writes the current state's user instruction from help (when it has one),
-// then the common keys, then the prompt with no line end
+// Writes the current state's user instruction from help (nothing when it has
+// none), then the prompt with no line end
 void show_help(Navigator const& navigator, HelpSource const& help, std::FILE* out);
 
 // Goes between the state names in the prompt
@@ -84,8 +85,9 @@ void show(Navigator const& navigator, std::FILE* out);
 // Navigating: a quit key ends the loop. Any other key goes to the current
 // state first, and when it answers with a new state, that state is shown.
 // When the state has no mapping for the key, the common keys apply: back_key
-// goes back (nothing at the root), help_key shows the state's user
-// instruction from help and the common keys (see show_help), Enter
+// goes back (nothing at the root), help_key shows the common keys, and
+// pressed again right after, the state's user instruction from help (then
+// the common keys again, and so on; any other key starts over), Enter
 // shows the state again and quit_key ends the loop. Any other printable key
 // starts the input with that key.
 //

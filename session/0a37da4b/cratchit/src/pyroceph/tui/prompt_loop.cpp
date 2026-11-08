@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <optional>
 #include <print>
 #include <utility>
@@ -41,16 +42,25 @@ std::string path_of(Navigator const& navigator) {
 void to_edit_prompt(std::FILE* out) { std::print(out, "\b\b: "); }
 void to_navigation_prompt(std::FILE* out) { std::print(out, "\b\b> "); }
 
-// Writes the current state's user instruction (when it has one) and the common keys
-void write_help(Navigator const& navigator, HelpSource const& help, std::FILE* out) {
+// The current state's user instruction from help, or nothing when it has none
+View help_lines(Navigator const& navigator, HelpSource const& help) {
   auto const topic = navigator.current().help_topic();
-  auto const lines = help && !topic.empty() ? help(topic) : View{};
-  if (!lines.empty()) std::print(out, "\n");
-  for (auto const& line : lines) std::print(out, "{}\n", line);
+  return help && !topic.empty() ? help(topic) : View{};
+}
+
+// Writes the common keys, one per line. has_help tells in the caption of
+// help_key that pressing it again shows the state's user instruction.
+void write_common_keys(Navigator const& navigator, bool has_help, std::FILE* out) {
   std::print(out, "\n");
-  for (auto const& common : common_keys(navigator)) {
+  for (auto const& common : common_keys(navigator, has_help)) {
     std::print(out, "  {:<7} {}\n", common.key, common.caption);
   }
+}
+
+// Writes the lines of a user instruction
+void write_help(View const& lines, std::FILE* out) {
+  std::print(out, "\n");
+  for (auto const& line : lines) std::print(out, "{}\n", line);
 }
 
 std::size_t code_points_of(std::string const& utf8) {
@@ -75,12 +85,14 @@ public:
   // keys. Starts the input with the key when it is no action. False when the
   // key ends the loop.
   bool navigate(CodePoint key) {
+    if (key != help_key) help_next_ = false;
     if (navigator_.press(key)) {
       present();
     } else if (key == back_key) {
       if (navigator_.back()) present();
     } else if (key == help_key) {
-      show_help(navigator_, help_, out_);
+      help();
+      std::print(out_, "{}", prompt_of(navigator_));
     } else if (is_enter(key)) {
       present();
     } else if (key == quit_key) {
@@ -94,13 +106,14 @@ public:
 
   // Handles a key while typing input
   void edit(CodePoint key) {
+    if (key != help_key) help_next_ = false;
     if (key == back_key && input_.text() == navigator_.current().start_input()) {
       // The start text is untouched, so the user has typed nothing yet
       input_.clear();
       after_wrap_ = false;
       if (navigator_.back()) present();
     } else if (key == help_key && input_.text() == navigator_.current().start_input()) {
-      write_help(navigator_, help_, out_);
+      help();
       reprint();
     } else if (is_backspace(key)) {
       erase_one();
@@ -117,6 +130,7 @@ public:
 
   // Handles a function key while typing input. Function keys do nothing while navigating.
   void edit(FunctionKey key) {
+    help_next_ = false;
     if (key == FunctionKey::escape) {
       erase_all();
     } else if (key == FunctionKey::del) {
@@ -125,6 +139,19 @@ public:
   }
 
 private:
+  // help_key: the common keys, or right after them the state's user
+  // instruction when it has one. Writes no prompt.
+  void help() {
+    auto const lines = help_lines(navigator_, help_);
+    if (help_next_ && !lines.empty()) {
+      write_help(lines, out_);
+      help_next_ = false;
+    } else {
+      write_common_keys(navigator_, !lines.empty(), out_);
+      help_next_ = !lines.empty();
+    }
+  }
+
   void echo(CodePoint key) {
     std::print(out_, "{}", utf8_of(key));
     after_wrap_ = false;
@@ -214,6 +241,7 @@ private:
   std::FILE* out_;
   TerminalWidth width_;
   HelpSource help_;
+  bool help_next_ = false; // the last key showed the common keys, so help_key shows the user instruction
   InputBuffer input_;
   bool after_wrap_ = false; // the cursor is at the start of a row because a code point there was erased
 };
@@ -228,10 +256,12 @@ bool is_enter(CodePoint code_point) { return code_point == U'\n' || code_point =
 
 bool is_backspace(CodePoint code_point) { return code_point == 0x7F || code_point == 0x08; }
 
-std::vector<CommonKey> common_keys(Navigator const& navigator) {
+std::vector<CommonKey> common_keys(Navigator const& navigator, bool has_help) {
   std::vector<CommonKey> keys;
   if (navigator.can_go_back()) keys.push_back({utf8_of(back_key), "Tillbaka"});
-  keys.push_back({utf8_of(help_key), "Visa hjälp och gemensamma val"});
+  keys.push_back({utf8_of(help_key), has_help ? std::format("Visa gemensamma val, tryck igen för hjälp om {}",
+                                                            navigator.current().name())
+                                              : std::string("Visa gemensamma val")});
   keys.push_back({"Enter", "Visa valen igen"});
   keys.push_back({"Esc", "Töm indata (även Ctrl-U)"});
   keys.push_back({utf8_of(quit_key), "Avsluta"});
@@ -239,10 +269,14 @@ std::vector<CommonKey> common_keys(Navigator const& navigator) {
   return keys;
 }
 
-void show_common_keys(Navigator const& navigator, std::FILE* out) { show_help(navigator, {}, out); }
+void show_common_keys(Navigator const& navigator, std::FILE* out) {
+  write_common_keys(navigator, false, out);
+  std::print(out, "{}", prompt_of(navigator));
+  std::fflush(out);
+}
 
 void show_help(Navigator const& navigator, HelpSource const& help, std::FILE* out) {
-  write_help(navigator, help, out);
+  write_help(help_lines(navigator, help), out);
   std::print(out, "{}", prompt_of(navigator));
   std::fflush(out);
 }
