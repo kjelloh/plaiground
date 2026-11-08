@@ -103,3 +103,46 @@ TEST(State, TakesNoInputByDefault) {
   ASSERT_FALSE(result);
   EXPECT_EQ(result.error(), pyroceph::tui::no_input_error);
 }
+
+namespace {
+
+class Returning : public pyroceph::tui::State {
+public:
+  explicit Returning(int* returns) : returns_(returns) {}
+  std::string name() const override { return "Tillbaka hit"; }
+  pyroceph::tui::View view() const override { return {}; }
+  pyroceph::tui::OptionsList options() const override { return {}; }
+  pyroceph::tui::OnKeyResult on_key(pyroceph::tui::CodePoint key) override {
+    return key == U'1' ? test::menu("Nästa") : nullptr;
+  }
+  void on_return() override { ++*returns_; }
+
+private:
+  int* returns_;
+};
+
+} // namespace
+
+TEST(State, BackCallsOnReturnOfTheStateBefore) {
+  int returns = 0;
+  Navigator navigator(std::make_unique<Returning>(&returns));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(returns, 0);
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(returns, 1);
+}
+
+TEST(State, EnterMakesTheStateCurrent) {
+  Navigator navigator(tree());
+  navigator.enter(test::menu("Inmatat"));
+  EXPECT_EQ(navigator.current().name(), "Inmatat");
+  EXPECT_TRUE(navigator.back());
+}
+
+TEST(State, CompletesNothingAndStartsNoInputByDefault) {
+  Navigator navigator(tree());
+  EXPECT_TRUE(navigator.current().start_input().empty());
+  auto const completion = navigator.current().complete(U"/x");
+  EXPECT_TRUE(completion.added.empty());
+  EXPECT_TRUE(completion.candidates.empty());
+}

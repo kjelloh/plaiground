@@ -5,6 +5,7 @@
 #include "pyroceph/tui/prompt_loop.hpp"
 #include "pyroceph/tui/raw_mode.hpp"
 #include "pyroceph/tui/state.hpp"
+#include "pyroceph/tui/terminal_width.hpp"
 #include "ui/root_menu.hpp"
 
 #include <cstdio>
@@ -69,7 +70,7 @@ int main() {
     pyroceph::tui::Navigator navigator(cratchit::ui::make_root_menu(cratchit::default_workspace_folder()));
     std::println("Tryck ? för gemensamma val.");
     LOG_BUSINESS("Promptloopen startade");
-    pyroceph::tui::run_prompt_loop(keys, navigator, stdout);
+    pyroceph::tui::run_prompt_loop(keys, navigator, stdout, pyroceph::tui::terminal_width);
     if (keys.failure_count() > 0) LOG_DESIGN_INSUFFICIENCY("{} tangenter kunde inte avkodas", keys.failure_count());
   }
   LOG_BUSINESS("cratchit avslutades");

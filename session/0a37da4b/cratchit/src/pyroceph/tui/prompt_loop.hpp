@@ -4,6 +4,8 @@
 #include "pyroceph/tui/state.hpp"
 
 #include <cstdio>
+#include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -33,6 +35,14 @@ bool is_backspace(CodePoint code_point);
 // Ctrl-U (U+0015) empties the input and goes back to navigating
 inline constexpr CodePoint clear_key = 0x15;
 
+// Tab completes the input while typing, as the current state answers (see
+// State::complete), or sounds the bell
+inline constexpr CodePoint complete_key = U'\t';
+
+// Gives the terminal's width in columns, or nothing when it is not known (see
+// terminal_width.hpp)
+using TerminalWidth = std::function<std::optional<int>()>;
+
 // A key that works the same in every state, as listed by help_key
 struct CommonKey {
   std::string key;     // as shown, e.g. "-" or "Ctrl-D"
@@ -56,7 +66,7 @@ std::string prompt_of(Navigator const& navigator);
 // As prompt_of but ending in ": ", shown while the user types input
 std::string edit_prompt_of(Navigator const& navigator);
 
-// Writes the current state's options, one per line as key and caption, then
+// Writes the current state's view and options, one per line as key and caption, then
 // the prompt with no line end, as UTF-8. The common keys are not listed.
 void show(Navigator const& navigator, std::FILE* out);
 
@@ -66,18 +76,28 @@ void show(Navigator const& navigator, std::FILE* out);
 // state first, and when it answers with a new state, that state is shown.
 // When the state has no mapping for the key, the common keys apply: back_key
 // goes back (nothing at the root), help_key shows the common keys, Enter
-// shows the options again and quit_key ends the loop. Any other printable key starts the input with that key.
+// shows the state again and quit_key ends the loop. Any other printable key
+// starts the input with that key.
+//
+// Whenever a state with a start text (State::start_input) is shown, its input
+// starts with that text, e.g. a folder to type a path from. As long as the
+// start text is untouched, back_key goes back as when navigating.
 //
 // Typing input: printable keys go into the input and are echoed. Backspace
 // and Delete erase one; when the input becomes empty, navigating starts
-// again. Esc and Ctrl-U empty the input and navigating starts again. Enter gives the input to
-// the state's on_input: when accepted, the reply is shown, the input is
-// emptied and navigating starts again; when not, the error text is shown and
-// the input is kept, so the user can correct it.
+// again. Esc and Ctrl-U empty the input and navigating starts again. Tab adds
+// what the state completes the input with, or lists the candidates and writes
+// the input again below them. Enter gives the input to the state's on_input:
+// when accepted, the reply is shown, the input is emptied, and the state it
+// leads to (if any) becomes current; then the current state is shown. When
+// not, the error text is shown and the input is kept, so the user can correct it.
+//
+// width gives the terminal's width, so that Backspace erases right in an input
+// that has wrapped onto more rows. Without it Backspace assumes one row.
 //
 // Arrows and other function keys are read whole (see KeyParser) and do
 // nothing yet. Ends at a quit key or when the input ends, and then ends the
 // prompt line.
-void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out);
+void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out, TerminalWidth width = {});
 
 } // namespace pyroceph::tui

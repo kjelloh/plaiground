@@ -44,13 +44,13 @@ std::FILE* temporary_file() {
 }
 
 // Runs the loop and gives back what it wrote
-std::string run(KeyReader& keys, Navigator& navigator) {
+std::string run(KeyReader& keys, Navigator& navigator, pyroceph::tui::TerminalWidth width = {}) {
   auto* out = temporary_file();
   if (out == nullptr) {
     ADD_FAILURE() << "No temporary file";
     return {};
   }
-  pyroceph::tui::run_prompt_loop(keys, navigator, out);
+  pyroceph::tui::run_prompt_loop(keys, navigator, out, std::move(width));
   std::rewind(out);
   std::string written;
   for (int c; (c = std::fgetc(out)) != EOF;) written.push_back(static_cast<char>(c));
@@ -317,4 +317,98 @@ TEST(PromptLoop, StateIsAskedBeforeTheQuitKey) {
   auto keys = keys_of({'q', 'q', '-'}); // the root maps q, Kvar does not, so the second q ends the loop
   run(keys, navigator);
   EXPECT_EQ(navigator.current().name(), "Kvar");
+}
+
+namespace {
+
+// Types a word from "/", completes it from a fixed list and leads to a state
+// named by the word on Enter
+class WordState : public pyroceph::tui::State {
+public:
+  std::string name() const override { return "Ord"; }
+  pyroceph::tui::View view() const override { return {}; }
+  pyroceph::tui::OptionsList options() const override { return {}; }
+  pyroceph::tui::OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::u32string start_input() const override { return U"/"; }
+  pyroceph::tui::Completion complete(std::u32string_view text) const override {
+    if (text == U"/a") return {U"pa/", {}};
+    if (text == U"/b") return {{}, {"bil", "buss"}};
+    return {};
+  }
+  pyroceph::tui::InputResult on_input(std::u32string_view text) override {
+    if (text == U"/") return std::unexpected(std::string("Skriv ett ord."));
+    return pyroceph::tui::Accepted(menu("Valt"), "Ok.");
+  }
+};
+
+std::unique_ptr<pyroceph::tui::State> words() {
+  return menu("Rot", {{U'1', "Ord", [] { return std::make_unique<WordState>(); }}});
+}
+
+} // namespace
+
+TEST(PromptLoop, StartTextStartsTheInputWhenTheStateIsShown) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /\n");
+}
+
+TEST(PromptLoop, TabAddsWhatTheStateCompletes) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', 'a', '\t'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /apa/\n");
+}
+
+TEST(PromptLoop, TabListsTheCandidatesAndWritesTheInputAgain) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', 'b', '\t'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /b\n  bil\n  buss\nRot > Ord: /b\n");
+}
+
+TEST(PromptLoop, TabWithoutCompletionSoundsTheBell) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', 'x', '\t'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /x\a\n");
+}
+
+TEST(PromptLoop, AcceptedInputLeadsToTheNextState) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', 'x', '\n', '-'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /x"
+                                  "\nOk.\nRot > Ord > Valt> "
+                                  "\nRot > Ord> \b\b: /\n");
+  EXPECT_EQ(navigator.current().name(), "Ord");
+}
+
+TEST(PromptLoop, EscEmptiesTheStartTextAndBackGoesBack) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', 0x1B, '-'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /\b \b\b\b> \n  1 Ord\nRot> \n");
+}
+
+// "Rot > Ord: /" is 12 columns, so on a terminal 13 wide x is in the last column and y wraps
+TEST(PromptLoop, BackspaceErasesAcrossARowWhenTheWidthIsKnown) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', 'x', 'y', 0x7F, 0x7F, 0x7F});
+  auto const width = []() -> std::optional<int> { return 13; };
+  EXPECT_EQ(run(keys, navigator, width), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /xy"
+                                         "\b \b"            // y, in the first column of the second row
+                                         "\x1b[A\x1b[13G\x1b[K" // x, in the last column of the first row
+                                         "\b \b\b\b> \n");   // /
+}
+
+TEST(PromptLoop, BackspaceInTheLastColumnStaysOnTheRow) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', 'x', 0x7F});
+  auto const width = []() -> std::optional<int> { return 13; };
+  EXPECT_EQ(run(keys, navigator, width), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /x\x1b[13G\x1b[K\n");
+}
+
+TEST(PromptLoop, BackGoesBackWhileTheStartTextIsUntouched) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', '-', '1', 'x', '-'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /"
+                                  "\n  1 Ord\nRot> "
+                                  "\nRot > Ord> \b\b: /x-\n");
+  EXPECT_EQ(navigator.current().name(), "Ord");
 }

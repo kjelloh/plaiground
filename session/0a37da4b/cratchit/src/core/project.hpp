@@ -39,4 +39,14 @@ std::expected<std::vector<ListedProject>, std::string> list_projects(Workspace c
 // anything. Error text otherwise.
 std::expected<Project, std::string> open_project(std::filesystem::path const& folder, std::string_view uuid);
 
+// Opens the project in folder, whatever its uuid: as open_project, for a
+// project the workspace does not list yet. folder must be a full path; it is
+// normalised (no `.`, `..` or separator at the end). Error text otherwise.
+std::expected<Project, std::string> open_project(std::filesystem::path const& folder);
+
+// Makes the workspace remember the project: sets `project.<uuid> = <folder>`
+// in workspace.txt (added last, or replacing the folder it had), keeping the
+// other entries as they are. Error text when workspace.txt cannot be read or written.
+std::expected<void, std::string> remember_project(Workspace const& workspace, Project const& project);
+
 } // namespace cratchit

@@ -11,6 +11,7 @@ add_executable(cratchit_tests
   test_key_parser.cpp
   test_key_reader.cpp
   test_log.cpp
+  test_path_completion.cpp
   test_path_value.cpp
   test_project.cpp
   test_prompt_loop.cpp

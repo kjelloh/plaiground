@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <format>
+#include <optional>
 #include <system_error>
 #include <tuple>
 
@@ -39,7 +40,10 @@ std::expected<std::vector<ListedProject>, std::string> list_projects(Workspace c
   return result;
 }
 
-std::expected<Project, std::string> open_project(fs::path const& folder, std::string_view uuid) {
+namespace {
+
+// Reads project.txt in folder. The uuid must be expected_uuid, when given.
+std::expected<Project, std::string> read_project(fs::path const& folder, std::optional<std::string_view> expected_uuid) {
   Project result;
   result.folder = folder;
   result.file = folder / ".cratchit" / "project.txt";
@@ -51,15 +55,35 @@ std::expected<Project, std::string> open_project(fs::path const& folder, std::st
   if (!entries) return std::unexpected(entries.error());
   auto found_uuid = find_value(*entries, "uuid");
   if (!found_uuid || found_uuid->empty()) return std::unexpected(std::format("{}: 'uuid' saknas", result.file.string()));
-  if (*found_uuid != uuid) {
-    return std::unexpected(
-        std::format("{}: uuid {} är inte {} som samlingsmappen har för mappen", result.file.string(), *found_uuid, uuid));
+  if (expected_uuid && *found_uuid != *expected_uuid) {
+    return std::unexpected(std::format("{}: uuid {} är inte {} som samlingsmappen har för mappen", result.file.string(),
+                                       *found_uuid, *expected_uuid));
   }
   auto name = find_value(*entries, "name");
   if (!name || name->empty()) return std::unexpected(std::format("{}: 'name' saknas", result.file.string()));
   result.uuid = std::move(*found_uuid);
   result.name = std::move(*name);
   return result;
+}
+
+} // namespace
+
+std::expected<Project, std::string> open_project(fs::path const& folder, std::string_view uuid) {
+  return read_project(folder, uuid);
+}
+
+std::expected<Project, std::string> open_project(fs::path const& folder) {
+  if (!folder.is_absolute()) return std::unexpected(std::format("{} är inte en hel sökväg", folder.string()));
+  auto normal = folder.lexically_normal();
+  if (!normal.has_filename() && normal.has_relative_path()) normal = normal.parent_path();
+  return read_project(normal, std::nullopt);
+}
+
+std::expected<void, std::string> remember_project(Workspace const& workspace, Project const& project) {
+  auto entries = read_path_values(workspace.file);
+  if (!entries) return std::unexpected(entries.error());
+  set_value(*entries, std::string(project_prefix) + project.uuid, project.folder.string());
+  return write_path_values(workspace.file, *entries);
 }
 
 } // namespace cratchit

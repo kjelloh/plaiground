@@ -33,9 +33,18 @@ using OptionsList = std::vector<Option>;
 // formats the lines. All UTF-8.
 using View = std::vector<std::string>;
 
-// What a state answers to text the user entered: a reply to show (may be
-// empty) when it accepts the text, or an error text when it does not. All UTF-8.
-using InputResult = std::expected<std::string, std::string>;
+// What a state answers when it accepts text the user entered (see below)
+struct Accepted;
+
+// What a state answers to text the user entered: Accepted, or an error text
+// (UTF-8) when it does not accept it.
+using InputResult = std::expected<Accepted, std::string>;
+
+// What Tab adds to the input, as a state answers it (see State::complete)
+struct Completion {
+  std::u32string added;                // appended to the input
+  std::vector<std::string> candidates; // listed (UTF-8) when nothing can be added
+};
 
 // One place in the UI. The client derives its concrete states from it.
 //
@@ -65,6 +74,33 @@ public:
   // Acts on text the user entered. By default the state takes no input and
   // answers with no_input_error.
   virtual InputResult on_input(std::u32string_view text);
+
+  // The text the input starts with whenever the state is shown, e.g. a folder
+  // to type a path from. Empty by default: the state is navigated until the
+  // user types. A state with a start text is where the user types.
+  virtual std::u32string start_input() const { return {}; }
+
+  // What Tab adds to the input text, e.g. the rest of a folder name. Nothing
+  // by default, and then Tab does nothing but sound the bell.
+  virtual Completion complete(std::u32string_view text) const;
+
+  // Called when the user comes back to the state from a state after it, before
+  // it is shown again. Lets the state read again what may have changed there.
+  virtual void on_return() {}
+};
+
+// What a state answers when it accepts text the user entered: a reply to show
+// (UTF-8, may be empty) and, when the input leads on, the next state, which
+// the TUI takes over as if a key had led there.
+struct Accepted {
+  // Implicit from the reply, so that a state may answer with its reply alone
+  Accepted() = default;
+  Accepted(std::string reply_) : reply(std::move(reply_)) {}
+  Accepted(char const* reply_) : reply(reply_) {}
+  Accepted(std::unique_ptr<State> next_, std::string reply_ = {}) : reply(std::move(reply_)), next(std::move(next_)) {}
+
+  std::string reply;
+  std::unique_ptr<State> next; // nullptr: stay in the state
 };
 
 // The states from the root to the current one. Owns them: a state is
@@ -86,8 +122,12 @@ public:
   // that becomes the current state. True when the state changed.
   bool press(CodePoint key);
 
-  // Leaves the current state, which is destroyed, for the state before. Does
-  // nothing at the root. True when the state changed.
+  // Makes next, which must not be empty, the current state, e.g. the state
+  // that accepted input leads to
+  void enter(std::unique_ptr<State> next);
+
+  // Leaves the current state, which is destroyed, for the state before, and
+  // calls its on_return. Does nothing at the root. True when the state changed.
   bool back();
 
 private:

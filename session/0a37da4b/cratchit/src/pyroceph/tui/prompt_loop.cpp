@@ -4,7 +4,11 @@
 #include "pyroceph/tui/input_buffer.hpp"
 #include "pyroceph/tui/key_parser.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <optional>
 #include <print>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -37,72 +41,166 @@ std::string path_of(Navigator const& navigator) {
 void to_edit_prompt(std::FILE* out) { std::print(out, "\b\b: "); }
 void to_navigation_prompt(std::FILE* out) { std::print(out, "\b\b> "); }
 
-// Moves back over one code point on the terminal and blanks it
-void unecho(std::FILE* out) { std::print(out, "\b \b"); }
-
-// Erases the last code point of the input. Navigating starts again when it becomes empty.
-void erase_one(InputBuffer& input, std::FILE* out) {
-  input.erase();
-  unecho(out);
-  if (input.empty()) to_navigation_prompt(out);
+std::size_t code_points_of(std::string const& utf8) {
+  return static_cast<std::size_t>(std::ranges::count_if(utf8, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
 }
 
-// Empties the input, and navigating starts again
-void erase_all(InputBuffer& input, std::FILE* out) {
-  for (std::size_t i = 0; i < input.size(); ++i) unecho(out);
-  input.clear();
-  to_navigation_prompt(out);
-}
+// The loop's own state: the navigator, the input and where the terminal's cursor is
+class Loop {
+public:
+  Loop(Navigator& navigator, std::FILE* out, TerminalWidth width)
+      : navigator_(navigator), out_(out), width_(std::move(width)) {}
 
-// Handles a key while navigating: the current state first, then the common
-// keys. Starts the input with the key when it is no action. False when the
-// key ends the loop.
-bool navigate(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE* out) {
-  if (navigator.press(key)) {
-    show(navigator, out);
-  } else if (key == back_key) {
-    if (navigator.back()) show(navigator, out);
-  } else if (key == help_key) {
-    show_common_keys(navigator, out);
-  } else if (is_enter(key)) {
-    show(navigator, out);
-  } else if (key == quit_key) {
-    return false;
-  } else if (input.push(key)) {
-    to_edit_prompt(out);
-    std::print(out, "{}", utf8_of(key));
+  bool typing() const { return !input_.empty(); }
+
+  // Shows the current state, and starts its input when it has a start text
+  void present() {
+    show(navigator_, out_);
+    start_input();
   }
-  return true;
-}
 
-// Handles a key while typing input
-void edit(CodePoint key, Navigator& navigator, InputBuffer& input, std::FILE* out) {
-  if (is_backspace(key)) {
-    erase_one(input, out);
-  } else if (key == clear_key) {
-    erase_all(input, out);
-  } else if (is_enter(key)) {
-    auto const result = navigator.current().on_input(input.text());
-    if (result) {
-      input.clear();
-      if (!result->empty()) std::print(out, "\n{}", *result);
-      show(navigator, out);
-    } else {
-      std::print(out, "\n{}\n{}{}", result.error(), edit_prompt_of(navigator), utf8_of(input.text()));
+  // Handles a key while navigating: the current state first, then the common
+  // keys. Starts the input with the key when it is no action. False when the
+  // key ends the loop.
+  bool navigate(CodePoint key) {
+    if (navigator_.press(key)) {
+      present();
+    } else if (key == back_key) {
+      if (navigator_.back()) present();
+    } else if (key == help_key) {
+      show_common_keys(navigator_, out_);
+    } else if (is_enter(key)) {
+      present();
+    } else if (key == quit_key) {
+      return false;
+    } else if (input_.push(key)) {
+      to_edit_prompt(out_);
+      echo(key);
     }
-  } else if (input.push(key)) {
-    std::print(out, "{}", utf8_of(key));
+    return true;
   }
-}
 
-// Handles a function key while typing input. Function keys do nothing while navigating.
-void edit(FunctionKey key, InputBuffer& input, std::FILE* out) {
-  if (key == FunctionKey::escape) {
-    erase_all(input, out);
-  } else if (key == FunctionKey::del) {
-    erase_one(input, out); // the cursor is always at the end
+  // Handles a key while typing input
+  void edit(CodePoint key) {
+    if (key == back_key && input_.text() == navigator_.current().start_input()) {
+      // The start text is untouched, so the user has typed nothing yet
+      input_.clear();
+      after_wrap_ = false;
+      if (navigator_.back()) present();
+    } else if (is_backspace(key)) {
+      erase_one();
+    } else if (key == clear_key) {
+      erase_all();
+    } else if (key == complete_key) {
+      complete();
+    } else if (is_enter(key)) {
+      enter();
+    } else if (input_.push(key)) {
+      echo(key);
+    }
   }
-}
+
+  // Handles a function key while typing input. Function keys do nothing while navigating.
+  void edit(FunctionKey key) {
+    if (key == FunctionKey::escape) {
+      erase_all();
+    } else if (key == FunctionKey::del) {
+      erase_one(); // the cursor is always at the end
+    }
+  }
+
+private:
+  void echo(CodePoint key) {
+    std::print(out_, "{}", utf8_of(key));
+    after_wrap_ = false;
+  }
+
+  // Writes the edit prompt and the input on a line of their own
+  void reprint() {
+    std::print(out_, "{}{}", edit_prompt_of(navigator_), utf8_of(input_.text()));
+    after_wrap_ = false;
+  }
+
+  void start_input() {
+    auto const text = navigator_.current().start_input();
+    if (text.empty() || !input_.empty()) return;
+    for (auto const code_point : text) input_.push(code_point);
+    if (input_.empty()) return;
+    to_edit_prompt(out_);
+    std::print(out_, "{}", utf8_of(input_.text()));
+    after_wrap_ = false;
+  }
+
+  // Erases the last code point of the input, on the terminal too. Navigating
+  // starts again when the input becomes empty.
+  //
+  // Each code point is taken to fill one column. When the terminal's width is
+  // known, an input that has wrapped onto more rows is erased right: the
+  // terminal leaves the cursor in the last column after writing there, and
+  // Backspace does not go up a row, so the last column is cleared with escape
+  // sequences instead. Without the width, Backspace is used throughout.
+  void erase_one() {
+    if (input_.empty()) return;
+    auto const width = width_ ? width_() : std::nullopt;
+    auto const end = code_points_of(edit_prompt_of(navigator_)) + input_.size(); // the column after the last code point
+    if (width && end % static_cast<std::size_t>(*width) == 0) {
+      // The code point is in the last column. The cursor is on it, or at the
+      // start of the next row when a code point there was just erased.
+      if (after_wrap_) std::print(out_, "\x1b[A");
+      std::print(out_, "\x1b[{}G\x1b[K", *width);
+      after_wrap_ = false;
+    } else {
+      std::print(out_, "\b \b");
+      after_wrap_ = width && (end - 1) % static_cast<std::size_t>(*width) == 0;
+    }
+    input_.erase();
+    if (input_.empty()) to_navigation_prompt(out_);
+  }
+
+  // Empties the input, and navigating starts again
+  void erase_all() {
+    while (!input_.empty()) erase_one();
+  }
+
+  // Adds what the state completes the input with, or lists the candidates
+  // and writes the input again below them, or sounds the bell
+  void complete() {
+    auto const completion = navigator_.current().complete(input_.text());
+    if (!completion.added.empty()) {
+      for (auto const code_point : completion.added) {
+        if (input_.push(code_point)) echo(code_point);
+      }
+    } else if (!completion.candidates.empty()) {
+      std::print(out_, "\n");
+      for (auto const& candidate : completion.candidates) std::print(out_, "  {}\n", candidate);
+      reprint();
+    } else {
+      std::print(out_, "\a");
+    }
+  }
+
+  // Gives the input to the state. When accepted, the reply is shown, the
+  // input is emptied, the state it leads to (if any) becomes current and is
+  // shown. When not, the error text is shown and the input is kept.
+  void enter() {
+    auto result = navigator_.current().on_input(input_.text());
+    if (result) {
+      input_.clear();
+      if (!result->reply.empty()) std::print(out_, "\n{}", result->reply);
+      if (result->next) navigator_.enter(std::move(result->next));
+      present();
+    } else {
+      std::print(out_, "\n{}\n", result.error());
+      reprint();
+    }
+  }
+
+  Navigator& navigator_;
+  std::FILE* out_;
+  TerminalWidth width_;
+  InputBuffer input_;
+  bool after_wrap_ = false; // the cursor is at the start of a row because a code point there was erased
+};
 
 } // namespace
 
@@ -150,20 +248,20 @@ void show(Navigator const& navigator, std::FILE* out) {
   std::fflush(out);
 }
 
-void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out) {
+void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out, TerminalWidth width) {
   KeyParser parser(keys);
-  InputBuffer input;
-  show(navigator, out);
+  Loop loop(navigator, out, std::move(width));
+  loop.present();
   while (auto const key = parser.next()) {
     if (auto const* code_point = std::get_if<CodePoint>(&*key)) {
       if (is_quit(*code_point)) break;
-      if (input.empty()) {
-        if (!navigate(*code_point, navigator, input, out)) break;
+      if (!loop.typing()) {
+        if (!loop.navigate(*code_point)) break;
       } else {
-        edit(*code_point, navigator, input, out);
+        loop.edit(*code_point);
       }
-    } else if (!input.empty()) {
-      edit(std::get<FunctionKey>(*key), input, out);
+    } else if (loop.typing()) {
+      loop.edit(std::get<FunctionKey>(*key));
     }
     std::fflush(out);
   }

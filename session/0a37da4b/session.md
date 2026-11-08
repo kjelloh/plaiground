@@ -155,6 +155,17 @@ Nu visar det sig att detta är SUPERKOMPLICERAT!!
 
 Det här med AI-kodning har sina BAKSIDOR!!
 
+OK, nu har jag ätit middag och tänkt på saken.
+
+* Jag betalar för dyraste super-duper-Claude!
+* Så vad händer om jag ger den fria händer och återkopplar tills sökvägsinmatning till befintligt projekt fungerar tillfredsställande?
+* Håller jag på att 'förfalla' till en slop-programmerare som bara slött låter Claude fixa koden?
+* Håller jag på att sluta bry mig?
+
+OK. Claude fixade biffen!
+
+* Jag tänker acceptera detta nu så jag kommer vidare!
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.

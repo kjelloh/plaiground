@@ -41,9 +41,11 @@ add_library(pyroceph
   src/pyroceph/tui/input_buffer.cpp
   src/pyroceph/tui/key_parser.cpp
   src/pyroceph/tui/key_reader.cpp
+  src/pyroceph/tui/path_completion.cpp
   src/pyroceph/tui/prompt_loop.cpp
   src/pyroceph/tui/raw_mode.cpp
   src/pyroceph/tui/state.cpp
+  src/pyroceph/tui/terminal_width.cpp
 )
 target_include_directories(pyroceph PUBLIC src)
 target_link_libraries(pyroceph PUBLIC charset PRIVATE cratchit_warnings)

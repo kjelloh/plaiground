@@ -45,6 +45,12 @@
 * Steg 40: State för funktioner som inte finns än, `make_design_insufficiency_state(description)` i `src/ui/design_insufficiency` med tester i `test/test_design_insufficiency.cpp`. Namnet i sökvägen är `Inte än` och vyn är beskrivningen. Statet loggar `DESIGN_INSUFFICIENCY` med filen och raden där det skapas. `Öppna befintlig` och `Ny bokföring` under `Lägg till` leder nu dit. 203 tester. Provkört med pipe på macOS.
 * Steg 41: `make_design_insufficiency_state(option, what)`: namnet i sökvägen är `Inte än (<menyval>)` och vyn `Utvecklaren av cratchit har inte infört <what> ännu.`. Loggen får `<menyval>: <what>`. Texterna till användaren i menyerna, `main`, varningarna om terminalens teckenkodning och `no_input_error` är omskrivna till aktiv form. 203 tester. Provkört med pipe på macOS.
 * Steg 42: `Ny bokföring` under `Lägg till` är ett eget state (`NewProjectState` i `src/ui/add_project_menu.cpp`) med `1 Från SIE` och `2 Från uppgifter` (namn, organisationsnummer och räkenskapsår). Båda leder till `Inte än`. 205 tester. Provkört med pipe på macOS.
+* Steg 43: `Öppna befintlig` under `Lägg till` fungerar, med sökväg och Tab-komplettering som i 'take 3'.
+  * pyroceph: `State::start_input()` (texten indata börjar med när statet visas), `State::complete()` (Tab), `State::on_return()` (anropas när man går tillbaka till statet), och `on_input` kan leda till ett nytt state (`Accepted{reply, next}`, `Navigator::enter`). `-` går tillbaka så länge starttexten är orörd.
+  * pyroceph: `complete_path`, `path_input_of` och `path_of` i `pyroceph/tui/path_completion` (från `complete_folder` i 'take 3'). `terminal_width()` i `pyroceph/tui/terminal_width`. Med känd bredd suddar Backspace rätt över en radbrytning (escape-sekvenser), annars som förut.
+  * core: `open_project(folder)` utan uuid och `remember_project` (skriver `project.<uuid> = <mapp>` i `workspace.txt`).
+  * ui: `make_open_existing_project` börjar i Dokument-mappen. Enter öppnar bokföringen, samlingsmappen kommer ihåg den och man hamnar i bokföringens state. `Samlingsmapp` läser om sin lista när man kommer tillbaka.
+  * 231 tester. Provkört med pipe på macOS (HOME i en tillfällig mapp och en kopia av `The ITfied AB`). Radbrytningen vid Backspace är bara testad mot förväntade escape-sekvenser, inte i en riktig terminal. Windows-grenen av `terminal_width` är skriven men inte byggd.
 
 ## Bygg, kör och installera
 
@@ -64,4 +70,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 ## Nästa steg
 
 * Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden.
-* Bestäms av användaren. Troliga steg: fylla `Öppna befintlig` och `Ny bokföring`, så att cratchit själv lägger till en rad i `workspace.txt` (kräver att indata kan leda till ett nytt state, och att `Samlingsmapp` läser om sin lista när man går tillbaka till den). Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.
+* Bestäms av användaren. Troliga steg: prova `Öppna befintlig` i en riktig terminal (särskilt Backspace över radbrytning), fylla `Ny bokföring`. Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.
