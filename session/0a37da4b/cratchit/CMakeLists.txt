@@ -54,6 +54,7 @@ target_link_libraries(pyroceph PUBLIC charset PRIVATE cratchit_warnings)
 add_library(cratchit_core
   src/core/dot_folder.cpp
   src/core/log.cpp
+  src/core/manual.cpp
   src/core/path_value.cpp
   src/core/project.cpp
   src/core/terminal_encoding.cpp
@@ -101,6 +102,8 @@ target_link_libraries(cratchit PRIVATE cratchit_core cratchit_ui pyroceph cratch
 # project version. It is put together in the build folder at configure time.
 set(framework_folder ${CMAKE_CURRENT_BINARY_DIR}/framework/.cratchit)
 configure_file(resources/framework.txt.in ${framework_folder}/framework.txt @ONLY)
+# The user manual comes with the framework, so that ? can show its help paragraphs
+configure_file(docs/anvandarmanual.md ${framework_folder}/anvandarmanual.md COPYONLY)
 
 # Copies the framework next to the built program on every build, so that a
 # development build finds it just like an installed one

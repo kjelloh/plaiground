@@ -1,6 +1,7 @@
 #include "core/path_value.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/add_project_menu.hpp"
+#include "ui/help_topics.hpp"
 #include "ui/project_menu.hpp"
 #include "ui/root_menu.hpp"
 #include "ui/test_menu.hpp"
@@ -302,4 +303,31 @@ TEST(AddProjectMenu, FromSieAndFromDetailsAreNotThereYet) {
 
 TEST(AddProjectMenu, OtherKeysAreNotMapped) {
   EXPECT_EQ(cratchit::ui::make_add_project_menu(workspace_at("/x/cratchit"), "/x")->on_key(U'3'), nullptr);
+}
+
+TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
+  namespace topic = cratchit::ui::help_topic;
+  auto const folder = documents / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-08"));
+  add_project(folder, "itfied", "1", "uuid = 1\nname = The ITfied AB\n");
+  add_project(folder, "trasig", "2", "uuid = 2\n");
+  Navigator navigator(cratchit::ui::make_root_menu(folder));
+  EXPECT_EQ(navigator.current().help_topic(), topic::root);
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::workspace);
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::project);
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'2')); // trasig has no name
+  EXPECT_EQ(navigator.current().help_topic(), topic::error);
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'+'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::add_project);
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::open_existing);
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::new_project);
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::design_insufficiency);
 }

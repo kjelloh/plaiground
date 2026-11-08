@@ -41,6 +41,18 @@ std::string path_of(Navigator const& navigator) {
 void to_edit_prompt(std::FILE* out) { std::print(out, "\b\b: "); }
 void to_navigation_prompt(std::FILE* out) { std::print(out, "\b\b> "); }
 
+// Writes the current state's user instruction (when it has one) and the common keys
+void write_help(Navigator const& navigator, HelpSource const& help, std::FILE* out) {
+  auto const topic = navigator.current().help_topic();
+  auto const lines = help && !topic.empty() ? help(topic) : View{};
+  if (!lines.empty()) std::print(out, "\n");
+  for (auto const& line : lines) std::print(out, "{}\n", line);
+  std::print(out, "\n");
+  for (auto const& common : common_keys(navigator)) {
+    std::print(out, "  {:<7} {}\n", common.key, common.caption);
+  }
+}
+
 std::size_t code_points_of(std::string const& utf8) {
   return static_cast<std::size_t>(std::ranges::count_if(utf8, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
 }
@@ -48,8 +60,8 @@ std::size_t code_points_of(std::string const& utf8) {
 // The loop's own state: the navigator, the input and where the terminal's cursor is
 class Loop {
 public:
-  Loop(Navigator& navigator, std::FILE* out, TerminalWidth width)
-      : navigator_(navigator), out_(out), width_(std::move(width)) {}
+  Loop(Navigator& navigator, std::FILE* out, TerminalWidth width, HelpSource help)
+      : navigator_(navigator), out_(out), width_(std::move(width)), help_(std::move(help)) {}
 
   bool typing() const { return !input_.empty(); }
 
@@ -68,7 +80,7 @@ public:
     } else if (key == back_key) {
       if (navigator_.back()) present();
     } else if (key == help_key) {
-      show_common_keys(navigator_, out_);
+      show_help(navigator_, help_, out_);
     } else if (is_enter(key)) {
       present();
     } else if (key == quit_key) {
@@ -87,6 +99,9 @@ public:
       input_.clear();
       after_wrap_ = false;
       if (navigator_.back()) present();
+    } else if (key == help_key && input_.text() == navigator_.current().start_input()) {
+      write_help(navigator_, help_, out_);
+      reprint();
     } else if (is_backspace(key)) {
       erase_one();
     } else if (key == clear_key) {
@@ -198,6 +213,7 @@ private:
   Navigator& navigator_;
   std::FILE* out_;
   TerminalWidth width_;
+  HelpSource help_;
   InputBuffer input_;
   bool after_wrap_ = false; // the cursor is at the start of a row because a code point there was erased
 };
@@ -215,7 +231,7 @@ bool is_backspace(CodePoint code_point) { return code_point == 0x7F || code_poin
 std::vector<CommonKey> common_keys(Navigator const& navigator) {
   std::vector<CommonKey> keys;
   if (navigator.can_go_back()) keys.push_back({utf8_of(back_key), "Tillbaka"});
-  keys.push_back({utf8_of(help_key), "Visa gemensamma val"});
+  keys.push_back({utf8_of(help_key), "Visa hjälp och gemensamma val"});
   keys.push_back({"Enter", "Visa valen igen"});
   keys.push_back({"Esc", "Töm indata (även Ctrl-U)"});
   keys.push_back({utf8_of(quit_key), "Avsluta"});
@@ -223,11 +239,10 @@ std::vector<CommonKey> common_keys(Navigator const& navigator) {
   return keys;
 }
 
-void show_common_keys(Navigator const& navigator, std::FILE* out) {
-  std::print(out, "\n");
-  for (auto const& common : common_keys(navigator)) {
-    std::print(out, "  {:<7} {}\n", common.key, common.caption);
-  }
+void show_common_keys(Navigator const& navigator, std::FILE* out) { show_help(navigator, {}, out); }
+
+void show_help(Navigator const& navigator, HelpSource const& help, std::FILE* out) {
+  write_help(navigator, help, out);
   std::print(out, "{}", prompt_of(navigator));
   std::fflush(out);
 }
@@ -248,9 +263,9 @@ void show(Navigator const& navigator, std::FILE* out) {
   std::fflush(out);
 }
 
-void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out, TerminalWidth width) {
+void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out, TerminalWidth width, HelpSource help) {
   KeyParser parser(keys);
-  Loop loop(navigator, out, std::move(width));
+  Loop loop(navigator, out, std::move(width), std::move(help));
   loop.present();
   while (auto const key = parser.next()) {
     if (auto const* code_point = std::get_if<CodePoint>(&*key)) {

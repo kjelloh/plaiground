@@ -11,6 +11,9 @@ namespace pyroceph::tui {
 // The name of the error state, shown in the path
 inline constexpr std::string_view error_state_name = "Fel";
 
+// The help topic of the error state (see State::help_topic)
+inline constexpr std::string_view error_help_topic = "fel";
+
 // A state that only shows an error message as its view. It has no options and
 // maps no keys, so only the common keys work there and - goes back as usual.
 //

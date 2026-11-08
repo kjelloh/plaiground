@@ -1,5 +1,6 @@
 #include "ui/root_menu.hpp"
 
+#include "ui/help_topics.hpp"
 #include "core/dot_folder.hpp"
 #include "core/log.hpp"
 #include "core/project.hpp"
@@ -37,6 +38,7 @@ public:
     if (key == U'9') return make_test_menu();
     return nullptr;
   }
+  std::string help_topic() const override { return std::string(help_topic::root); }
 
 private:
   OnKeyResult open() const {

@@ -1,6 +1,7 @@
 #include "ui/design_insufficiency.hpp"
 
 #include "core/log.hpp"
+#include "ui/help_topics.hpp"
 
 #include <format>
 #include <utility>
@@ -23,6 +24,7 @@ public:
   View view() const override { return {description_}; }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::design_insufficiency); }
 
 private:
   std::string name_;

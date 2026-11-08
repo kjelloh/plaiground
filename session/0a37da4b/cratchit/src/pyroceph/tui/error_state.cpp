@@ -14,6 +14,7 @@ public:
   View view() const override { return {message_}; }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::string help_topic() const override { return std::string(error_help_topic); }
 
 private:
   std::string message_;

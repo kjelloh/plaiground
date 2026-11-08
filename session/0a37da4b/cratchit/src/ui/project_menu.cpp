@@ -1,5 +1,7 @@
 #include "ui/project_menu.hpp"
 
+#include "ui/help_topics.hpp"
+
 #include <string>
 #include <utility>
 
@@ -20,6 +22,7 @@ public:
   View view() const override { return {project_.folder.string()}; }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::project); }
 
 private:
   Project project_;

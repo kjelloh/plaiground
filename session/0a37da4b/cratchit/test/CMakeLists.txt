@@ -11,6 +11,7 @@ add_executable(cratchit_tests
   test_key_parser.cpp
   test_key_reader.cpp
   test_log.cpp
+  test_manual.cpp
   test_path_completion.cpp
   test_path_value.cpp
   test_project.cpp
@@ -22,6 +23,8 @@ add_executable(cratchit_tests
   test_utf16.cpp
   test_utf8.cpp
 )
+# The manual in the source tree, so that the tests check the one that is edited
+target_compile_definitions(cratchit_tests PRIVATE CRATCHIT_MANUAL_FILE="${PROJECT_SOURCE_DIR}/docs/anvandarmanual.md")
 target_link_libraries(cratchit_tests PRIVATE cratchit_core cratchit_ui pyroceph cratchit_warnings GTest::gtest_main)
 
 include(GoogleTest)

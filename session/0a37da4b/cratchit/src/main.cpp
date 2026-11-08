@@ -1,5 +1,6 @@
 #include "core/dot_folder.hpp"
 #include "core/log.hpp"
+#include "core/manual.hpp"
 #include "core/terminal_encoding.hpp"
 #include "pyroceph/tui/key_reader.hpp"
 #include "pyroceph/tui/prompt_loop.hpp"
@@ -10,6 +11,7 @@
 
 #include <cstdio>
 #include <filesystem>
+#include <format>
 #include <string>
 #include <print>
 
@@ -63,14 +65,21 @@ int main() {
     std::println("cratchit skapade {} i {}", entry.file.generic_string(), entry.folder.string());
     LOG_BUSINESS("Skapade {} i {}", entry.file.generic_string(), entry.folder.string());
   }
+  // The user manual comes with the framework. Without it, ? shows only the common keys.
+  auto const manual = cratchit::read_manual(framework->file.parent_path() / cratchit::manual_file_name);
+  if (!manual) LOG_DESIGN_INSUFFICIENCY("Ingen användarmanual: {}", manual.error());
+  auto const help = [&manual](std::string_view topic) -> pyroceph::tui::View {
+    if (!manual) return {std::format("cratchit hittar inte användarmanualen: {}", manual.error())};
+    return manual->help(topic);
+  };
   {
     pyroceph::tui::RawMode raw_mode;
     auto keys = pyroceph::tui::terminal_key_reader(encoding_of(terminal_encoding.in));
     // The workspace is opened when the user chooses it (0 in the root)
     pyroceph::tui::Navigator navigator(cratchit::ui::make_root_menu(cratchit::default_workspace_folder()));
-    std::println("Tryck ? för gemensamma val.");
+    std::println("Tryck ? för hjälp.");
     LOG_BUSINESS("Promptloopen startade");
-    pyroceph::tui::run_prompt_loop(keys, navigator, stdout, pyroceph::tui::terminal_width);
+    pyroceph::tui::run_prompt_loop(keys, navigator, stdout, pyroceph::tui::terminal_width, help);
     if (keys.failure_count() > 0) LOG_DESIGN_INSUFFICIENCY("{} tangenter kunde inte avkodas", keys.failure_count());
   }
   LOG_BUSINESS("cratchit avslutades");

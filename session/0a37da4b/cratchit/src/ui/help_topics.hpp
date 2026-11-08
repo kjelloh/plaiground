@@ -1,0 +1,30 @@
+#pragma once
+
+#include "pyroceph/tui/error_state.hpp"
+
+#include <array>
+#include <string_view>
+
+namespace cratchit::ui {
+
+// The help topics of cratchit's states (see State::help_topic). Each one marks
+// a help paragraph in the user manual, docs/anvandarmanual.md, as
+// `<!-- hjälp: <topic> -->`.
+namespace help_topic {
+inline constexpr std::string_view root = "start";
+inline constexpr std::string_view workspace = "samlingsmapp";
+inline constexpr std::string_view add_project = "lagg-till";
+inline constexpr std::string_view open_existing = "oppna-befintlig";
+inline constexpr std::string_view new_project = "ny-bokforing";
+inline constexpr std::string_view project = "bokforing";
+inline constexpr std::string_view design_insufficiency = "inte-an";
+inline constexpr std::string_view error = pyroceph::tui::error_help_topic;
+} // namespace help_topic
+
+// All of them, so that a test can check that the manual has each one
+inline constexpr std::array all_help_topics{
+    help_topic::root,    help_topic::workspace,           help_topic::add_project, help_topic::open_existing,
+    help_topic::new_project, help_topic::project, help_topic::design_insufficiency, help_topic::error,
+};
+
+} // namespace cratchit::ui

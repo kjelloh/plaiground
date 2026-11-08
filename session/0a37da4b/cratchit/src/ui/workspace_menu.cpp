@@ -1,5 +1,6 @@
 #include "ui/workspace_menu.hpp"
 
+#include "ui/help_topics.hpp"
 #include "core/log.hpp"
 #include "pyroceph/tui/error_state.hpp"
 #include "ui/add_project_menu.hpp"
@@ -46,6 +47,7 @@ public:
     if (key == add_key) return make_add_project_menu(workspace_, start_folder());
     return nullptr;
   }
+  std::string help_topic() const override { return std::string(help_topic::workspace); }
 
   // A project may have been added on the way back here: read the list again
   void on_return() override {

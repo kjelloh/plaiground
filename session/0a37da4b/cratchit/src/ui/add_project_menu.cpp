@@ -1,5 +1,6 @@
 #include "ui/add_project_menu.hpp"
 
+#include "ui/help_topics.hpp"
 #include "core/log.hpp"
 #include "core/project.hpp"
 #include "pyroceph/tui/path_completion.hpp"
@@ -44,6 +45,7 @@ public:
     }
     return nullptr;
   }
+  std::string help_topic() const override { return std::string(help_topic::new_project); }
 };
 
 class OpenExistingState : public State {
@@ -57,6 +59,7 @@ public:
   }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::open_existing); }
   std::u32string start_input() const override { return pyroceph::tui::path_input_of(start_folder_); }
   Completion complete(std::u32string_view text) const override { return pyroceph::tui::complete_path(text); }
   InputResult on_input(std::u32string_view text) override {
@@ -95,6 +98,7 @@ public:
     if (key == U'2') return std::make_unique<NewProjectState>();
     return nullptr;
   }
+  std::string help_topic() const override { return std::string(help_topic::add_project); }
 
 private:
   Workspace workspace_;

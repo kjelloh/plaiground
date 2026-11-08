@@ -20,8 +20,13 @@ bool is_quit(CodePoint code_point);
 // state maps it itself. While typing input it is text.
 inline constexpr CodePoint quit_key = U'q';
 
-// The key that lists the common keys, unless the current state maps it itself
+// The key that shows the current state's user instruction and the common
+// keys, unless the current state maps it itself
 inline constexpr CodePoint help_key = U'?';
+
+// Gives the lines (UTF-8) of the user instruction for a help topic (see
+// State::help_topic), e.g. from the user manual. Empty when there is none.
+using HelpSource = std::function<View(std::string_view topic)>;
 
 // True for Enter, which shows the current state's options again. Enter comes
 // as U+000A on macOS and Linux (the terminal turns CR into LF) and as U+000D
@@ -56,6 +61,10 @@ std::vector<CommonKey> common_keys(Navigator const& navigator);
 // Writes the common keys, one per line, then the prompt with no line end
 void show_common_keys(Navigator const& navigator, std::FILE* out);
 
+// Writes the current state's user instruction from help (when it has one),
+// then the common keys, then the prompt with no line end
+void show_help(Navigator const& navigator, HelpSource const& help, std::FILE* out);
+
 // Goes between the state names in the prompt
 inline constexpr std::string_view path_separator = " > ";
 
@@ -75,13 +84,14 @@ void show(Navigator const& navigator, std::FILE* out);
 // Navigating: a quit key ends the loop. Any other key goes to the current
 // state first, and when it answers with a new state, that state is shown.
 // When the state has no mapping for the key, the common keys apply: back_key
-// goes back (nothing at the root), help_key shows the common keys, Enter
+// goes back (nothing at the root), help_key shows the state's user
+// instruction from help and the common keys (see show_help), Enter
 // shows the state again and quit_key ends the loop. Any other printable key
 // starts the input with that key.
 //
 // Whenever a state with a start text (State::start_input) is shown, its input
 // starts with that text, e.g. a folder to type a path from. As long as the
-// start text is untouched, back_key goes back as when navigating.
+// start text is untouched, back_key and help_key work as when navigating.
 //
 // Typing input: printable keys go into the input and are echoed. Backspace
 // and Delete erase one; when the input becomes empty, navigating starts
@@ -98,6 +108,7 @@ void show(Navigator const& navigator, std::FILE* out);
 // Arrows and other function keys are read whole (see KeyParser) and do
 // nothing yet. Ends at a quit key or when the input ends, and then ends the
 // prompt line.
-void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out, TerminalWidth width = {});
+void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out, TerminalWidth width = {},
+                     HelpSource help = {});
 
 } // namespace pyroceph::tui

@@ -15,10 +15,13 @@ Manualen beskriver det som finns i cratchit i dag och växer i takt med programm
 
 ## Starta och avsluta
 
-Skriv `cratchit` i en terminal och tryck Enter:
+<!-- hjälp: start -->
+Du står i början av cratchit. Tryck `0` för att öppna samlingsmappen med dina bokföringar. Tryck `q` för att avsluta.
+
+Starta cratchit genom att skriva `cratchit` i en terminal och trycka Enter:
 
 ```text
-Tryck ? för gemensamma val.
+Tryck ? för hjälp.
 
   0 Samlingsmapp
 Cratchit> 
@@ -50,6 +53,10 @@ Cratchit > Samlingsmapp > Lägg till>
 
 Här tar `1` dig till *Öppna befintlig* och `2` till *Ny bokföring*.
 
+### Hjälp
+
+Tryck `?` var du än står. cratchit visar då ett kort stycke ur den här manualen om platsen du står på, och sedan de gemensamma valen.
+
 ### Gemensamma val
 
 Några tangenter fungerar överallt. De står inte bland valen. Tryck `?` så visar cratchit dem:
@@ -57,7 +64,7 @@ Några tangenter fungerar överallt. De står inte bland valen. Tryck `?` så vi
 | Tangent | Gör |
 |---|---|
 | `-` | Tillbaka till platsen före |
-| `?` | Visa de gemensamma valen |
+| `?` | Visa hjälp och de gemensamma valen |
 | Enter | Visa valen igen |
 | Esc | Töm raden du skriver på (även Ctrl-U) |
 | `q` | Avsluta |
@@ -94,9 +101,15 @@ När cratchit vill ha en mapp står en sökväg redan på raden, och du fortsät
 
 ### Fel
 
-Kan cratchit inte göra det du valde hamnar du på platsen *Fel*, som visar orsaken. Tryck `-` för att gå tillbaka.
+<!-- hjälp: fel -->
+cratchit kunde inte göra det du valde, och orsaken står ovanför prompten. Tryck `-` för att gå tillbaka.
+
+Kan cratchit inte göra det du valde hamnar du alltså på platsen *Fel*.
 
 ### Inte än
+
+<!-- hjälp: inte-an -->
+Valet du gjorde finns i menyn men cratchit kan inte utföra det än. Vad som saknas står ovanför prompten. Tryck `-` för att gå tillbaka.
 
 Några val finns i menyerna innan cratchit kan utföra dem. De leder till platsen *Inte än*, som säger vad som saknas:
 
@@ -109,7 +122,10 @@ Tryck `-` för att gå tillbaka.
 
 ## Samlingsmappen
 
-Samlingsmappen håller reda på dina bokföringar. Tryck `0` i början för att öppna den.
+<!-- hjälp: samlingsmapp -->
+Samlingsmappen listar de bokföringar cratchit kommer ihåg. Tryck en bokförings siffra för att öppna den. Tryck `+` för att lägga till en bokföring.
+
+Tryck `0` i början för att öppna samlingsmappen.
 
 Samlingsmappen listar de bokföringar den kommer ihåg, med tangenterna `1` till `9`, i bokstavsordning efter namn:
 
@@ -128,6 +144,9 @@ En bokföring är bokföringen för en juridisk person, till exempel ett aktiebo
 
 ### Öppna en bokföring
 
+<!-- hjälp: bokforing -->
+Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Än så länge finns det inga val här. Tryck `-` för att gå tillbaka.
+
 Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen den ligger i:
 
 ```text
@@ -137,7 +156,17 @@ Cratchit > Samlingsmapp > The ITfied AB>
 
 Än så länge finns det inga val i en öppnad bokföring.
 
+### Lägg till
+
+<!-- hjälp: lagg-till -->
+Tryck `1` för att lägga till en bokföring som redan finns, eller `2` för att skapa en ny.
+
+Du kommer hit med `+` i samlingsmappen.
+
 ### Lägga till en befintlig bokföring
+
+<!-- hjälp: oppna-befintlig -->
+Skriv sökvägen till mappen som bokföringen ligger i och tryck Enter. Tab fyller i mappnamn. Så länge du inte har ändrat sökvägen går `-` tillbaka. Annars tömmer Esc raden först.
 
 Har du en bokföring som samlingsmappen inte listar tar du in den så här:
 
@@ -162,6 +191,9 @@ Ligger det ingen bokföring i mappen säger cratchit det, och sökvägen står k
 Allt som hör till en bokföring ligger i dess mapp. Flytta eller kopiera mappen dit du vill ha den, och lägg sedan till den på det nya stället med *Öppna befintlig*. Samlingsmappen kommer då ihåg det nya stället i stället för det gamla.
 
 ### Ny bokföring
+
+<!-- hjälp: ny-bokforing -->
+Välj hur den nya bokföringen ska skapas: `1` från en SIE-fil eller `2` från namn, organisationsnummer och räkenskapsår. Inget av dem finns än.
 
 Tryck `+` och sedan `2` (*Ny bokföring*). Där finns två val:
 

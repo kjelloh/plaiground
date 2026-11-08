@@ -84,6 +84,10 @@ public:
   // by default, and then Tab does nothing but sound the bell.
   virtual Completion complete(std::u32string_view text) const;
 
+  // The topic of the state's user instruction, which help_key shows (see
+  // HelpSource in prompt_loop.hpp). Empty by default: no instruction.
+  virtual std::string help_topic() const { return {}; }
+
   // Called when the user comes back to the state from a state after it, before
   // it is shown again. Lets the state read again what may have changed there.
   virtual void on_return() {}

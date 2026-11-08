@@ -123,6 +123,7 @@ cratchit has two `.cratchit` folders:
 | File | Holds |
 | --- | --- |
 | `<program folder>/.cratchit/framework.txt` | `version`, the cratchit version the framework belongs to |
+| `<program folder>/.cratchit/anvandarmanual.md` | A copy of `docs/anvandarmanual.md`. `?` shows its help paragraphs (see below). |
 | `~/.cratchit/runtime.txt` | `created`, the day it was created |
 | `~/.cratchit/log.txt` | The log, next to `runtime.txt` |
 
@@ -158,6 +159,13 @@ Then `std::filesystem::canonical` resolves links and `..` (on macOS and Linux li
 ## Using cratchit
 
 The user manual is in Swedish: [docs/anvandarmanual.md](docs/anvandarmanual.md). It describes what cratchit can do so far and is updated with every step that changes what the user sees.
+
+`?` in the program shows a short help paragraph from the manual for the state the user is in, then the common keys. The manual is the only source of these texts:
+
+* A help paragraph is marked by a line `<!-- hjälp: <topic> -->` (invisible when the Markdown is shown) and is the paragraph after it.
+* Each state names its topic (`State::help_topic()`); cratchit's topics are in `src/ui/help_topics.hpp`. A state without a topic shows only the common keys.
+* The manual is copied into the framework at build time and read at start (`core/manual`). The program shows the paragraph as plain text, without `**`, `*`, backticks and link targets.
+* The tests check that the manual has a paragraph for every topic, and no paragraph for an unknown topic.
 
 ## Uninstall
 
