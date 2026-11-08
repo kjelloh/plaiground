@@ -38,6 +38,7 @@
 * Steg 33: Felmeddelande-state `make_error_state(message)` i `pyroceph/tui/error_state` med tester i `test/test_error_state.cpp`. Namnet är `Fel`, vyn är meddelandet, inga val, inga tangenter mappade, så `-` går tillbaka. Ännu inte använt av något state i cratchit. 171 tester.
 * Steg 34: Testmenyns `Projekt` har `1 Öppna` (lyckas) och `2 Öppna (misslyckas)`, som leder till felstatet med "Kunde inte öppna projektet.". 172 tester. Provkört med pipe på macOS.
 * Steg 35: `0 Samlingsmapp` öppnar `<Dokument>/cratchit` och skapar den första gången (`open_workspace`, `documents_folder`, `default_workspace_folder` i `core/dot_folder`). Vyn visar mappen, och `Ny samlingsmapp skapad.` när den skapades. Går det inte att öppna mappen kommer man till `Fel` med orsaken. 182 tester. Provkört med pipe på macOS med HOME i en tillfällig mapp (skapad, öppnad igen, och `Documents` saknas leder till `Fel`). Inte provat mot den riktiga `~/Documents`, där macOS först frågar om Terminal får använda mappen. Windows-grenen (`SHGetKnownFolderPath`) är skriven men inte byggd.
+* Steg 36: GitHub Actions sparar Conans paket (`~/.conan2/p`) mellan körningarna med `actions/cache@v6`. Orsak: macOS-bygget föll när github.com inte svarade (503, timeout) då `gtest` skulle hämtas för att byggas från källkoden. Conan-versionen står en gång, i `CONAN_VERSION`. Workflow inte körd.
 
 ## Bygg, kör och installera
 

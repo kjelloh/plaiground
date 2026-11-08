@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CONAN_VERSION: "2.34.0" # The Conan version on every platform, also part of the cache key
+
 jobs:
   build-and-test:
     name: ${{ matrix.os }}
@@ -59,8 +62,20 @@ jobs:
 
       - name: Install Conan
         run: |
-          pip install conan==2.34.0
+          pip install conan==${{ env.CONAN_VERSION }}
           conan profile detect --force
+
+      # Keeps Conan's packages (gtest built from source) between runs, so that they are
+      # not downloaded from github.com and built on every run. A new key when
+      # conanfile.py or the Conan version changes; the old cache is then the starting
+      # point and --build=missing builds only what is missing.
+      - name: Cache Conan packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.conan2/p
+          key: conan-${{ runner.os }}-${{ runner.arch }}-${{ env.CONAN_VERSION }}-${{ hashFiles('session/0a37da4b/cratchit/conanfile.py') }}
+          restore-keys: |
+            conan-${{ runner.os }}-${{ runner.arch }}-${{ env.CONAN_VERSION }}-
 
       - name: Install Conan packages
         run: conan install . --build=missing -s build_type=Debug -s compiler.cppstd=23
