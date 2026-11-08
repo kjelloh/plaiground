@@ -223,13 +223,13 @@ cratchit::Project project_with_books(fs::path const& folder, std::string const& 
 
 } // namespace
 
-TEST_F(RootMenuTest, ProjectOffersItsFiscalYearsTheLatestFirst) {
+TEST_F(RootMenuTest, ProjectOffersItsFiscalYearsTheCurrentAsZero) {
   Navigator navigator(cratchit::ui::make_project_menu(project_with_books(
       documents / "p", "chart_type = EUBAS97\nyear.2024-05-01 = 2025-04-30\nyear.2025-05-01 = 2026-04-30\n")));
   EXPECT_EQ(navigator.current().view(), (View{(documents / "p").string()}));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "2025/26 (2025-05-01 – 2026-04-30)"},
-                                                        {U'2', "2024/25 (2024-05-01 – 2025-04-30)"}}));
-  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2025/26 (2025-05-01 – 2026-04-30)"},
+                                                        {U'1', "2024/25 (2024-05-01 – 2025-04-30)"}}));
+  ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2024/25");
   EXPECT_EQ(navigator.current().view(), (View{"Räkenskapsår 2024-05-01 – 2025-04-30"}));
   EXPECT_TRUE(navigator.current().options().empty());
@@ -244,12 +244,13 @@ TEST_F(RootMenuTest, ProjectSaysWhenItsFiscalYearsCannotBeRead) {
   EXPECT_TRUE(project->options().empty());
 }
 
-TEST_F(RootMenuTest, ProjectOffersNineFiscalYearsAndSaysWhenThereAreMore) {
+TEST_F(RootMenuTest, ProjectOffersTenFiscalYearsAndSaysWhenThereAreMore) {
   std::string text;
-  for (int year = 2010; year < 2020; ++year) text += std::format("year.{}-01-01 = {}-12-31\n", year, year);
+  for (int year = 2009; year < 2020; ++year) text += std::format("year.{}-01-01 = {}-12-31\n", year, year);
   auto project = cratchit::ui::make_project_menu(project_with_books(documents / "p", text));
-  EXPECT_EQ(project->options().size(), 9u);
-  EXPECT_EQ(project->options().front().second, "2019 (2019-01-01 – 2019-12-31)");
+  ASSERT_EQ(project->options().size(), 10u);
+  EXPECT_EQ(project->options().front(), (pyroceph::tui::Option{U'0', "2019 (2019-01-01 – 2019-12-31)"}));
+  EXPECT_EQ(project->options().back(), (pyroceph::tui::Option{U'9', "2010 (2010-01-01 – 2010-12-31)"}));
   EXPECT_EQ(project->view().back(), "Bokföringen har fler räkenskapsår än cratchit visar här.");
 }
 
@@ -360,7 +361,7 @@ TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
   EXPECT_EQ(navigator.current().help_topic(), topic::workspace);
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().help_topic(), topic::project);
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().help_topic(), topic::fiscal_year);
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());

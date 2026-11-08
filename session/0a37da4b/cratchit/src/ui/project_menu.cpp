@@ -62,10 +62,10 @@ public:
 
 private:
   std::size_t listed() const { return std::min(years_.size(), max_listed_fiscal_years); }
-  static CodePoint key_of(std::size_t index) { return static_cast<CodePoint>(U'1' + index); }
+  static CodePoint key_of(std::size_t index) { return static_cast<CodePoint>(U'0' + index); }
 
   Project project_;
-  std::vector<FiscalYear> years_; // the latest first
+  std::vector<FiscalYear> years_; // the latest first, as key 0
   std::string error_;             // why the fiscal years could not be read, or empty
 };
 

@@ -149,20 +149,20 @@ En bokföring är bokföringen för en juridisk person, till exempel ett aktiebo
 ### Öppna en bokföring
 
 <!-- hjälp: bokforing -->
-Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Valen är bokföringens räkenskapsår, det senaste först. Tryck ett års siffra för att öppna året. Tryck `-` för att gå tillbaka.
+Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Valen är bokföringens räkenskapsår: `0` är det aktuella året och `1`, `2`, `3` de äldre. Tryck ett års siffra för att öppna året. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
 Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen den ligger i:
 
 ```text
 /Users/anna/Documents/Bokföringar/The ITfied AB
-  1 2026/27 (2026-05-01 – 2027-04-30)
-  2 2025/26 (2025-05-01 – 2026-04-30)
-  3 2024/25 (2024-05-01 – 2025-04-30)
+  0 2026/27 (2026-05-01 – 2027-04-30)
+  1 2025/26 (2025-05-01 – 2026-04-30)
+  2 2024/25 (2024-05-01 – 2025-04-30)
 Cratchit > Samlingsmapp > The ITfied AB> 
 ```
 
-Valen är bokföringens räkenskapsår, det senaste först. Ett räkenskapsår som följer kalenderåret heter till exempel `2025`, och ett som går över två kalenderår heter till exempel `2025/26`. Har bokföringen fler än nio räkenskapsår visar cratchit de nio senaste och säger att det finns fler.
+Valen är bokföringens räkenskapsår. `0` är det aktuella, det senaste i bokföringen, och `1`, `2`, `3` är åren före det, på samma sätt som i en SIE-fil men utan minustecken. Ett räkenskapsår som följer kalenderåret heter till exempel `2025`, och ett som går över två kalenderår heter till exempel `2025/26`. Har bokföringen fler än tio räkenskapsår visar cratchit de tio senaste och säger att det finns fler.
 
 ### Räkenskapsår
 
