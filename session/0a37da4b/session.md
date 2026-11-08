@@ -68,6 +68,22 @@ Och nu blev jag varse att våra states inte har något sätt att visa 'sitt inne
 
 * Så jag bad Claude införa 'view'
 
+Och nu bad jag Claude införa ett felmeddelande-state.
+
+* Claude gjorde så.
+* Och på min begäran ett test-val som misslyckas.
+
+```sh
+Cratchit > Testmeny > Projekt> 
+  1 Öppna
+  2 Öppna (misslyckas)
+Cratchit > Testmeny > Projekt> 
+Kunde inte öppna projektet.
+Cratchit > Testmeny > Projekt > Fel> 
+```
+
+Det blir BRA (också med sökväg som tydligt anger 'Fel')
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.

@@ -46,6 +46,17 @@ TEST(TestMenu, KeepsItsStates) {
   EXPECT_EQ(navigator.current().name(), "Bokslut");
 }
 
+TEST(TestMenu, ProjektHasOneOpenThatWorksAndOneThatFails) {
+  Navigator navigator(cratchit::ui::make_test_menu());
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Öppna"}, {U'2', "Öppna (misslyckas)"}}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Fel");
+  EXPECT_EQ(navigator.current().view(), (pyroceph::tui::View{"Kunde inte öppna projektet."}));
+  EXPECT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Projekt");
+}
+
 TEST(TestMenu, BokslutTakesAYearOfFourDigits) {
   Navigator navigator(cratchit::ui::make_test_menu());
   navigator.press(U'2');

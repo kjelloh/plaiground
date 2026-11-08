@@ -1,5 +1,7 @@
 #include "ui/test_menu.hpp"
 
+#include "pyroceph/tui/error_state.hpp"
+
 #include <algorithm>
 #include <expected>
 #include <format>
@@ -31,9 +33,11 @@ class ProjektState : public State {
 public:
   std::string name() const override { return "Projekt"; }
   View view() const override { return {}; }
-  OptionsList options() const override { return {{U'1', "Öppna"}}; }
+  OptionsList options() const override { return {{U'1', "Öppna"}, {U'2', "Öppna (misslyckas)"}}; }
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'1') return std::make_unique<OppnaProjektState>();
+    // Shows how a state answers when the state a key maps to cannot be entered
+    if (key == U'2') return pyroceph::tui::make_error_state("Kunde inte öppna projektet.");
     return nullptr;
   }
 };

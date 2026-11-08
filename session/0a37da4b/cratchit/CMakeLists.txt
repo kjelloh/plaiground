@@ -37,6 +37,7 @@ target_link_libraries(charset PRIVATE cratchit_warnings)
 # The terminal UI library pyroceph, namespace pyroceph::tui. Knows nothing of
 # cratchit, so that it can become a library of its own.
 add_library(pyroceph
+  src/pyroceph/tui/error_state.cpp
   src/pyroceph/tui/input_buffer.cpp
   src/pyroceph/tui/key_parser.cpp
   src/pyroceph/tui/key_reader.cpp
