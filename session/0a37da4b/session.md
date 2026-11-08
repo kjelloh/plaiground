@@ -166,6 +166,8 @@ OK. Claude fixade biffen!
 
 * Jag tänker acceptera detta nu så jag kommer vidare!
 
+Nu har jag bett Claude skapa en användarmanual [anvandarmanual](./cratchit/docs/anvandarmanual.md)
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.
