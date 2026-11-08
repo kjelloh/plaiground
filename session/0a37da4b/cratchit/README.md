@@ -100,7 +100,8 @@ In Debug builds `LOG_DEVELOPMENT_TRACE` is compiled in; in Release builds it is 
 | `src/charset/` | Text encodings: Unicode, UTF-8, UTF-16, CP437, and `Transcoder` | yes |
 | `src/pyroceph/tui/` | The terminal UI library `pyroceph`: keys, states and the prompt loop. Knows nothing of cratchit. | yes |
 | `src/core/` | cratchit's own logic: settings folders, log, terminal encoding | yes |
-| `src/main.cpp` | The program, with its UI states | yes |
+| `src/ui/` | cratchit's own UI states (library `cratchit_ui`): the root menu, and the test menu kept to remember how states and navigation work | yes |
+| `src/main.cpp` | The program: starts up and runs the prompt loop from the root menu | yes |
 | `test/` | The tests (GoogleTest) | yes |
 | `resources/` | The sources of the framework that is installed next to the program (see [Where cratchit keeps its files](#where-cratchit-keeps-its-files)). So far `framework.txt.in`; later the rules for Swedish bookkeeping. | yes |
 | `CMakeLists.txt`, `conanfile.py` | The build | yes |
@@ -144,7 +145,7 @@ Then `std::filesystem::canonical` resolves links and `..` (on macOS and Linux li
 
 ## Using cratchit
 
-cratchit shows a menu and a prompt with the path to where you are, e.g. `Huvudmeny > Projekt> `.
+cratchit shows a menu and a prompt with the path to where you are, e.g. `Cratchit > Testmeny > Projekt> `. So far the root holds only `9 Testmeny`, a small test menu.
 
 | Key | Does |
 | --- | --- |

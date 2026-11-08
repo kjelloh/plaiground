@@ -70,10 +70,19 @@ else()
 endif()
 target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${development_trace})
 
+# cratchit's own UI states, built on pyroceph::tui::State. A library of its own
+# so that the tests can reach the states.
+add_library(cratchit_ui
+  src/ui/root_menu.cpp
+  src/ui/test_menu.cpp
+)
+target_include_directories(cratchit_ui PUBLIC src)
+target_link_libraries(cratchit_ui PUBLIC pyroceph PRIVATE cratchit_warnings)
+
 add_executable(cratchit
   src/main.cpp
 )
-target_link_libraries(cratchit PRIVATE cratchit_core pyroceph cratchit_warnings)
+target_link_libraries(cratchit PRIVATE cratchit_core cratchit_ui pyroceph cratchit_warnings)
 
 # The framework comes with the program: a .cratchit folder next to it, which
 # cratchit only reads. resources/ holds its sources; framework.txt gets the

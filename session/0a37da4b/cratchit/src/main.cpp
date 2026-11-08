@@ -5,14 +5,11 @@
 #include "pyroceph/tui/prompt_loop.hpp"
 #include "pyroceph/tui/raw_mode.hpp"
 #include "pyroceph/tui/state.hpp"
+#include "ui/root_menu.hpp"
 
 #include <cstdio>
-#include <algorithm>
 #include <filesystem>
-#include <format>
-#include <memory>
 #include <string>
-#include <string_view>
 #include <print>
 
 namespace {
@@ -22,59 +19,6 @@ namespace {
 charset::Encoding encoding_of(cratchit::Charset charset) {
   return charset == cratchit::Charset::Cp437 ? charset::Encoding::cp437 : charset::Encoding::utf8;
 }
-
-using pyroceph::tui::CodePoint;
-using pyroceph::tui::InputResult;
-using pyroceph::tui::OnKeyResult;
-using pyroceph::tui::OptionsList;
-using pyroceph::tui::State;
-
-// Demo states. Each state creates the next one when the user goes there.
-
-class OppnaProjektState : public State {
-public:
-  std::string name() const override { return "Öppna projekt"; }
-  OptionsList options() const override { return {}; }
-  OnKeyResult on_key(CodePoint) override { return nullptr; }
-};
-
-class ProjektState : public State {
-public:
-  std::string name() const override { return "Projekt"; }
-  OptionsList options() const override { return {{U'1', "Öppna"}}; }
-  OnKeyResult on_key(CodePoint key) override {
-    if (key == U'1') return std::make_unique<OppnaProjektState>();
-    return nullptr;
-  }
-};
-
-// Takes a year of four digits
-class BokslutState : public State {
-public:
-  std::string name() const override { return "Bokslut"; }
-  OptionsList options() const override { return {}; }
-  OnKeyResult on_key(CodePoint) override { return nullptr; }
-  InputResult on_input(std::u32string_view text) override {
-    auto const is_digit = [](char32_t c) { return c >= U'0' && c <= U'9'; };
-    if (text.size() != 4 || !std::ranges::all_of(text, is_digit)) {
-      return std::unexpected(std::string("Ange ett år med fyra siffror, till exempel 2025."));
-    }
-    std::string year;
-    for (auto const c : text) year.push_back(static_cast<char>(c));
-    return std::format("Bokslut för {} noterat.", year);
-  }
-};
-
-class HuvudmenyState : public State {
-public:
-  std::string name() const override { return "Huvudmeny"; }
-  OptionsList options() const override { return {{U'1', "Projekt"}, {U'2', "Bokslut"}}; }
-  OnKeyResult on_key(CodePoint key) override {
-    if (key == U'1') return std::make_unique<ProjektState>();
-    if (key == U'2') return std::make_unique<BokslutState>();
-    return nullptr;
-  }
-};
 
 } // namespace
 
@@ -121,7 +65,7 @@ int main() {
   {
     pyroceph::tui::RawMode raw_mode;
     auto keys = pyroceph::tui::terminal_key_reader(encoding_of(terminal_encoding.in));
-    pyroceph::tui::Navigator navigator(std::make_unique<HuvudmenyState>());
+    pyroceph::tui::Navigator navigator(cratchit::ui::make_root_menu());
     std::println("Tryck ? för gemensamma val.");
     LOG_BUSINESS("Promptloopen startade");
     pyroceph::tui::run_prompt_loop(keys, navigator, stdout);

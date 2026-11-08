@@ -14,10 +14,11 @@ add_executable(cratchit_tests
   test_state.cpp
   test_terminal_encoding.cpp
   test_transcoder.cpp
+  test_ui.cpp
   test_utf16.cpp
   test_utf8.cpp
 )
-target_link_libraries(cratchit_tests PRIVATE cratchit_core pyroceph cratchit_warnings GTest::gtest_main)
+target_link_libraries(cratchit_tests PRIVATE cratchit_core cratchit_ui pyroceph cratchit_warnings GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(cratchit_tests)

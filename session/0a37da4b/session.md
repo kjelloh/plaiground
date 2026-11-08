@@ -5,6 +5,37 @@
 * [Claude beslut.md](./beslut.md)
 * [Claude status.md](./status.md)
 
+## 20261108
+
+Så nu är det dags tror jag att bestämma hur cratchit skall bete sig för 'projekt'?
+
+* Borde inte projekten ligga i användarens dokument-mapp?
+* Men skall dom ligga där 'nakna' som en mapp per projekt?
+* Eller skall cratchit föreslå en topp-mapp 'cratchit' med undermappar för användarens projekt?
+* Och med option att komma ihåg och kunna öppna projekt på annat ställe på disken?
+
+Hur kan detta vara så svårt för mig att fatta ett beslut om?
+
+* Ok, vi har redan bestämt att cratchit skapar sig en dot-mapp som definierar ett cratchit-projekt.
+* Men som 'take 3' gör så 'skräpar den ner' hela '.cratchit' med separat filer för bokföring, händelser, stashade filer och allt möjligt.
+* Det betyder att om vi skapar ett projekt där det redan ligger säg en dot-mapp för ett workspace, så kommer det att bli rörigt i dot-mappen!
+* Om vi ger varje projekt ett UUID så kan vi skapa undermappar 'projekt_xxxx...' o dot-mappen för varje projekt?
+* Och sedan har vi frihet att 'skräpa ner' bäst vi vill i den projekt-mappen i '.cratchit'?
+
+Låt oss prova?
+
+* NEJ. Jag ändrar mig!
+* Ett projekt måste ligga i en egen mapp!
+* Användaren får inte skapa ett projekt i en mapp som 'är' ett workspace.
+* Användaren måste skapa ett projekt i en undermapp till ett workspace.
+
+Jag valde nu att be Claude skapa en ny root och flytta befintliga menyn till valety '9 Testmeny'
+
+* Det visade sig vara rätt beslut!
+* För nu avslöjade Claude hur hård-kodat allting va i main.
+* Så för att göra detta föreslog Claude att skap en fil per state.
+* Och kalla gamla roten för 'TextMenu' i filen test_menu.cpp/hpp
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.
@@ -162,6 +193,9 @@ MEN GUD VILKEN FRIKTION!!
 * OSV, OSV OSV...
 
 Så, nu är allt grönt uppe hos Github!
+
+* Och när jag pushar detta så triggar det ONÖDIGA byggen uppe på Github!
+* SÅ MYCKET SLÖSERI oc h INEFFEKTIVITET överallt??!!
 
 ## 20261106
 

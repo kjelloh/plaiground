@@ -32,6 +32,7 @@
 * Steg 28: MSVC-felet C4702 i `charset/decoder.cpp` rättat. Windows-bygget har troligen aldrig kommit förbi `charset`, så fler fel kan komma i `pyroceph`, `main.cpp` och testerna.
 * Steg 29: Med MSVC kompilerar nu `charset`, `cratchit_core`, `pyroceph` och `main.cpp` (enligt CI-loggen). Två varningar i `test/test_prompt_loop.cpp` rättade (C4996 `tmpfile`, C4244). Länkning och körning av testerna på Windows ännu inte sedda.
 * 2026-11-07: GitHub Actions grönt på Linux, macOS och Windows: bygge, alla tester, körning från byggmappen och installation (Debug) med körning via `PATH`. Därmed är Windows- och Linux-grenarna i `dot_folder` (`program_folder`, `user_home`), `terminal_encoding`, `RawMode` och `KeyReader` byggda och körda i CI (utan riktig terminal). `install.py` är inte körd på Windows eller Linux.
+* Steg 30: Ny rot `Cratchit` med `9 Testmeny`. Testmenyn och roten i `src/ui/` (biblioteket `cratchit_ui`) med tester i `test/test_ui.cpp`. 165 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 
@@ -50,4 +51,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 29 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 30 i en riktig terminal.
