@@ -28,6 +28,15 @@ struct Runtime {
   std::vector<Initiated> initiated;
 };
 
+// A workspace: the folder that holds the user's projects, each in a folder of
+// its own below it. Named "Samlingsmapp" in the UI. Marked by
+// <folder>/.cratchit/workspace.txt.
+struct Workspace {
+  std::filesystem::path folder;     // the workspace folder
+  std::filesystem::path file;       // <folder>/.cratchit/workspace.txt
+  std::vector<Initiated> initiated; // what open_workspace created
+};
+
 // The folder that holds the running program, with links and `..` resolved.
 // Asks the platform (macOS _NSGetExecutablePath, Linux /proc/self/exe, Windows
 // GetModuleFileNameW), since argv[0] is only what the starter passed, e.g. the
@@ -43,6 +52,22 @@ std::expected<Framework, std::string> open_framework(std::filesystem::path const
 // fresh start: created, with runtime.txt holding `created = <today>`. Existing
 // files are never changed. Error text otherwise.
 std::expected<Runtime, std::string> open_runtime(std::filesystem::path const& home, std::string_view today);
+
+// Opens the workspace in folder. A missing folder is a fresh start: the folder
+// itself (not its parents), .cratchit and workspace.txt holding
+// `created = <today>` are created. Existing files are never changed. Error text
+// otherwise, e.g. when the system denies access (macOS asks the user before a
+// program may use Documents).
+std::expected<Workspace, std::string> open_workspace(std::filesystem::path const& folder, std::string_view today);
+
+// The user's documents folder, as the platform names it: Windows
+// SHGetKnownFolderPath(FOLDERID_Documents) (follows a move to OneDrive), Linux
+// XDG_DOCUMENTS_DIR when set, else <home>/Documents, macOS <home>/Documents.
+// Error text when it cannot be found.
+std::expected<std::filesystem::path, std::string> documents_folder();
+
+// Where the workspace is by default: <documents folder>/cratchit
+std::expected<std::filesystem::path, std::string> default_workspace_folder();
 
 // The user's home folder. It must be a full path to an existing folder. Error
 // text otherwise, or when it is not given or empty.

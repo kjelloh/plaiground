@@ -84,6 +84,16 @@ Cratchit > Testmeny > Projekt > Fel>
 
 Det blir BRA (också med sökväg som tydligt anger 'Fel')
 
+Nu råkade jag trycka 'vänsterpil' i Claude.
+
+* Och då kraschar hela konsolen!
+* macOS säger att appen vill ha access till 'Documents'
+* Jag svara nej och då hänger sig allting!
+* Jag avslutade Claude...
+
+
+SÅ KÄNSLIGT OCH BRÄCKLIGT ALLTING ÄR!!
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.

@@ -15,6 +15,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <shlobj.h>
 #else
 #include <cstdlib>
 #endif
@@ -36,6 +37,27 @@ std::expected<void, std::string> write_new_file(fs::path const& file, std::strin
     return std::unexpected(std::format("Kan inte skriva {}", file.string()));
   }
   return {};
+}
+
+// Makes sure folder is a folder: true when it was created, false when it was
+// already there. Only the folder itself is created, not its parents. An error
+// other than "not found" (e.g. access denied) is reported, not taken as missing.
+std::expected<bool, std::string> ensure_folder(fs::path const& folder) {
+  std::error_code ec;
+  auto const status = fs::status(folder, ec);
+  if (ec && ec != std::errc::no_such_file_or_directory) {
+    return std::unexpected(std::format("Kan inte nå {}: {}", folder.string(), ec.message()));
+  }
+  if (fs::exists(status)) {
+    if (!fs::is_directory(status)) {
+      return std::unexpected(std::format("{} finns men är inte en mapp", folder.string()));
+    }
+    return false;
+  }
+  if (!fs::create_directory(folder, ec)) {
+    return std::unexpected(std::format("Kan inte skapa {}: {}", folder.string(), ec.message()));
+  }
+  return true;
 }
 
 #ifdef _WIN32
@@ -168,6 +190,60 @@ std::expected<Runtime, std::string> open_runtime(fs::path const& home, std::stri
   }
   result.initiated.push_back({home, runtime_name});
   return result;
+}
+
+std::expected<Workspace, std::string> open_workspace(fs::path const& folder, std::string_view today) {
+  Workspace result;
+  result.folder = folder;
+  auto const workspace_name = fs::path(".cratchit") / "workspace.txt";
+  result.file = folder / workspace_name;
+
+  if (auto const made = ensure_folder(folder); !made) return std::unexpected(made.error());
+  if (auto const made = ensure_folder(folder / ".cratchit"); !made) return std::unexpected(made.error());
+
+  std::error_code ec;
+  auto const status = fs::status(result.file, ec);
+  if (ec && ec != std::errc::no_such_file_or_directory) {
+    return std::unexpected(std::format("Kan inte nå {}: {}", result.file.string(), ec.message()));
+  }
+  if (fs::is_regular_file(status)) return result;
+  if (fs::exists(status)) {
+    return std::unexpected(std::format("{} finns men är inte en fil", result.file.string()));
+  }
+  if (auto written = write_new_file(result.file, std::format("created = {}\n", today)); !written) {
+    return std::unexpected(written.error());
+  }
+  result.initiated.push_back({folder, workspace_name});
+  return result;
+}
+
+#if defined(_WIN32)
+std::expected<fs::path, std::string> documents_folder() {
+  PWSTR path = nullptr;
+  auto const hr = SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &path);
+  if (FAILED(hr)) {
+    CoTaskMemFree(path);
+    return std::unexpected(std::string("Hittar inte mappen Dokument (SHGetKnownFolderPath misslyckades)"));
+  }
+  fs::path result(path);
+  CoTaskMemFree(path);
+  return result;
+}
+#else
+std::expected<fs::path, std::string> documents_folder() {
+#if defined(__linux__)
+  if (auto const* xdg = std::getenv("XDG_DOCUMENTS_DIR"); xdg != nullptr && fs::path(xdg).is_absolute()) {
+    return fs::path(xdg);
+  }
+#endif
+  auto const home = user_home();
+  if (!home) return std::unexpected(std::format("Hittar inte mappen Dokument: {}", home.error()));
+  return *home / "Documents";
+}
+#endif
+
+std::expected<fs::path, std::string> default_workspace_folder() {
+  return documents_folder().transform([](fs::path const& documents) { return documents / "cratchit"; });
 }
 
 std::string today_iso() {

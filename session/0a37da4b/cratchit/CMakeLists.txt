@@ -57,6 +57,10 @@ add_library(cratchit_core
 )
 target_include_directories(cratchit_core PUBLIC src)
 target_link_libraries(cratchit_core PRIVATE cratchit_warnings)
+if(WIN32)
+  # SHGetKnownFolderPath and CoTaskMemFree, for the Documents folder
+  target_link_libraries(cratchit_core PRIVATE shell32 ole32)
+endif()
 
 # LOG_DEVELOPMENT_TRACE is compiled in when CRATCHIT_DEVELOPMENT_TRACE is ON,
 # left out when OFF, and DEBUG (the default) compiles it into Debug builds only
@@ -79,7 +83,7 @@ add_library(cratchit_ui
   src/ui/workspace_menu.cpp
 )
 target_include_directories(cratchit_ui PUBLIC src)
-target_link_libraries(cratchit_ui PUBLIC pyroceph PRIVATE cratchit_warnings)
+target_link_libraries(cratchit_ui PUBLIC pyroceph cratchit_core PRIVATE cratchit_warnings)
 
 add_executable(cratchit
   src/main.cpp

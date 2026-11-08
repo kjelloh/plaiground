@@ -121,6 +121,64 @@ TEST_F(DotFolderTest, RuntimeFileFolderIsAnError) {
   EXPECT_FALSE(cratchit::open_runtime(root, "2026-10-20").has_value());
 }
 
+// Workspace: the folder that holds the user's projects
+
+TEST_F(DotFolderTest, FreshWorkspaceIsCreated) {
+  auto const folder = root / "cratchit";
+  auto const workspace = cratchit::open_workspace(folder, "2026-11-08");
+  ASSERT_TRUE(workspace.has_value()) << workspace.error();
+  EXPECT_EQ(workspace->folder, folder);
+  EXPECT_EQ(workspace->file, folder / ".cratchit" / "workspace.txt");
+  EXPECT_EQ(read_file(workspace->file), "created = 2026-11-08\n");
+  ASSERT_EQ(workspace->initiated.size(), 1u);
+  EXPECT_EQ(workspace->initiated[0].folder, folder);
+  EXPECT_EQ(workspace->initiated[0].file, fs::path(".cratchit") / "workspace.txt");
+}
+
+TEST_F(DotFolderTest, ExistingWorkspaceIsNotChanged) {
+  auto const folder = root / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-08").has_value());
+  auto const workspace = cratchit::open_workspace(folder, "2030-01-01");
+  ASSERT_TRUE(workspace.has_value()) << workspace.error();
+  EXPECT_TRUE(workspace->initiated.empty());
+  EXPECT_EQ(read_file(workspace->file), "created = 2026-11-08\n");
+}
+
+TEST_F(DotFolderTest, ExistingFolderBecomesAWorkspace) {
+  write_file(root / "cratchit" / "notes.txt", "mine\n");
+  auto const workspace = cratchit::open_workspace(root / "cratchit", "2026-11-08");
+  ASSERT_TRUE(workspace.has_value()) << workspace.error();
+  EXPECT_EQ(workspace->initiated.size(), 1u);
+  EXPECT_EQ(read_file(root / "cratchit" / "notes.txt"), "mine\n");
+}
+
+TEST_F(DotFolderTest, WorkspaceParentsAreNotCreated) {
+  auto const workspace = cratchit::open_workspace(root / "Documents" / "cratchit", "2026-11-08");
+  ASSERT_FALSE(workspace.has_value());
+  EXPECT_NE(workspace.error().find("Kan inte skapa"), std::string::npos);
+  EXPECT_FALSE(fs::exists(root / "Documents"));
+}
+
+TEST_F(DotFolderTest, WorkspaceThatIsAFileIsAnError) {
+  std::ofstream(root / "cratchit") << "not a folder\n";
+  auto const workspace = cratchit::open_workspace(root / "cratchit", "2026-11-08");
+  ASSERT_FALSE(workspace.has_value());
+  EXPECT_NE(workspace.error().find("inte en mapp"), std::string::npos);
+}
+
+TEST_F(DotFolderTest, WorkspaceFileFolderIsAnError) {
+  fs::create_directories(root / "cratchit" / ".cratchit" / "workspace.txt");
+  EXPECT_FALSE(cratchit::open_workspace(root / "cratchit", "2026-11-08").has_value());
+}
+
+TEST(DefaultWorkspaceFolder, IsCratchitInDocuments) {
+  auto const documents = cratchit::documents_folder();
+  ASSERT_TRUE(documents.has_value()) << documents.error();
+  auto const folder = cratchit::default_workspace_folder();
+  ASSERT_TRUE(folder.has_value()) << folder.error();
+  EXPECT_EQ(*folder, *documents / "cratchit");
+}
+
 // The program's own folder
 
 TEST(ProgramFolder, HoldsTheRunningProgram) {

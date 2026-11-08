@@ -37,6 +37,7 @@
 * Steg 32: Ett state har två delar: vy (`State::view()`, typen `View`, rader) och val (`options()`). `show()` visar vyns rader ovanför valen. Alla befintliga state har tom vy. 168 tester. Provkört med pipe på macOS, inget syns annorlunda.
 * Steg 33: Felmeddelande-state `make_error_state(message)` i `pyroceph/tui/error_state` med tester i `test/test_error_state.cpp`. Namnet är `Fel`, vyn är meddelandet, inga val, inga tangenter mappade, så `-` går tillbaka. Ännu inte använt av något state i cratchit. 171 tester.
 * Steg 34: Testmenyns `Projekt` har `1 Öppna` (lyckas) och `2 Öppna (misslyckas)`, som leder till felstatet med "Kunde inte öppna projektet.". 172 tester. Provkört med pipe på macOS.
+* Steg 35: `0 Samlingsmapp` öppnar `<Dokument>/cratchit` och skapar den första gången (`open_workspace`, `documents_folder`, `default_workspace_folder` i `core/dot_folder`). Vyn visar mappen, och `Ny samlingsmapp skapad.` när den skapades. Går det inte att öppna mappen kommer man till `Fel` med orsaken. 182 tester. Provkört med pipe på macOS med HOME i en tillfällig mapp (skapad, öppnad igen, och `Documents` saknas leder till `Fel`). Inte provat mot den riktiga `~/Documents`, där macOS först frågar om Terminal får använda mappen. Windows-grenen (`SHGetKnownFolderPath`) är skriven men inte byggd.
 
 ## Bygg, kör och installera
 
@@ -55,4 +56,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bestäms av användaren. Nästa troliga steg: att `0 Samlingsmapp` öppnar en riktig samlingsmapp och ger `make_error_state` när det misslyckas.
+* Bestäms av användaren. Troliga steg: lista projekten i samlingsmappen, skapa ett projekt i en undermapp, och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`).
