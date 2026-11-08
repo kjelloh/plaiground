@@ -13,10 +13,12 @@ using pyroceph::tui::CodePoint;
 using pyroceph::tui::OnKeyResult;
 using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
+using pyroceph::tui::View;
 
 class RootState : public State {
 public:
   std::string name() const override { return "Cratchit"; }
+  View view() const override { return {}; }
   OptionsList options() const override { return {{U'0', "Samlingsmapp"}, {U'9', "Testmeny"}}; }
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'0') return make_workspace_menu();

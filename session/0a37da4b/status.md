@@ -34,6 +34,7 @@
 * 2026-11-07: GitHub Actions grönt på Linux, macOS och Windows: bygge, alla tester, körning från byggmappen och installation (Debug) med körning via `PATH`. Därmed är Windows- och Linux-grenarna i `dot_folder` (`program_folder`, `user_home`), `terminal_encoding`, `RawMode` och `KeyReader` byggda och körda i CI (utan riktig terminal). `install.py` är inte körd på Windows eller Linux.
 * Steg 30: Ny rot `Cratchit` med `9 Testmeny`. Testmenyn och roten i `src/ui/` (biblioteket `cratchit_ui`) med tester i `test/test_ui.cpp`. 165 tester. Provkört med pipe på macOS.
 * Steg 31: `0 Samlingsmapp` i roten, ett tomt workspace-state (`src/ui/workspace_menu`). 167 tester. Provkört med pipe på macOS.
+* Steg 32: Ett state har två delar: vy (`State::view()`, typen `View`, rader) och val (`options()`). `show()` visar vyns rader ovanför valen. Alla befintliga state har tom vy. 168 tester. Provkört med pipe på macOS, inget syns annorlunda.
 
 ## Bygg, kör och installera
 
@@ -52,4 +53,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bestäms av användaren. Väntar på användarens test av steg 31 i en riktig terminal.
+* Bestäms av användaren. Väntar på användarens test av steg 32. Därefter steg 2: felmeddelande-state (`make_error_state`) i `pyroceph/tui`.

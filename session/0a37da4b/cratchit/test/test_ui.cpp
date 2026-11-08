@@ -10,6 +10,7 @@ using pyroceph::tui::OptionsList;
 TEST(RootMenu, IsCratchitWithWorkspaceAsZeroAndTestMenuAsNine) {
   auto const root = cratchit::ui::make_root_menu();
   EXPECT_EQ(root->name(), "Cratchit");
+  EXPECT_TRUE(root->view().empty());
   EXPECT_EQ(root->options(), (OptionsList{{U'0', "Samlingsmapp"}, {U'9', "Testmeny"}}));
 }
 
@@ -56,6 +57,7 @@ TEST(TestMenu, BokslutTakesAYearOfFourDigits) {
 
 TEST(WorkspaceMenu, IsEmptyForNow) {
   auto workspace = cratchit::ui::make_workspace_menu();
+  EXPECT_TRUE(workspace->view().empty());
   EXPECT_TRUE(workspace->options().empty());
   EXPECT_EQ(workspace->on_key(U'1'), nullptr);
   auto const input = workspace->on_input(U"x");

@@ -57,6 +57,17 @@ Jag hade en diskussion  med Claude men kände att vi trassalde in oss olika lös
 
 * Så jag avslutade Claude och backade alla filer för att göra ett omtag.
 
+NEJ. Det fungerar ju inte heller!
+
+* Tog en promenad.
+* Beslöt att införa ett pop-up-state med felmeddelande.
+* Då kan vi alltid lsöa ett fel genom att returnera ett generellt felmeddelande-state.
+* Och TUI kan lita på att ett alternativ antingen inte är mappar eller leder till ett nytt state.
+
+Och nu blev jag varse att våra states inte har något sätt att visa 'sitt innehåll'.
+
+* Så jag bad Claude införa 'view'
+
 ## 20261107
 
 Idag började jag med att försöka plantera lite mer 'arkitektur' så vi får en mer 'snitsld bana' då vi tar in kod från tidigare sessioner.

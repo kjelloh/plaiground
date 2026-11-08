@@ -80,6 +80,14 @@ TEST(PromptLoop, ShowsEachNewStateWithoutCommonKeys) {
             "\n");
 }
 
+TEST(PromptLoop, ShowsTheViewAboveTheOptions) {
+  Navigator navigator(menu("Huvudmeny", {{U'1', "Visa", [] { return test::viewing("Visa", {"Rad ett", "Rad två"}); }}}));
+  auto keys = keys_of({'1', '\n', '-'});
+  auto const visa = std::string("\nRad ett\nRad två\nHuvudmeny > Visa> ");
+  EXPECT_EQ(run(keys, navigator),
+            "\n  1 Visa\nHuvudmeny> " + visa + visa + "\n  1 Visa\nHuvudmeny> \n");
+}
+
 TEST(PromptLoop, NonAsciiKeyIsAChoice) {
   Navigator navigator(tree());
   auto keys = keys_of({'1', 0xC3, 0xA5});

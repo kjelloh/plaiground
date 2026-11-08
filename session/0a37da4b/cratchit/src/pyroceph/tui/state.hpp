@@ -29,11 +29,19 @@ using Option = std::pair<CodePoint, std::string>;
 // The options a state offers, in display order. The TUI formats the list.
 using OptionsList = std::vector<Option>;
 
+// The lines of a state's view: its content, shown above its options. The TUI
+// formats the lines. All UTF-8.
+using View = std::vector<std::string>;
+
 // What a state answers to text the user entered: a reply to show (may be
 // empty) when it accepts the text, or an error text when it does not. All UTF-8.
 using InputResult = std::expected<std::string, std::string>;
 
 // One place in the UI. The client derives its concrete states from it.
+//
+// A state has two parts that the TUI shows: its view (its content) and, below
+// it, its options (what the user can do from here with a key). What a key
+// reaches is an option; everything else is the view.
 //
 // A state creates the next state itself, in on_key, when the user goes there.
 // So the tree of states grows as the user navigates, and a state can offer
@@ -44,6 +52,9 @@ public:
 
   // The place's name, e.g. "Huvudmeny". Shown in the path, so keep it short. UTF-8.
   virtual std::string name() const = 0;
+
+  // The state's content, shown above the options. Empty when there is nothing to show.
+  virtual View view() const = 0;
 
   // The options to show the user. The state keeps them in step with on_key.
   virtual OptionsList options() const = 0;

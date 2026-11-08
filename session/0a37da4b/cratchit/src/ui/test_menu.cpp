@@ -15,12 +15,14 @@ using pyroceph::tui::InputResult;
 using pyroceph::tui::OnKeyResult;
 using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
+using pyroceph::tui::View;
 
 // Each state creates the next one when the user goes there
 
 class OppnaProjektState : public State {
 public:
   std::string name() const override { return "Öppna projekt"; }
+  View view() const override { return {}; }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
 };
@@ -28,6 +30,7 @@ public:
 class ProjektState : public State {
 public:
   std::string name() const override { return "Projekt"; }
+  View view() const override { return {}; }
   OptionsList options() const override { return {{U'1', "Öppna"}}; }
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'1') return std::make_unique<OppnaProjektState>();
@@ -39,6 +42,7 @@ public:
 class BokslutState : public State {
 public:
   std::string name() const override { return "Bokslut"; }
+  View view() const override { return {}; }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
   InputResult on_input(std::u32string_view text) override {
@@ -55,6 +59,7 @@ public:
 class TestmenyState : public State {
 public:
   std::string name() const override { return "Testmeny"; }
+  View view() const override { return {}; }
   OptionsList options() const override { return {{U'1', "Projekt"}, {U'2', "Bokslut"}}; }
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'1') return std::make_unique<ProjektState>();

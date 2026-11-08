@@ -140,6 +140,9 @@ std::string edit_prompt_of(Navigator const& navigator) { return path_of(navigato
 
 void show(Navigator const& navigator, std::FILE* out) {
   std::print(out, "\n");
+  for (auto const& line : navigator.current().view()) {
+    std::print(out, "{}\n", line);
+  }
   for (auto const& [key, caption] : navigator.current().options()) {
     std::print(out, "  {} {}\n", utf8_of(key), caption);
   }
