@@ -57,6 +57,7 @@
 * Steg 47: Öppnad bokföring har `1 Räkenskapsår` och `2 Kvartal`, båda till `Inte än` (`project_menu.cpp`). Manualen uppdaterad (hjälptext, avsnitt, Kommer senare, ordlista). 247 tester. Provkört med pipe på macOS.
 * Steg 48: Ersätter steg 47. En öppnad bokföring listar sina räkenskapsår från `books/books.txt` (`list_fiscal_years`, `label_of` i `core/fiscal_year`), det senaste som `1`. Ett valt år är ett eget state (`ui/fiscal_year_menu`) utan val. Kvartal borttaget. Manualen uppdaterad. 255 tester. Provkört med pipe på macOS mot en kopia av `The ITfied AB` (2026/27, 2025/26, 2024/25).
 * Steg 49: Räkenskapsåren har `0` för det aktuella (senaste) året och `1`, `2`, ... för de äldre, högst 10. Manualen uppdaterad. 255 tester. Provkört med pipe på macOS.
+* Steg 50: Regeln att cratchit fungerar helt utan SIE-filer står i `beslut.md`. Koden kontrollerad: ingenting kräver SIE. Testet `YearWithoutBooksIsListed` visar att ett räkenskapsår listas utan egen bokföringsmapp. 256 tester.
 
 ## Bygg, kör och installera
 

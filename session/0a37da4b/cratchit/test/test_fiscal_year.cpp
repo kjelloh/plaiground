@@ -64,3 +64,15 @@ TEST(FiscalYearLabel, CalendarYearIsOneYear) { EXPECT_EQ(label_of({"2025-01-01",
 TEST(FiscalYearLabel, BrokenYearIsTwoYears) { EXPECT_EQ(label_of({"2025-05-01", "2026-04-30"}), "2025/26"); }
 
 TEST(FiscalYearLabel, AcrossACenturyBothAreWhole) { EXPECT_EQ(label_of({"1999-07-01", "2000-06-30"}), "1999/2000"); }
+
+// A year is listed from books.txt alone: whether it has any books (a folder of
+// its own with vouchers) does not matter
+TEST_F(FiscalYearTest, YearWithoutBooksIsListed) {
+  books("year.2024-05-01 = 2025-04-30\nyear.2025-05-01 = 2026-04-30\n");
+  fs::create_directories(folder / ".cratchit" / "books" / "2024-05-01");
+  std::ofstream(folder / ".cratchit" / "books" / "2024-05-01" / "vouchers.csv") << "series,number,date,text,amount\n";
+  // 2025-05-01 has no folder at all
+  auto const years = cratchit::list_fiscal_years(project());
+  ASSERT_TRUE(years) << years.error();
+  EXPECT_EQ(*years, (std::vector<FiscalYear>{{"2025-05-01", "2026-04-30"}, {"2024-05-01", "2025-04-30"}}));
+}
