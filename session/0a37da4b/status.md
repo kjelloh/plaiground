@@ -41,6 +41,7 @@
 * Steg 36: GitHub Actions sparar Conans paket (`~/.conan2/p`) mellan körningarna med `actions/cache@v6`. Orsak: macOS-bygget föll när github.com inte svarade (503, timeout) då `gtest` skulle hämtas för att byggas från källkoden. Conan-versionen står en gång, i `CONAN_VERSION`. Workflow inte körd.
 * Steg 37: `Samlingsmapp` listar projekten (undermappar med `.cratchit/project.txt`) som 1–9 och öppnar dem (`list_projects`, `open_project` i `core/project`, `make_project_menu` i `src/ui/project_menu`). Projektets state har projektets namn i sökvägen och mappen som vy, inga val än. Ett projekt som inte går att öppna leder till `Fel`. 194 tester. Provkört med pipe på macOS med HOME i en tillfällig mapp och en kopia av `The ITfied AB`.
 * Steg 38: Samlingsmappen söker inte längre i sina undermappar. Den listar projekten den kommer ihåg i `workspace.txt` (`project.<uuid> = <mapp>`, som i 'take 3'), och mappen kan ligga var som helst. `open_project` kontrollerar att `uuid` i `project.txt` stämmer. cratchit skriver ännu inget i `workspace.txt`, så projekt läggs dit för hand. 198 tester. Provkört med pipe på macOS (HOME i en tillfällig mapp, `The ITfied AB` utanför samlingsmappen och ihågkommen, och ett projekt i en undermapp som inte var ihågkommet och inte syntes).
+* Steg 39: `Samlingsmapp` har `+ Lägg till bokföring` sist, som leder till `Lägg till` med `1 Öppna befintlig` och `2 Ny bokföring`. Båda är tomma states för nu (`make_add_project_menu` i `src/ui/add_project_menu`). Samlingsmappens texter säger nu bokföring i stället för projekt. 201 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 
@@ -59,4 +60,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bestäms av användaren. Troliga steg: att cratchit själv lägger till ett projekt i `workspace.txt` (öppna bokföring på annat ställe, eller ny bokföring), och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`).
+* Bestäms av användaren. Troliga steg: fylla `Öppna befintlig` och `Ny bokföring`, så att cratchit själv lägger till en rad i `workspace.txt` (kräver att indata kan leda till ett nytt state, och att `Samlingsmapp` läser om sin lista när man går tillbaka till den). Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.

@@ -2,6 +2,7 @@
 
 #include "core/log.hpp"
 #include "pyroceph/tui/error_state.hpp"
+#include "ui/add_project_menu.hpp"
 #include "ui/project_menu.hpp"
 
 #include <algorithm>
@@ -29,18 +30,20 @@ public:
     View lines;
     if (!workspace_.initiated.empty()) lines.push_back("Ny samlingsmapp skapad.");
     lines.push_back(workspace_.folder.string());
-    if (projects_.size() > max_listed_projects) lines.push_back("Fler projekt finns.");
+    if (projects_.size() > max_listed_projects) lines.push_back("Fler bokföringar finns.");
     return lines;
   }
   OptionsList options() const override {
     OptionsList result;
     for (std::size_t i = 0; i < listed(); ++i) result.push_back({key_of(i), projects_[i].caption});
+    result.push_back({add_key, "Lägg till bokföring"});
     return result;
   }
   OnKeyResult on_key(CodePoint key) override {
     for (std::size_t i = 0; i < listed(); ++i) {
       if (key == key_of(i)) return open(projects_[i]);
     }
+    if (key == add_key) return make_add_project_menu();
     return nullptr;
   }
 
@@ -52,7 +55,7 @@ private:
     auto project = open_project(listed.folder, listed.uuid);
     if (!project) {
       LOG_BUSINESS("Kunde inte öppna projektet i {}: {}", listed.folder.string(), project.error());
-      return pyroceph::tui::make_error_state(std::format("Kunde inte öppna projektet: {}", project.error()));
+      return pyroceph::tui::make_error_state(std::format("Kunde inte öppna bokföringen: {}", project.error()));
     }
     LOG_BUSINESS("Öppnade projektet {} i {}", project->name, project->folder.string());
     return make_project_menu(std::move(*project));

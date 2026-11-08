@@ -1,3 +1,4 @@
+#include "ui/add_project_menu.hpp"
 #include "ui/project_menu.hpp"
 #include "ui/root_menu.hpp"
 #include "ui/test_menu.hpp"
@@ -145,7 +146,7 @@ TEST_F(RootMenuTest, WorkspaceListsItsProjectsAndOpensOne) {
   std::ofstream(folder / ".cratchit" / "workspace.txt") << "created = 2026-11-08\nproject.1 = itfied\nproject.2 = annat\n";
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Annat AB"}, {U'2', "The ITfied AB"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Annat AB"}, {U'2', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
   EXPECT_EQ(navigator.current().view(), (View{(folder / "itfied").string()}));
@@ -160,11 +161,11 @@ TEST_F(RootMenuTest, ProjectThatCannotBeOpenedLeadsToAnError) {
   add_project(folder, "Utan namn", "1", "uuid = 1\n");
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Utan namn"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Utan namn"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Fel");
   ASSERT_EQ(navigator.current().view().size(), 1u);
-  EXPECT_TRUE(navigator.current().view()[0].starts_with("Kunde inte öppna projektet: "));
+  EXPECT_TRUE(navigator.current().view()[0].starts_with("Kunde inte öppna bokföringen: "));
   EXPECT_TRUE(navigator.current().view()[0].ends_with("'name' saknas"));
 }
 
@@ -176,10 +177,10 @@ cratchit::Workspace workspace_at(fs::path const& folder) {
 
 } // namespace
 
-TEST(WorkspaceMenu, WithoutProjectsShowsItsFolderAndHasNoOptions) {
+TEST(WorkspaceMenu, WithoutProjectsShowsItsFolderAndOffersOnlyToAdd) {
   auto workspace = cratchit::ui::make_workspace_menu(workspace_at("/x/cratchit"), {});
   EXPECT_EQ(workspace->view(), (View{fs::path("/x/cratchit").string()}));
-  EXPECT_TRUE(workspace->options().empty());
+  EXPECT_EQ(workspace->options(), (OptionsList{{U'+', "Lägg till bokföring"}}));
   EXPECT_EQ(workspace->on_key(U'1'), nullptr);
   EXPECT_EQ(workspace->on_key(U'0'), nullptr);
   auto const input = workspace->on_input(U"x");
@@ -192,10 +193,11 @@ TEST(WorkspaceMenu, OffersNineProjectsAndSaysWhenThereAreMore) {
   for (char c = 'a'; c <= 'j'; ++c) projects.push_back({std::string(1, c), fs::path("/x/cratchit") / std::string(1, c), std::string(1, c)});
   auto workspace = cratchit::ui::make_workspace_menu(workspace_at("/x/cratchit"), projects);
   auto const options = workspace->options();
-  ASSERT_EQ(options.size(), 9u);
-  EXPECT_EQ(options.front(), (pyroceph::tui::Option{U'1', "a"}));
-  EXPECT_EQ(options.back(), (pyroceph::tui::Option{U'9', "i"}));
-  EXPECT_EQ(workspace->view(), (View{fs::path("/x/cratchit").string(), "Fler projekt finns."}));
+  ASSERT_EQ(options.size(), 10u);
+  EXPECT_EQ(options[0], (pyroceph::tui::Option{U'1', "a"}));
+  EXPECT_EQ(options[8], (pyroceph::tui::Option{U'9', "i"}));
+  EXPECT_EQ(options[9], (pyroceph::tui::Option{U'+', "Lägg till bokföring"}));
+  EXPECT_EQ(workspace->view(), (View{fs::path("/x/cratchit").string(), "Fler bokföringar finns."}));
 }
 
 TEST(ProjectMenu, IsNamedByTheProjectAndShowsItsFolder) {
@@ -204,4 +206,32 @@ TEST(ProjectMenu, IsNamedByTheProjectAndShowsItsFolder) {
   EXPECT_EQ(project->view(), (View{fs::path("/x/p").string()}));
   EXPECT_TRUE(project->options().empty());
   EXPECT_EQ(project->on_key(U'1'), nullptr);
+}
+
+TEST(WorkspaceMenu, PlusLeadsToAddWithOpenExistingAndNew) {
+  Navigator navigator(cratchit::ui::make_workspace_menu(workspace_at("/x/cratchit"), {}));
+  ASSERT_TRUE(navigator.press(U'+'));
+  EXPECT_EQ(navigator.current().name(), "Lägg till");
+  EXPECT_TRUE(navigator.current().view().empty());
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Öppna befintlig"}, {U'2', "Ny bokföring"}}));
+  EXPECT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
+}
+
+TEST(AddProjectMenu, OpenExistingAndNewAreEmptyForNow) {
+  for (auto const& [key, name] : {std::pair{U'1', "Öppna befintlig"}, std::pair{U'2', "Ny bokföring"}}) {
+    Navigator navigator(cratchit::ui::make_add_project_menu());
+    ASSERT_TRUE(navigator.press(key));
+    EXPECT_EQ(navigator.current().name(), name);
+    EXPECT_TRUE(navigator.current().view().empty());
+    EXPECT_TRUE(navigator.current().options().empty());
+    EXPECT_EQ(navigator.current().on_key(U'1'), nullptr);
+    EXPECT_FALSE(navigator.current().on_input(U"x"));
+    EXPECT_TRUE(navigator.back());
+    EXPECT_EQ(navigator.current().name(), "Lägg till");
+  }
+}
+
+TEST(AddProjectMenu, OtherKeysAreNotMapped) {
+  EXPECT_EQ(cratchit::ui::make_add_project_menu()->on_key(U'3'), nullptr);
 }
