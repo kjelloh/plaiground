@@ -153,8 +153,8 @@ TEST_F(RootMenuTest, WorkspaceListsItsProjectsAndOpensOne) {
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Annat AB"}, {U'2', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
-  EXPECT_EQ(navigator.current().view(), (View{(folder / "itfied").string()}));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Räkenskapsår"}, {U'2', "Kvartal"}}));
+  EXPECT_EQ(navigator.current().view(), (View{(folder / "itfied").string(), "Bokföringen har inga räkenskapsår än."}));
+  EXPECT_TRUE(navigator.current().options().empty());
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
 }
@@ -207,21 +207,50 @@ TEST(WorkspaceMenu, OffersNineProjectsAndSaysWhenThereAreMore) {
 TEST(ProjectMenu, IsNamedByTheProjectAndShowsItsFolder) {
   auto project = cratchit::ui::make_project_menu({"/x/p", "/x/p/.cratchit/project.txt", "1", "The ITfied AB"});
   EXPECT_EQ(project->name(), "The ITfied AB");
-  EXPECT_EQ(project->view(), (View{fs::path("/x/p").string()}));
-  EXPECT_EQ(project->options(), (OptionsList{{U'1', "Räkenskapsår"}, {U'2', "Kvartal"}}));
-  EXPECT_EQ(project->on_key(U'3'), nullptr);
+  EXPECT_EQ(project->view(), (View{fs::path("/x/p").string(), "Bokföringen har inga räkenskapsår än."}));
+  EXPECT_TRUE(project->options().empty());
+  EXPECT_EQ(project->on_key(U'1'), nullptr);
 }
 
-TEST(ProjectMenu, FiscalYearsAndQuartersAreNotThereYet) {
-  for (auto const& [key, option] : {std::pair{U'1', "Räkenskapsår"}, std::pair{U'2', "Kvartal"}}) {
-    Navigator navigator(cratchit::ui::make_project_menu({"/x/p", "/x/p/.cratchit/project.txt", "1", "The ITfied AB"}));
-    ASSERT_TRUE(navigator.press(key));
-    EXPECT_EQ(navigator.current().name(), std::format("Inte än ({})", option));
-    ASSERT_EQ(navigator.current().view().size(), 1u);
-    EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att välja "));
-    EXPECT_TRUE(navigator.back());
-    EXPECT_EQ(navigator.current().name(), "The ITfied AB");
-  }
+namespace {
+
+// A project in folder whose books.txt holds text
+cratchit::Project project_with_books(fs::path const& folder, std::string const& text) {
+  fs::create_directories(folder / ".cratchit" / "books");
+  std::ofstream(folder / ".cratchit" / "books" / "books.txt") << text;
+  return {folder, folder / ".cratchit" / "project.txt", "1", "The ITfied AB"};
+}
+
+} // namespace
+
+TEST_F(RootMenuTest, ProjectOffersItsFiscalYearsTheLatestFirst) {
+  Navigator navigator(cratchit::ui::make_project_menu(project_with_books(
+      documents / "p", "chart_type = EUBAS97\nyear.2024-05-01 = 2025-04-30\nyear.2025-05-01 = 2026-04-30\n")));
+  EXPECT_EQ(navigator.current().view(), (View{(documents / "p").string()}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "2025/26 (2025-05-01 – 2026-04-30)"},
+                                                        {U'2', "2024/25 (2024-05-01 – 2025-04-30)"}}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "2024/25");
+  EXPECT_EQ(navigator.current().view(), (View{"Räkenskapsår 2024-05-01 – 2025-04-30"}));
+  EXPECT_TRUE(navigator.current().options().empty());
+  EXPECT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "The ITfied AB");
+}
+
+TEST_F(RootMenuTest, ProjectSaysWhenItsFiscalYearsCannotBeRead) {
+  auto project = cratchit::ui::make_project_menu(project_with_books(documents / "p", "year.2025 = 2026-04-30\n"));
+  ASSERT_EQ(project->view().size(), 2u);
+  EXPECT_TRUE(project->view()[1].starts_with("cratchit kunde inte läsa räkenskapsåren: "));
+  EXPECT_TRUE(project->options().empty());
+}
+
+TEST_F(RootMenuTest, ProjectOffersNineFiscalYearsAndSaysWhenThereAreMore) {
+  std::string text;
+  for (int year = 2010; year < 2020; ++year) text += std::format("year.{}-01-01 = {}-12-31\n", year, year);
+  auto project = cratchit::ui::make_project_menu(project_with_books(documents / "p", text));
+  EXPECT_EQ(project->options().size(), 9u);
+  EXPECT_EQ(project->options().front().second, "2019 (2019-01-01 – 2019-12-31)");
+  EXPECT_EQ(project->view().back(), "Bokföringen har fler räkenskapsår än cratchit visar här.");
 }
 
 TEST(WorkspaceMenu, PlusLeadsToAddWithOpenExistingAndNew) {
@@ -269,7 +298,8 @@ TEST_F(RootMenuTest, OpenExistingOpensTheProjectAndTheWorkspaceRemembersIt) {
   ASSERT_TRUE(result->next);
   navigator.enter(std::move(result->next));
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
-  EXPECT_EQ(navigator.current().view(), (View{(documents / "elsewhere" / "itfied").string()}));
+  EXPECT_EQ(navigator.current().view(),
+            (View{(documents / "elsewhere" / "itfied").string(), "Bokföringen har inga räkenskapsår än."}));
   auto const entries = cratchit::read_path_values(folder / ".cratchit" / "workspace.txt");
   ASSERT_TRUE(entries);
   EXPECT_EQ(cratchit::find_value(*entries, "project.7"), (documents / "elsewhere" / "itfied").string());
@@ -322,6 +352,7 @@ TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
   auto const folder = documents / "cratchit";
   ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-08"));
   add_project(folder, "itfied", "1", "uuid = 1\nname = The ITfied AB\n");
+  project_with_books(folder / "itfied", "year.2025-05-01 = 2026-04-30\n");
   add_project(folder, "trasig", "2", "uuid = 2\n");
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   EXPECT_EQ(navigator.current().help_topic(), topic::root);
@@ -329,6 +360,9 @@ TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
   EXPECT_EQ(navigator.current().help_topic(), topic::workspace);
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().help_topic(), topic::project);
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::fiscal_year);
+  ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'2')); // trasig has no name
   EXPECT_EQ(navigator.current().help_topic(), topic::error);

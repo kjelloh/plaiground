@@ -53,6 +53,7 @@ target_link_libraries(pyroceph PUBLIC charset PRIVATE cratchit_warnings)
 # Application logic (from take 3, session 60cae9fe)
 add_library(cratchit_core
   src/core/dot_folder.cpp
+  src/core/fiscal_year.cpp
   src/core/log.cpp
   src/core/manual.cpp
   src/core/path_value.cpp
@@ -84,6 +85,7 @@ target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${dev
 add_library(cratchit_ui
   src/ui/add_project_menu.cpp
   src/ui/design_insufficiency.cpp
+  src/ui/fiscal_year_menu.cpp
   src/ui/project_menu.cpp
   src/ui/root_menu.cpp
   src/ui/test_menu.cpp

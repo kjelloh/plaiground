@@ -149,24 +149,33 @@ En bokföring är bokföringen för en juridisk person, till exempel ett aktiebo
 ### Öppna en bokföring
 
 <!-- hjälp: bokforing -->
-Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Tryck `1` för att välja ett räkenskapsår eller `2` för att välja ett kvartal. Tryck `-` för att gå tillbaka.
+Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Valen är bokföringens räkenskapsår, det senaste först. Tryck ett års siffra för att öppna året. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
 Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen den ligger i:
 
 ```text
 /Users/anna/Documents/Bokföringar/The ITfied AB
-  1 Räkenskapsår
-  2 Kvartal
+  1 2026/27 (2026-05-01 – 2027-04-30)
+  2 2025/26 (2025-05-01 – 2026-04-30)
+  3 2024/25 (2024-05-01 – 2025-04-30)
 Cratchit > Samlingsmapp > The ITfied AB> 
 ```
 
-I en öppnad bokföring väljer du vilken period du vill arbeta med:
+Valen är bokföringens räkenskapsår, det senaste först. Ett räkenskapsår som följer kalenderåret heter till exempel `2025`, och ett som går över två kalenderår heter till exempel `2025/26`. Har bokföringen fler än nio räkenskapsår visar cratchit de nio senaste och säger att det finns fler.
 
-* `1` *Räkenskapsår*: välj ett räkenskapsår.
-* `2` *Kvartal*: välj ett kvartal.
+### Räkenskapsår
 
-Räkenskapsår och kvartal är skilda val, eftersom ett kvartal kan ligga över gränsen mellan två räkenskapsår. Inget av dem finns än. Båda leder till [Inte än](#inte-än).
+<!-- hjälp: rakenskapsar -->
+Du har öppnat ett räkenskapsår i bokföringen. Ovanför prompten står vilken period det gäller. Än så länge finns det inga val här. Tryck `-` för att gå tillbaka till bokföringen.
+<!-- /hjälp -->
+
+Tryck räkenskapsårets siffra i bokföringen. Prompten får då årets namn:
+
+```text
+Räkenskapsår 2025-05-01 – 2026-04-30
+Cratchit > Samlingsmapp > The ITfied AB > 2025/26> 
+```
 
 ### Lägg till
 
@@ -223,8 +232,6 @@ Det här finns som val men leder till [Inte än](#inte-än):
 
 * Skapa en ny bokföring från en SIE-fil.
 * Skapa en ny bokföring från namn, organisationsnummer och räkenskapsår.
-* Välja räkenskapsår i en bokföring.
-* Välja kvartal i en bokföring.
 
 ## Ordlista
 
@@ -235,4 +242,3 @@ Det här finns som val men leder till [Inte än](#inte-än):
 | sökväg | Var en mapp ligger på datorn, till exempel `/Users/anna/Documents` |
 | prompt | Raden där cratchit väntar på din tangent eller text |
 | räkenskapsår | Den period, oftast tolv månader, som bokföringen räknas och avslutas för |
-| kvartal | En period på tre månader, till exempel januari–mars |

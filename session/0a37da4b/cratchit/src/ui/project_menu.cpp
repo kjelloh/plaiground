@@ -1,10 +1,16 @@
 #include "ui/project_menu.hpp"
 
-#include "ui/design_insufficiency.hpp"
+#include "core/fiscal_year.hpp"
+#include "core/log.hpp"
+#include "ui/fiscal_year_menu.hpp"
 #include "ui/help_topics.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <format>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace cratchit::ui {
 
@@ -16,25 +22,51 @@ using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
 using pyroceph::tui::View;
 
-// The captions, used both in the menu and for the states they lead to
-constexpr char const* fiscal_years_caption = "Räkenskapsår";
-constexpr char const* quarters_caption = "Kvartal";
-
 class ProjectState : public State {
 public:
-  explicit ProjectState(Project project) : project_(std::move(project)) {}
+  explicit ProjectState(Project project) : project_(std::move(project)) {
+    auto years = list_fiscal_years(project_);
+    if (years) {
+      years_ = std::move(*years);
+    } else {
+      LOG_BUSINESS("Kunde inte läsa räkenskapsåren i {}: {}", project_.folder.string(), years.error());
+      error_ = years.error();
+    }
+  }
   std::string name() const override { return project_.name; }
-  View view() const override { return {project_.folder.string()}; }
-  OptionsList options() const override { return {{U'1', fiscal_years_caption}, {U'2', quarters_caption}}; }
+  View view() const override {
+    View lines{project_.folder.string()};
+    if (!error_.empty()) {
+      lines.push_back(std::format("cratchit kunde inte läsa räkenskapsåren: {}", error_));
+    } else if (years_.empty()) {
+      lines.push_back("Bokföringen har inga räkenskapsår än.");
+    } else if (years_.size() > max_listed_fiscal_years) {
+      lines.push_back("Bokföringen har fler räkenskapsår än cratchit visar här.");
+    }
+    return lines;
+  }
+  OptionsList options() const override {
+    OptionsList result;
+    for (std::size_t i = 0; i < listed(); ++i) {
+      result.push_back({key_of(i), std::format("{} ({} – {})", label_of(years_[i]), years_[i].start, years_[i].end)});
+    }
+    return result;
+  }
   OnKeyResult on_key(CodePoint key) override {
-    if (key == U'1') return make_design_insufficiency_state(fiscal_years_caption, "att välja räkenskapsår i bokföringen");
-    if (key == U'2') return make_design_insufficiency_state(quarters_caption, "att välja kvartal i bokföringen");
+    for (std::size_t i = 0; i < listed(); ++i) {
+      if (key == key_of(i)) return make_fiscal_year_menu(project_, years_[i]);
+    }
     return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::project); }
 
 private:
+  std::size_t listed() const { return std::min(years_.size(), max_listed_fiscal_years); }
+  static CodePoint key_of(std::size_t index) { return static_cast<CodePoint>(U'1' + index); }
+
   Project project_;
+  std::vector<FiscalYear> years_; // the latest first
+  std::string error_;             // why the fiscal years could not be read, or empty
 };
 
 } // namespace

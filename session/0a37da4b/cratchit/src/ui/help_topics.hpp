@@ -17,6 +17,7 @@ inline constexpr std::string_view add_project = "lagg-till";
 inline constexpr std::string_view open_existing = "oppna-befintlig";
 inline constexpr std::string_view new_project = "ny-bokforing";
 inline constexpr std::string_view project = "bokforing";
+inline constexpr std::string_view fiscal_year = "rakenskapsar";
 inline constexpr std::string_view design_insufficiency = "inte-an";
 inline constexpr std::string_view error = pyroceph::tui::error_help_topic;
 } // namespace help_topic
@@ -24,7 +25,8 @@ inline constexpr std::string_view error = pyroceph::tui::error_help_topic;
 // All of them, so that a test can check that the manual has each one
 inline constexpr std::array all_help_topics{
     help_topic::root,    help_topic::workspace,           help_topic::add_project, help_topic::open_existing,
-    help_topic::new_project, help_topic::project, help_topic::design_insufficiency, help_topic::error,
+    help_topic::new_project, help_topic::project, help_topic::fiscal_year, help_topic::design_insufficiency,
+    help_topic::error,
 };
 
 } // namespace cratchit::ui

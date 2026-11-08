@@ -55,6 +55,7 @@
 * Steg 45: `?` visar ett hjälpstycke ur manualen för statet man står i, och sedan de gemensamma valen (`State::help_topic()`, `HelpSource`, `show_help` i `pyroceph`, `core/manual`, `ui/help_topics.hpp`). Manualen har fått ett märkt stycke per state och följer med i framework. Startraden säger `Tryck ? för hjälp.` 243 tester. Provkört med pipe på macOS.
 * Steg 46: `?` visar de gemensamma valen, och `?` direkt igen visar statets hjälptext ur manualen (sedan växlar det). Hjälptexten slutar vid `<!-- /hjälp -->` och får ha flera stycken, listor och kodblock. Manualens märken har fått slutmärken. 246 tester. Provkört med pipe på macOS.
 * Steg 47: Öppnad bokföring har `1 Räkenskapsår` och `2 Kvartal`, båda till `Inte än` (`project_menu.cpp`). Manualen uppdaterad (hjälptext, avsnitt, Kommer senare, ordlista). 247 tester. Provkört med pipe på macOS.
+* Steg 48: Ersätter steg 47. En öppnad bokföring listar sina räkenskapsår från `books/books.txt` (`list_fiscal_years`, `label_of` i `core/fiscal_year`), det senaste som `1`. Ett valt år är ett eget state (`ui/fiscal_year_menu`) utan val. Kvartal borttaget. Manualen uppdaterad. 255 tester. Provkört med pipe på macOS mot en kopia av `The ITfied AB` (2026/27, 2025/26, 2024/25).
 
 ## Bygg, kör och installera
 
