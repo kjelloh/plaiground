@@ -1,3 +1,4 @@
+#include "core/books/books.hpp"
 #include "core/path_value.hpp"
 #include "core/sie/document.hpp"
 #include "core/sie/file.hpp"
@@ -637,4 +638,54 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   navigator.enter(std::move(same->next));
   EXPECT_TRUE(navigator.current().options().empty());
   EXPECT_EQ(navigator.current().view().back(), "Alla verifikationer i räkenskapsåret finns redan i SIE-filen. Det finns inget att exportera.");
+}
+
+TEST_F(RootMenuTest, ImportListsTheChangedVouchersAPageAtATime) {
+  auto const folder = documents / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-09"));
+  auto const sie = [](bool changed) {
+    std::string text = "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+                       "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n";
+    for (int number = 1; number <= 12; ++number) {
+      text += std::format("#VER A {} 202502{:02} \"Sale\"\r\n{{\r\n", number, number);
+      text += changed ? "#BTRANS 1930 {} 100 \"\" \"\" \"\" \"K\"\r\n#BTRANS 3010 {} -100 \"\" \"\" \"\" \"K\"\r\n"
+                        "#RTRANS 1930 {} 110 \"\" \"\" \"\" \"K\"\r\n#TRANS 1930 {} 110\r\n"
+                        "#RTRANS 3010 {} -110 \"\" \"\" \"\" \"K\"\r\n#TRANS 3010 {} -110\r\n"
+                      : "#TRANS 1930 {} 100\r\n#TRANS 3010 {} -100\r\n";
+      text += "}\r\n";
+    }
+    return text;
+  };
+  std::ofstream(folder / "start.se", std::ios::binary) << sie(false);
+  auto plan = cratchit::plan_project_from_sie(folder / "start.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  std::ofstream(documents / "changed.se", std::ios::binary) << sie(true);
+  Navigator navigator(cratchit::ui::make_project_menu(*project));
+  ASSERT_TRUE(navigator.press(U'+'));
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(documents) + U"changed.se");
+  ASSERT_TRUE(result) << result.error();
+  navigator.enter(std::move(result->next));
+  auto const lines = [&navigator](std::string_view start) {
+    std::size_t count = 0;
+    for (auto const& line : navigator.current().view()) count += line.starts_with(start) ? 1 : 0;
+    return count;
+  };
+  EXPECT_EQ(lines("Verifikationer: 0 nya, 12 ändrade, 0 finns redan"), 1u);
+  EXPECT_EQ(lines("  A "), 10u);
+  EXPECT_EQ(lines("  … och 2 till. Tryck 2 för fler."), 1u);
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Importera"}, {U'2', "Mer…"}}));
+  // Mer… shows the rest, in place
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  EXPECT_EQ(lines("  A "), 12u);
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Importera"}}));
+  EXPECT_FALSE(navigator.press(U'2'));
+  // Importing takes the changes and goes back to the project
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Test AB");
+  auto const books = cratchit::books::read_books(project->folder);
+  ASSERT_TRUE(books) << books.error();
+  EXPECT_EQ(books->years[0].vouchers[11].postings.size(), 4u);
 }

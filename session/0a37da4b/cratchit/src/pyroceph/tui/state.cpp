@@ -11,6 +11,7 @@ Completion State::complete(std::u32string_view) const { return {}; }
 Navigator::Navigator(std::unique_ptr<State> root) { path_.push_back(std::move(root)); }
 
 bool Navigator::press(CodePoint key) {
+  if (current().on_key_in_place(key)) return true;
   auto next = current().on_key(key);
   if (!next) return follow_back_to();
   enter(std::move(next));

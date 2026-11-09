@@ -34,7 +34,48 @@ fs::path free_name_in(fs::path const& folder, fs::path const& file) {
   return target;
 }
 
+// The vouchers of the year starting on start that the planned books hold otherwise than the books
+// before. Error text when one has another date or text: only struck and added rows are taken.
+std::expected<std::vector<ChangedVoucher>, std::string> changed_vouchers(books::Books const& before,
+                                                                         books::Books const& after, Date start) {
+  std::vector<ChangedVoucher> result;
+  auto const* old_year = before.year_starting(start);
+  auto const* new_year = after.year_starting(start);
+  if (old_year == nullptr || new_year == nullptr) return result;
+  for (auto const& old_voucher : old_year->vouchers) {
+    auto const found = std::ranges::find_if(new_year->vouchers, [&](books::Voucher const& v) {
+      return v.series == old_voucher.series && v.number == old_voucher.number;
+    });
+    if (found == new_year->vouchers.end() || *found == old_voucher) continue;
+    if (found->event.date != old_voucher.event.date || found->event.heading != old_voucher.event.heading) {
+      return std::unexpected(std::format("Verifikationen {} {} har ett annat datum eller en annan text i filen. cratchit tar "
+                                         "bara emot strukna och tillagda rader i befintliga verifikationer",
+                                         old_voucher.series, old_voucher.number));
+    }
+    ChangedVoucher changed{old_voucher.series, old_voucher.number, format_iso_date(old_voucher.event.date),
+                           old_voucher.event.heading};
+    auto const removed = [](books::Posting const& p) { return p.kind == books::Posting::Kind::removed; };
+    auto const struck_before = static_cast<std::size_t>(std::ranges::count_if(old_voucher.postings, removed));
+    auto const struck_after = static_cast<std::size_t>(std::ranges::count_if(found->postings, removed));
+    changed.struck = struck_after > struck_before ? struck_after - struck_before : 0;
+    changed.added = found->postings.size() > old_voucher.postings.size() ? found->postings.size() - old_voucher.postings.size() : 0;
+    result.push_back(std::move(changed));
+  }
+  return result;
+}
+
 } // namespace
+
+std::string change_text(ChangedVoucher const& changed) {
+  auto const rows = [](std::size_t count, std::string_view one, std::string_view many) {
+    return std::format("{} {}", count, count == 1 ? one : many);
+  };
+  std::string what;
+  if (changed.struck > 0) what = rows(changed.struck, "rad struken", "rader strukna");
+  if (changed.added > 0) what += (what.empty() ? "" : ", ") + rows(changed.added, "rad tillagd", "rader tillagda");
+  if (what.empty()) what = "ändrad";
+  return std::format("{} {}  {}  {}: {}", changed.series, changed.number, changed.date, changed.heading, what);
+}
 
 std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project, fs::path const& sie_file) {
   std::error_code ec;
@@ -61,12 +102,16 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
   plan.import = books::plan_import(*books, identity, document);
   auto const& import = plan.import;
   if (!import.errors.empty()) return std::unexpected(errors_text(import.errors));
-  if (import.reverts() || import.vouchers_changed > 0) {
+  if (import.reverts() || import.vouchers_forced > 0) {
     return std::unexpected(std::format(
-        "Importen skulle ändra eller ta bort verifikationer som redan finns i bokföringen ({} ändrade, {} med annat "
-        "nummer, {} ersatta, {} borttagna, {} till väntande). cratchit importerar än så länge bara det som är nytt",
-        import.vouchers_changed, import.renamed.size(), import.replaced.size(), import.dropped.size(), import.demoted.size()));
+        "Importen skulle ta bort eller byta ut verifikationer som redan finns i bokföringen ({} med annat nummer, {} "
+        "ersatta, {} borttagna, {} till väntande). cratchit importerar än så länge bara nya verifikationer och strukna "
+        "eller tillagda rader",
+        import.renamed.size(), import.replaced.size(), import.dropped.size(), import.demoted.size()));
   }
+  auto changed = changed_vouchers(*books, import.books, import.year_start);
+  if (!changed) return std::unexpected(changed.error());
+  plan.changed = std::move(*changed);
   if (books::nothing_to_import(*books, import)) return std::unexpected("Allt i SIE-filen finns redan i bokföringen");
   return plan;
 }

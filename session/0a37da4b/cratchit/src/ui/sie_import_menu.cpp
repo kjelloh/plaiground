@@ -8,6 +8,7 @@
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/help_topics.hpp"
 
+#include <algorithm>
 #include <format>
 #include <utility>
 
@@ -41,7 +42,15 @@ public:
     if (!plan_.alert.empty()) lines.push_back(plan_.alert);
     lines.push_back(std::format("Räkenskapsår: {} – {} ({})", format_iso_date(import.year_start), format_iso_date(import.year_end),
                                 plan_.new_year ? "nytt i bokföringen" : "finns i bokföringen"));
-    lines.push_back(std::format("Verifikationer: {} nya, {} finns redan", import.vouchers_added, import.vouchers_known));
+    lines.push_back(std::format("Verifikationer: {} nya, {} ändrade, {} finns redan", import.vouchers_added,
+                                plan_.changed.size(), import.vouchers_known));
+    if (!plan_.changed.empty()) {
+      lines.push_back("Ändrade (strukna och tillagda rader):");
+      for (std::size_t i = 0; i < shown(); ++i) lines.push_back("  " + change_text(plan_.changed[i]));
+      if (shown() < plan_.changed.size()) {
+        lines.push_back(std::format("  … och {} till. Tryck 2 för fler.", plan_.changed.size() - shown()));
+      }
+    }
     lines.push_back(std::format("Konton: {} nya, {} med ändrat namn eller ändrade uppgifter", import.accounts_added,
                                 import.accounts_changed));
     if (import.identity_changed) lines.push_back(std::format("Bokföringen får organisationsnummer {}.", import.identity.orgnr));
@@ -50,7 +59,15 @@ public:
   }
   OptionsList options() const override {
     if (imported_) return {};
-    return {{U'1', "Importera"}};
+    OptionsList result{{U'1', "Importera"}};
+    if (shown() < plan_.changed.size()) result.push_back({more_key, "Mer…"});
+    return result;
+  }
+  // Mer… shows one page more of the changed vouchers
+  bool on_key_in_place(CodePoint key) override {
+    if (imported_ || key != more_key || shown() >= plan_.changed.size()) return false;
+    pages_ += 1;
+    return true;
   }
   OnKeyResult on_key(CodePoint key) override {
     if (imported_ || key != U'1') return nullptr;
@@ -65,6 +82,7 @@ public:
                  plan_.sie_file.string(), project_.name, project_.uuid, format_iso_date(plan_.import.year_start),
                  format_iso_date(plan_.import.year_end), plan_.import.vouchers_added, plan_.import.accounts_added,
                  imported->moved_to.string());
+    for (auto const& changed : plan_.changed) LOG_BUSINESS("SIE-import ändrade verifikationen {}", change_text(changed));
     for (auto const& note : plan_.import.notes) LOG_BUSINESS("SIE-import: {}", note);
     if (report_) {
       report_(std::format("cratchit importerade {}: {} nya verifikationer i räkenskapsåret {} – {}. Filen ligger nu i {}.",
@@ -78,10 +96,16 @@ public:
   std::string help_topic() const override { return std::string(help_topic::confirm_import); }
 
 private:
+  // The changed vouchers are listed a page at a time; Mer… shows one page more
+  static constexpr std::size_t page = 10;
+  static constexpr CodePoint more_key = U'2';
+  std::size_t shown() const { return std::min(plan_.changed.size(), page * pages_); }
+
   Project project_;
   SieImportPlan plan_;
   State const* origin_;
   Report report_;
+  std::size_t pages_ = 1;
   bool imported_ = false;
 };
 

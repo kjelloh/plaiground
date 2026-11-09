@@ -206,7 +206,7 @@ Med `+` i bokföringen tar du in en SIE-fil från ett annat bokföringsprogram, 
 ```text
 SIE-fil: /Users/anna/Downloads/TheITfiedAB.se (Fortnox 3.62.17, skapad 2026-11-09)
 Räkenskapsår: 2026-05-01 – 2027-04-30 (nytt i bokföringen)
-Verifikationer: 12 nya, 0 finns redan
+Verifikationer: 12 nya, 0 ändrade, 0 finns redan
 Konton: 1 nya, 0 med ändrat namn eller ändrade uppgifter
 cratchit flyttar SIE-filen till /Users/anna/Documents/cratchit/The ITfied AB/importerade_sie_filer.
   1 Importera
@@ -214,7 +214,7 @@ Cratchit > Samlingsmapp > The ITfied AB > Importera från SIE > Bekräfta>
 ```
 
 <!-- hjälp: bekrafta-import -->
-Ovanför prompten står vilket räkenskapsår SIE-filen gäller, om året är nytt i bokföringen eller redan finns, och vad importen lägger till. Tryck `1` för att importera, eller `-` för att gå tillbaka utan att importera något.
+Ovanför prompten står vilket räkenskapsår SIE-filen gäller, om året är nytt i bokföringen eller redan finns, och vad importen lägger till eller ändrar. Ändrade verifikationer listas tio i taget, och `2` (*Mer…*) visar fler. Tryck `1` för att importera, eller `-` för att gå tillbaka utan att importera något.
 <!-- /hjälp -->
 
 När importen är klar går cratchit tillbaka till bokföringen, som säger vad som importerades och visar räkenskapsåret i listan. SIE-filen flyttas till mappen `importerade_sie_filer` i bokföringens mapp. Finns en fil med samma namn där redan får den nya filen ett nummer.
@@ -225,7 +225,10 @@ cratchit importerar ingenting, och visar varför, om:
 * filen gäller ett annat organisationsnummer än bokföringen,
 * filens räkenskapsår överlappar ett annat år i bokföringen, eller slutar på ett annat datum än samma år i bokföringen,
 * allt i filen redan finns i bokföringen,
-* importen skulle ändra eller ta bort verifikationer som redan finns i bokföringen. cratchit importerar än så länge bara det som är nytt.
+* importen skulle ta bort eller byta ut verifikationer som redan finns i bokföringen,
+* en verifikation som redan finns har ett annat datum eller en annan text i filen.
+
+**Ändrade verifikationer.** En verifikation som redan är bokförd får enligt SIE bara ändras genom att rader stryks (`#BTRANS`) och nya rader läggs till (`#RTRANS`). Det som redan står får inte ändras. Sådana ändringar tar cratchit emot. *Bekräfta* listar då varje ändrad verifikation, till exempel `A 12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd`, tio i taget, och `2` (*Mer…*) visar fler. Ändringarna skrivs också i loggen.
 
 ### Räkenskapsår
 
@@ -430,7 +433,7 @@ Ett nystartat företag kan ha ett första räkenskapsår som är kortare eller l
 ## Kommer senare
 
 * En kontoplan för en ny bokföring från uppgifter. cratchit kommer att erbjuda BAS-kontoplanen.
-* Import av en SIE-fil som ändrar eller tar bort verifikationer som redan finns i bokföringen.
+* Import av en SIE-fil som tar bort eller byter ut verifikationer som redan finns i bokföringen, eller ändrar deras datum eller text.
 
 ## Ordlista
 

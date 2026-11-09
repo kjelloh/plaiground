@@ -191,3 +191,27 @@ TEST(State, BackToAStateNotOnThePathDoesNothing) {
   EXPECT_FALSE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Klar");
 }
+
+namespace {
+
+// Counts how often it acted in place on 1
+class Counter : public pyroceph::tui::State {
+public:
+  std::string name() const override { return "Räknare"; }
+  pyroceph::tui::View view() const override { return {std::to_string(count)}; }
+  pyroceph::tui::OptionsList options() const override { return {{U'1', "Mer…"}}; }
+  pyroceph::tui::OnKeyResult on_key(pyroceph::tui::CodePoint) override { return nullptr; }
+  bool on_key_in_place(pyroceph::tui::CodePoint key) override { return key == U'1' && ++count > 0; }
+  int count = 0;
+};
+
+} // namespace
+
+TEST(State, KeyActedOnInPlaceKeepsTheState) {
+  Navigator navigator(std::make_unique<Counter>());
+  EXPECT_TRUE(navigator.press(U'1'));
+  EXPECT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.path().size(), 1u);
+  EXPECT_EQ(navigator.current().view(), (pyroceph::tui::View{"2"}));
+  EXPECT_FALSE(navigator.press(U'2'));
+}

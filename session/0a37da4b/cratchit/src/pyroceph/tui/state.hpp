@@ -71,6 +71,11 @@ public:
   // The next state for the key, or nullptr when the state has no mapping for it
   virtual OnKeyResult on_key(CodePoint key) = 0;
 
+  // Acts on a key without leaving the state, e.g. showing more of a long list
+  // ("Mer…"). True when it did: the TUI then shows the state again. Asked
+  // before on_key. False by default.
+  virtual bool on_key_in_place(CodePoint /*key*/) { return false; }
+
   // Acts on text the user entered. By default the state takes no input and
   // answers with no_input_error.
   virtual InputResult on_input(std::u32string_view text);
@@ -133,10 +138,11 @@ public:
   // True when there is a state before the current one
   bool can_go_back() const { return path_.size() > 1; }
 
-  // Gives the key to the current state. When it answers with a new state,
-  // that becomes the current state; else, when it then names a state to go
-  // back to (State::back_to), the navigator goes back there. True when the
-  // state changed.
+  // Gives the key to the current state. When it acts in place
+  // (State::on_key_in_place) the state stays; else when it answers with a new
+  // state, that becomes the current state; else, when it then names a state to
+  // go back to (State::back_to), the navigator goes back there. True when the
+  // state changed or acted, so that it is to be shown again.
   bool press(CodePoint key);
 
   // Goes back to the state the current state names (State::back_to), when it

@@ -101,7 +101,7 @@ TEST_F(SieImportTest, RemovingAVoucherIsRefused) {
   // The file lacks A 2, which the books have: importing would demote it
   auto const plan = cratchit::plan_sie_import(project, write("less.se", sie_file(2025, "", sale(2025, 1, "0201"))));
   ASSERT_FALSE(plan);
-  EXPECT_TRUE(plan.error().starts_with("Importen skulle ändra eller ta bort verifikationer")) << plan.error();
+  EXPECT_TRUE(plan.error().starts_with("Importen skulle ta bort eller byta ut verifikationer")) << plan.error();
   auto const books = cratchit::books::read_books(project.folder);
   ASSERT_TRUE(books);
   EXPECT_EQ(books->years[0].vouchers.size(), 2u);
@@ -117,4 +117,48 @@ TEST_F(SieImportTest, AnotherOrgnrIsRefused) {
 TEST_F(SieImportTest, NoSieFileIsRefused) {
   EXPECT_FALSE(cratchit::plan_sie_import(project, write("notes.se", "notes\n")));
   EXPECT_FALSE(cratchit::plan_sie_import(project, root / "gone.se"));
+}
+
+namespace {
+
+// The 2025 file with A 2's rows (10 to bank costs) replaced by rows
+std::string with_a2_rows(std::string const& rows) {
+  auto file = sie_file(2025, balanced_balances(), sale_and_cost(2025));
+  std::string const original = "#TRANS 6570 {} 10\r\n#TRANS 1930 {} -10\r\n";
+  file.replace(file.find(original), original.size(), rows);
+  return file;
+}
+
+// A 2 with both rows struck and new ones added for 12, as Fortnox writes a changed voucher
+std::string const struck_and_added = "#BTRANS 6570 {} 10 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                     "#BTRANS 1930 {} -10 \"\" \"\" \"\" \"Kjell\"\r\n"
+                                     "#RTRANS 6570 {} 12 \"\" \"\" \"\" \"Kjell\"\r\n#TRANS 6570 {} 12\r\n"
+                                     "#RTRANS 1930 {} -12 \"\" \"\" \"\" \"Kjell\"\r\n#TRANS 1930 {} -12\r\n";
+
+} // namespace
+
+TEST_F(SieImportTest, StruckAndAddedRowsChangeAVoucher) {
+  auto const plan = cratchit::plan_sie_import(project, write("changed.se", with_a2_rows(struck_and_added)));
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_EQ(plan->import.vouchers_added, 0u);
+  ASSERT_EQ(plan->changed.size(), 1u);
+  EXPECT_EQ(cratchit::change_text(plan->changed[0]), "A 2  2025-03-01  Bank cost: 2 rader strukna, 2 rader tillagda");
+  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  auto const books = cratchit::books::read_books(project.folder);
+  ASSERT_TRUE(books) << books.error();
+  EXPECT_EQ(books->years[0].vouchers[1].postings.size(), 4u);
+}
+
+TEST_F(SieImportTest, AnotherTextOfAVoucherIsRefused) {
+  auto file = with_a2_rows(struck_and_added);
+  file.replace(file.find("\"Bank cost\""), 11, "\"Bank fee\"");
+  auto const plan = cratchit::plan_sie_import(project, write("text.se", file));
+  ASSERT_FALSE(plan);
+  EXPECT_EQ(plan.error(), "Verifikationen A 2 har ett annat datum eller en annan text i filen. cratchit tar bara emot "
+                          "strukna och tillagda rader i befintliga verifikationer");
+}
+
+TEST(ChangeText, SaysWhatChanged) {
+  EXPECT_EQ(cratchit::change_text({"A", "12", "2025-06-03", "Loopia", 1, 1}), "A 12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd");
+  EXPECT_EQ(cratchit::change_text({"A", "12", "2025-06-03", "Loopia", 0, 3}), "A 12  2025-06-03  Loopia: 3 rader tillagda");
 }
