@@ -2,6 +2,16 @@
 
 ```#0a37da4b```
 
+
+Previous sessions to refactor in to this one.
+
+1. [Vibe code a Swedish book keeping app named cratchit - take 3 (Drop feed Claude)](../60cae9fe/session.md)
+1. [# Consider a cratchit app that maps an SIE file to a Swedish Årsredovisning?](../5b35b2b9/session.md)
+1. [Consider a cratchit app that maps an SIE file to a Swedish SKV Ink_2?](../7d4475fb/session.md)
+1. [Consider to vibe code a pdf-walker C++ console app?](../9fe36d28/session.md)
+
+Claude state files.
+
 * [Claude beslut.md](./beslut.md)
 * [Claude status.md](./status.md)
 

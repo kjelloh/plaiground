@@ -76,3 +76,61 @@ TEST_F(FiscalYearTest, YearWithoutBooksIsListed) {
   ASSERT_TRUE(years) << years.error();
   EXPECT_EQ(*years, (std::vector<FiscalYear>{{"2025-05-01", "2026-04-30"}, {"2024-05-01", "2025-04-30"}}));
 }
+
+TEST(YearAfter, IsTwelveMonthsFromTheDayAfter) {
+  EXPECT_EQ(cratchit::year_after({"2025-05-01", "2026-04-30"}), (FiscalYear{"2026-05-01", "2027-04-30"}));
+  EXPECT_EQ(cratchit::year_after({"2026-11-01", "2026-12-31"}), (FiscalYear{"2027-01-01", "2027-12-31"})); // after a short first year
+  EXPECT_EQ(cratchit::year_after({"2026-07-01", "2027-12-31"}), (FiscalYear{"2028-01-01", "2028-12-31"})); // after a long one
+  EXPECT_EQ(cratchit::year_after({"2027-03-01", "2028-02-29"}), (FiscalYear{"2028-03-01", "2029-02-28"}));
+}
+
+namespace {
+
+std::vector<FiscalYear> years_of(std::vector<cratchit::ListedYear> const& listed) {
+  std::vector<FiscalYear> result;
+  for (auto const& year : listed) result.push_back(year.year);
+  return result;
+}
+
+} // namespace
+
+TEST_F(FiscalYearTest, YearsUpToTodayAreListedTheCurrentFirst) {
+  books("year.2024-05-01 = 2025-04-30\nyear.2025-05-01 = 2026-04-30\n");
+  auto const listed = cratchit::list_years_until(project(), "2026-11-09");
+  ASSERT_TRUE(listed) << listed.error();
+  EXPECT_EQ(years_of(*listed), (std::vector<FiscalYear>{{"2026-05-01", "2027-04-30"},
+                                                        {"2025-05-01", "2026-04-30"},
+                                                        {"2024-05-01", "2025-04-30"}}));
+  EXPECT_FALSE((*listed)[0].in_books);
+  EXPECT_TRUE((*listed)[1].in_books);
+  EXPECT_FALSE(fs::exists(folder / ".cratchit" / "books" / "2026-05-01")); // nothing written
+}
+
+TEST_F(FiscalYearTest, ANewYearShowsWhenTheDayIsInIt) {
+  books("year.2025-05-01 = 2026-04-30\n");
+  EXPECT_EQ(cratchit::list_years_until(project(), "2026-04-30")->size(), 1u);
+  EXPECT_EQ(cratchit::list_years_until(project(), "2026-05-01")->size(), 2u);
+  EXPECT_EQ(cratchit::list_years_until(project(), "2028-05-01")->size(), 4u); // years without books in between
+}
+
+TEST_F(FiscalYearTest, ALaterYearInTheBooksIsTheCurrentOne) {
+  books("year.2027-01-01 = 2027-12-31\n"); // a company starting next year
+  auto const listed = cratchit::list_years_until(project(), "2026-11-09");
+  ASSERT_TRUE(listed) << listed.error();
+  EXPECT_EQ(years_of(*listed), (std::vector<FiscalYear>{{"2027-01-01", "2027-12-31"}}));
+}
+
+TEST_F(FiscalYearTest, YearsFollowAShortFirstYear) {
+  books("year.2026-11-01 = 2026-12-31\n");
+  auto const listed = cratchit::list_years_until(project(), "2028-02-01");
+  ASSERT_TRUE(listed) << listed.error();
+  EXPECT_EQ(years_of(*listed), (std::vector<FiscalYear>{{"2028-01-01", "2028-12-31"},
+                                                        {"2027-01-01", "2027-12-31"},
+                                                        {"2026-11-01", "2026-12-31"}}));
+}
+
+TEST_F(FiscalYearTest, NoYearsInTheBooksListsNone) {
+  auto const listed = cratchit::list_years_until(project(), "2026-11-09");
+  ASSERT_TRUE(listed) << listed.error();
+  EXPECT_TRUE(listed->empty());
+}

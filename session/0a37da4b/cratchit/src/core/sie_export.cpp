@@ -26,9 +26,13 @@ std::expected<Loaded, std::string> load(Project const& project, FiscalYear const
   auto books = books::read_books(project.folder);
   if (!books) return std::unexpected(books.error());
   auto const start = parse_iso_date(year.start);
-  auto const found = start ? std::ranges::find(books->years, *start, &books::FiscalYear::start) : books->years.end();
+  auto const end = parse_iso_date(year.end);
+  if (!start || !end) return std::unexpected(std::format("{} – {} är inget räkenskapsår", year.start, year.end));
+  auto found = std::ranges::find(books->years, *start, &books::FiscalYear::start);
   if (found == books->years.end()) {
-    return std::unexpected(std::format("Räkenskapsåret {} – {} finns inte i bokföringen", year.start, year.end));
+    // A year not booked yet (see list_years_until): exported with nothing in it, here in memory only
+    auto const at = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start > *start; });
+    found = books->years.insert(at, books::FiscalYear{*start, *end, {}, {}});
   }
   auto const index = static_cast<std::size_t>(found - books->years.begin());
   books::Identity identity{project.name, {}};

@@ -150,7 +150,7 @@ public:
   FiscalYearState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) {}
   std::string name() const override { return label_of(year_); }
   View view() const override {
-    View lines{std::format("Räkenskapsår {} – {}", year_.start, year_.end)};
+    View lines{std::format("Räkenskapsår {} – {}", year_.start, year_.end), std::format("Bokfört: {}", booked())};
     if (!report_.empty()) lines.push_back(report_);
     return lines;
   }
@@ -172,6 +172,16 @@ public:
   void report(std::string text) { report_ = std::move(text); }
 
 private:
+  // What is booked in the year, read now: "inget" or "37 verifikationer"
+  std::string booked() const {
+    auto const books = books::read_books(project_.folder);
+    auto const start = parse_iso_date(year_.start);
+    auto const* found = books && start ? books->year_starting(*start) : nullptr;
+    auto const vouchers = found != nullptr ? found->vouchers.size() : 0;
+    if (vouchers == 0) return "inget";
+    return std::format("{} {}", vouchers, vouchers == 1 ? "verifikation" : "verifikationer");
+  }
+
   Project project_;
   FiscalYear year_;
   std::string report_;

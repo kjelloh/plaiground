@@ -246,7 +246,19 @@ std::expected<fs::path, std::string> default_workspace_folder() {
   return documents_folder().transform([](fs::path const& documents) { return documents / "cratchit"; });
 }
 
+namespace {
+
+std::optional<std::string>& today_override() {
+  static std::optional<std::string> today;
+  return today;
+}
+
+} // namespace
+
+void set_today(std::optional<std::string> today) { today_override() = std::move(today); }
+
 std::string today_iso() {
+  if (today_override()) return *today_override();
   std::time_t const now = std::time(nullptr);
   std::tm local{};
 #ifdef _WIN32

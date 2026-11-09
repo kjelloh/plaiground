@@ -76,7 +76,12 @@ std::expected<std::filesystem::path, std::string> choose_user_home(std::optional
 // choose_user_home from the environment: USERPROFILE on Windows, HOME elsewhere
 std::expected<std::filesystem::path, std::string> user_home();
 
-// Today's local date as YYYY-MM-DD
+// Today's local date as YYYY-MM-DD, or the date set with set_today
 std::string today_iso();
+
+// Makes today_iso give today (YYYY-MM-DD) instead of the clock's date, or the
+// clock's date again with nothing. For tests, and for trying a date with the
+// environment variable CRATCHIT_TODAY (see main).
+void set_today(std::optional<std::string> today);
 
 } // namespace cratchit

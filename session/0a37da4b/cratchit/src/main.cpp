@@ -1,3 +1,4 @@
+#include "core/date.hpp"
 #include "core/dot_folder.hpp"
 #include "core/log.hpp"
 #include "core/manual.hpp"
@@ -10,6 +11,7 @@
 #include "ui/root_menu.hpp"
 
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <format>
 #include <string>
@@ -28,6 +30,16 @@ charset::Encoding encoding_of(cratchit::Charset charset) {
 int main() {
   auto const cwd = std::filesystem::current_path();
   LOG_BUSINESS("cratchit startade i {}", cwd.string());
+  // CRATCHIT_TODAY=YYYY-MM-DD makes cratchit take that day as today, e.g. to try a new fiscal year
+  if (char const* today = std::getenv("CRATCHIT_TODAY"); today != nullptr && *today != '\0') {
+    if (cratchit::parse_iso_date(today)) {
+      cratchit::set_today(std::string(today));
+      std::println(stderr, "cratchit räknar med att det är {} i dag (CRATCHIT_TODAY).", today);
+      LOG_BUSINESS("Dagens datum satt till {} med CRATCHIT_TODAY", today);
+    } else {
+      std::println(stderr, "Varning: CRATCHIT_TODAY={} är inget datum ÅÅÅÅ-MM-DD. cratchit använder dagens datum.", today);
+    }
+  }
   auto const terminal_encoding = cratchit::choose_terminal_encoding(cratchit::report_terminal_encoding());
   for (auto const& warning : terminal_encoding.warnings) {
     std::println(stderr, "{}", warning);

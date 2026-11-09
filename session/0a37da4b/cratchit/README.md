@@ -172,6 +172,16 @@ The user manual is in Swedish: [docs/anvandarmanual.md](docs/anvandarmanual.md).
 * The manual is copied into the framework at build time and read at start (`core/manual`). The program shows the help text as plain text, without `**`, `*`, backticks and link targets; code blocks show as they are, without their fences.
 * The tests check that the manual has a help text for every topic, and no help text for an unknown topic.
 
+## Trying another day
+
+Some of cratchit depends on today's date, e.g. which fiscal year is the current one (key 0). To try another day, e.g. the turn of a fiscal year, set `CRATCHIT_TODAY`:
+
+```sh
+CRATCHIT_TODAY=2027-05-02 cratchit
+```
+
+cratchit says on stderr which day it takes as today. The tests run on a fixed day (`test/test_today.cpp`).
+
 ## Uninstall
 
 Delete the program file and the framework next to it, e.g. `~/.local/bin/cratchit` and `~/.local/bin/.cratchit/`. To remove your own files and logs as well, delete `~/.cratchit`.

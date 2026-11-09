@@ -22,8 +22,10 @@ struct Exported {
 // Exports the whole fiscal year ("Allt") as an SIE 4E file in the project folder,
 // sie_<year>_allt.se: identification, accounts, dimensions, objects, the balances
 // cratchit calculates and every voucher (see books::export_document). The books,
-// the project's name and orgnr are read now. Error text when they cannot be read,
-// the year is not in the books, or the file cannot be written.
+// the project's name and orgnr are read now. A year not in the books yet (see
+// list_years_until) is exported as an empty year, its opening balances carried
+// from the year before. Error text when they cannot be read, or the file cannot
+// be written.
 std::expected<Exported, std::string> export_all(Project const& project, FiscalYear const& year, std::string_view today);
 
 // The fiscal year compared with an SIE file of the same year (see books::diff_with)

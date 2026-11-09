@@ -174,20 +174,29 @@ En bokföring är bokföringen för en juridisk person, till exempel ett aktiebo
 ### Öppna en bokföring
 
 <!-- hjälp: bokforing -->
-Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Valen är bokföringens räkenskapsår: `0` är det aktuella året och `1`, `2`, `3` de äldre. Tryck ett års siffra för att öppna året. Tryck `-` för att gå tillbaka.
+Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Valen är bokföringens räkenskapsår: `0` är det år som dagens datum ligger i, och `1`, `2`, `3` är åren bakåt. Efter varje år står hur mycket som är bokfört. Tryck ett års siffra för att öppna året. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
 Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen den ligger i:
 
 ```text
 /Users/anna/Documents/Bokföringar/The ITfied AB
-  0 2026/27 (2026-05-01 – 2027-04-30)
-  1 2025/26 (2025-05-01 – 2026-04-30)
-  2 2024/25 (2024-05-01 – 2025-04-30)
+  0 2026/27 (2026-05-01 – 2027-04-30)  bokfört: 37 verifikationer
+  1 2025/26 (2025-05-01 – 2026-04-30)  bokfört: 116 verifikationer
+  2 2024/25 (2024-05-01 – 2025-04-30)  bokfört: 115 verifikationer
 Cratchit > Samlingsmapp > The ITfied AB> 
 ```
 
-Valen är bokföringens räkenskapsår. `0` är det aktuella, det senaste i bokföringen, och `1`, `2`, `3` är åren före det, på samma sätt som i en SIE-fil men utan minustecken. Ett räkenskapsår som följer kalenderåret heter till exempel `2025`, och ett som går över två kalenderår heter till exempel `2025/26`. Har bokföringen fler än tio räkenskapsår visar cratchit de tio senaste och säger att det finns fler.
+Valen är bokföringens räkenskapsår. `0` är det aktuella året, det som dagens datum ligger i, och `1`, `2`, `3` är åren före det, på samma sätt som i en SIE-fil men utan minustecken. Listan går tillbaka till det äldsta året med bokföring. Ett räkenskapsår som följer kalenderåret heter till exempel `2025`, och ett som går över två kalenderår heter till exempel `2025/26`. Har bokföringen fler än tio räkenskapsår visar cratchit de tio senaste och säger att det finns fler.
+
+Räkenskapsåren finns oavsett om något är bokfört i dem. När ett nytt räkenskapsår börjar dyker det upp som `0` med `bokfört: inget`, och de andra åren flyttas ett steg. Du behöver inte skapa det. Varje år efter det första är tolv månader och börjar dagen efter förra årets sista dag. Ett första år som är kortare eller längre följs alltså av helt vanliga år. cratchit hanterar inte ett räkenskapsår som läggs om senare.
+
+```text
+  0 2027/28 (2027-05-01 – 2028-04-30)  bokfört: inget
+  1 2026/27 (2026-05-01 – 2027-04-30)  bokfört: 37 verifikationer
+```
+
+Ett år där inget är bokfört fungerar som de andra: du kan importera till det och exportera det.
 
 ### Räkenskapsår
 
@@ -199,6 +208,7 @@ Tryck räkenskapsårets siffra i bokföringen. Prompten får då årets namn:
 
 ```text
 Räkenskapsår 2025-05-01 – 2026-04-30
+Bokfört: 116 verifikationer
   1 Exportera till SIE
   2 Importera från SIE
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26> 
@@ -433,7 +443,6 @@ Ett nystartat företag kan ha ett första räkenskapsår som är kortare eller l
 ## Kommer senare
 
 * En kontoplan för en ny bokföring från uppgifter. cratchit kommer att erbjuda BAS-kontoplanen.
-* Ett nytt räkenskapsår. cratchit kommer att skapa det automatiskt när dagens datum ligger i ett år som ännu inte finns i bokföringen. Fram till dess kan en bokföring bara få nya räkenskapsår när den skapas.
 * Import av en SIE-fil som tar bort eller byter ut verifikationer som redan finns i bokföringen, eller ändrar deras datum eller text.
 
 ## Ordlista

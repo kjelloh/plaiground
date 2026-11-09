@@ -1,8 +1,11 @@
 #include "core/fiscal_year.hpp"
 
+#include "core/books/books.hpp"
+#include "core/date.hpp"
 #include "core/path_value.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <format>
 #include <system_error>
 
@@ -41,6 +44,43 @@ std::expected<std::vector<FiscalYear>, std::string> list_fiscal_years(Project co
     result.push_back(std::move(year));
   }
   std::ranges::sort(result, std::ranges::greater{}, &FiscalYear::start);
+  return result;
+}
+
+FiscalYear year_after(FiscalYear const& year) {
+  using namespace std::chrono;
+  auto const end = *parse_iso_date(year.end);
+  auto const start = next_day(end);
+  auto const last_month = year_month(start.year(), start.month()) + months(11);
+  return {format_iso_date(start), format_iso_date(year_month_day(last_month / last))};
+}
+
+std::expected<std::vector<ListedYear>, std::string> list_years_until(Project const& project, std::string_view today) {
+  auto booked = list_fiscal_years(project); // the latest first
+  if (!booked) return std::unexpected(booked.error());
+  if (booked->empty()) return std::vector<ListedYear>{};
+  auto const books = books::read_books(project.folder);
+  if (!books) return std::unexpected(books.error());
+  auto const vouchers_in = [&books](FiscalYear const& year) -> std::size_t {
+    auto const start = parse_iso_date(year.start);
+    auto const* found = start ? books->year_starting(*start) : nullptr;
+    return found != nullptr ? found->vouchers.size() : 0;
+  };
+  // From the oldest in the books, each next one from the books when it is there, else twelve months on
+  std::vector<FiscalYear> ascending(booked->rbegin(), booked->rend());
+  std::vector<ListedYear> result;
+  auto current = ascending.front();
+  std::size_t next_booked = 1;
+  for (;;) {
+    bool const in_books = std::ranges::find(ascending, current) != ascending.end();
+    result.push_back({current, in_books, vouchers_in(current)});
+    bool const more_booked = next_booked < ascending.size();
+    if (!more_booked && current.end >= today) break;
+    auto next = year_after(current);
+    if (more_booked && ascending[next_booked].start <= next.end) next = ascending[next_booked++];
+    current = next;
+  }
+  std::ranges::reverse(result);
   return result;
 }
 

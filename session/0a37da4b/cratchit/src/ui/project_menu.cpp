@@ -22,6 +22,12 @@ using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
 using pyroceph::tui::View;
 
+// "inget", "1 verifikation" or "37 verifikationer"
+std::string booked_text(std::size_t vouchers) {
+  if (vouchers == 0) return "inget";
+  return std::format("{} {}", vouchers, vouchers == 1 ? "verifikation" : "verifikationer");
+}
+
 class ProjectState : public State {
 public:
   explicit ProjectState(Project project) : project_(std::move(project)) { read_years(); }
@@ -38,28 +44,33 @@ public:
     return lines;
   }
   OptionsList options() const override {
+    std::size_t width = 0; // of the labels, so that the periods line up
+    for (std::size_t i = 0; i < listed(); ++i) width = std::max(width, label_of(years_[i].year).size());
     OptionsList result;
     for (std::size_t i = 0; i < listed(); ++i) {
-      result.push_back({key_of(i), std::format("{} ({} – {})", label_of(years_[i]), years_[i].start, years_[i].end)});
+      auto const& [year, in_books, vouchers] = years_[i];
+      auto label = label_of(year);
+      label.append(width - label.size(), ' ');
+      result.push_back({key_of(i), std::format("{} ({} – {})  bokfört: {}", label, year.start, year.end, booked_text(vouchers))});
     }
     return result;
   }
   OnKeyResult on_key(CodePoint key) override {
     for (std::size_t i = 0; i < listed(); ++i) {
-      if (key == key_of(i)) return make_fiscal_year_menu(project_, years_[i]);
+      if (key == key_of(i)) return make_fiscal_year_menu(project_, years_[i].year);
     }
     return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::project); }
 
-  // The fiscal years may have changed on the way back here: read them again
+  // The fiscal years may have changed on the way back here (an import, or a new day): read them again
   void on_return() override { read_years(); }
 
 private:
   void read_years() {
     years_.clear();
     error_.clear();
-    auto years = list_fiscal_years(project_);
+    auto years = list_years_until(project_, today_iso());
     if (years) {
       years_ = std::move(*years);
     } else {
@@ -72,7 +83,7 @@ private:
   static CodePoint key_of(std::size_t index) { return static_cast<CodePoint>(U'0' + index); }
 
   Project project_;
-  std::vector<FiscalYear> years_; // the latest first, as key 0
+  std::vector<ListedYear> years_; // the latest first, the current year as key 0
   std::string error_;             // why the fiscal years could not be read, or empty
 };
 

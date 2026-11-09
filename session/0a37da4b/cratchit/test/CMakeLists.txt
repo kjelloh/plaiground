@@ -32,6 +32,7 @@ add_executable(cratchit_tests
   test_prompt_loop.cpp
   test_state.cpp
   test_terminal_encoding.cpp
+  test_today.cpp
   test_transcoder.cpp
   test_ui.cpp
   test_utf16.cpp

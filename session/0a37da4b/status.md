@@ -73,6 +73,7 @@
 * Steg 63: SIE-importen tar emot ändrade verifikationer med strukna och tillagda rader, men vägrar ändrat datum eller ändrad text. `Bekräfta` listar dem tio i taget med `2 Mer…` (`State::on_key_in_place` i `pyroceph`), och de loggas vid importen. Manualen uppdaterad. 426 tester. Provkört med pipe på macOS.
 * Steg 64: En bokföring som skapas från SIE får sin SIE-fil i `importerade_sie_filer`, som vid import. En ny bokföring kan inte längre skapas från en SIE-fil som ligger någonstans inne i en annan bokförings mapp. Manualen uppdaterad. 427 tester. Provkört med pipe på macOS.
 * Steg 65: `Importera från SIE` flyttad från bokföringen till räkenskapsåret (`2`), och filen måste gälla det året. `+` i bokföringen borttaget, så nya räkenskapsår kan för närvarande inte läggas till. Manualen uppdaterad. 428 tester.
+* Steg 66: Räkenskapsåren räknas fram från bokföringen fram till dagens datum (`list_years_until`): `0` är alltid det aktuella året, ett nytt år syns av sig självt och skrivs först när något görs i det. Varje år visar `bokfört: inget` eller `bokfört: N verifikationer`. `CRATCHIT_TODAY` sätter dagens datum för att prova; testerna kör på 2026-11-09. Manualen och README uppdaterade. 438 tester. Provkört med pipe på macOS mot en kopia av The ITfied AB, med och utan `CRATCHIT_TODAY=2027-05-02`.
 
 ## Bygg, kör och installera
 
@@ -93,7 +94,6 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 * Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden. De ska stå under *Kommer senare* i manualen.
 * Varje steg som ändrar det användaren ser uppdaterar `cratchit/docs/anvandarmanual.md`.
-* Minnesanteckning, att återkomma till: cratchit ska skapa ett nytt räkenskapsår automatiskt när dagens datum ligger i ett år som ännu inte finns i bokföringen (se beslut steg 65). Till dess kan en befintlig bokföring inte få nya år.
 * Notering, att återkomma till: kanske "forcerad import", "skriv över" eller liknande för SIE-importer som tar bort eller byter ut befintliga verifikationer, eller ändrar deras datum eller text (se beslut steg 62 och 63).
 * Notering: en BAS-kontoplan ska läggas i framework, och cratchit ska erbjuda den när en ny bokföring skapas från uppgifter (se beslut steg 54).
 * Bestäms av användaren. Troliga steg: prova `Befintlig` i en riktig terminal (särskilt Backspace över radbrytning). Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.
