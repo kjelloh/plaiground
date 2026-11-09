@@ -1,4 +1,7 @@
 #include "core/path_value.hpp"
+#include "core/sie/document.hpp"
+#include "core/sie/file.hpp"
+#include "core/sie_project.hpp"
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/add_project_menu.hpp"
@@ -271,7 +274,7 @@ TEST_F(RootMenuTest, ProjectOffersItsFiscalYearsTheCurrentAsZero) {
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2024/25");
   EXPECT_EQ(navigator.current().view(), (View{"Räkenskapsår 2024-05-01 – 2025-04-30"}));
-  EXPECT_TRUE(navigator.current().options().empty());
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Exportera till SIE"}}));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
 }
@@ -561,4 +564,75 @@ TEST_F(RootMenuTest, WorkspaceShowsItsProjectsInColumnsReadFromEachProject) {
   // Read anew: a project renamed in its own file shows so at once
   std::ofstream(folder / "Exempel AB" / ".cratchit" / "project.txt") << "uuid = 1\nname = Annat namn AB\norgnr = 556677-8899\n";
   EXPECT_TRUE(state->options()[0].second.starts_with("Annat namn AB")) << state->options()[0].second;
+}
+
+TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
+  auto const folder = documents / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-09"));
+  auto const sie = [](std::string const& vouchers) {
+    return "#FLAGGA 0\r\n#SIETYP 4\r\n#PROGRAM \"Annat\" 2.0\r\n#GEN 20251015\r\n#FNAMN \"Test AB\"\r\n"
+           "#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n" +
+           vouchers;
+  };
+  auto const sale = [](int number, std::string const& date) {
+    return std::format("#VER A {} {} \"Sale\"\r\n{{\r\n#TRANS 1930 {{}} {}.00\r\n#TRANS 3010 {{}} -{}.00\r\n}}\r\n",
+                       number, date, 100 * number, 100 * number);
+  };
+  std::ofstream(folder / "full.se", std::ios::binary) << sie(sale(1, "20250201") + sale(2, "20250301"));
+  auto plan = cratchit::plan_project_from_sie(folder / "full.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_project_menu(*project));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Exportera till SIE");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Allt"}, {U'2', "Skillnad"}}));
+  // Allt: written in the project folder, back in the year, which says so
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "2025");
+  EXPECT_TRUE(fs::exists(project->folder / "sie_2025_allt.se"));
+  ASSERT_EQ(navigator.current().view().size(), 2u);
+  EXPECT_TRUE(navigator.current().view()[1].starts_with("cratchit skrev sie_2025_allt.se i ")) << navigator.current().view()[1];
+  // Again: never overwritten
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_TRUE(fs::exists(project->folder / "sie_2025_allt_2.se"));
+  // The written file reads as SIE with the year's vouchers
+  auto const written = cratchit::sie::lex_file(project->folder / "sie_2025_allt.se");
+  ASSERT_TRUE(written);
+  EXPECT_EQ(cratchit::sie::parse_document(written->lines).document.vouchers.size(), 2u);
+  // Skillnad against a file that lacks the second sale
+  std::ofstream(project->folder / "older.se", std::ios::binary) << sie(sale(1, "20250201"));
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Skillnad");
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(project->folder));
+  auto refused = navigator.current().on_input(pyroceph::tui::path_input_of(project->folder) + U"gone.se");
+  EXPECT_FALSE(refused);
+  auto compared = navigator.current().on_input(pyroceph::tui::path_input_of(project->folder) + U"older.se");
+  ASSERT_TRUE(compared) << compared.error();
+  navigator.enter(std::move(compared->next));
+  EXPECT_EQ(navigator.current().name(), "older.se");
+  EXPECT_EQ(navigator.current().view()[0], "Jämfört med older.se (Annat 2.0, skapad 2025-10-15):");
+  EXPECT_EQ(navigator.current().view()[1], "Filen skapades 2025-10-15. Är det den senaste exporten från programmet?");
+  EXPECT_EQ(navigator.current().view()[2], "  I cratchit, inte i filen (1):");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Skriv skillnaden till en SIE-fil"}}));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "2025");
+  EXPECT_TRUE(fs::exists(project->folder / "sie_2025_skillnad.se"));
+  auto const difference = cratchit::sie::lex_file(project->folder / "sie_2025_skillnad.se");
+  ASSERT_TRUE(difference);
+  auto const document = cratchit::sie::parse_document(difference->lines).document;
+  ASSERT_EQ(document.vouchers.size(), 1u);
+  EXPECT_EQ(document.vouchers[0].number, "2");
+  EXPECT_TRUE(document.opening.empty()); // no balances
+  // Against a file with every voucher: nothing to write
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  auto same = navigator.current().on_input(pyroceph::tui::path_input_of(project->folder) + U"full.se");
+  ASSERT_TRUE(same) << same.error();
+  navigator.enter(std::move(same->next));
+  EXPECT_TRUE(navigator.current().options().empty());
+  EXPECT_EQ(navigator.current().view().back(), "Alla verifikationer i cratchit finns redan i SIE-filen. Det finns inget att exportera.");
 }

@@ -192,15 +192,69 @@ Valen är bokföringens räkenskapsår. `0` är det aktuella, det senaste i bokf
 ### Räkenskapsår
 
 <!-- hjälp: rakenskapsar -->
-Du har öppnat ett räkenskapsår i bokföringen. Ovanför prompten står vilken period det gäller. Än så länge finns det inga val här. Tryck `-` för att gå tillbaka till bokföringen.
+Du har öppnat ett räkenskapsår i bokföringen. Ovanför prompten står vilken period det gäller. Tryck `1` för att exportera året till en SIE-fil. Tryck `-` för att gå tillbaka till bokföringen.
 <!-- /hjälp -->
 
 Tryck räkenskapsårets siffra i bokföringen. Prompten får då årets namn:
 
 ```text
 Räkenskapsår 2025-05-01 – 2026-04-30
+  1 Exportera till SIE
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26> 
 ```
+
+### Exportera till SIE
+
+<!-- hjälp: exportera-sie -->
+Tryck `1` *Allt* för att skriva hela räkenskapsåret, med balanser och alla verifikationer, till en SIE-fil. Tryck `2` *Skillnad* för att jämföra året med en SIE-fil från ett annat program och skriva bara de verifikationer som filen saknar. Filen hamnar i bokföringens mapp.
+<!-- /hjälp -->
+
+Med en SIE-fil kan du lämna över ett räkenskapsår till ett annat bokföringsprogram. Tryck `1` (*Exportera till SIE*) i räkenskapsåret. Där finns två val:
+
+* `1` *Allt*: hela räkenskapsåret, med kontoplan, ingående och utgående balanser, resultat och alla verifikationer. Filen heter till exempel `sie_2025-26_allt.se`.
+* `2` *Skillnad*: bara de verifikationer som finns i cratchit men inte i en SIE-fil som du väljer, utan balanser. Filen heter till exempel `sie_2025-26_skillnad.se`.
+
+Filen hamnar i bokföringens mapp, och cratchit skriver aldrig över en tidigare export: finns filen redan får den nya filen ett nummer, till exempel `sie_2025-26_allt_2.se`. När filen är skriven går cratchit tillbaka till räkenskapsåret och säger vad som skrevs:
+
+```text
+Räkenskapsår 2025-05-01 – 2026-04-30
+cratchit skrev sie_2025-26_allt.se i /Users/anna/Documents/cratchit/The ITfied AB: 115 verifikationer och balanser.
+  1 Exportera till SIE
+Cratchit > Samlingsmapp > The ITfied AB > 2025/26> 
+```
+
+<!-- hjälp: skillnad-sie -->
+Skriv sökvägen till SIE-filen att jämföra med och tryck Enter. Filen ska vara en export som du just har gjort från programmet du ska föra över till, till exempel Fortnox, så att den visar hur bokföringen ser ut där nu. Är filen äldre kan verifikationer som redan finns i programmet komma med igen, och då läggs de till en gång till. Sökvägen börjar i bokföringens mapp, och Tab fyller i mappar och SIE-filer.
+<!-- /hjälp -->
+
+*Skillnad* är till för när du bokför i cratchit och vill föra över det nya till ett annat program. Exportera först året från det andra programmet till en SIE-fil, och välj sedan den filen här. cratchit jämför verifikationerna efter datum och konton och belopp, inte efter nummer.
+
+**Jämför alltid med en färsk export.** Skillnaden räknas mot SIE-filen du väljer, inte mot programmet självt. Den blir därför bara rätt om filen visar hur bokföringen i programmet ser ut just nu. Gör så här varje gång:
+
+1. Exportera räkenskapsåret från programmet du ska föra över till.
+2. Välj den filen i *Skillnad* och skriv skillnaden.
+3. Läs in skillnadsfilen i programmet.
+
+Nästa gång börjar du om från steg 1. Den gamla exporten saknar ju det du just läste in, så en jämförelse med den skulle skriva samma verifikationer igen. Är filen inte skapad i dag, eller saknar den datum, frågar cratchit i jämförelsen om det är den senaste exporten:
+
+```text
+Jämfört med TheITfiedAB.se (Fortnox 3.0, skapad 2026-10-19):
+Filen skapades 2026-10-19. Är det den senaste exporten från programmet?
+  I cratchit, inte i filen (2):
+    A 116   2026-04-28       1250.00  Loopia
+    A 117   2026-04-30        310.00  Bankavgift
+  I filen, inte i cratchit (0):
+  1 Skriv skillnaden till en SIE-fil
+Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Exportera till SIE > Skillnad > TheITfiedAB.se> 
+```
+
+<!-- hjälp: jamforelse-sie -->
+Ovanför prompten står vilka verifikationer som bara finns i cratchit och vilka som bara finns i SIE-filen. Tryck `1` för att skriva de verifikationer som bara finns i cratchit till en SIE-fil. Har filen verifikationer som inte finns i cratchit, eller som ser annorlunda ut i cratchit, skriver cratchit ingen fil. Tryck `-` för att gå tillbaka.
+<!-- /hjälp -->
+
+Ska du föra över till Fortnox eller ett liknande program, använd *Skillnad* och inte *Allt*. Program som Fortnox lägger till alla verifikationer i filen, med nya nummer i samma serie, men kan inte ändra eller ta bort de verifikationer som redan finns. En fil med hela året skulle därför dubblera verifikationerna i programmet. Exportera först året från programmet, och jämför med den filen.
+
+Har SIE-filen verifikationer som inte finns i cratchit, eller som ser annorlunda ut i cratchit, skriver cratchit ingen fil. Program som Fortnox kan bara lägga till verifikationer, så de måste stämma först: gör ändringen i programmet, eller ta in den i cratchit. Finns alla verifikationer redan i filen säger cratchit att det inte finns något att exportera.
 
 ### Lägg till
 

@@ -31,6 +31,26 @@ I now decided to start a little list of things I 'miss' in the app while I test 
     * Can we make it open in it correct path (same as for opening remembered projects)
     * For now I believe the will open in the 'add -> existing -> project'?
     * Or maybe that is ok the first time?
+* Consider to be able to lock the books to an SIE-file?
+    * This would help to interact with Fortnox
+    * Fortnox treats import SIE as 'create new vouchers' for each voucher in SIE file
+    * It kind-of does an 'append' or 'extend with' operation.
+    * It even renumbers vouchers (It preservers series but NOT numbers!)
+    * It NEVER replace, mutates or removes its own vouchers!
+    * So we can't export an SIE file to fortnox and have it remove or mutate vouchers it already have.
+    * Thus, locking cratchit books to SIE file from Fortnox prevents us from mutating vouchers already in Fortnox
+* Consider Export SIE as implemented in take 3
+    * Export full SEI
+    * Export diff to SIE
+    * We may enhance the 'diff' to ensure only 'extended' (disjunct set) is allowed
+    * Such 'diff = disjunct' allows secure export to Fortnox that imports as 'append as new'
+
+I think I want to also create a list with things I like about what is in the app.
+
+* I like how we can make the path to a state read like a sentence!
+
+    * E.g., ``` Cratchit > … > 2025/26 > Exportera SIE > Allt ```
+    * E.g., ``` Cratchit > … > 2025/26 > Exportera SIE > Skillnad >> fortnox_export_20261109.se> ```
 
 
 ## 20261108

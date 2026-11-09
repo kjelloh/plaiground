@@ -55,6 +55,7 @@ add_library(cratchit_core
   src/core/amount.cpp
   src/core/bas.cpp
   src/core/books/books.cpp
+  src/core/books/export.cpp
   src/core/books/import.cpp
   src/core/csv.cpp
   src/core/date.cpp
@@ -69,11 +70,15 @@ add_library(cratchit_core
   src/core/sie/document.cpp
   src/core/sie/file.cpp
   src/core/sie/lexer.cpp
+  src/core/sie/writer.cpp
+  src/core/sie_export.cpp
   src/core/sie_project.cpp
   src/core/terminal_encoding.cpp
+  src/core/version.cpp
 )
 target_include_directories(cratchit_core PUBLIC src)
 target_link_libraries(cratchit_core PUBLIC charset PRIVATE cratchit_warnings)
+target_compile_definitions(cratchit_core PRIVATE CRATCHIT_VERSION="${PROJECT_VERSION}")
 if(WIN32)
   # SHGetKnownFolderPath and CoTaskMemFree, for the Documents folder
   target_link_libraries(cratchit_core PRIVATE shell32 ole32)

@@ -8,6 +8,7 @@ add_executable(cratchit_tests
   test_import.cpp
   test_sie_check.cpp
   test_sie_document.cpp
+  test_sie_export.cpp
   test_sie_file.cpp
   test_sie_lexer.cpp
   test_sie_project.cpp
