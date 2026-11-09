@@ -178,7 +178,10 @@ struct Written {
 // The folder holding the books: <project folder>/.cratchit/books
 std::filesystem::path books_folder(std::filesystem::path const& project_folder);
 
-// Reads the books of a project. No books folder gives empty books.
+// Reads the books of a project. No books folder gives empty books. Missing
+// accounts.csv, dimensions.csv or objects.csv are empty, and so is a year
+// without a folder of its own (as in books made from details); a file missing
+// in a year's folder is an error.
 // Error text names the file that is missing or malformed.
 std::expected<Books, std::string> read_books(std::filesystem::path const& project_folder);
 

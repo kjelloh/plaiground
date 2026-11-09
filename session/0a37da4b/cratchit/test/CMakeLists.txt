@@ -15,6 +15,7 @@ add_executable(cratchit_tests
   test_decoder.cpp
   test_design_insufficiency.cpp
   test_detect.cpp
+  test_details_project.cpp
   test_error_state.cpp
   test_fiscal_year.cpp
   test_dot_folder.cpp

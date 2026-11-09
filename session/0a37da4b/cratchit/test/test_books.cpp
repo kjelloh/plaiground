@@ -314,3 +314,13 @@ TEST_F(BooksFiles, WaitingEventPostingsAreKeptOnlyWhileThereAreAny) {
   ASSERT_FALSE(bad.has_value());
   EXPECT_NE(bad.error().find("event 3 is not in events.csv"), std::string::npos) << bad.error();
 }
+
+TEST_F(BooksFiles, BooksOfOnlyAYearAreRead) {
+  fs::create_directories(root / ".cratchit" / "books");
+  std::ofstream(root / ".cratchit" / "books" / "books.txt") << "year.2026-01-01 = 2026-12-31\n";
+  auto const books = cratchit::books::read_books(root);
+  ASSERT_TRUE(books.has_value()) << books.error();
+  EXPECT_TRUE(books->accounts.empty());
+  ASSERT_EQ(books->years.size(), 1u);
+  EXPECT_TRUE(books->years[0].vouchers.empty());
+}

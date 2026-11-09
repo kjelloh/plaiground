@@ -61,6 +61,7 @@
 * Steg 51: `Öppna befintlig` börjar i samlingsmappen (`make_add_project_menu(workspace, workspace.folder)`). Manualen uppdaterad. 257 tester. Provkört med pipe på macOS.
 * Steg 52: `Ny bokföring > Från SIE` skapar en bokföring från en SIE-fil (`core/sie_project`, `ui/sie_project_menu`): plan i `Bekräfta`, sedan mapp med företagets namn bredvid filen, hela filen importerad i 'take 3':s format, och SIE-filen flyttad dit. SIE-läsaren och bokföringen flyttade från 'take 3' med tester. Manualen och README uppdaterade. 380 tester. Provkört med pipe på macOS mot en kopia av The ITfied AB:s SIE-fil för 2024/25 (115 verifikationer, samma `vouchers.csv` och `postings.csv` som 'take 3').
 * Steg 53: Efter `Bekräfta > 1` går cratchit tillbaka till samlingsmappen, som listar den nya bokföringen (`State::back_to`, `Navigator::follow_back_to` i `pyroceph`). Manualen uppdaterad. 382 tester. Provkört med pipe på macOS.
+* Steg 54: `Ny bokföring > Från uppgifter` skapar en bokföring i samlingsmappen från namn, organisationsnummer (Luhn) och första räkenskapsår, steg för steg (`core/details_project`, `ui/details_project_menu`). Bara `project.txt` och `books.txt` skapas; `read_books` läser saknade tabeller och årsmappar som tomma. Ingen kontoplan än. Manualen och README uppdaterade. 392 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 
@@ -81,4 +82,5 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 * Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden. De ska stå under *Kommer senare* i manualen.
 * Varje steg som ändrar det användaren ser uppdaterar `cratchit/docs/anvandarmanual.md`.
+* Notering: en BAS-kontoplan ska läggas i framework, och cratchit ska erbjuda den när en ny bokföring skapas från uppgifter (se beslut steg 54).
 * Bestäms av användaren. Troliga steg: prova `Öppna befintlig` i en riktig terminal (särskilt Backspace över radbrytning), fylla `Ny bokföring`. Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.

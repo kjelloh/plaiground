@@ -1,6 +1,7 @@
 #include "core/path_value.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/add_project_menu.hpp"
+#include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/project_menu.hpp"
 #include "ui/root_menu.hpp"
@@ -331,15 +332,6 @@ TEST(AddProjectMenu, NewOffersFromSieAndFromDetails) {
   EXPECT_EQ(navigator.current().name(), "Lägg till");
 }
 
-TEST(AddProjectMenu, FromDetailsIsNotThereYet) {
-  Navigator navigator(cratchit::ui::make_add_project_menu(workspace_at("/x/cratchit"), "/x"));
-  ASSERT_TRUE(navigator.press(U'2'));
-  ASSERT_TRUE(navigator.press(U'2'));
-  EXPECT_EQ(navigator.current().name(), "Inte än (Från uppgifter)");
-  ASSERT_EQ(navigator.current().view().size(), 1u);
-  EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att skapa en ny bokföring från "));
-}
-
 TEST(AddProjectMenu, FromSieStartsInTheStartFolder) {
   Navigator navigator(cratchit::ui::make_add_project_menu(workspace_at("/x/cratchit"), "/x/cratchit"));
   ASSERT_TRUE(navigator.press(U'2'));
@@ -383,7 +375,19 @@ TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
   EXPECT_EQ(navigator.current().help_topic(), topic::from_sie);
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'2'));
-  EXPECT_EQ(navigator.current().help_topic(), topic::design_insufficiency);
+  EXPECT_EQ(navigator.current().help_topic(), topic::from_details);
+  auto next = [&navigator](std::u32string_view text) {
+    auto result = navigator.current().on_input(text);
+    ASSERT_TRUE(result) << result.error();
+    navigator.enter(std::move(result->next));
+  };
+  next(U"Exempel AB");
+  EXPECT_EQ(navigator.current().help_topic(), topic::details_orgnr);
+  next(U"556677-8899");
+  EXPECT_EQ(navigator.current().help_topic(), topic::details_year);
+  next(U"2026-01-01 2026-12-31");
+  EXPECT_EQ(navigator.current().help_topic(), topic::confirm_details_project);
+  EXPECT_EQ(cratchit::ui::make_design_insufficiency_state("Val", "något")->help_topic(), topic::design_insufficiency);
 }
 
 TEST(WorkspaceMenu, OpenExistingStartsInTheWorkspace) {
@@ -424,4 +428,51 @@ TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Test AB");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2025 (2025-01-01 – 2025-12-31)"}}));
+}
+
+TEST_F(RootMenuTest, FromDetailsCreatesTheProjectAndTheWorkspaceRemembersIt) {
+  auto const folder = documents / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-09"));
+  Navigator navigator(cratchit::ui::make_root_menu(folder));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'+'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Från uppgifter");
+  EXPECT_TRUE(navigator.current().start_input().empty());
+  // Each step refuses what it cannot take, and leads on with what it can
+  EXPECT_FALSE(navigator.current().on_input(U"A/B"));
+  auto name = navigator.current().on_input(U"Exempel AB");
+  ASSERT_TRUE(name) << name.error();
+  navigator.enter(std::move(name->next));
+  EXPECT_EQ(navigator.current().name(), "Exempel AB");
+  EXPECT_FALSE(navigator.current().on_input(U"556677-8898")); // wrong check digit
+  auto orgnr = navigator.current().on_input(U"5566778899");
+  ASSERT_TRUE(orgnr) << orgnr.error();
+  navigator.enter(std::move(orgnr->next));
+  EXPECT_EQ(navigator.current().name(), "556677-8899");
+  EXPECT_TRUE(navigator.current().start_input().ends_with(U"-01-01 " + navigator.current().start_input().substr(0, 4) + U"-12-31"));
+  auto year = navigator.current().on_input(U"2026-05-01 2027-04-30");
+  ASSERT_TRUE(year) << year.error();
+  navigator.enter(std::move(year->next));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  EXPECT_FALSE(fs::exists(folder / "Exempel AB")); // nothing created before 1
+  // Back to the name: what was given is offered again
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().start_input(), U"5566778899");
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().start_input(), U"Exempel AB");
+  // On to Bekräfta again, and create
+  for (auto const text : {U"Exempel AB", U"556677-8899", U"2026-05-01 2027-04-30"}) {
+    auto result = navigator.current().on_input(text);
+    ASSERT_TRUE(result) << result.error();
+    navigator.enter(std::move(result->next));
+  }
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Exempel AB"}, {U'+', "Lägg till bokföring"}}));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Exempel AB");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2026/27 (2026-05-01 – 2027-04-30)"}}));
 }

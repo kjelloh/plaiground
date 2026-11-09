@@ -114,14 +114,14 @@ Kan cratchit inte göra det du valde hamnar du alltså på platsen *Fel*.
 Valet du gjorde finns i menyn men cratchit kan inte utföra det än. Vad som saknas står ovanför prompten. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
-Några val finns i menyerna innan cratchit kan utföra dem. De leder till platsen *Inte än*, som säger vad som saknas:
+Ett val kan finnas i menyn innan cratchit kan utföra det. Det leder då till platsen *Inte än*, som säger vad som saknas, till exempel:
 
 ```text
-Utvecklaren av cratchit har inte infört att skapa en ny bokföring från en SIE-fil ännu.
-Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Inte än (Från SIE)> 
+Utvecklaren av cratchit har inte infört att … ännu.
+Cratchit > … > Inte än (<valet>)> 
 ```
 
-Tryck `-` för att gå tillbaka.
+Tryck `-` för att gå tillbaka. Just nu finns inga sådana val.
 
 ## Samlingsmappen
 
@@ -216,13 +216,13 @@ Allt som hör till en bokföring ligger i dess mapp. Flytta eller kopiera mappen
 ### Ny bokföring
 
 <!-- hjälp: ny-bokforing -->
-Välj hur den nya bokföringen ska skapas: `1` från en SIE-fil eller `2` från namn, organisationsnummer och räkenskapsår. Att skapa från uppgifter finns inte än.
+Välj hur den nya bokföringen ska skapas: `1` från en SIE-fil eller `2` från namn, organisationsnummer och räkenskapsår.
 <!-- /hjälp -->
 
 Tryck `+` och sedan `2` (*Ny bokföring*). Där finns två val:
 
 * `1` *Från SIE*: skapa bokföringen från en SIE-fil (se nedan).
-* `2` *Från uppgifter*: skapa bokföringen från namn, organisationsnummer och räkenskapsår. Det finns inte än och leder till [Inte än](#inte-än).
+* `2` *Från uppgifter*: skapa bokföringen från namn, organisationsnummer och räkenskapsår (se [Ny bokföring från uppgifter](#ny-bokföring-från-uppgifter)).
 
 ### Ny bokföring från en SIE-fil
 
@@ -256,11 +256,55 @@ cratchit skapar en ny mapp med företagets namn bredvid SIE-filen, tar in hela f
 
 cratchit skapar ingenting om filen inte går att använda, till exempel om den inte är en SIE-fil, har fel eller saknar företagets namn eller räkenskapsår. Det gäller också om det redan finns en mapp med företagets namn bredvid filen. Orsaken står då under prompten, och sökvägen står kvar så att du kan rätta den.
 
+### Ny bokföring från uppgifter
+
+<!-- hjälp: fran-uppgifter -->
+Skriv företagets namn och tryck Enter. Bokföringen får en mapp med det namnet i samlingsmappen. Sedan frågar cratchit efter organisationsnummer och räkenskapsår.
+<!-- /hjälp -->
+
+Har du ingen SIE-fil skapar du bokföringen från uppgifter om företaget:
+
+1. Tryck `+`, `2` (*Ny bokföring*) och `2` (*Från uppgifter*).
+2. Skriv företagets namn och tryck Enter.
+3. Skriv organisationsnumret och tryck Enter.
+4. Skriv första och sista dagen i det första räkenskapsåret och tryck Enter.
+5. Tryck `1` (*Skapa bokföringen*).
+
+```text
+Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter: Exempel AB
+Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter > Exempel AB: 556677-8899
+Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter > Exempel AB > 556677-8899: 2026-01-01 2026-12-31
+Företag: Exempel AB (556677-8899)
+Räkenskapsår: 2026-01-01 – 2026-12-31
+cratchit skapar bokföringen i /Users/anna/Documents/cratchit/Exempel AB.
+Bokföringen får ingen kontoplan än.
+  1 Skapa bokföringen
+Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter > Exempel AB > 556677-8899 > Bekräfta> 
+```
+
+Prompten visar det du har skrivit hittills. Går det inte att använda det du skrev visar cratchit varför, och texten står kvar så att du kan rätta den. Trycker du `-` innan du har ändrat raden kommer du tillbaka till förra uppgiften, där det du skrev står kvar.
+
+<!-- hjälp: uppgifter-orgnr -->
+Skriv företagets organisationsnummer och tryck Enter, med eller utan bindestreck, till exempel 556677-8899. cratchit kontrollerar att kontrollsiffran stämmer.
+<!-- /hjälp -->
+
+Organisationsnumret måste anges.
+
+<!-- hjälp: uppgifter-rakenskapsar -->
+Skriv första och sista dagen i det första räkenskapsåret, till exempel 2026-01-01 2026-12-31, och tryck Enter. Innevarande kalenderår står redan på raden. Räkenskapsåret ska börja den första dagen i en månad, sluta den sista dagen i en månad och vara högst 18 månader.
+<!-- /hjälp -->
+
+Ett första räkenskapsår får vara kortare eller längre än tolv månader, men högst 18 månader.
+
+<!-- hjälp: bekrafta-uppgifter -->
+Ovanför prompten står uppgifterna och var bokföringen skapas. Tryck `1` för att skapa bokföringen. cratchit går då tillbaka till samlingsmappen, där bokföringen finns i listan. Tryck `-` för att gå tillbaka och ändra något.
+<!-- /hjälp -->
+
+Bokföringen får än så länge ingen kontoplan (se [Kommer senare](#kommer-senare)).
+
 ## Kommer senare
 
-Det här finns som val men leder till [Inte än](#inte-än):
-
-* Skapa en ny bokföring från namn, organisationsnummer och räkenskapsår.
+* En kontoplan för en ny bokföring från uppgifter. cratchit kommer att erbjuda BAS-kontoplanen.
 
 ## Ordlista
 
@@ -270,5 +314,7 @@ Det här finns som val men leder till [Inte än](#inte-än):
 | samlingsmapp | Där cratchit håller reda på dina bokföringar |
 | sökväg | Var en mapp ligger på datorn, till exempel `/Users/anna/Documents` |
 | prompt | Raden där cratchit väntar på din tangent eller text |
+| organisationsnummer | Företagets nummer hos Bolagsverket, tio siffror, till exempel 556677-8899 |
+| kontoplan | Listan över bokföringens konton, till exempel BAS-kontoplanen |
 | SIE-fil | En fil med bokföring i ett standardformat, som bokföringsprogram använder för att lämna över bokföring till varandra |
 | räkenskapsår | Den period, oftast tolv månader, som bokföringen räknas och avslutas för |

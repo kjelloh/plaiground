@@ -58,6 +58,7 @@ add_library(cratchit_core
   src/core/books/import.cpp
   src/core/csv.cpp
   src/core/date.cpp
+  src/core/details_project.cpp
   src/core/dot_folder.cpp
   src/core/fiscal_year.cpp
   src/core/log.cpp
@@ -96,6 +97,7 @@ target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${dev
 add_library(cratchit_ui
   src/ui/add_project_menu.cpp
   src/ui/design_insufficiency.cpp
+  src/ui/details_project_menu.cpp
   src/ui/fiscal_year_menu.cpp
   src/ui/project_menu.cpp
   src/ui/root_menu.cpp

@@ -4,7 +4,7 @@
 #include "core/log.hpp"
 #include "core/project.hpp"
 #include "pyroceph/tui/path_completion.hpp"
-#include "ui/design_insufficiency.hpp"
+#include "ui/details_project_menu.hpp"
 #include "ui/project_menu.hpp"
 #include "ui/sie_project_menu.hpp"
 
@@ -32,7 +32,7 @@ constexpr char const* from_sie_caption = "Från SIE";
 constexpr char const* from_details_caption = "Från uppgifter";
 
 // Creates a new project, from an SIE file or from the details the user enters
-// (name, organisation number and fiscal year). The latter is not there yet.
+// (name, organisation number and fiscal year).
 class NewProjectState : public State {
 public:
   NewProjectState(Workspace workspace, std::filesystem::path start_folder, State const* origin)
@@ -42,10 +42,7 @@ public:
   OptionsList options() const override { return {{U'1', from_sie_caption}, {U'2', from_details_caption}}; }
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'1') return make_project_from_sie(workspace_, start_folder_, origin_);
-    if (key == U'2') {
-      return make_design_insufficiency_state(
-          from_details_caption, "att skapa en ny bokföring från namn, organisationsnummer och räkenskapsår");
-    }
+    if (key == U'2') return make_project_from_details(workspace_, origin_);
     return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::new_project); }

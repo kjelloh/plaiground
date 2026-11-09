@@ -150,6 +150,16 @@ std::expected<std::optional<Date>, std::string> optional_date_field(fs::path con
   return std::optional<Date>{*date};
 }
 
+// As read_table, but a missing file is an empty table: books made from
+// details have no chart of accounts, dimensions or objects yet
+std::expected<std::vector<CsvRow>, std::string> read_optional_table(fs::path const& file, CsvRow const& header) {
+  std::error_code ec;
+  if (!fs::exists(file, ec)) {
+    return std::vector<CsvRow>{};
+  }
+  return read_table(file, header);
+}
+
 std::expected<Amount, std::string> amount_field(fs::path const& file, std::string const& text) {
   auto const amount = parse_amount(text);
   if (!amount) {
@@ -161,6 +171,10 @@ std::expected<Amount, std::string> amount_field(fs::path const& file, std::strin
 std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date start, Date end) {
   FiscalYear year{start, end, {}, {}};
   auto const year_folder = folder / year_folder_name(start);
+  std::error_code missing;
+  if (!fs::exists(year_folder, missing)) {
+    return year; // a year without a folder has no balances or vouchers yet, e.g. in books made from details
+  }
   auto const opening_path = year_folder / opening_file;
   auto const opening = read_table(opening_path, opening_header);
   if (!opening) {
@@ -436,21 +450,21 @@ std::expected<Books, std::string> read_books(fs::path const& project_folder) {
       closed.push_back(*start);
     }
   }
-  auto const accounts = read_table(folder / accounts_file, accounts_header);
+  auto const accounts = read_optional_table(folder / accounts_file, accounts_header);
   if (!accounts) {
     return std::unexpected(accounts.error());
   }
   for (auto const& row : *accounts) {
     books.accounts.push_back({row[0], row[1], row[2], row[3], row[4]});
   }
-  auto const dimensions = read_table(folder / dimensions_file, dimensions_header);
+  auto const dimensions = read_optional_table(folder / dimensions_file, dimensions_header);
   if (!dimensions) {
     return std::unexpected(dimensions.error());
   }
   for (auto const& row : *dimensions) {
     books.dimensions.push_back({row[0], row[1], row[2]});
   }
-  auto const objects = read_table(folder / objects_file, objects_header);
+  auto const objects = read_optional_table(folder / objects_file, objects_header);
   if (!objects) {
     return std::unexpected(objects.error());
   }

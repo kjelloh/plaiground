@@ -11,7 +11,19 @@ I now switch to english again (so I can share my thoughts to a wider audience?)
 
 It is now time to carry on making a full book keeping app from the sessions where we have developed parts of it.
 
-I have now vibe coded 'new project from SIE file'
+I have now vibe coded 'new project from SIE file'.
+
+I now decided to start a little list of things I 'miss' in the app while I test for each new functionality. I may need this list to remember what else to try to add to it when the main bits are implemented?
+
+* Consider to list projects with their creation date?
+    * In this way we can distinguish projects with the same name?
+    * While testing I created 'The ITfied AB' several times (different locations)
+    * So I need to be able to see what it what?
+    * Also show path to project folder?
+* Consider a way to 'prune' the list of remembered projects?
+    * Perhaps a 'forget' option?
+    * Perhaps a 'scan' that removes those where location no longer exists (moved/deleted by user)
+
 
 ## 20261108
 

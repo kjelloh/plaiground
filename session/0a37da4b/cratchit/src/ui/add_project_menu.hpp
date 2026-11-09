@@ -16,8 +16,7 @@ inline constexpr pyroceph::tui::CodePoint add_key = U'+';
 //   list yet (see make_open_existing_project).
 // * 2 "Ny bokföring" creates a new one, 1 from an SIE file ("Från SIE", see
 //   sie_project_menu.hpp) or 2 from name, organisation number and fiscal year
-//   ("Från uppgifter"), which is not there yet: it leads to the design
-//   insufficiency state (see design_insufficiency.hpp).
+//   ("Från uppgifter", see details_project_menu.hpp).
 // No input. Reached by + from the workspace. start_folder is where the user
 // starts typing the path of an existing project or of an SIE file. origin is
 // the state the user started from (the workspace), which the TUI goes back to
