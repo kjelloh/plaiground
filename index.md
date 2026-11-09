@@ -4,6 +4,7 @@ My agentic AI playground aiming at sandboxing AI code generation from production
 
 * [docs/README](./docs/REAME.md)
 * [thinking](./docs/thinking.md)
+* [AI sessions](./session/index.md)
 * [chimes](./chime/index.md)
 
 All documentation is licenced as CC0 1.0 Universal as defined in LICENCE file in top folder 'docs' - [Documentation Licence](./docs/LICENCE.txt)

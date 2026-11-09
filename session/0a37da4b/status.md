@@ -82,6 +82,7 @@
 * Steg 72: Linux-testet `Books.WaitingEventsArePlacedByDateTiesInTheOrderNoted` rättat: `place_waiting` räknar indexet före `insert` (ordningen i `insert(...) - begin()` är ospecificerad, och GCC 14 tog `begin()` från före omflyttningen). 445 tester med clang och GCC 16.
 * Steg 73: Windows-bygget rättat: `CRATCHIT_TODAY` läses med `environment_variable` (`GetEnvironmentVariableA` på Windows) i stället för `std::getenv` (MSVC C4996). 445 tester med clang och GCC 16.
 * Steg 74: Windows-testet `DesignInsufficiencyState.LogsADesignInsufficiencyWithTheCallersPlace` rättat: loggfilen stängs innan testmappen tas bort. 445 tester med clang och GCC 16.
+* 2026-11-09: GitHub Actions grönt igen på Linux, macOS och Windows (efter steg 69–74): bygge och alla 445 tester. Felen kom från kod som flyttats från 'take 3' och aldrig byggts med GCC eller MSVC, och från `std::getenv` i `main.cpp`.
 
 ## Bygg, kör och installera
 
