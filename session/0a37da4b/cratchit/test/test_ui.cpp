@@ -1,4 +1,5 @@
 #include "core/path_value.hpp"
+#include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/add_project_menu.hpp"
 #include "ui/design_insufficiency.hpp"
@@ -166,18 +167,44 @@ TEST_F(RootMenuTest, WorkspaceListsItsProjectsAndOpensOne) {
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
 }
 
-TEST_F(RootMenuTest, ProjectThatCannotBeOpenedLeadsToAnError) {
+TEST_F(RootMenuTest, ProjectThatCannotBeOpenedCanBeForgotten) {
   auto const folder = documents / "cratchit";
   ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-08"));
   add_project(folder, "Utan namn", "1", "uuid = 1\n");
+  add_project(folder, "Kvar", "2", "uuid = 2\nname = Kvar AB\n");
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Utan namn"}, {U'+', "Lägg till bokföring"}}));
-  ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().name(), "Fel");
+  EXPECT_EQ(names_of(navigator.current().options()),
+            (OptionsList{{U'1', "Kvar AB"}, {U'2', "Utan namn"}, {U'+', "Lägg till bokföring"}}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Utan namn");
   ASSERT_EQ(navigator.current().view().size(), 1u);
-  EXPECT_TRUE(navigator.current().view()[0].starts_with("cratchit kunde inte öppna bokföringen: "));
-  EXPECT_TRUE(navigator.current().view()[0].ends_with("'name' saknas"));
+  EXPECT_TRUE(navigator.current().view()[0].ends_with("'name' saknas")) << navigator.current().view()[0];
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Glöm"}}));
+  // - goes back without forgetting
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().options().size(), 3u);
+  // 0 forgets and goes back to the workspace; the folder stays
+  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
+  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Kvar AB"}, {U'+', "Lägg till bokföring"}}));
+  EXPECT_TRUE(fs::exists(folder / "Utan namn" / ".cratchit" / "project.txt"));
+}
+
+TEST_F(RootMenuTest, ProjectThatIsGoneCanBeForgotten) {
+  auto const folder = documents / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-08"));
+  std::ofstream(folder / ".cratchit" / "workspace.txt", std::ios::app) << "project.1 = " << (documents / "Borta AB").string() << "\n";
+  Navigator navigator(cratchit::ui::make_root_menu(folder));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Borta AB");
+  ASSERT_FALSE(navigator.current().view().empty());
+  EXPECT_TRUE(navigator.current().view()[0].ends_with("men mappen finns inte längre.")) << navigator.current().view()[0];
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'+', "Lägg till bokföring"}}));
 }
 
 namespace {
@@ -372,7 +399,8 @@ TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'2')); // trasig has no name
-  EXPECT_EQ(navigator.current().help_topic(), topic::error);
+  EXPECT_EQ(navigator.current().help_topic(), topic::forget_project);
+  EXPECT_EQ(pyroceph::tui::make_error_state("x")->help_topic(), topic::error);
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'+'));
   EXPECT_EQ(navigator.current().help_topic(), topic::add_project);

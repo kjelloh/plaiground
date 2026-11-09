@@ -2,14 +2,15 @@
 
 #include "ui/help_topics.hpp"
 #include "core/log.hpp"
-#include "pyroceph/tui/error_state.hpp"
 #include "ui/add_project_menu.hpp"
+#include "ui/forget_project_menu.hpp"
 #include "ui/project_menu.hpp"
 
 #include <algorithm>
 #include <array>
 #include <optional>
 #include <string_view>
+#include <system_error>
 #include <tuple>
 #include <cstddef>
 #include <format>
@@ -128,11 +129,17 @@ private:
 
   static CodePoint key_of(std::size_t index) { return static_cast<CodePoint>(U'1' + index); }
 
-  static OnKeyResult open(ListedProject const& listed) {
+  // Opens the project, or offers to forget it when it is gone or cannot be opened
+  OnKeyResult open(ListedProject const& listed) const {
+    std::error_code ec;
+    if (!std::filesystem::exists(listed.folder, ec)) {
+      LOG_BUSINESS("Projektet i {} finns inte längre", listed.folder.string());
+      return make_forget_project_menu(workspace_, listed, true, {}, this);
+    }
     auto project = open_project(listed.folder, listed.uuid);
     if (!project) {
       LOG_BUSINESS("Kunde inte öppna projektet i {}: {}", listed.folder.string(), project.error());
-      return pyroceph::tui::make_error_state(std::format("cratchit kunde inte öppna bokföringen: {}", project.error()));
+      return make_forget_project_menu(workspace_, listed, false, project.error(), this);
     }
     LOG_BUSINESS("Öppnade projektet {} i {}", project->name, project->folder.string());
     return make_project_menu(std::move(*project));

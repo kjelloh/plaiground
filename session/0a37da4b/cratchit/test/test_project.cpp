@@ -1,5 +1,7 @@
 #include "core/project.hpp"
 
+#include "core/path_value.hpp"
+
 #include <gtest/gtest.h>
 
 #include <filesystem>
@@ -163,4 +165,23 @@ TEST_F(ProjectTest, FolderWithoutProjectFileIsAnError) {
   ASSERT_FALSE(project.has_value());
   EXPECT_NE(project.error().find("saknas"), std::string::npos);
   EXPECT_FALSE(fs::exists(root / "x" / ".cratchit"));
+}
+
+TEST_F(ProjectTest, ForgetRemovesOnlyTheProjectsEntryAndTouchesNoFiles) {
+  add_project(workspace.folder / "b", "uuid = 2\nname = Beta AB\n");
+  remember("project.1 = Borta");
+  remember("project.2 = b");
+  ASSERT_TRUE(cratchit::forget_project(workspace, "1"));
+  auto const projects = cratchit::list_projects(workspace);
+  ASSERT_TRUE(projects) << projects.error();
+  ASSERT_EQ(projects->size(), 1u);
+  EXPECT_EQ((*projects)[0].uuid, "2");
+  auto const entries = cratchit::read_path_values(workspace.file);
+  ASSERT_TRUE(entries);
+  EXPECT_EQ(cratchit::find_value(*entries, "created"), "2026-11-08");
+  // Forgetting b leaves its folder as it is
+  ASSERT_TRUE(cratchit::forget_project(workspace, "2"));
+  EXPECT_TRUE(fs::exists(workspace.folder / "b" / ".cratchit" / "project.txt"));
+  // Forgetting what is not remembered does nothing
+  EXPECT_TRUE(cratchit::forget_project(workspace, "7"));
 }

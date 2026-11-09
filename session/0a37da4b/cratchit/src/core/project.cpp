@@ -110,6 +110,15 @@ std::expected<Project, std::string> open_project(fs::path const& folder) {
   return read_project(normal, std::nullopt);
 }
 
+std::expected<void, std::string> forget_project(Workspace const& workspace, std::string_view uuid) {
+  auto entries = read_path_values(workspace.file);
+  if (!entries) return std::unexpected(entries.error());
+  auto const path = std::string(project_prefix) + std::string(uuid);
+  auto const removed = std::erase_if(*entries, [&path](PathValue const& entry) { return entry.path == path; });
+  if (removed == 0) return {};
+  return write_path_values(workspace.file, *entries);
+}
+
 std::expected<void, std::string> remember_project(Workspace const& workspace, Project const& project) {
   auto entries = read_path_values(workspace.file);
   if (!entries) return std::unexpected(entries.error());

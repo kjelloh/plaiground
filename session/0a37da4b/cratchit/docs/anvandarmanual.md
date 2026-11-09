@@ -148,6 +148,23 @@ Cratchit > Samlingsmapp>
 * *(finns inte längre)* betyder att mappen är borttagen eller flyttad. Har du flyttat bokföringen lägger du till den igen på det nya stället (se [Flytta en bokföring](#flytta-en-bokföring)).
 * *(går inte att öppna)* betyder att mappen finns, men att den inte innehåller den bokföring samlingsmappen kommer ihåg.
 
+### Glömma en bokföring
+
+<!-- hjälp: glom -->
+Bokföringen finns inte längre där samlingsmappen tror, eller går inte att öppna. Orsaken står ovanför prompten. Tryck `0` för att samlingsmappen ska glömma den, eller `-` för att gå tillbaka utan att glömma. Inga filer tas bort.
+<!-- /hjälp -->
+
+Väljer du en bokföring som är märkt *(finns inte längre)* eller *(går inte att öppna)* visar cratchit varför den inte går att öppna och erbjuder `0` *Glöm*:
+
+```text
+Bokföringen fanns i /Users/anna/Borttagen AB, men mappen finns inte längre.
+Den kan vara borttagen eller flyttad. Har du flyttat den kan du lägga till den på det nya stället med + i samlingsmappen.
+  0 Glöm
+Cratchit > Samlingsmapp > Borttagen AB> 
+```
+
+Tryck `0`, så glömmer samlingsmappen bokföringen och du kommer tillbaka till samlingsmappen, där den inte längre finns i listan. Glöm tar bara bort bokföringen ur samlingsmappens lista. Inga filer eller mappar tas bort.
+
 Har du fler än nio bokföringar visar cratchit de nio första och säger att det finns fler.
 
 ## Bokföringar

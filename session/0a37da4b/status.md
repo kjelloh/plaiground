@@ -63,6 +63,7 @@
 * Steg 53: Efter `Bekräfta > 1` går cratchit tillbaka till samlingsmappen, som listar den nya bokföringen (`State::back_to`, `Navigator::follow_back_to` i `pyroceph`). Manualen uppdaterad. 382 tester. Provkört med pipe på macOS.
 * Steg 54: `Ny bokföring > Från uppgifter` skapar en bokföring i samlingsmappen från namn, organisationsnummer (Luhn) och första räkenskapsår, steg för steg (`core/details_project`, `ui/details_project_menu`). Bara `project.txt` och `books.txt` skapas; `read_books` läser saknade tabeller och årsmappar som tomma. Ingen kontoplan än. Manualen och README uppdaterade. 392 tester. Provkört med pipe på macOS.
 * Steg 55: Samlingsmappen visar bokföringarna i kolumner (namn, org.nr, skapad, kort sökväg) med rubrikrad, och märker bokföringar som inte finns längre eller inte går att öppna. Uppgifterna läses från varje bokförings `project.txt` när listan visas (`describe_project`, `short_folder_text`); samlingsmappen vet bara sökvägarna. Manualen uppdaterad. 397 tester. Provkört med pipe på macOS.
+* Steg 56: En bokföring som inte finns längre eller inte går att öppna leder till en plats med `0 Glöm`, som tar bort den ur `workspace.txt` (`forget_project`, `ui/forget_project_menu`) och går tillbaka till samlingsmappen. Inga filer rörs. Manualen uppdaterad. 399 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 

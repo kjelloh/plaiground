@@ -71,4 +71,11 @@ std::expected<Project, std::string> open_project(std::filesystem::path const& fo
 // other entries as they are. Error text when workspace.txt cannot be read or written.
 std::expected<void, std::string> remember_project(Workspace const& workspace, Project const& project);
 
+// Makes the workspace forget the project with uuid: removes its
+// `project.<uuid>` entry from workspace.txt, keeping the other entries as they
+// are. Never touches the project's folder or files. Nothing to do when the
+// workspace does not remember it. Error text when workspace.txt cannot be read
+// or written.
+std::expected<void, std::string> forget_project(Workspace const& workspace, std::string_view uuid);
+
 } // namespace cratchit
