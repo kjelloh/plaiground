@@ -76,6 +76,12 @@ std::expected<std::filesystem::path, std::string> choose_user_home(std::optional
 // choose_user_home from the environment: USERPROFILE on Windows, HOME elsewhere
 std::expected<std::filesystem::path, std::string> user_home();
 
+// The value of an environment variable, or nothing when it is not set. On
+// Windows read with GetEnvironmentVariableA (MSVC warns that std::getenv is
+// unsafe, C4996), elsewhere with std::getenv. For plain ASCII values, such as
+// CRATCHIT_TODAY.
+std::optional<std::string> environment_variable(std::string_view name);
+
 // Today's local date as YYYY-MM-DD, or the date set with set_today
 std::string today_iso();
 

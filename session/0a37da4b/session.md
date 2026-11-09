@@ -86,6 +86,16 @@ I am now churning along.
     * Or maybe already is?
     * Then I can come back and refactor the code should I spot openings for terser and cleaner design?  
 
+* I am now not as sure as I was above about Claudes efficiency in writing safe code and chose best practices?
+
+    * I am iterating fix of Github build errors.
+    * I am not sure. But some errors sounds like 'bad practices'?
+    * One error was about an expression with '-' producing memory corrupting code on gcc but not clang?
+    * Another was about MSVC warning about calling 'unsafe' system 'get env' something?
+    * It was 'funktioner som MSVC kallar osäkra, till exempel getenv, fopen, sprintf, localtime och tmpfile.'
+    * I get the feeling Claude generates learned code (and not best practice code)?
+    * Anyhow, at least it is able to identify and adress the errors with changed code.
+    * So tests and compiler errors will clean up the code (if though a bit inefficiently compared to getting the code correct from the beginning)?
 
 ## 20261108
 

@@ -246,6 +246,21 @@ std::expected<fs::path, std::string> default_workspace_folder() {
   return documents_folder().transform([](fs::path const& documents) { return documents / "cratchit"; });
 }
 
+std::optional<std::string> environment_variable(std::string_view name) {
+  std::string const key(name);
+#ifdef _WIN32
+  auto const size = GetEnvironmentVariableA(key.c_str(), nullptr, 0);
+  if (size == 0) return std::nullopt;
+  std::string value(size, '\0');
+  value.resize(GetEnvironmentVariableA(key.c_str(), value.data(), size));
+  return value;
+#else
+  auto const* value = std::getenv(key.c_str());
+  if (value == nullptr) return std::nullopt;
+  return std::string(value);
+#endif
+}
+
 namespace {
 
 std::optional<std::string>& today_override() {
