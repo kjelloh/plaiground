@@ -74,6 +74,7 @@
 * Steg 64: En bokföring som skapas från SIE får sin SIE-fil i `importerade_sie_filer`, som vid import. En ny bokföring kan inte längre skapas från en SIE-fil som ligger någonstans inne i en annan bokförings mapp. Manualen uppdaterad. 427 tester. Provkört med pipe på macOS.
 * Steg 65: `Importera från SIE` flyttad från bokföringen till räkenskapsåret (`2`), och filen måste gälla det året. `+` i bokföringen borttaget, så nya räkenskapsår kan för närvarande inte läggas till. Manualen uppdaterad. 428 tester.
 * Steg 66: Räkenskapsåren räknas fram från bokföringen fram till dagens datum (`list_years_until`): `0` är alltid det aktuella året, ett nytt år syns av sig självt och skrivs först när något görs i det. Varje år visar `bokfört: inget` eller `bokfört: N verifikationer`. `CRATCHIT_TODAY` sätter dagens datum för att prova; testerna kör på 2026-11-09. Manualen och README uppdaterade. 438 tester. Provkört med pipe på macOS mot en kopia av The ITfied AB, med och utan `CRATCHIT_TODAY=2027-05-02`.
+* Steg 67: Räkenskapsåren listas som `2027-05-01 – 2028-04-30  bokfört: inget`, utan årsnamn och parentes. Namnet står kvar i sökvägen. Manualen uppdaterad. 438 tester.
 
 ## Bygg, kör och installera
 

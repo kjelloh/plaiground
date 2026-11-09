@@ -44,14 +44,10 @@ public:
     return lines;
   }
   OptionsList options() const override {
-    std::size_t width = 0; // of the labels, so that the periods line up
-    for (std::size_t i = 0; i < listed(); ++i) width = std::max(width, label_of(years_[i].year).size());
     OptionsList result;
     for (std::size_t i = 0; i < listed(); ++i) {
       auto const& [year, in_books, vouchers] = years_[i];
-      auto label = label_of(year);
-      label.append(width - label.size(), ' ');
-      result.push_back({key_of(i), std::format("{} ({} – {})  bokfört: {}", label, year.start, year.end, booked_text(vouchers))});
+      result.push_back({key_of(i), std::format("{} – {}  bokfört: {}", year.start, year.end, booked_text(vouchers))});
     }
     return result;
   }
