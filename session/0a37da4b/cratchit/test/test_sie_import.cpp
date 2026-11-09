@@ -170,3 +170,82 @@ TEST_F(SieImportTest, WithAYearTheFileMustBeForThatYear) {
   ASSERT_FALSE(other);
   EXPECT_EQ(other.error(), "SIE-filen gäller räkenskapsåret 2025-01-01 – 2025-12-31, inte 2026");
 }
+
+namespace {
+
+// Test AB's SIE file for the fiscal year start – end (YYYYMMDD) with one sale on day
+std::string sie_for(std::string const& start, std::string const& end, std::string const& day) {
+  return std::format("#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 {} {}\r\n"
+                     "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n"
+                     "#VER A 1 {} \"Sale\"\r\n{{\r\n#TRANS 1930 {{}} 100\r\n#TRANS 3010 {{}} -100\r\n}}\r\n",
+                     start, end, day);
+}
+
+std::vector<cratchit::FiscalYear> listed_years(cratchit::Project const& project, std::string const& today) {
+  std::vector<cratchit::FiscalYear> result;
+  auto const listed = cratchit::list_years_until(project, today);
+  EXPECT_TRUE(listed) << listed.error();
+  if (!listed) return result;
+  for (auto const& year : *listed) result.push_back(year.year);
+  return result;
+}
+
+} // namespace
+
+TEST_F(SieImportTest, TheYearBeforeTakesAnEarlierYear) {
+  // The books have 2025; the year before, 2024, is listed to import into
+  auto const plan = cratchit::plan_sie_import(project, write("2024.se", sie_for("20240101", "20241231", "20240301")),
+                                              cratchit::FiscalYear{"2024-01-01", "2024-12-31"});
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_FALSE(plan->expected);
+  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  EXPECT_EQ(listed_years(project, "2025-06-01"),
+            (std::vector<cratchit::FiscalYear>{{"2025-01-01", "2025-12-31"}, {"2024-01-01", "2024-12-31"}, {"2023-01-01", "2023-12-31"}}));
+}
+
+TEST_F(SieImportTest, TheYearBeforeTakesAFirstYearOfAnotherLength) {
+  // The company's first year: 18 months, ending the day before 2025
+  auto const plan = cratchit::plan_sie_import(project, write("first.se", sie_for("20230701", "20241231", "20240301")),
+                                              cratchit::FiscalYear{"2024-01-01", "2024-12-31"});
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(plan->expected);
+  EXPECT_EQ(*plan->expected, (cratchit::FiscalYear{"2024-01-01", "2024-12-31"}));
+  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  EXPECT_EQ(listed_years(project, "2025-06-01"),
+            (std::vector<cratchit::FiscalYear>{{"2025-01-01", "2025-12-31"}, {"2023-07-01", "2024-12-31"}, {"2022-07-01", "2023-06-30"}}));
+}
+
+TEST_F(SieImportTest, TheFirstYearAfterTakesAChangeOfFiscalYear) {
+  // Omläggning: four months, then years from May
+  auto const plan = cratchit::plan_sie_import(project, write("change.se", sie_for("20260101", "20260430", "20260201")),
+                                              cratchit::FiscalYear{"2026-01-01", "2026-12-31"});
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(plan->expected);
+  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  EXPECT_EQ(listed_years(project, "2026-11-09"), (std::vector<cratchit::FiscalYear>{{"2026-05-01", "2027-04-30"},
+                                                                                   {"2026-01-01", "2026-04-30"},
+                                                                                   {"2025-01-01", "2025-12-31"},
+                                                                                   {"2024-01-01", "2024-12-31"}}));
+}
+
+TEST_F(SieImportTest, AYearInAGapNeedsTheSameDates) {
+  // 2027 is not the first year after 2025, so it takes no other dates
+  auto const plan = cratchit::plan_sie_import(project, write("gap.se", sie_for("20270101", "20270630", "20270201")),
+                                              cratchit::FiscalYear{"2027-01-01", "2027-12-31"});
+  ASSERT_FALSE(plan);
+  EXPECT_EQ(plan.error(), "SIE-filen gäller räkenskapsåret 2027-01-01 – 2027-06-30, inte 2027");
+}
+
+TEST_F(SieImportTest, AnAdjoiningYearOfMoreThanEighteenMonthsIsRefused) {
+  auto const plan = cratchit::plan_sie_import(project, write("long.se", sie_for("20230601", "20241231", "20240301")),
+                                              cratchit::FiscalYear{"2024-01-01", "2024-12-31"});
+  ASSERT_FALSE(plan);
+  EXPECT_EQ(plan.error(), "SIE-filen gäller räkenskapsåret 2023-06-01 – 2024-12-31, inte 2024");
+}
+
+TEST(FiscalYearBefore, IsTwelveMonthsEndingTheDayBefore) {
+  EXPECT_EQ(cratchit::year_before({"2025-05-01", "2026-04-30"}), (cratchit::FiscalYear{"2024-05-01", "2025-04-30"}));
+  EXPECT_EQ(cratchit::year_before({"2026-11-01", "2026-12-31"}), (cratchit::FiscalYear{"2025-11-01", "2026-10-31"}));
+  EXPECT_EQ(cratchit::months_of({"2023-07-01", "2024-12-31"}), 18);
+  EXPECT_EQ(cratchit::months_of({"2026-01-01", "2026-04-30"}), 4);
+}

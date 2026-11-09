@@ -19,10 +19,12 @@ namespace cratchit::ui {
 // path is kept.
 //
 // "Bekräfta" 1 imports (see import_sie: the books, and the SIE file moved to
-// importerade_sie_filer), gives report what was done, and the TUI goes back to
-// origin (State::back_to), the fiscal year. A failure leads to the error state.
+// importerade_sie_filer), gives report what was done and the year imported
+// (its dates are the file's, which may differ from year's when it adjoins the
+// books, see plan_sie_import), and the TUI goes back to origin
+// (State::back_to), the fiscal year. A failure leads to the error state.
 std::unique_ptr<pyroceph::tui::State> make_sie_import_menu(Project project, FiscalYear year,
                                                            pyroceph::tui::State const* origin,
-                                                           std::function<void(std::string)> report);
+                                                           std::function<void(std::string, FiscalYear)> report);
 
 } // namespace cratchit::ui

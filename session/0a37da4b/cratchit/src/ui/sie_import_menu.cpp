@@ -25,7 +25,21 @@ using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
 using pyroceph::tui::View;
 
-using Report = std::function<void(std::string)>;
+using Report = std::function<void(std::string, FiscalYear)>;
+
+// "SIE-fil: <file>", then "(<program>, skapad <day>)" with what the file tells
+std::string file_line(SieImportPlan const& plan) {
+  auto line = std::format("SIE-fil: {}", plan.sie_file.string());
+  if (!plan.program.empty() && !plan.generated.empty()) return line + std::format(" ({}, skapad {})", plan.program, plan.generated);
+  if (!plan.program.empty()) return line + std::format(" ({})", plan.program);
+  if (!plan.generated.empty()) return line + std::format(" (skapad {})", plan.generated);
+  return line;
+}
+
+// "1 ny verifikation", "2 nya verifikationer"
+std::string new_vouchers_text(std::size_t count) {
+  return count == 1 ? "1 ny verifikation" : std::format("{} nya verifikationer", count);
+}
 
 class ConfirmImportState : public State {
 public:
@@ -36,13 +50,19 @@ public:
     if (imported_) return {"cratchit har importerat SIE-filen."};
     auto const& import = plan_.import;
     View lines;
-    lines.push_back(plan_.generated.empty()
-                        ? std::format("SIE-fil: {} ({})", plan_.sie_file.string(), plan_.program)
-                        : std::format("SIE-fil: {} ({}, skapad {})", plan_.sie_file.string(), plan_.program, plan_.generated));
+    lines.push_back(file_line(plan_));
     if (!plan_.alert.empty()) lines.push_back(plan_.alert);
-    lines.push_back(std::format("Räkenskapsår: {} – {}", format_iso_date(import.year_start), format_iso_date(import.year_end)));
-    lines.push_back(std::format("Verifikationer: {} nya, {} ändrade, {} finns redan", import.vouchers_added,
-                                plan_.changed.size(), import.vouchers_known));
+    if (plan_.expected) {
+      lines.push_back(std::format("Räkenskapsår: {} – {} (cratchit räknade med {} – {})", format_iso_date(import.year_start),
+                                  format_iso_date(import.year_end), plan_.expected->start, plan_.expected->end));
+      lines.push_back("cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att "
+                      "räkenskapsåret är korrekt.");
+    } else {
+      lines.push_back(std::format("Räkenskapsår: {} – {}", format_iso_date(import.year_start), format_iso_date(import.year_end)));
+    }
+    lines.push_back(std::format("Verifikationer: {} {}, {} {}, {} finns redan", import.vouchers_added,
+                                import.vouchers_added == 1 ? "ny" : "nya", plan_.changed.size(),
+                                plan_.changed.size() == 1 ? "ändrad" : "ändrade", import.vouchers_known));
     if (!plan_.changed.empty()) {
       lines.push_back("Ändrade (strukna och tillagda rader):");
       for (std::size_t i = 0; i < shown(); ++i) lines.push_back("  " + change_text(plan_.changed[i]));
@@ -84,12 +104,14 @@ public:
     for (auto const& changed : plan_.changed) LOG_BUSINESS("SIE-import ändrade verifikationen {}", change_text(changed));
     for (auto const& note : plan_.import.notes) LOG_BUSINESS("SIE-import: {}", note);
     if (report_) {
-      report_(std::format("cratchit importerade {}: {} nya verifikationer i räkenskapsåret {} – {}. Filen ligger nu i {}.",
-                          plan_.sie_file.filename().string(), plan_.import.vouchers_added,
-                          format_iso_date(plan_.import.year_start), format_iso_date(plan_.import.year_end),
-                          imported_sie_folder_name));
+      FiscalYear const year{format_iso_date(plan_.import.year_start), format_iso_date(plan_.import.year_end)};
+      report_(std::format("cratchit importerade {}: {} och {} {} i räkenskapsåret {} – {}. Filen ligger nu i {}.",
+                          plan_.sie_file.filename().string(), new_vouchers_text(plan_.import.vouchers_added),
+                          plan_.changed.size(), plan_.changed.size() == 1 ? "ändrad" : "ändrade", year.start, year.end,
+                          imported_sie_folder_name),
+              year);
     }
-    return nullptr; // back to the project (back_to)
+    return nullptr; // back to the fiscal year (back_to)
   }
   State const* back_to() const override { return imported_ ? origin_ : nullptr; }
   std::string help_topic() const override { return std::string(help_topic::confirm_import); }

@@ -32,10 +32,12 @@ struct ListedYear {
   std::size_t vouchers = 0;  // booked in the year
 };
 
-// The fiscal years of the project from the oldest in the books up to the one
-// today is in (or the latest in the books, when that is later), the latest
-// first, so that the first is the current year (key 0) and the rest go back
-// (1, 2, ...), as #RAR 0, -1, ... in SIE. Fiscal years exist whether booked or
+// The fiscal years of the project from the year before the oldest in the books
+// up to the one today is in (or the latest in the books, when that is later),
+// the latest first, so that the first is the current year (key 0) and the rest
+// go back (1, 2, ...), as #RAR 0, -1, ... in SIE. The last, the year before the
+// oldest in the books (see year_before), has nothing booked: it is there so that
+// the user can import an earlier year. Fiscal years exist whether booked or
 // not: a year after one in the books starts the day after it and is twelve
 // months (a first fiscal year may be shorter or longer, a later one is not;
 // changing the fiscal year is not supported), and such a year is listed
@@ -45,6 +47,12 @@ std::expected<std::vector<ListedYear>, std::string> list_years_until(Project con
 
 // The fiscal year twelve months long that starts the day after year
 FiscalYear year_after(FiscalYear const& year);
+
+// The fiscal year twelve months long that ends the day before year
+FiscalYear year_before(FiscalYear const& year);
+
+// The length of the year in whole months, e.g. 12 for 2025-05-01 – 2026-04-30
+int months_of(FiscalYear const& year);
 
 // How the year is named in the UI: "2025" when it starts and ends in the same
 // calendar year, else "2025/26" (and "1999/2000" across a century)

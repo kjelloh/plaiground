@@ -184,12 +184,13 @@ Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens nam
   0 2026-05-01 – 2027-04-30  bokfört: 37 verifikationer
   1 2025-05-01 – 2026-04-30  bokfört: 116 verifikationer
   2 2024-05-01 – 2025-04-30  bokfört: 115 verifikationer
+  3 2023-05-01 – 2024-04-30  bokfört: inget
 Cratchit > Samlingsmapp > The ITfied AB> 
 ```
 
-Valen är bokföringens räkenskapsår. `0` är det aktuella året, det som dagens datum ligger i, och `1`, `2`, `3` är åren före det, på samma sätt som i en SIE-fil men utan minustecken. Listan går tillbaka till det äldsta året med bokföring. Listan visar varje års första och sista dag. När du öppnar ett år får det ett kort namn i prompten: `2025` för ett år som följer kalenderåret, och till exempel `2025/26` för ett som går över två kalenderår. Har bokföringen fler än tio räkenskapsår visar cratchit de tio senaste och säger att det finns fler.
+Valen är bokföringens räkenskapsår. `0` är det aktuella året, det som dagens datum ligger i, och `1`, `2`, `3` är åren före det, på samma sätt som i en SIE-fil men utan minustecken. Listan går tillbaka till det äldsta året med bokföring, och sist står året före det, med `bokfört: inget`. Det året finns där för att du ska kunna importera ett tidigare år från en SIE-fil. När du har gjort det står nästa tidigare år sist, och så vidare. Listan visar varje års första och sista dag. När du öppnar ett år får det ett kort namn i prompten: `2025` för ett år som följer kalenderåret, och till exempel `2025/26` för ett som går över två kalenderår. Har bokföringen fler än tio räkenskapsår visar cratchit de tio senaste och säger att det finns fler.
 
-Räkenskapsåren finns oavsett om något är bokfört i dem. När ett nytt räkenskapsår börjar dyker det upp som `0` med `bokfört: inget`, och de andra åren flyttas ett steg. Du behöver inte skapa det. Varje år efter det första är tolv månader och börjar dagen efter förra årets sista dag. Ett första år som är kortare eller längre följs alltså av helt vanliga år. cratchit hanterar inte ett räkenskapsår som läggs om senare.
+Räkenskapsåren finns oavsett om något är bokfört i dem. När ett nytt räkenskapsår börjar dyker det upp som `0` med `bokfört: inget`, och de andra åren flyttas ett steg. Du behöver inte skapa det. Varje år efter det första är tolv månader och börjar dagen efter förra årets sista dag. Ett första år som är kortare eller längre följs alltså av helt vanliga år. Ett räkenskapsår som läggs om kan du bara ta in från en SIE-fil (se [Importera från SIE](#importera-från-sie)).
 
 ```text
   0 2027-05-01 – 2028-04-30  bokfört: inget
@@ -247,10 +248,24 @@ cratchit importerar ingenting, och visar varför, om:
 
 * filen inte är en SIE-fil, har fel eller saknar räkenskapsår,
 * filen gäller ett annat organisationsnummer än bokföringen,
-* filen gäller ett annat räkenskapsår än det du står i,
+* filen gäller ett annat räkenskapsår än det du står i (se nedan om år som ansluter),
 * allt i filen redan finns i bokföringen,
 * importen skulle ta bort eller byta ut verifikationer som redan finns i bokföringen,
 * en verifikation som redan finns har ett annat datum eller en annan text i filen.
+
+**Ett år med andra datum.** I ett år där inget är bokfört tar cratchit emot en SIE-fil för ett år med andra datum, om filens år ansluter till bokföringen och är högst 18 månader:
+
+* i det första året efter det senaste bokförda året, om filens år börjar dagen efter det årets sista dag. Så tar du in en omläggning av räkenskapsåret.
+* i året före det äldsta bokförda året, om filens år slutar dagen före det årets första dag. Så tar du in ett första år som är kortare eller längre än tolv månader.
+
+*Bekräfta* visar då vilket år cratchit räknade med:
+
+```text
+Räkenskapsår: 2026-01-01 – 2026-04-30 (cratchit räknade med 2026-01-01 – 2026-12-31)
+cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att räkenskapsåret är korrekt.
+```
+
+Efter importen har året filens datum, och de följande åren räknas från det, tolv månader i taget. I alla andra år måste filen ha exakt samma datum som året.
 
 **Ändrade verifikationer.** En verifikation som redan är bokförd får enligt SIE bara ändras genom att rader stryks (`#BTRANS`) och nya rader läggs till (`#RTRANS`). Det som redan står får inte ändras. Sådana ändringar tar cratchit emot. *Bekräfta* listar då varje ändrad verifikation, till exempel `A 12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd`, tio i taget, och `2` (*Mer…*) visar fler. Ändringarna skrivs också i loggen.
 

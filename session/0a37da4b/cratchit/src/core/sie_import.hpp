@@ -37,6 +37,7 @@ struct SieImportPlan {
   std::string generated; // #GEN as YYYY-MM-DD, or empty
   std::string alert;     // when the file was not read as CP437 (see sie::lex_file), else empty
   bool new_year = false; // the file's fiscal year is not in the books yet
+  std::optional<FiscalYear> expected; // the year cratchit counted with, when the file's year adjoins it with other dates
   books::ImportPlan import;
   std::vector<ChangedVoucher> changed; // vouchers in the books with rows struck or added, by series and number
 };
@@ -52,7 +53,13 @@ struct SieImportPlan {
 // and rows to vouchers as SIE allows. Writes nothing.
 //
 // With year, the file must be for that fiscal year (its #RAR 0), else error text
-// naming the file's year: the user imports into the year they stand in.
+// naming the file's year: the user imports into the year they stand in. A year
+// in the books needs the same dates. A year not in the books may come with
+// other dates when the file's year adjoins the books and is 1 to 18 months
+// long: the first year after the latest in the books must start the day after
+// it, and the year before the oldest must end the day before it. That takes in
+// a first fiscal year of another length, and a change of fiscal year
+// (omläggning), from an SIE file; the years after are counted from it.
 std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project, std::filesystem::path const& sie_file,
                                                           std::optional<FiscalYear> const& year = std::nullopt);
 

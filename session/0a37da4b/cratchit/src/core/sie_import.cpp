@@ -64,6 +64,21 @@ std::expected<std::vector<ChangedVoucher>, std::string> changed_vouchers(books::
   return result;
 }
 
+// True when the file's year may come instead of year, which is not in the books: it adjoins them (starts the
+// day after the latest, or ends the day before the oldest, as year does) and is 1 to 18 months long
+bool adjoins(books::Books const& books, FiscalYear const& year, FiscalYear const& file_year) {
+  if (books.years.empty()) return false;
+  auto const start = parse_iso_date(year.start);
+  if (!start || books.year_starting(*start) != nullptr) return false; // in the books: the same dates only
+  auto const months = months_of(file_year);
+  if (months < 1 || months > 18) return false;
+  FiscalYear const oldest{format_iso_date(books.years.front().start), format_iso_date(books.years.front().end)};
+  FiscalYear const latest{format_iso_date(books.years.back().start), format_iso_date(books.years.back().end)};
+  bool const first_after = year.start == year_after(latest).start;
+  bool const before_oldest = year.end == year_before(oldest).end;
+  return (first_after && file_year.start == year.start) || (before_oldest && file_year.end == year.end);
+}
+
 } // namespace
 
 std::string change_text(ChangedVoucher const& changed) {
@@ -93,11 +108,15 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
   if (document.sie_type.empty()) return std::unexpected(std::format("{} är ingen SIE-fil (#SIETYP saknas)", sie_file.string()));
   if (!parsed.errors.empty()) return std::unexpected(errors_text(parsed.errors));
   if (!document.year(0)) return std::unexpected("SIE-filen saknar räkenskapsår (#RAR 0)");
+  std::optional<FiscalYear> expected;
   if (year) {
-    auto const start = format_iso_date(document.year(0)->start);
-    auto const end = format_iso_date(document.year(0)->end);
-    if (start != year->start || end != year->end) {
-      return std::unexpected(std::format("SIE-filen gäller räkenskapsåret {} – {}, inte {}", start, end, label_of(*year)));
+    FiscalYear const file_year{format_iso_date(document.year(0)->start), format_iso_date(document.year(0)->end)};
+    if (file_year != *year) {
+      if (!adjoins(*books, *year, file_year)) {
+        return std::unexpected(std::format("SIE-filen gäller räkenskapsåret {} – {}, inte {}", file_year.start, file_year.end,
+                                           label_of(*year)));
+      }
+      expected = *year;
     }
   }
 
@@ -107,6 +126,7 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
   if (document.generated) plan.generated = format_iso_date(*document.generated);
   plan.alert = lexed->alert;
   plan.new_year = books->year_starting(document.year(0)->start) == nullptr;
+  plan.expected = expected;
   plan.import = books::plan_import(*books, identity, document);
   auto const& import = plan.import;
   if (!import.errors.empty()) return std::unexpected(errors_text(import.errors));

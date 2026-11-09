@@ -100,24 +100,26 @@ TEST_F(FiscalYearTest, YearsUpToTodayAreListedTheCurrentFirst) {
   ASSERT_TRUE(listed) << listed.error();
   EXPECT_EQ(years_of(*listed), (std::vector<FiscalYear>{{"2026-05-01", "2027-04-30"},
                                                         {"2025-05-01", "2026-04-30"},
-                                                        {"2024-05-01", "2025-04-30"}}));
+                                                        {"2024-05-01", "2025-04-30"},
+                                                        {"2023-05-01", "2024-04-30"}})); // the year before, to import into
   EXPECT_FALSE((*listed)[0].in_books);
   EXPECT_TRUE((*listed)[1].in_books);
+  EXPECT_FALSE((*listed)[3].in_books);
   EXPECT_FALSE(fs::exists(folder / ".cratchit" / "books" / "2026-05-01")); // nothing written
 }
 
 TEST_F(FiscalYearTest, ANewYearShowsWhenTheDayIsInIt) {
   books("year.2025-05-01 = 2026-04-30\n");
-  EXPECT_EQ(cratchit::list_years_until(project(), "2026-04-30")->size(), 1u);
-  EXPECT_EQ(cratchit::list_years_until(project(), "2026-05-01")->size(), 2u);
-  EXPECT_EQ(cratchit::list_years_until(project(), "2028-05-01")->size(), 4u); // years without books in between
+  EXPECT_EQ(cratchit::list_years_until(project(), "2026-04-30")->size(), 2u); // and the year before
+  EXPECT_EQ(cratchit::list_years_until(project(), "2026-05-01")->size(), 3u);
+  EXPECT_EQ(cratchit::list_years_until(project(), "2028-05-01")->size(), 5u); // years without books in between
 }
 
 TEST_F(FiscalYearTest, ALaterYearInTheBooksIsTheCurrentOne) {
   books("year.2027-01-01 = 2027-12-31\n"); // a company starting next year
   auto const listed = cratchit::list_years_until(project(), "2026-11-09");
   ASSERT_TRUE(listed) << listed.error();
-  EXPECT_EQ(years_of(*listed), (std::vector<FiscalYear>{{"2027-01-01", "2027-12-31"}}));
+  EXPECT_EQ(years_of(*listed), (std::vector<FiscalYear>{{"2027-01-01", "2027-12-31"}, {"2026-01-01", "2026-12-31"}}));
 }
 
 TEST_F(FiscalYearTest, YearsFollowAShortFirstYear) {
@@ -126,7 +128,8 @@ TEST_F(FiscalYearTest, YearsFollowAShortFirstYear) {
   ASSERT_TRUE(listed) << listed.error();
   EXPECT_EQ(years_of(*listed), (std::vector<FiscalYear>{{"2028-01-01", "2028-12-31"},
                                                         {"2027-01-01", "2027-12-31"},
-                                                        {"2026-11-01", "2026-12-31"}}));
+                                                        {"2026-11-01", "2026-12-31"},
+                                                        {"2025-11-01", "2026-10-31"}}));
 }
 
 TEST_F(FiscalYearTest, NoYearsInTheBooksListsNone) {

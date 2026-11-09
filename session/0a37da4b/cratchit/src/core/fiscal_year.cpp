@@ -55,6 +55,21 @@ FiscalYear year_after(FiscalYear const& year) {
   return {format_iso_date(start), format_iso_date(year_month_day(last_month / last))};
 }
 
+FiscalYear year_before(FiscalYear const& year) {
+  using namespace std::chrono;
+  auto const start = *parse_iso_date(year.start);
+  auto const end = sys_days(start) - days(1);
+  auto const first_month = year_month(start.year(), start.month()) - months(12);
+  return {format_iso_date(year_month_day(first_month / 1)), format_iso_date(year_month_day(end))};
+}
+
+int months_of(FiscalYear const& year) {
+  auto const start = *parse_iso_date(year.start);
+  auto const end = *parse_iso_date(year.end);
+  return (static_cast<int>(end.year()) - static_cast<int>(start.year())) * 12 +
+         static_cast<int>(static_cast<unsigned>(end.month())) - static_cast<int>(static_cast<unsigned>(start.month())) + 1;
+}
+
 std::expected<std::vector<ListedYear>, std::string> list_years_until(Project const& project, std::string_view today) {
   auto booked = list_fiscal_years(project); // the latest first
   if (!booked) return std::unexpected(booked.error());
@@ -80,6 +95,8 @@ std::expected<std::vector<ListedYear>, std::string> list_years_until(Project con
     if (more_booked && ascending[next_booked].start <= next.end) next = ascending[next_booked++];
     current = next;
   }
+  // The year before the oldest in the books, to import an earlier year into
+  result.insert(result.begin(), ListedYear{year_before(ascending.front()), false, 0});
   std::ranges::reverse(result);
   return result;
 }

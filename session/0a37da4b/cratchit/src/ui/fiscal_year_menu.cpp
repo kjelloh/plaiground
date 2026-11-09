@@ -162,7 +162,10 @@ public:
     }
     if (key == U'2') {
       report_.clear();
-      return make_sie_import_menu(project_, year_, this, [this](std::string text) { report(std::move(text)); });
+      return make_sie_import_menu(project_, year_, this, [this](std::string text, FiscalYear imported) {
+        report(std::move(text));
+        year_ = std::move(imported); // the file's dates, e.g. a first year of another length or a change of fiscal year
+      });
     }
     return nullptr;
   }
