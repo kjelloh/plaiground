@@ -354,7 +354,11 @@ bool FiscalYear::holds(Date date) const {
 std::size_t FiscalYear::place_waiting(WaitingEvent event) {
   auto const at = std::ranges::upper_bound(waiting, event.event.date, {},
                                            [](WaitingEvent const& other) { return other.event.date; });
-  return static_cast<std::size_t>(waiting.insert(at, std::move(event)) - waiting.begin());
+  // The index first: insert may move the elements, and C++ does not say which side of a - b is evaluated
+  // first, so insert(...) - begin() may take begin() from before the move (GCC 14 does)
+  auto const index = static_cast<std::size_t>(at - waiting.begin());
+  waiting.insert(at, std::move(event));
+  return index;
 }
 
 FiscalYear const* Books::year_starting(Date start) const {

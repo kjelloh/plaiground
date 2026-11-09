@@ -79,6 +79,7 @@
 * Steg 69: Linux-bygget rättat: `quoted` i `core/sie/writer.cpp` heter `sie_quoted`, så att GCC inte väljer `std::quoted` via ADL. Provbyggt och testat på macOS (445 tester); GCC finns inte lokalt, så Linux och Windows är inte provade.
 * Steg 70: Provbyggt med GCC 16 lokalt (omslag i scratchpad). Rättat två GCC-fel i testerna från 'take 3': startvärden `{}` i `books::Posting` och `books::FiscalYear`, och aliaset `log` i `test_sie_file.cpp`. 445 tester går igenom med både GCC 16 och clang. Windows (MSVC) inte provat.
 * Steg 71: Windows-bygget rättat: MSVC C4146 i `core/amount.cpp` (`0 - x` i stället för `-x` för ett tal utan tecken). Kontrollerat med clangs konverterings- och skuggningsvarningar att inget liknande finns kvar. 445 tester med clang och GCC 16. MSVC inte provat lokalt.
+* Steg 72: Linux-testet `Books.WaitingEventsArePlacedByDateTiesInTheOrderNoted` rättat: `place_waiting` räknar indexet före `insert` (ordningen i `insert(...) - begin()` är ospecificerad, och GCC 14 tog `begin()` från före omflyttningen). 445 tester med clang och GCC 16.
 
 ## Bygg, kör och installera
 
