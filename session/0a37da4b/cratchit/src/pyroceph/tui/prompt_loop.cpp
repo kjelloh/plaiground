@@ -229,7 +229,11 @@ private:
     if (result) {
       input_.clear();
       if (!result->reply.empty()) std::print(out_, "\n{}", result->reply);
-      if (result->next) navigator_.enter(std::move(result->next));
+      if (result->next) {
+        navigator_.enter(std::move(result->next));
+      } else {
+        navigator_.follow_back_to();
+      }
       present();
     } else {
       std::print(out_, "\n{}\n", result.error());

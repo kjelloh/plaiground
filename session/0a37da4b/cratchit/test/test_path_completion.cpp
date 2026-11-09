@@ -110,3 +110,10 @@ TEST(PathInput, FolderGetsOneSeparatorAfterIt) {
   // Typed back, the path gets no second separator
   EXPECT_EQ(path_input_of(pyroceph::tui::path_of(path_input_of(folder))), path_input_of(folder));
 }
+
+TEST_F(PathCompletionTest, OnlyAcceptedFilesCount) {
+  std::ofstream(root / "export.se") << "#FLAGGA 0\n";
+  std::ofstream(root / "export.txt") << "text\n";
+  auto const accept = [](fs::path const& file) { return file.extension() == ".se"; };
+  EXPECT_EQ(complete_path(typed(U"ex"), true, accept).added, U"port.se");
+}

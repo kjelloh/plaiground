@@ -101,7 +101,8 @@ void show(Navigator const& navigator, std::FILE* out);
 // what the state completes the input with, or lists the candidates and writes
 // the input again below them. Enter gives the input to the state's on_input:
 // when accepted, the reply is shown, the input is emptied, and the state it
-// leads to (if any) becomes current; then the current state is shown. When
+// leads to (if any) becomes current, else the state named by its back_to (if
+// any); then the current state is shown. When
 // not, the error text is shown and the input is kept, so the user can correct it.
 //
 // width gives the terminal's width, so that Backspace erases right in an input

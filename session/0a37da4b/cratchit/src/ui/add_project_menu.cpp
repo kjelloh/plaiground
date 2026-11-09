@@ -6,6 +6,7 @@
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/project_menu.hpp"
+#include "ui/sie_project_menu.hpp"
 
 #include <format>
 #include <string>
@@ -31,14 +32,16 @@ constexpr char const* from_sie_caption = "Från SIE";
 constexpr char const* from_details_caption = "Från uppgifter";
 
 // Creates a new project, from an SIE file or from the details the user enters
-// (name, organisation number and fiscal year). Neither is there yet.
+// (name, organisation number and fiscal year). The latter is not there yet.
 class NewProjectState : public State {
 public:
+  NewProjectState(Workspace workspace, std::filesystem::path start_folder, State const* origin)
+      : workspace_(std::move(workspace)), start_folder_(std::move(start_folder)), origin_(origin) {}
   std::string name() const override { return new_project_caption; }
   View view() const override { return {}; }
   OptionsList options() const override { return {{U'1', from_sie_caption}, {U'2', from_details_caption}}; }
   OnKeyResult on_key(CodePoint key) override {
-    if (key == U'1') return make_design_insufficiency_state(from_sie_caption, "att skapa en ny bokföring från en SIE-fil");
+    if (key == U'1') return make_project_from_sie(workspace_, start_folder_, origin_);
     if (key == U'2') {
       return make_design_insufficiency_state(
           from_details_caption, "att skapa en ny bokföring från namn, organisationsnummer och räkenskapsår");
@@ -46,6 +49,11 @@ public:
     return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::new_project); }
+
+private:
+  Workspace workspace_;
+  std::filesystem::path start_folder_;
+  State const* origin_;
 };
 
 class OpenExistingState : public State {
@@ -88,14 +96,14 @@ private:
 
 class AddProjectState : public State {
 public:
-  AddProjectState(Workspace workspace, std::filesystem::path start_folder)
-      : workspace_(std::move(workspace)), start_folder_(std::move(start_folder)) {}
+  AddProjectState(Workspace workspace, std::filesystem::path start_folder, State const* origin)
+      : workspace_(std::move(workspace)), start_folder_(std::move(start_folder)), origin_(origin) {}
   std::string name() const override { return "Lägg till"; }
   View view() const override { return {}; }
   OptionsList options() const override { return {{U'1', open_existing_caption}, {U'2', new_project_caption}}; }
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'1') return make_open_existing_project(workspace_, start_folder_);
-    if (key == U'2') return std::make_unique<NewProjectState>();
+    if (key == U'2') return std::make_unique<NewProjectState>(workspace_, start_folder_, origin_);
     return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::add_project); }
@@ -103,12 +111,14 @@ public:
 private:
   Workspace workspace_;
   std::filesystem::path start_folder_;
+  State const* origin_;
 };
 
 } // namespace
 
-std::unique_ptr<State> make_add_project_menu(Workspace workspace, std::filesystem::path start_folder) {
-  return std::make_unique<AddProjectState>(std::move(workspace), std::move(start_folder));
+std::unique_ptr<State> make_add_project_menu(Workspace workspace, std::filesystem::path start_folder,
+                                             State const* origin) {
+  return std::make_unique<AddProjectState>(std::move(workspace), std::move(start_folder), origin);
 }
 
 std::unique_ptr<State> make_open_existing_project(Workspace workspace, std::filesystem::path start_folder) {

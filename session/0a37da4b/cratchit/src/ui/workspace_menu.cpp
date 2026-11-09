@@ -44,7 +44,7 @@ public:
     for (std::size_t i = 0; i < listed(); ++i) {
       if (key == key_of(i)) return open(projects_[i]);
     }
-    if (key == add_key) return make_add_project_menu(workspace_, start_folder());
+    if (key == add_key) return make_add_project_menu(workspace_, workspace_.folder, this);
     return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::workspace); }
@@ -60,13 +60,6 @@ public:
   }
 
 private:
-  // Where the user starts typing the path of an existing project: the
-  // Documents folder, else the folder that holds the workspace
-  std::filesystem::path start_folder() const {
-    if (auto const documents = documents_folder()) return *documents;
-    return workspace_.folder.parent_path();
-  }
-
   std::size_t listed() const { return std::min(projects_.size(), max_listed_projects); }
   static CodePoint key_of(std::size_t index) { return static_cast<CodePoint>(U'1' + index); }
 

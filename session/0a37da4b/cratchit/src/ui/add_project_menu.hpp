@@ -14,12 +14,16 @@ inline constexpr pyroceph::tui::CodePoint add_key = U'+';
 // Adds a project to the workspace, named "Lägg till" in the path:
 // * 1 "Öppna befintlig" opens an existing project that the workspace does not
 //   list yet (see make_open_existing_project).
-// * 2 "Ny bokföring" creates a new one, 1 from an SIE file ("Från SIE") or 2
-//   from name, organisation number and fiscal year ("Från uppgifter"). Neither
-//   is there yet: they lead to the design insufficiency state (see design_insufficiency.hpp).
+// * 2 "Ny bokföring" creates a new one, 1 from an SIE file ("Från SIE", see
+//   sie_project_menu.hpp) or 2 from name, organisation number and fiscal year
+//   ("Från uppgifter"), which is not there yet: it leads to the design
+//   insufficiency state (see design_insufficiency.hpp).
 // No input. Reached by + from the workspace. start_folder is where the user
-// starts typing the path of an existing project.
-std::unique_ptr<pyroceph::tui::State> make_add_project_menu(Workspace workspace, std::filesystem::path start_folder);
+// starts typing the path of an existing project or of an SIE file. origin is
+// the state the user started from (the workspace), which the TUI goes back to
+// once a new project is created; nullptr to stay.
+std::unique_ptr<pyroceph::tui::State> make_add_project_menu(Workspace workspace, std::filesystem::path start_folder,
+                                                            pyroceph::tui::State const* origin = nullptr);
 
 // Opens an existing project, named "Öppna befintlig" in the path. The user
 // types the path of the project folder, starting from start_folder, and Tab

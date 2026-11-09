@@ -58,6 +58,9 @@
 * Steg 48: Ersätter steg 47. En öppnad bokföring listar sina räkenskapsår från `books/books.txt` (`list_fiscal_years`, `label_of` i `core/fiscal_year`), det senaste som `1`. Ett valt år är ett eget state (`ui/fiscal_year_menu`) utan val. Kvartal borttaget. Manualen uppdaterad. 255 tester. Provkört med pipe på macOS mot en kopia av `The ITfied AB` (2026/27, 2025/26, 2024/25).
 * Steg 49: Räkenskapsåren har `0` för det aktuella (senaste) året och `1`, `2`, ... för de äldre, högst 10. Manualen uppdaterad. 255 tester. Provkört med pipe på macOS.
 * Steg 50: Regeln att cratchit fungerar helt utan SIE-filer står i `beslut.md`. Koden kontrollerad: ingenting kräver SIE. Testet `YearWithoutBooksIsListed` visar att ett räkenskapsår listas utan egen bokföringsmapp. 256 tester.
+* Steg 51: `Öppna befintlig` börjar i samlingsmappen (`make_add_project_menu(workspace, workspace.folder)`). Manualen uppdaterad. 257 tester. Provkört med pipe på macOS.
+* Steg 52: `Ny bokföring > Från SIE` skapar en bokföring från en SIE-fil (`core/sie_project`, `ui/sie_project_menu`): plan i `Bekräfta`, sedan mapp med företagets namn bredvid filen, hela filen importerad i 'take 3':s format, och SIE-filen flyttad dit. SIE-läsaren och bokföringen flyttade från 'take 3' med tester. Manualen och README uppdaterade. 380 tester. Provkört med pipe på macOS mot en kopia av The ITfied AB:s SIE-fil för 2024/25 (115 verifikationer, samma `vouchers.csv` och `postings.csv` som 'take 3').
+* Steg 53: Efter `Bekräfta > 1` går cratchit tillbaka till samlingsmappen, som listar den nya bokföringen (`State::back_to`, `Navigator::follow_back_to` i `pyroceph`). Manualen uppdaterad. 382 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 

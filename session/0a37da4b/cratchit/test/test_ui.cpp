@@ -331,17 +331,21 @@ TEST(AddProjectMenu, NewOffersFromSieAndFromDetails) {
   EXPECT_EQ(navigator.current().name(), "Lägg till");
 }
 
-TEST(AddProjectMenu, FromSieAndFromDetailsAreNotThereYet) {
-  for (auto const& [key, option] : {std::pair{U'1', "Från SIE"}, std::pair{U'2', "Från uppgifter"}}) {
-    Navigator navigator(cratchit::ui::make_add_project_menu(workspace_at("/x/cratchit"), "/x"));
-    ASSERT_TRUE(navigator.press(U'2'));
-    ASSERT_TRUE(navigator.press(key));
-    EXPECT_EQ(navigator.current().name(), std::format("Inte än ({})", option));
-    ASSERT_EQ(navigator.current().view().size(), 1u);
-    EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att skapa en ny bokföring från "));
-    EXPECT_TRUE(navigator.back());
-    EXPECT_EQ(navigator.current().name(), "Ny bokföring");
-  }
+TEST(AddProjectMenu, FromDetailsIsNotThereYet) {
+  Navigator navigator(cratchit::ui::make_add_project_menu(workspace_at("/x/cratchit"), "/x"));
+  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Inte än (Från uppgifter)");
+  ASSERT_EQ(navigator.current().view().size(), 1u);
+  EXPECT_TRUE(navigator.current().view()[0].starts_with("Utvecklaren av cratchit har inte infört att skapa en ny bokföring från "));
+}
+
+TEST(AddProjectMenu, FromSieStartsInTheStartFolder) {
+  Navigator navigator(cratchit::ui::make_add_project_menu(workspace_at("/x/cratchit"), "/x/cratchit"));
+  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Från SIE");
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of("/x/cratchit"));
 }
 
 TEST(AddProjectMenu, OtherKeysAreNotMapped) {
@@ -376,5 +380,48 @@ TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().help_topic(), topic::new_project);
   ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::from_sie);
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().help_topic(), topic::design_insufficiency);
+}
+
+TEST(WorkspaceMenu, OpenExistingStartsInTheWorkspace) {
+  Navigator navigator(cratchit::ui::make_workspace_menu(workspace_at("/x/cratchit"), {}));
+  ASSERT_TRUE(navigator.press(U'+'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of("/x/cratchit"));
+}
+
+TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
+  auto const folder = documents / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-09"));
+  std::ofstream(folder / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n"
+         "#VER A 1 20250201 \"Sale\"\r\n{\r\n#TRANS 1930 {} 500.00\r\n#TRANS 3010 {} -500.00\r\n}\r\n";
+  Navigator navigator(cratchit::ui::make_root_menu(folder));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'+'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  // Tab completes the SIE file
+  auto const typed = navigator.current().start_input() + U"te";
+  EXPECT_EQ(navigator.current().complete(typed).added, U"st.se");
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(folder) + U"test.se");
+  ASSERT_TRUE(result) << result.error();
+  ASSERT_TRUE(result->next);
+  navigator.enter(std::move(result->next));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Skapa bokföringen"}}));
+  EXPECT_FALSE(fs::exists(folder / "Test AB")); // nothing created before 1
+  // 1 creates the project and goes back to where the user started, the workspace, which lists it
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_TRUE(fs::exists(folder / "Test AB" / "test.se"));
+  EXPECT_EQ(navigator.path().size(), 2u);
+  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Test AB"}, {U'+', "Lägg till bokföring"}}));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Test AB");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2025 (2025-01-01 – 2025-12-31)"}}));
 }

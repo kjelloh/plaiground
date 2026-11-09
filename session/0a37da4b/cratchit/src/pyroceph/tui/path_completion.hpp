@@ -3,6 +3,7 @@
 #include "pyroceph/tui/state.hpp"
 
 #include <filesystem>
+#include <functional>
 #include <string_view>
 
 namespace pyroceph::tui {
@@ -22,6 +23,8 @@ std::filesystem::path path_of(std::u32string_view typed);
 // * Hidden names (.name) count only when the typed name starts with a dot.
 // * Nothing for a typed text without a separator, or a folder that cannot be read.
 // Names compare as typed on macOS and Linux, and ignoring case (A-Z) on Windows.
-Completion complete_path(std::u32string_view typed, bool files = false);
+// With accept_file, only the files it accepts count (folders always count).
+Completion complete_path(std::u32string_view typed, bool files = false,
+                         std::function<bool(std::filesystem::path const&)> const& accept_file = {});
 
 } // namespace pyroceph::tui

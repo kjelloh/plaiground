@@ -134,7 +134,12 @@ The workspace (*samlingsmapp*) and each project (*bokföring*, the books of one 
 | File | Holds |
 | --- | --- |
 | `<Documents>/cratchit/.cratchit/workspace.txt` | `created`, and one `project.<uuid> = <folder>` per project the workspace remembers. A project folder may be anywhere. |
-| `<project folder>/.cratchit/project.txt` | The project's `uuid` and `name` (and more, in the format of take 3). cratchit only reads it so far. |
+| `<project folder>/.cratchit/project.txt` | `created`, `uuid`, `name` and `orgnr`, in the format of take 3 (which may add more). |
+| `<project folder>/.cratchit/books/books.txt` | `chart_type`, `company_id`, `address.*` and one `year.<start> = <end>` per fiscal year |
+| `<project folder>/.cratchit/books/accounts.csv`, `dimensions.csv`, `objects.csv` | The chart of accounts, dimensions and objects |
+| `<project folder>/.cratchit/books/<year start>/opening.csv`, `vouchers.csv`, `postings.csv` | A fiscal year's reported opening balances, vouchers and their postings |
+
+The books are kept as take 3 keeps them (`core/books`, ported from take 3, as is the SIE reader `core/sie`). *Ny bokföring > Från SIE* plans the import of a whole SIE file into empty books (`plan_project_from_sie`), and on the user's confirmation creates `<the SIE file's folder>/<#FNAMN>/` with `project.txt` and the books, and moves the SIE file into it (`create_project_from_sie`). No copy is kept in `.cratchit/imports`. cratchit works without SIE files; SIE is only one way in.
 
 The workspace and its `.cratchit` are created the first time the user opens it. *Öppna befintlig* adds or replaces the project's line in `workspace.txt`, so a moved project folder is remembered at its new place (same `uuid`).
 

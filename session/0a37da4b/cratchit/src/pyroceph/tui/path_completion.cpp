@@ -70,7 +70,8 @@ std::u32string path_input_of(fs::path const& folder) {
 
 fs::path path_of(std::u32string_view typed) { return fs::path(encoded(typed)); }
 
-Completion complete_path(std::u32string_view typed, bool files) {
+Completion complete_path(std::u32string_view typed, bool files,
+                         std::function<bool(fs::path const&)> const& accept_file) {
   auto const cut = typed.find_last_of(separators);
   if (cut == std::u32string_view::npos) return {};
   auto const folder = path_of(typed.substr(0, cut + 1));
@@ -86,7 +87,7 @@ Completion complete_path(std::u32string_view typed, bool files) {
        it.increment(ec)) {
     std::error_code type_ec;
     bool const is_folder = it->is_directory(type_ec);
-    if (!is_folder && !(files && it->is_regular_file(type_ec))) continue;
+    if (!is_folder && !(files && it->is_regular_file(type_ec) && (!accept_file || accept_file(it->path())))) continue;
     auto name = decoded(it->path().filename().u8string());
     if (name.starts_with(U'.') && !prefix.starts_with(U'.')) continue;
     if (starts_with(name, prefix)) names.push_back({std::move(name), is_folder});

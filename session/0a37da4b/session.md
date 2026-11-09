@@ -5,6 +5,14 @@
 * [Claude beslut.md](./beslut.md)
 * [Claude status.md](./status.md)
 
+## 20261109
+
+I now switch to english again (so I can share my thoughts to a wider audience?)
+
+It is now time to carry on making a full book keeping app from the sessions where we have developed parts of it.
+
+I have now vibe coded 'new project from SIE file'
+
 ## 20261108
 
 Så nu är det dags tror jag att bestämma hur cratchit skall bete sig för 'projekt'?

@@ -146,3 +146,48 @@ TEST(State, CompletesNothingAndStartsNoInputByDefault) {
   EXPECT_TRUE(completion.added.empty());
   EXPECT_TRUE(completion.candidates.empty());
 }
+
+namespace {
+
+// Goes back to target once it has acted on 1
+class Done : public pyroceph::tui::State {
+public:
+  explicit Done(State const* target) : target_(target) {}
+  std::string name() const override { return "Klar"; }
+  pyroceph::tui::View view() const override { return {}; }
+  pyroceph::tui::OptionsList options() const override { return {}; }
+  pyroceph::tui::OnKeyResult on_key(pyroceph::tui::CodePoint key) override {
+    done_ = key == U'1';
+    return nullptr;
+  }
+  State const* back_to() const override { return done_ ? target_ : nullptr; }
+
+private:
+  State const* target_;
+  bool done_ = false;
+};
+
+} // namespace
+
+TEST(State, BackToGoesBackSeveralStatesAndCallsOnReturn) {
+  int returns = 0;
+  Navigator navigator(std::make_unique<Returning>(&returns));
+  ASSERT_TRUE(navigator.press(U'1')); // Nästa
+  navigator.enter(test::menu("Mellan"));
+  auto const* root = navigator.path().front().get();
+  navigator.enter(std::make_unique<Done>(root));
+  EXPECT_FALSE(navigator.press(U'2')); // not done: stays
+  EXPECT_EQ(navigator.current().name(), "Klar");
+  EXPECT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.path().size(), 1u);
+  EXPECT_EQ(navigator.current().name(), "Tillbaka hit");
+  EXPECT_EQ(returns, 1);
+}
+
+TEST(State, BackToAStateNotOnThePathDoesNothing) {
+  auto const elsewhere = test::menu("Någon annanstans");
+  Navigator navigator(tree());
+  navigator.enter(std::make_unique<Done>(elsewhere.get()));
+  EXPECT_FALSE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Klar");
+}

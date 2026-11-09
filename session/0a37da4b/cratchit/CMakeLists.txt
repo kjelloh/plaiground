@@ -52,16 +52,27 @@ target_link_libraries(pyroceph PUBLIC charset PRIVATE cratchit_warnings)
 
 # Application logic (from take 3, session 60cae9fe)
 add_library(cratchit_core
+  src/core/amount.cpp
+  src/core/bas.cpp
+  src/core/books/books.cpp
+  src/core/books/import.cpp
+  src/core/csv.cpp
+  src/core/date.cpp
   src/core/dot_folder.cpp
   src/core/fiscal_year.cpp
   src/core/log.cpp
   src/core/manual.cpp
   src/core/path_value.cpp
   src/core/project.cpp
+  src/core/sie/check.cpp
+  src/core/sie/document.cpp
+  src/core/sie/file.cpp
+  src/core/sie/lexer.cpp
+  src/core/sie_project.cpp
   src/core/terminal_encoding.cpp
 )
 target_include_directories(cratchit_core PUBLIC src)
-target_link_libraries(cratchit_core PRIVATE cratchit_warnings)
+target_link_libraries(cratchit_core PUBLIC charset PRIVATE cratchit_warnings)
 if(WIN32)
   # SHGetKnownFolderPath and CoTaskMemFree, for the Documents folder
   target_link_libraries(cratchit_core PRIVATE shell32 ole32)
@@ -88,6 +99,7 @@ add_library(cratchit_ui
   src/ui/fiscal_year_menu.cpp
   src/ui/project_menu.cpp
   src/ui/root_menu.cpp
+  src/ui/sie_project_menu.cpp
   src/ui/test_menu.cpp
   src/ui/workspace_menu.cpp
 )

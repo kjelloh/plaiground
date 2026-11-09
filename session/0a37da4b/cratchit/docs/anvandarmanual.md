@@ -195,7 +195,7 @@ Har du en bokföring som samlingsmappen inte listar tar du in den så här:
 
 1. Tryck `+` (*Lägg till bokföring*) i samlingsmappen.
 2. Tryck `1` (*Öppna befintlig*).
-3. Skriv sökvägen till mappen som bokföringen ligger i. Tab fyller i mappnamnen (se [Skriva en sökväg](#skriva-en-sökväg)).
+3. Skriv sökvägen till mappen som bokföringen ligger i. Sökvägen börjar i samlingsmappen, och Tab fyller i mappnamnen (se [Skriva en sökväg](#skriva-en-sökväg)).
 4. Tryck Enter.
 
 ```text
@@ -216,21 +216,50 @@ Allt som hör till en bokföring ligger i dess mapp. Flytta eller kopiera mappen
 ### Ny bokföring
 
 <!-- hjälp: ny-bokforing -->
-Välj hur den nya bokföringen ska skapas: `1` från en SIE-fil eller `2` från namn, organisationsnummer och räkenskapsår. Inget av dem finns än.
+Välj hur den nya bokföringen ska skapas: `1` från en SIE-fil eller `2` från namn, organisationsnummer och räkenskapsår. Att skapa från uppgifter finns inte än.
 <!-- /hjälp -->
 
 Tryck `+` och sedan `2` (*Ny bokföring*). Där finns två val:
 
-* `1` *Från SIE*: skapa bokföringen från en SIE-fil.
-* `2` *Från uppgifter*: skapa bokföringen från namn, organisationsnummer och räkenskapsår.
+* `1` *Från SIE*: skapa bokföringen från en SIE-fil (se nedan).
+* `2` *Från uppgifter*: skapa bokföringen från namn, organisationsnummer och räkenskapsår. Det finns inte än och leder till [Inte än](#inte-än).
 
-Inget av dem finns än. Båda leder till [Inte än](#inte-än).
+### Ny bokföring från en SIE-fil
+
+<!-- hjälp: fran-sie -->
+Skriv sökvägen till SIE-filen och tryck Enter. Tab fyller i mappar och SIE-filer. cratchit läser filen och visar vad den innehåller innan något skapas. Så länge du inte har ändrat sökvägen går `-` tillbaka.
+<!-- /hjälp -->
+
+En SIE-fil är en fil med bokföring som du har hämtat från ett annat bokföringsprogram. Så skapar du en bokföring från den:
+
+1. Tryck `+`, `2` (*Ny bokföring*) och `1` (*Från SIE*).
+2. Skriv sökvägen till SIE-filen. Sökvägen börjar i samlingsmappen, och Tab fyller i mappar och SIE-filer.
+3. Tryck Enter. cratchit läser filen och visar vad den innehåller.
+4. Tryck `1` (*Skapa bokföringen*).
+
+```text
+SIE-fil: /Users/anna/Documents/cratchit/TheITfiedAB.se
+Företag: The ITfied AB (556782-8172)
+Räkenskapsår: 2026-05-01 – 2027-04-30
+Verifikationer: 42
+Konton: 501
+cratchit skapar bokföringen i /Users/anna/Documents/cratchit/The ITfied AB och flyttar dit SIE-filen.
+  1 Skapa bokföringen
+Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från SIE > Bekräfta> 
+```
+
+<!-- hjälp: bekrafta-sie -->
+Ovanför prompten står vad cratchit hittade i SIE-filen och var bokföringen skapas. Tryck `1` för att skapa bokföringen. cratchit går då tillbaka till samlingsmappen, där bokföringen finns i listan. Tryck `-` för att gå tillbaka utan att skapa något.
+<!-- /hjälp -->
+
+cratchit skapar en ny mapp med företagets namn bredvid SIE-filen, tar in hela filen och flyttar in SIE-filen i den nya mappen. Sedan går cratchit tillbaka till samlingsmappen, där den nya bokföringen nu finns i listan.
+
+cratchit skapar ingenting om filen inte går att använda, till exempel om den inte är en SIE-fil, har fel eller saknar företagets namn eller räkenskapsår. Det gäller också om det redan finns en mapp med företagets namn bredvid filen. Orsaken står då under prompten, och sökvägen står kvar så att du kan rätta den.
 
 ## Kommer senare
 
 Det här finns som val men leder till [Inte än](#inte-än):
 
-* Skapa en ny bokföring från en SIE-fil.
 * Skapa en ny bokföring från namn, organisationsnummer och räkenskapsår.
 
 ## Ordlista
@@ -241,4 +270,5 @@ Det här finns som val men leder till [Inte än](#inte-än):
 | samlingsmapp | Där cratchit håller reda på dina bokföringar |
 | sökväg | Var en mapp ligger på datorn, till exempel `/Users/anna/Documents` |
 | prompt | Raden där cratchit väntar på din tangent eller text |
+| SIE-fil | En fil med bokföring i ett standardformat, som bokföringsprogram använder för att lämna över bokföring till varandra |
 | räkenskapsår | Den period, oftast tolv månader, som bokföringen räknas och avslutas för |
