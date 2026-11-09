@@ -2,6 +2,7 @@
 
 #include "core/log.hpp"
 #include "core/project.hpp"
+#include "core/sie_import.hpp"
 #include "core/sie_project.hpp"
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
@@ -42,7 +43,8 @@ public:
     lines.push_back(std::format("Räkenskapsår: {} – {}", date_text(plan_.import.year_start), date_text(plan_.import.year_end)));
     lines.push_back(std::format("Verifikationer: {}", plan_.import.vouchers_added));
     lines.push_back(std::format("Konton: {}", plan_.import.books.accounts.size()));
-    lines.push_back(std::format("cratchit skapar bokföringen i {} och flyttar dit SIE-filen.", plan_.folder.string()));
+    lines.push_back(std::format("cratchit skapar bokföringen i {} och flyttar SIE-filen till {} där.", plan_.folder.string(),
+                                imported_sie_folder_name));
     return lines;
   }
   OptionsList options() const override {

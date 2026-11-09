@@ -17,8 +17,7 @@ inline constexpr std::size_t max_listed_fiscal_years = 10;
 // read). Its options are the fiscal years (see list_fiscal_years): the
 // current (latest) year as 0 and the older ones as 1, 2, ... up to 9, like
 // #RAR 0, -1, -2 in SIE without the minus. Each leads to its year (see
-// fiscal_year_menu.hpp). Last "+ Importera från SIE" (see sie_import_menu.hpp),
-// after which the view says what was imported and the years are read again.
+// fiscal_year_menu.hpp). The years are read again when the user comes back.
 // No input. Reached by a digit from the workspace.
 std::unique_ptr<pyroceph::tui::State> make_project_menu(Project project);
 

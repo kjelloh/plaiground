@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <string>
 
@@ -84,7 +85,7 @@ TEST_F(SieProjectTest, CreateMakesTheProjectImportsTheFileAndMovesIt) {
   EXPECT_EQ(books->years[0].vouchers.size(), 2u);
   // The SIE file moved into the project folder, and no copy is stashed
   EXPECT_FALSE(fs::exists(file));
-  EXPECT_TRUE(fs::exists(folder / "test.se"));
+  EXPECT_TRUE(fs::exists(folder / "importerade_sie_filer" / "test.se"));
   EXPECT_FALSE(fs::exists(folder / ".cratchit" / "imports"));
 }
 
@@ -147,4 +148,15 @@ TEST(SieProject, NewUuidsAreVersionFourAndDiffer) {
   EXPECT_TRUE(cratchit::is_uuid_like(a)) << a;
   EXPECT_EQ(a[14], '4');
   EXPECT_NE(a, cratchit::new_uuid());
+}
+
+TEST_F(SieProjectTest, FileBelowAProjectFolderIsAnError) {
+  fs::create_directories(root / ".cratchit");
+  std::ofstream(root / ".cratchit" / "project.txt") << "uuid = 1\nname = Annat AB\n";
+  fs::create_directories(root / "importerade_sie_filer");
+  auto const file = root / "importerade_sie_filer" / "test.se";
+  std::ofstream(file, std::ios::binary) << sie_file(2025, balanced_balances(), sale_and_cost(2025));
+  auto const plan = cratchit::plan_project_from_sie(file);
+  ASSERT_FALSE(plan);
+  EXPECT_EQ(plan.error(), std::format("SIE-filen ligger i mappen för en bokföring ({})", root.string()));
 }

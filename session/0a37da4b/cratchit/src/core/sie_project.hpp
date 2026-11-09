@@ -28,13 +28,14 @@ struct SieProjectPlan {
 // year 0 with its accounts, dimensions, objects and vouchers). Error text when the
 // file cannot be read, is no SIE file (#SIETYP), has no #FNAMN or no #RAR 0, has
 // errors (the first ones are given), when #FNAMN cannot be a folder name, or when
-// the folder already exists or the SIE file lies in a project folder. Writes nothing.
+// the folder already exists or the SIE file lies in a project folder (or below one). Writes nothing.
 std::expected<SieProjectPlan, std::string> plan_project_from_sie(std::filesystem::path const& sie_file);
 
 // Creates the planned project: the folder, .cratchit/project.txt (`created`,
 // `uuid` (new), `name`, `orgnr`), the books (see books::write_books: books.txt,
 // accounts, dimensions, objects and the year's opening balances, vouchers and
-// postings), and then moves the SIE file into the folder. Error text when any
+// postings), and then moves the SIE file into <folder>/importerade_sie_filer/,
+// as an import does (see import_sie). Error text when any
 // step fails; what was created before stays.
 std::expected<Project, std::string> create_project_from_sie(SieProjectPlan const& plan, std::string_view today);
 

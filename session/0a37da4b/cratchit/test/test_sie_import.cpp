@@ -162,3 +162,11 @@ TEST(ChangeText, SaysWhatChanged) {
   EXPECT_EQ(cratchit::change_text({"A", "12", "2025-06-03", "Loopia", 1, 1}), "A 12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd");
   EXPECT_EQ(cratchit::change_text({"A", "12", "2025-06-03", "Loopia", 0, 3}), "A 12  2025-06-03  Loopia: 3 rader tillagda");
 }
+
+TEST_F(SieImportTest, WithAYearTheFileMustBeForThatYear) {
+  auto const file = write("more.se", sie_file(2025, balanced_balances(), sale_and_cost(2025) + sale(2025, 3, "0401")));
+  EXPECT_TRUE(cratchit::plan_sie_import(project, file, cratchit::FiscalYear{"2025-01-01", "2025-12-31"}));
+  auto const other = cratchit::plan_sie_import(project, file, cratchit::FiscalYear{"2026-01-01", "2026-12-31"});
+  ASSERT_FALSE(other);
+  EXPECT_EQ(other.error(), "SIE-filen gäller räkenskapsåret 2025-01-01 – 2025-12-31, inte 2026");
+}

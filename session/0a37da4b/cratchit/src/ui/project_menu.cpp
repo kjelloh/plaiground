@@ -4,7 +4,6 @@
 #include "core/log.hpp"
 #include "ui/fiscal_year_menu.hpp"
 #include "ui/help_topics.hpp"
-#include "ui/sie_import_menu.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -29,7 +28,6 @@ public:
   std::string name() const override { return project_.name; }
   View view() const override {
     View lines{project_.folder.string()};
-    if (!report_.empty()) lines.push_back(report_);
     if (!error_.empty()) {
       lines.push_back(std::format("cratchit kunde inte läsa räkenskapsåren: {}", error_));
     } else if (years_.empty()) {
@@ -44,31 +42,20 @@ public:
     for (std::size_t i = 0; i < listed(); ++i) {
       result.push_back({key_of(i), std::format("{} ({} – {})", label_of(years_[i]), years_[i].start, years_[i].end)});
     }
-    result.push_back({import_key, "Importera från SIE"});
     return result;
   }
   OnKeyResult on_key(CodePoint key) override {
     for (std::size_t i = 0; i < listed(); ++i) {
-      if (key == key_of(i)) {
-        report_.clear();
-        return make_fiscal_year_menu(project_, years_[i]);
-      }
-    }
-    if (key == import_key) {
-      report_.clear();
-      return make_sie_import_menu(project_, this, [this](std::string text) { report_ = std::move(text); });
+      if (key == key_of(i)) return make_fiscal_year_menu(project_, years_[i]);
     }
     return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::project); }
 
-  // An import may have added a fiscal year on the way back here: read them again
+  // The fiscal years may have changed on the way back here: read them again
   void on_return() override { read_years(); }
 
 private:
-  // + adds to the list, here a fiscal year (or vouchers to one) from an SIE file
-  static constexpr CodePoint import_key = U'+';
-
   void read_years() {
     years_.clear();
     error_.clear();
@@ -87,7 +74,6 @@ private:
   Project project_;
   std::vector<FiscalYear> years_; // the latest first, as key 0
   std::string error_;             // why the fiscal years could not be read, or empty
-  std::string report_;            // what an import did, until the user goes on from here
 };
 
 } // namespace

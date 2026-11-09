@@ -1,10 +1,12 @@
 #pragma once
 
 #include "core/books/import.hpp"
+#include "core/fiscal_year.hpp"
 #include "core/project.hpp"
 
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -48,7 +50,11 @@ struct SieImportPlan {
 // books otherwise than by struck and added rows (another date or text), or
 // rename, replace, drop or demote them: for now cratchit only adds vouchers,
 // and rows to vouchers as SIE allows. Writes nothing.
-std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project, std::filesystem::path const& sie_file);
+//
+// With year, the file must be for that fiscal year (its #RAR 0), else error text
+// naming the file's year: the user imports into the year they stand in.
+std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project, std::filesystem::path const& sie_file,
+                                                          std::optional<FiscalYear> const& year = std::nullopt);
 
 // What import_sie did
 struct SieImported {

@@ -15,6 +15,11 @@ I have now vibe coded 'new project from SIE file'.
 
 I now decided to start a little list of things I 'miss' (or may need to attend to later) in the app while I test for each new functionality. I may need this list to remember what else to try to add to it when the main bits are implemented?
 
+* Consider to make cratchit introduce a new financial year based on current date?
+    * If current date is on a new yer that does not yet exist, introduce it.
+* Consider a '+' to introduce historical financial years?
+    * Maybe we should allow this ONLY from SIE file?
+    * Or is 'introduce' + 'open' + 'import SIE' the way to go?  
 * Consider to list projects with their creation date?
     * Now lists with creation date and more
 * Consider a way to 'prune' the list of remembered projects?

@@ -1,6 +1,7 @@
 #include "core/sie_project.hpp"
 
 #include "core/path_value.hpp"
+#include "core/sie_import.hpp"
 #include "core/sie/document.hpp"
 #include "core/sie/file.hpp"
 
@@ -101,8 +102,12 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const&
     return std::unexpected(std::format("Företagsnamnet \"{}\" går inte att använda som namn på en mapp", document.company_name));
   }
   auto const sie_folder = sie_file.parent_path();
-  if (fs::exists(sie_folder / ".cratchit" / "project.txt", ec)) {
-    return std::unexpected(std::format("SIE-filen ligger i mappen för en bokföring ({})", sie_folder.string()));
+  // A new project must not be made inside another, e.g. from a file in its importerade_sie_filer
+  for (auto folder = sie_folder; !folder.empty(); folder = folder.parent_path()) {
+    if (fs::exists(folder / ".cratchit" / "project.txt", ec)) {
+      return std::unexpected(std::format("SIE-filen ligger i mappen för en bokföring ({})", folder.string()));
+    }
+    if (folder == folder.root_path()) break;
   }
   SieProjectPlan plan;
   plan.sie_file = sie_file;
@@ -130,7 +135,11 @@ std::expected<Project, std::string> create_project_from_sie(SieProjectPlan const
   if (!plan.orgnr.empty()) entries.push_back({"orgnr", plan.orgnr});
   if (auto written = write_path_values(project.file, entries); !written) return std::unexpected(written.error());
   if (auto written = books::write_books(plan.folder, plan.import.books); !written) return std::unexpected(written.error());
-  if (auto moved = move_into(plan.sie_file, plan.folder); !moved) return std::unexpected(moved.error());
+  auto const imported = plan.folder / imported_sie_folder_name;
+  if (!fs::create_directory(imported, ec)) {
+    return std::unexpected(std::format("Kan inte skapa {}: {}", imported.string(), ec.message()));
+  }
+  if (auto moved = move_into(plan.sie_file, imported); !moved) return std::unexpected(moved.error());
   return project;
 }
 

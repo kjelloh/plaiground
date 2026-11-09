@@ -10,8 +10,9 @@ namespace cratchit::ui {
 
 // A fiscal year of an opened project. Its name is the year's label (see
 // label_of), so the path reads e.g. "Cratchit > Samlingsmapp > The ITfied AB > 2025/26".
-// Its view shows the period, and what the last export wrote. Its option is
-// 1 "Exportera till SIE", a menu of its own:
+// Its view shows the period, and what the last export or import did. Its
+// options are 2 "Importera från SIE" (see sie_import_menu.hpp; the file must be
+// for this year) and 1 "Exportera till SIE", a menu of its own:
 // * 1 "Allt" writes the whole year with balances (see export_all) and goes back
 //   to the year, which says what was written.
 // * 2 "Skillnad" asks for an SIE file to compare with (a path from the project

@@ -40,8 +40,7 @@ public:
                         ? std::format("SIE-fil: {} ({})", plan_.sie_file.string(), plan_.program)
                         : std::format("SIE-fil: {} ({}, skapad {})", plan_.sie_file.string(), plan_.program, plan_.generated));
     if (!plan_.alert.empty()) lines.push_back(plan_.alert);
-    lines.push_back(std::format("Räkenskapsår: {} – {} ({})", format_iso_date(import.year_start), format_iso_date(import.year_end),
-                                plan_.new_year ? "nytt i bokföringen" : "finns i bokföringen"));
+    lines.push_back(std::format("Räkenskapsår: {} – {}", format_iso_date(import.year_start), format_iso_date(import.year_end)));
     lines.push_back(std::format("Verifikationer: {} nya, {} ändrade, {} finns redan", import.vouchers_added,
                                 plan_.changed.size(), import.vouchers_known));
     if (!plan_.changed.empty()) {
@@ -111,8 +110,8 @@ private:
 
 class ImportSieState : public State {
 public:
-  ImportSieState(Project project, State const* origin, Report report)
-      : project_(std::move(project)), origin_(origin), report_(std::move(report)) {}
+  ImportSieState(Project project, FiscalYear year, State const* origin, Report report)
+      : project_(std::move(project)), year_(std::move(year)), origin_(origin), report_(std::move(report)) {}
   std::string name() const override { return "Importera från SIE"; }
   View view() const override { return {"Skriv sökvägen till SIE-filen och tryck Enter. Tab fyller i mappar och SIE-filer."}; }
   OptionsList options() const override { return {}; }
@@ -123,7 +122,7 @@ public:
   }
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);
-    auto plan = plan_sie_import(project_, file);
+    auto plan = plan_sie_import(project_, file, year_);
     if (!plan) {
       LOG_BUSINESS("Kan inte importera {} i {}: {}", file.string(), project_.folder.string(), plan.error());
       return std::unexpected(std::format("cratchit kan inte importera filen: {}", plan.error()));
@@ -134,14 +133,15 @@ public:
 
 private:
   Project project_;
+  FiscalYear year_;
   State const* origin_;
   Report report_;
 };
 
 } // namespace
 
-std::unique_ptr<State> make_sie_import_menu(Project project, State const* origin, Report report) {
-  return std::make_unique<ImportSieState>(std::move(project), origin, std::move(report));
+std::unique_ptr<State> make_sie_import_menu(Project project, FiscalYear year, State const* origin, Report report) {
+  return std::make_unique<ImportSieState>(std::move(project), std::move(year), origin, std::move(report));
 }
 
 } // namespace cratchit::ui

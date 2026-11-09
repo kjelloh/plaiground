@@ -77,7 +77,8 @@ std::string change_text(ChangedVoucher const& changed) {
   return std::format("{} {}  {}  {}: {}", changed.series, changed.number, changed.date, changed.heading, what);
 }
 
-std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project, fs::path const& sie_file) {
+std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project, fs::path const& sie_file,
+                                                          std::optional<FiscalYear> const& year) {
   std::error_code ec;
   if (!sie_file.is_absolute()) return std::unexpected(std::format("{} är inte en hel sökväg", sie_file.string()));
   if (!fs::is_regular_file(sie_file, ec)) return std::unexpected(std::format("{} är ingen fil", sie_file.string()));
@@ -92,6 +93,13 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
   if (document.sie_type.empty()) return std::unexpected(std::format("{} är ingen SIE-fil (#SIETYP saknas)", sie_file.string()));
   if (!parsed.errors.empty()) return std::unexpected(errors_text(parsed.errors));
   if (!document.year(0)) return std::unexpected("SIE-filen saknar räkenskapsår (#RAR 0)");
+  if (year) {
+    auto const start = format_iso_date(document.year(0)->start);
+    auto const end = format_iso_date(document.year(0)->end);
+    if (start != year->start || end != year->end) {
+      return std::unexpected(std::format("SIE-filen gäller räkenskapsåret {} – {}, inte {}", start, end, label_of(*year)));
+    }
+  }
 
   SieImportPlan plan;
   plan.sie_file = sie_file;

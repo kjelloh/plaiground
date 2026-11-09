@@ -7,6 +7,7 @@
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/sie_import_menu.hpp"
 
 #include <format>
 #include <string>
@@ -153,11 +154,17 @@ public:
     if (!report_.empty()) lines.push_back(report_);
     return lines;
   }
-  OptionsList options() const override { return {{U'1', export_caption}}; }
+  OptionsList options() const override { return {{U'1', export_caption}, {U'2', "Importera från SIE"}}; }
   OnKeyResult on_key(CodePoint key) override {
-    if (key != U'1') return nullptr;
-    report_.clear();
-    return std::make_unique<ExportState>(*this, project_, year_);
+    if (key == U'1') {
+      report_.clear();
+      return std::make_unique<ExportState>(*this, project_, year_);
+    }
+    if (key == U'2') {
+      report_.clear();
+      return make_sie_import_menu(project_, year_, this, [this](std::string text) { report(std::move(text)); });
+    }
+    return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::fiscal_year); }
 

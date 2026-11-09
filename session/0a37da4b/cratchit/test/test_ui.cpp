@@ -167,7 +167,7 @@ TEST_F(RootMenuTest, WorkspaceListsItsProjectsAndOpensOne) {
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
   EXPECT_EQ(navigator.current().view(), (View{(folder / "itfied").string(), "Bokföringen har inga räkenskapsår än."}));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'+', "Importera från SIE"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{}));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
 }
@@ -251,7 +251,7 @@ TEST(ProjectMenu, IsNamedByTheProjectAndShowsItsFolder) {
   auto project = cratchit::ui::make_project_menu({"/x/p", "/x/p/.cratchit/project.txt", "1", "The ITfied AB"});
   EXPECT_EQ(project->name(), "The ITfied AB");
   EXPECT_EQ(project->view(), (View{fs::path("/x/p").string(), "Bokföringen har inga räkenskapsår än."}));
-  EXPECT_EQ(project->options(), (OptionsList{{U'+', "Importera från SIE"}}));
+  EXPECT_EQ(project->options(), (OptionsList{}));
   EXPECT_EQ(project->on_key(U'1'), nullptr);
 }
 
@@ -271,12 +271,11 @@ TEST_F(RootMenuTest, ProjectOffersItsFiscalYearsTheCurrentAsZero) {
       documents / "p", "chart_type = EUBAS97\nyear.2024-05-01 = 2025-04-30\nyear.2025-05-01 = 2026-04-30\n")));
   EXPECT_EQ(navigator.current().view(), (View{(documents / "p").string()}));
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2025/26 (2025-05-01 – 2026-04-30)"},
-                                                        {U'1', "2024/25 (2024-05-01 – 2025-04-30)"},
-                                                        {U'+', "Importera från SIE"}}));
+                                                        {U'1', "2024/25 (2024-05-01 – 2025-04-30)"}}));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2024/25");
   EXPECT_EQ(navigator.current().view(), (View{"Räkenskapsår 2024-05-01 – 2025-04-30"}));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Exportera till SIE"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Exportera till SIE"}, {U'2', "Importera från SIE"}}));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
 }
@@ -285,17 +284,16 @@ TEST_F(RootMenuTest, ProjectSaysWhenItsFiscalYearsCannotBeRead) {
   auto project = cratchit::ui::make_project_menu(project_with_books(documents / "p", "year.2025 = 2026-04-30\n"));
   ASSERT_EQ(project->view().size(), 2u);
   EXPECT_TRUE(project->view()[1].starts_with("cratchit kunde inte läsa räkenskapsåren: "));
-  EXPECT_EQ(project->options(), (OptionsList{{U'+', "Importera från SIE"}}));
+  EXPECT_EQ(project->options(), (OptionsList{}));
 }
 
 TEST_F(RootMenuTest, ProjectOffersTenFiscalYearsAndSaysWhenThereAreMore) {
   std::string text;
   for (int year = 2009; year < 2020; ++year) text += std::format("year.{}-01-01 = {}-12-31\n", year, year);
   auto project = cratchit::ui::make_project_menu(project_with_books(documents / "p", text));
-  ASSERT_EQ(project->options().size(), 11u);
+  ASSERT_EQ(project->options().size(), 10u);
   EXPECT_EQ(project->options().front(), (pyroceph::tui::Option{U'0', "2019 (2019-01-01 – 2019-12-31)"}));
-  EXPECT_EQ(project->options()[9], (pyroceph::tui::Option{U'9', "2010 (2010-01-01 – 2010-12-31)"}));
-  EXPECT_EQ(project->options().back(), (pyroceph::tui::Option{U'+', "Importera från SIE"}));
+  EXPECT_EQ(project->options().back(), (pyroceph::tui::Option{U'9', "2010 (2010-01-01 – 2010-12-31)"}));
   EXPECT_EQ(project->view().back(), "Bokföringen har fler räkenskapsår än cratchit visar här.");
 }
 
@@ -475,13 +473,13 @@ TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
   EXPECT_FALSE(fs::exists(folder / "Test AB")); // nothing created before 1
   // 1 creates the project and goes back to where the user started, the workspace, which lists it
   ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_TRUE(fs::exists(folder / "Test AB" / "test.se"));
+  EXPECT_TRUE(fs::exists(folder / "Test AB" / "importerade_sie_filer" / "test.se"));
   EXPECT_EQ(navigator.path().size(), 2u);
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
   EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Test AB"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Test AB");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2025 (2025-01-01 – 2025-12-31)"}, {U'+', "Importera från SIE"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2025 (2025-01-01 – 2025-12-31)"}}));
 }
 
 namespace {
@@ -542,7 +540,7 @@ TEST_F(RootMenuTest, FromDetailsIsAFormThatCreatesTheProjectOnEnter) {
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
   EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Exempel AB"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2026 (2026-05-01 – 2026-12-31)"}, {U'+', "Importera från SIE"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2026 (2026-05-01 – 2026-12-31)"}}));
 }
 
 TEST_F(RootMenuTest, WorkspaceShowsItsProjectsInColumnsReadFromEachProject) {
@@ -633,7 +631,7 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   // Against a file with every voucher: nothing to write
   ASSERT_TRUE(navigator.press(U'1'));
   ASSERT_TRUE(navigator.press(U'2'));
-  auto same = navigator.current().on_input(pyroceph::tui::path_input_of(project->folder) + U"full.se");
+  auto same = navigator.current().on_input(pyroceph::tui::path_input_of(project->folder / "importerade_sie_filer") + U"full.se");
   ASSERT_TRUE(same) << same.error();
   navigator.enter(std::move(same->next));
   EXPECT_TRUE(navigator.current().options().empty());
@@ -663,7 +661,15 @@ TEST_F(RootMenuTest, ImportListsTheChangedVouchersAPageAtATime) {
   ASSERT_TRUE(project) << project.error();
   std::ofstream(documents / "changed.se", std::ios::binary) << sie(true);
   Navigator navigator(cratchit::ui::make_project_menu(*project));
-  ASSERT_TRUE(navigator.press(U'+'));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Importera från SIE");
+  // A file of another year is refused
+  std::ofstream(documents / "other.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20260101 20261231\r\n";
+  auto const other = navigator.current().on_input(pyroceph::tui::path_input_of(documents) + U"other.se");
+  ASSERT_FALSE(other);
+  EXPECT_EQ(other.error(), "cratchit kan inte importera filen: SIE-filen gäller räkenskapsåret 2026-01-01 – 2026-12-31, inte 2025");
   auto result = navigator.current().on_input(pyroceph::tui::path_input_of(documents) + U"changed.se");
   ASSERT_TRUE(result) << result.error();
   navigator.enter(std::move(result->next));
@@ -682,9 +688,11 @@ TEST_F(RootMenuTest, ImportListsTheChangedVouchersAPageAtATime) {
   EXPECT_EQ(lines("  A "), 12u);
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Importera"}}));
   EXPECT_FALSE(navigator.press(U'2'));
-  // Importing takes the changes and goes back to the project
+  // Importing takes the changes and goes back to the fiscal year, which says so
   ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().name(), "Test AB");
+  EXPECT_EQ(navigator.current().name(), "2025");
+  ASSERT_EQ(navigator.current().view().size(), 2u);
+  EXPECT_TRUE(navigator.current().view()[1].starts_with("cratchit importerade changed.se: ")) << navigator.current().view()[1];
   auto const books = cratchit::books::read_books(project->folder);
   ASSERT_TRUE(books) << books.error();
   EXPECT_EQ(books->years[0].vouchers[11].postings.size(), 4u);
