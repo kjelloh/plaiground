@@ -7,21 +7,23 @@
 
 namespace cratchit::ui {
 
-// Creates a new project from details the user types, one at a time, each step
-// a state of its own whose name is the previous answer:
-// * "Från uppgifter": the company's name (see new_project_folder),
-// * "<name>": the organisation number (see parse_orgnr), required,
-// * "<orgnr>": the first fiscal year's first and last day (see
-//   parse_first_fiscal_year), starting with the current calendar year,
-// * "Bekräfta": shows the details and offers 1 "Skapa bokföringen".
-// A step that refuses the text shows why and keeps it. Each step starts with
-// what the user gave there before, so - goes back while it is untouched.
+// Creates a new project from details, named "Från uppgifter" in the path: a
+// form whose options are its fields, each showing its value or what to give:
+// 1 "Namn" (see new_project_folder), 2 "Organisationsnummer" (see parse_orgnr),
+// 3 "Räkenskapsår", given as its first month (see parse_first_month), and
+// 4 "Första årets längd" in months, 12 until changed (see
+// parse_first_year_length). A digit leads to the field, a text field (see
+// State::is_text_field) starting with the field's value: Enter takes a value
+// the field accepts and goes back to the form; a value it refuses is shown
+// why and kept; - goes back while the text is untouched, Esc empties it.
 //
-// 1 creates the project in the workspace folder (see
-// create_project_from_details), without a chart of accounts yet. The workspace
-// remembers it, and the TUI goes back to origin (State::back_to), e.g. the
-// workspace that now lists it. Without origin "Bekräfta" stays and says that the
-// project was created. A failure leads to the error state.
+// When name, organisation number and first month are given, Enter in the
+// form creates the project in the workspace folder (see
+// create_project_from_details, the fiscal year from first_fiscal_year), without
+// a chart of accounts yet. The workspace remembers it, and the TUI goes back to
+// origin (State::back_to), e.g. the workspace that now lists it. Without origin
+// the form stays and says that the project was created. A failure leads to the
+// error state. No confirmation: the form shows everything before Enter.
 std::unique_ptr<pyroceph::tui::State> make_project_from_details(Workspace workspace,
                                                                 pyroceph::tui::State const* origin = nullptr);
 

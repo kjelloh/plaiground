@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <filesystem>
 #include <algorithm>
 #include <string>
@@ -13,7 +14,6 @@
 namespace fs = std::filesystem;
 
 using cratchit::FiscalYear;
-using cratchit::parse_first_fiscal_year;
 using cratchit::parse_orgnr;
 
 TEST(Orgnr, TakesTenDigitsWithOrWithoutTheDash) {
@@ -37,30 +37,34 @@ TEST(Orgnr, RefusesWhatIsNoOrgnr) {
   EXPECT_FALSE(parse_orgnr("abcdef-ghij"));
 }
 
-TEST(FirstFiscalYear, TakesFirstAndLastDay) {
-  EXPECT_EQ(parse_first_fiscal_year("2026-01-01 2026-12-31"), (FiscalYear{"2026-01-01", "2026-12-31"}));
-  EXPECT_EQ(parse_first_fiscal_year("2026-05-01 – 2027-04-30"), (FiscalYear{"2026-05-01", "2027-04-30"}));
-  EXPECT_EQ(parse_first_fiscal_year(" 2026-05-01  -  2027-04-30 "), (FiscalYear{"2026-05-01", "2027-04-30"}));
+TEST(FirstMonth, IsYearAndMonth) {
+  EXPECT_EQ(cratchit::parse_first_month("2026-05"), std::chrono::year{2026} / std::chrono::May);
+  EXPECT_EQ(cratchit::parse_first_month(" 2026-12 "), std::chrono::year{2026} / std::chrono::December);
+  EXPECT_FALSE(cratchit::parse_first_month(""));
+  EXPECT_FALSE(cratchit::parse_first_month("2026"));
+  EXPECT_FALSE(cratchit::parse_first_month("2026-13"));
+  EXPECT_FALSE(cratchit::parse_first_month("2026-05-01"));
+  EXPECT_FALSE(cratchit::parse_first_month("maj 2026"));
 }
 
-TEST(FirstFiscalYear, MayBeShorterOrUpToEighteenMonths) {
-  EXPECT_TRUE(parse_first_fiscal_year("2026-11-01 2026-12-31"));
-  EXPECT_TRUE(parse_first_fiscal_year("2026-07-01 2027-12-31"));  // 18 months
-  EXPECT_FALSE(parse_first_fiscal_year("2026-06-01 2027-12-31")); // 19 months
+TEST(FirstYearLength, IsOneToEighteenMonths) {
+  EXPECT_EQ(cratchit::parse_first_year_length("12"), 12);
+  EXPECT_EQ(cratchit::parse_first_year_length(" 1 "), 1);
+  EXPECT_EQ(cratchit::parse_first_year_length("18"), 18);
+  EXPECT_FALSE(cratchit::parse_first_year_length("0"));
+  EXPECT_FALSE(cratchit::parse_first_year_length("19"));
+  EXPECT_FALSE(cratchit::parse_first_year_length(""));
+  EXPECT_FALSE(cratchit::parse_first_year_length("tolv"));
+  EXPECT_FALSE(cratchit::parse_first_year_length("12 månader"));
 }
 
-TEST(FirstFiscalYear, StartsFirstAndEndsLastInAMonth) {
-  EXPECT_FALSE(parse_first_fiscal_year("2026-01-02 2026-12-31"));
-  EXPECT_FALSE(parse_first_fiscal_year("2026-01-01 2026-12-30"));
-  EXPECT_TRUE(parse_first_fiscal_year("2027-03-01 2028-02-29")); // leap year
-  EXPECT_FALSE(parse_first_fiscal_year("2026-03-01 2027-02-29"));
-}
-
-TEST(FirstFiscalYear, RefusesOtherText) {
-  EXPECT_FALSE(parse_first_fiscal_year(""));
-  EXPECT_FALSE(parse_first_fiscal_year("2026"));
-  EXPECT_FALSE(parse_first_fiscal_year("2026-12-31 2026-01-01"));
-  EXPECT_FALSE(parse_first_fiscal_year("2026-01-01 till 2026-12-31"));
+TEST(FirstFiscalYear, StartsFirstInTheMonthAndEndsLastInTheLastMonth) {
+  using std::chrono::year;
+  EXPECT_EQ(cratchit::first_fiscal_year(year{2026} / std::chrono::January, 12), (FiscalYear{"2026-01-01", "2026-12-31"}));
+  EXPECT_EQ(cratchit::first_fiscal_year(year{2026} / std::chrono::May, 12), (FiscalYear{"2026-05-01", "2027-04-30"}));
+  EXPECT_EQ(cratchit::first_fiscal_year(year{2026} / std::chrono::July, 18), (FiscalYear{"2026-07-01", "2027-12-31"}));
+  EXPECT_EQ(cratchit::first_fiscal_year(year{2026} / std::chrono::November, 2), (FiscalYear{"2026-11-01", "2026-12-31"}));
+  EXPECT_EQ(cratchit::first_fiscal_year(year{2027} / std::chrono::March, 12), (FiscalYear{"2027-03-01", "2028-02-29"}));
 }
 
 namespace {

@@ -80,6 +80,12 @@ public:
   // user types. A state with a start text is where the user types.
   virtual std::u32string start_input() const { return {}; }
 
+  // True for a state that is a text field: the user types there even when the
+  // input is empty, so every key is text, except back_key and help_key while
+  // the input is untouched, and Backspace on an empty input does nothing.
+  // False by default: an empty input means navigating.
+  virtual bool is_text_field() const { return false; }
+
   // What Tab adds to the input text, e.g. the rest of a folder name. Nothing
   // by default, and then Tab does nothing but sound the bell.
   virtual Completion complete(std::u32string_view text) const;

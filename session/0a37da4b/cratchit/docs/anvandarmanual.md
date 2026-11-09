@@ -284,48 +284,53 @@ cratchit skapar ingenting om filen inte går att använda, till exempel om den i
 ### Ny bokföring från uppgifter
 
 <!-- hjälp: fran-uppgifter -->
-Skriv företagets namn och tryck Enter. Bokföringen får en mapp med det namnet i samlingsmappen. Sedan frågar cratchit efter organisationsnummer och räkenskapsår.
+Välj en uppgift med dess siffra och fyll i den. När namn, organisationsnummer och räkenskapsår är ifyllda skapar Enter bokföringen. Du kan ändra en uppgift så många gånger du vill innan dess.
 <!-- /hjälp -->
 
-Har du ingen SIE-fil skapar du bokföringen från uppgifter om företaget:
-
-1. Tryck `+`, `2` (*Ny bokföring*) och `2` (*Från uppgifter*).
-2. Skriv företagets namn och tryck Enter.
-3. Skriv organisationsnumret och tryck Enter.
-4. Skriv första och sista dagen i det första räkenskapsåret och tryck Enter.
-5. Tryck `1` (*Skapa bokföringen*).
+Har du ingen SIE-fil skapar du bokföringen från uppgifter om företaget. Tryck `+`, `2` (*Ny bokföring*) och `2` (*Från uppgifter*). Där fyller du i ett formulär:
 
 ```text
-Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter: Exempel AB
-Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter > Exempel AB: 556677-8899
-Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter > Exempel AB > 556677-8899: 2026-01-01 2026-12-31
-Företag: Exempel AB (556677-8899)
-Räkenskapsår: 2026-01-01 – 2026-12-31
-cratchit skapar bokföringen i /Users/anna/Documents/cratchit/Exempel AB.
-Bokföringen får ingen kontoplan än.
-  1 Skapa bokföringen
-Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter > Exempel AB > 556677-8899 > Bekräfta> 
+  1 Namn: <ange organisationens namn>
+  2 Organisationsnummer: <ange organisationens organisationsnummer>
+  3 Räkenskapsår: <ange räkenskapsårets första månad>
+  4 Första årets längd: 12 månader
+Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter> 
 ```
 
-Prompten visar det du har skrivit hittills. Går det inte att använda det du skrev visar cratchit varför, och texten står kvar så att du kan rätta den. Trycker du `-` innan du har ändrat raden kommer du tillbaka till förra uppgiften, där det du skrev står kvar.
+1. Tryck en uppgifts siffra. Raden är tom om uppgiften inte är ifylld, och visar det du skrev om den är det.
+2. Skriv uppgiften och tryck Enter. Går den att använda kommer du tillbaka till formuläret, där den nu står. Går den inte att använda visar cratchit varför, och texten står kvar så att du kan rätta den.
+3. Vill du inte ändra något trycker du `-` innan du har ändrat raden. Har du börjat ändra tömmer Esc raden först. Uppgiften är då som den var.
+4. När namn, organisationsnummer och räkenskapsår är ifyllda trycker du Enter i formuläret. cratchit skapar då bokföringen och går tillbaka till samlingsmappen, där den finns i listan.
+
+```text
+Tryck Enter för att skapa bokföringen i /Users/anna/Documents/cratchit/Exempel AB.
+Bokföringen får ingen kontoplan än.
+  1 Namn: Exempel AB
+  2 Organisationsnummer: 556677-8899
+  3 Räkenskapsår: 2026-05-01 – 2027-04-30
+  4 Första årets längd: 12 månader
+Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter> 
+```
+
+Bokföringen får en mapp med företagets namn i samlingsmappen. Den får än så länge ingen kontoplan (se [Kommer senare](#kommer-senare)).
+
+<!-- hjälp: uppgifter-namn -->
+Skriv organisationens namn och tryck Enter. Bokföringen får en mapp med det namnet i samlingsmappen, så det får inte redan finnas en mapp med samma namn där.
+<!-- /hjälp -->
 
 <!-- hjälp: uppgifter-orgnr -->
-Skriv företagets organisationsnummer och tryck Enter, med eller utan bindestreck, till exempel 556677-8899. cratchit kontrollerar att kontrollsiffran stämmer.
+Skriv organisationsnumret och tryck Enter, med eller utan bindestreck, till exempel 556677-8899. cratchit kontrollerar att kontrollsiffran stämmer.
 <!-- /hjälp -->
-
-Organisationsnumret måste anges.
 
 <!-- hjälp: uppgifter-rakenskapsar -->
-Skriv första och sista dagen i det första räkenskapsåret, till exempel 2026-01-01 2026-12-31, och tryck Enter. Innevarande kalenderår står redan på raden. Räkenskapsåret ska börja den första dagen i en månad, sluta den sista dagen i en månad och vara högst 18 månader.
+Skriv räkenskapsårets första månad och tryck Enter, till exempel 2026-05. Räkenskapsåret börjar den första dagen i den månaden.
 <!-- /hjälp -->
 
-Ett första räkenskapsår får vara kortare eller längre än tolv månader, men högst 18 månader.
-
-<!-- hjälp: bekrafta-uppgifter -->
-Ovanför prompten står uppgifterna och var bokföringen skapas. Tryck `1` för att skapa bokföringen. cratchit går då tillbaka till samlingsmappen, där bokföringen finns i listan. Tryck `-` för att gå tillbaka och ändra något.
+<!-- hjälp: uppgifter-langd -->
+Skriv hur många månader det första räkenskapsåret är och tryck Enter, 1 till 18. Oftast är det 12, men ett nystartat företags första räkenskapsår kan vara kortare eller längre, högst 18 månader.
 <!-- /hjälp -->
 
-Bokföringen får än så länge ingen kontoplan (se [Kommer senare](#kommer-senare)).
+Ett nystartat företag kan ha ett första räkenskapsår som är kortare eller längre än tolv månader. Startar företaget till exempel i maj och ska ha kalenderår, blir det första räkenskapsåret 8 månader: maj till december.
 
 ## Kommer senare
 

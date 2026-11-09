@@ -31,6 +31,11 @@ I now decided to start a little list of things I 'miss' in the app while I test 
     * Provide to i,port from SIE file?
     * Consider to detect vouchers to accounts no longer in new plan?
     * Consider mechanism to book change vouchers to move postings to accounts in new plan
+* Consider how 'open existing project' shall behave?
+    * Can we make it open in it correct path (same as for opening remembered projects)
+    * For now I believe the will open in the 'add -> existing -> project'?
+    * Or maybe that is ok the first time?
+
 
 ## 20261108
 

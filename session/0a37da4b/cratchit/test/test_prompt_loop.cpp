@@ -472,3 +472,54 @@ TEST(PromptLoop, HelpKeyWorksWhileTheStartTextIsUntouched) {
             "\n  -       Tillbaka\n  ?       Visa gemensamma val, tryck igen för hjälp om Ord\n" +
                 common_keys_after_back + "Rot > Ord: /" + "\nSkriv ett ord.\nRot > Ord: /x?\n");
 }
+
+namespace {
+
+// A text field that takes any text but an empty one
+class Field : public pyroceph::tui::State {
+public:
+  std::string name() const override { return "Fält"; }
+  pyroceph::tui::View view() const override { return {}; }
+  pyroceph::tui::OptionsList options() const override { return {}; }
+  pyroceph::tui::OnKeyResult on_key(CodePoint) override { return nullptr; }
+  bool is_text_field() const override { return true; }
+  pyroceph::tui::InputResult on_input(std::u32string_view text) override {
+    if (text.empty()) return std::unexpected(std::string("Skriv något."));
+    return pyroceph::tui::Accepted(menu("Klart"));
+  }
+};
+
+std::unique_ptr<pyroceph::tui::State> with_field() {
+  return menu("Rot", {{U'1', "Fält", [] { return std::make_unique<Field>(); }}});
+}
+
+} // namespace
+
+TEST(PromptLoop, TextFieldTypesEvenWhenEmpty) {
+  Navigator navigator(with_field());
+  auto keys = keys_of({'1', 'q', 'x'}); // q is text in a field
+  EXPECT_EQ(run(keys, navigator), "\n  1 Fält\nRot> \nRot > Fält> \b\b: qx\n");
+  EXPECT_EQ(navigator.current().name(), "Fält");
+}
+
+TEST(PromptLoop, TextFieldStaysOpenWhenEmptied) {
+  Navigator navigator(with_field());
+  auto keys = keys_of({'1', 'x', 0x7F, 0x7F, 'y', 0x15, 'z'}); // Backspace on empty does nothing; Ctrl-U empties
+  EXPECT_EQ(run(keys, navigator), "\n  1 Fält\nRot> \nRot > Fält> \b\b: x\b \by\b \bz\n");
+}
+
+TEST(PromptLoop, BackLeavesAnUntouchedTextField) {
+  Navigator navigator(with_field());
+  auto keys = keys_of({'1', '-', '1', 'x', '-'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Fält\nRot> \nRot > Fält> \b\b: "
+                                  "\n  1 Fält\nRot> "
+                                  "\nRot > Fält> \b\b: x-\n");
+}
+
+TEST(PromptLoop, EnterInATextFieldGivesTheInputToTheState) {
+  Navigator navigator(with_field());
+  auto keys = keys_of({'1', '\n', 'x', '\n'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Fält\nRot> \nRot > Fält> \b\b: "
+                                  "\nSkriv något.\nRot > Fält: "
+                                  "x\nRot > Fält > Klart> \n");
+}

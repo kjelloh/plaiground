@@ -5,11 +5,14 @@
 #include "core/log.hpp"
 #include "core/project.hpp"
 #include "pyroceph/tui/error_state.hpp"
+#include "pyroceph/tui/prompt_loop.hpp"
 #include "ui/help_topics.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <expected>
 #include <format>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -43,150 +46,194 @@ std::u32string u32_of(std::string_view utf8) {
   return result;
 }
 
-// What the user has given so far
+// The details of the form, each empty (or nothing) until the user gives it
 struct Details {
-  Workspace workspace;
-  State const* origin = nullptr;
   std::string name;
-  std::filesystem::path folder;
-  std::string orgnr;
-  FiscalYear year;
+  std::filesystem::path folder; // <workspace>/<name>
+  std::string orgnr;            // NNNNNN-NNNN
+  std::optional<std::chrono::year_month> first_month;
+  int months = 12; // the first fiscal year's length
+
+  bool complete() const { return !name.empty() && !orgnr.empty() && first_month.has_value(); }
+  FiscalYear year() const { return first_fiscal_year(*first_month, months); }
 };
 
-class ConfirmDetailsState : public State {
+enum class Field { name, orgnr, first_month, months };
+
+class DetailsFormState;
+
+// One field of the form, typed in a text field that starts with the field's
+// current value. Enter takes a value the field accepts into the form and goes
+// back to it; - goes back while the text is untouched, leaving the field as it was.
+class FieldState : public State {
 public:
-  explicit ConfirmDetailsState(Details details) : details_(std::move(details)) {}
-  std::string name() const override { return "Bekräfta"; }
+  FieldState(DetailsFormState& form, Field field) : form_(form), field_(field) {}
+  std::string name() const override;
+  View view() const override;
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  bool is_text_field() const override { return true; }
+  std::u32string start_input() const override;
+  InputResult on_input(std::u32string_view text) override;
+  State const* back_to() const override;
+  std::string help_topic() const override;
+
+private:
+  DetailsFormState& form_; // below this field on the path, so it outlives it
+  Field field_;
+  bool taken_ = false;
+};
+
+class DetailsFormState : public State {
+public:
+  DetailsFormState(Workspace workspace, State const* origin) : workspace_(std::move(workspace)), origin_(origin) {}
+  std::string name() const override { return "Från uppgifter"; }
   View view() const override {
     if (created_) return {std::format("cratchit har skapat bokföringen i {}.", details_.folder.string())};
-    return {std::format("Företag: {} ({})", details_.name, details_.orgnr),
-            std::format("Räkenskapsår: {} – {}", details_.year.start, details_.year.end),
-            std::format("cratchit skapar bokföringen i {}.", details_.folder.string()),
+    if (!details_.complete()) {
+      return {"Välj en uppgift och fyll i den. När namn, organisationsnummer och räkenskapsår är ifyllda skapar Enter bokföringen."};
+    }
+    return {std::format("Tryck Enter för att skapa bokföringen i {}.", details_.folder.string()),
             "Bokföringen får ingen kontoplan än."};
   }
   OptionsList options() const override {
     if (created_) return {};
-    return {{U'1', "Skapa bokföringen"}};
+    auto const or_ask = [](std::string const& value, std::string const& ask) { return value.empty() ? ask : value; };
+    auto const year = details_.first_month ? std::format("{} – {}", details_.year().start, details_.year().end) : std::string();
+    return {{U'1', "Namn: " + or_ask(details_.name, "<ange organisationens namn>")},
+            {U'2', "Organisationsnummer: " + or_ask(details_.orgnr, "<ange organisationens organisationsnummer>")},
+            {U'3', "Räkenskapsår: " + or_ask(year, "<ange räkenskapsårets första månad>")},
+            {U'4', std::format("Första årets längd: {} månader", details_.months)}};
   }
   OnKeyResult on_key(CodePoint key) override {
-    if (created_ || key != U'1') return nullptr;
-    auto project = create_project_from_details(details_.folder, details_.name, details_.orgnr, details_.year, today_iso());
+    if (created_) return nullptr;
+    if (key == U'1') return std::make_unique<FieldState>(*this, Field::name);
+    if (key == U'2') return std::make_unique<FieldState>(*this, Field::orgnr);
+    if (key == U'3') return std::make_unique<FieldState>(*this, Field::first_month);
+    if (key == U'4') return std::make_unique<FieldState>(*this, Field::months);
+    if (pyroceph::tui::is_enter(key) && details_.complete()) return create();
+    return nullptr;
+  }
+  State const* back_to() const override { return created_ ? origin_ : nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::from_details); }
+
+  // The value a field shows, as typed
+  std::string value_of(Field field) const {
+    switch (field) {
+    case Field::name: return details_.name;
+    case Field::orgnr: return details_.orgnr;
+    case Field::first_month:
+      return details_.first_month ? std::format("{:04}-{:02}", static_cast<int>(details_.first_month->year()),
+                                                static_cast<unsigned>(details_.first_month->month()))
+                                  : std::string();
+    case Field::months: return std::to_string(details_.months);
+    }
+    return {};
+  }
+
+  // Takes text into a field, or says why it cannot
+  std::expected<void, std::string> take(Field field, std::string const& text) {
+    switch (field) {
+    case Field::name: {
+      auto folder = new_project_folder(workspace_, text);
+      if (!folder) return std::unexpected(folder.error());
+      details_.folder = *folder;
+      details_.name = folder->filename().string();
+      return {};
+    }
+    case Field::orgnr: {
+      auto orgnr = parse_orgnr(text);
+      if (!orgnr) return std::unexpected(orgnr.error());
+      details_.orgnr = *orgnr;
+      return {};
+    }
+    case Field::first_month: {
+      auto month = parse_first_month(text);
+      if (!month) return std::unexpected(month.error());
+      details_.first_month = *month;
+      return {};
+    }
+    case Field::months: {
+      auto months = parse_first_year_length(text);
+      if (!months) return std::unexpected(months.error());
+      details_.months = *months;
+      return {};
+    }
+    }
+    return {};
+  }
+
+private:
+  OnKeyResult create() {
+    auto const year = details_.year();
+    auto project = create_project_from_details(details_.folder, details_.name, details_.orgnr, year, today_iso());
     if (!project) {
       LOG_BUSINESS("Kunde inte skapa bokföringen {}: {}", details_.name, project.error());
       return pyroceph::tui::make_error_state(std::format("cratchit kunde inte skapa bokföringen: {}", project.error()));
     }
     created_ = true;
     LOG_BUSINESS("Skapade projektet {} ({}) i {} med räkenskapsåret {} – {}", project->name, details_.orgnr,
-                 project->folder.string(), details_.year.start, details_.year.end);
-    if (auto const remembered = remember_project(details_.workspace, *project); !remembered) {
+                 project->folder.string(), year.start, year.end);
+    if (auto const remembered = remember_project(workspace_, *project); !remembered) {
       LOG_BUSINESS("Samlingsmappen kunde inte komma ihåg projektet: {}", remembered.error());
       return pyroceph::tui::make_error_state(
           std::format("cratchit skapade bokföringen men kunde inte skriva in den i samlingsmappen: {}", remembered.error()));
     }
     return nullptr; // back to where the user started (back_to)
   }
-  State const* back_to() const override { return created_ ? details_.origin : nullptr; }
-  std::string help_topic() const override { return std::string(help_topic::confirm_details_project); }
 
-private:
+  Workspace workspace_;
+  State const* origin_;
   Details details_;
   bool created_ = false;
 };
 
-// One step: a text the user types, checked and kept, leading to the next step
-class StepState : public State {
-public:
-  explicit StepState(Details details) : details_(std::move(details)) {}
-  View view() const override { return {instruction()}; }
-  OptionsList options() const override { return {}; }
-  OnKeyResult on_key(CodePoint) override { return nullptr; }
-  std::u32string start_input() const override { return u32_of(given_.empty() ? suggestion() : given_); }
-  InputResult on_input(std::u32string_view text) override {
-    auto const typed = utf8_of(text);
-    auto next = take(typed);
-    if (!next) return std::unexpected(next.error());
-    given_ = typed;
-    return Accepted(std::move(*next));
+std::string FieldState::name() const {
+  switch (field_) {
+  case Field::name: return "Namn";
+  case Field::orgnr: return "Organisationsnummer";
+  case Field::first_month: return "Räkenskapsår";
+  case Field::months: return "Första årets längd";
   }
+  return {};
+}
 
-protected:
-  virtual std::string instruction() const = 0;
-  virtual std::string suggestion() const { return {}; }
-  // The next step with the text taken, or why the text cannot be taken
-  virtual std::expected<std::unique_ptr<State>, std::string> take(std::string const& text) const = 0;
-
-  Details details_;
-
-private:
-  std::string given_; // what the user gave here last, offered again
-};
-
-class YearStep : public StepState {
-public:
-  using StepState::StepState;
-  std::string name() const override { return details_.orgnr; }
-  std::string help_topic() const override { return std::string(help_topic::details_year); }
-
-protected:
-  std::string instruction() const override {
-    return "Skriv första och sista dagen i det första räkenskapsåret och tryck Enter, till exempel 2026-01-01 2026-12-31.";
+View FieldState::view() const {
+  switch (field_) {
+  case Field::name: return {"Skriv organisationens namn och tryck Enter. Bokföringen får en mapp med det namnet i samlingsmappen."};
+  case Field::orgnr: return {"Skriv organisationsnumret och tryck Enter, till exempel 556677-8899."};
+  case Field::first_month: return {"Skriv räkenskapsårets första månad och tryck Enter, till exempel 2026-05."};
+  case Field::months:
+    return {"Skriv hur många månader det första räkenskapsåret är och tryck Enter, 1 till 18. Oftast 12, men ett nytt "
+            "företags första år kan vara kortare eller längre."};
   }
-  std::string suggestion() const override {
-    auto const year = today_iso().substr(0, 4);
-    return std::format("{}-01-01 {}-12-31", year, year);
-  }
-  std::expected<std::unique_ptr<State>, std::string> take(std::string const& text) const override {
-    auto year = parse_first_fiscal_year(text);
-    if (!year) return std::unexpected(year.error());
-    auto details = details_;
-    details.year = *year;
-    return std::make_unique<ConfirmDetailsState>(std::move(details));
-  }
-};
+  return {};
+}
 
-class OrgnrStep : public StepState {
-public:
-  using StepState::StepState;
-  std::string name() const override { return details_.name; }
-  std::string help_topic() const override { return std::string(help_topic::details_orgnr); }
+std::u32string FieldState::start_input() const { return u32_of(form_.value_of(field_)); }
 
-protected:
-  std::string instruction() const override {
-    return "Skriv företagets organisationsnummer och tryck Enter, till exempel 556677-8899.";
-  }
-  std::expected<std::unique_ptr<State>, std::string> take(std::string const& text) const override {
-    auto orgnr = parse_orgnr(text);
-    if (!orgnr) return std::unexpected(orgnr.error());
-    auto details = details_;
-    details.orgnr = *orgnr;
-    return std::make_unique<YearStep>(std::move(details));
-  }
-};
+InputResult FieldState::on_input(std::u32string_view text) {
+  if (auto const taken = form_.take(field_, utf8_of(text)); !taken) return std::unexpected(taken.error());
+  taken_ = true;
+  return Accepted(); // back to the form (back_to)
+}
 
-class NameStep : public StepState {
-public:
-  using StepState::StepState;
-  std::string name() const override { return "Från uppgifter"; }
-  std::string help_topic() const override { return std::string(help_topic::from_details); }
+State const* FieldState::back_to() const { return taken_ ? &form_ : nullptr; }
 
-protected:
-  std::string instruction() const override {
-    return "Skriv företagets namn och tryck Enter. Bokföringen får en mapp med det namnet i samlingsmappen.";
+std::string FieldState::help_topic() const {
+  switch (field_) {
+  case Field::name: return std::string(help_topic::details_name);
+  case Field::orgnr: return std::string(help_topic::details_orgnr);
+  case Field::first_month: return std::string(help_topic::details_year);
+  case Field::months: return std::string(help_topic::details_months);
   }
-  std::expected<std::unique_ptr<State>, std::string> take(std::string const& text) const override {
-    auto folder = new_project_folder(details_.workspace, text);
-    if (!folder) return std::unexpected(folder.error());
-    auto details = details_;
-    details.name = folder->filename().string();
-    details.folder = *folder;
-    return std::make_unique<OrgnrStep>(std::move(details));
-  }
-};
+  return {};
+}
 
 } // namespace
 
 std::unique_ptr<State> make_project_from_details(Workspace workspace, State const* origin) {
-  return std::make_unique<NameStep>(Details{std::move(workspace), origin, {}, {}, {}, {}});
+  return std::make_unique<DetailsFormState>(std::move(workspace), origin);
 }
 
 } // namespace cratchit::ui

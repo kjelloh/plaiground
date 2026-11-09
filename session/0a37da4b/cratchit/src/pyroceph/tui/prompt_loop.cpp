@@ -73,7 +73,7 @@ public:
   Loop(Navigator& navigator, std::FILE* out, TerminalWidth width, HelpSource help)
       : navigator_(navigator), out_(out), width_(std::move(width)), help_(std::move(help)) {}
 
-  bool typing() const { return !input_.empty(); }
+  bool typing() const { return field_ || !input_.empty(); }
 
   // Shows the current state, and starts its input when it has a start text
   void present() {
@@ -110,6 +110,7 @@ public:
     if (key == back_key && input_.text() == navigator_.current().start_input()) {
       // The start text is untouched, so the user has typed nothing yet
       input_.clear();
+      field_ = false;
       after_wrap_ = false;
       if (navigator_.back()) present();
     } else if (key == help_key && input_.text() == navigator_.current().start_input()) {
@@ -164,17 +165,20 @@ private:
   }
 
   void start_input() {
+    field_ = false;
+    if (!input_.empty()) return;
     auto const text = navigator_.current().start_input();
-    if (text.empty() || !input_.empty()) return;
+    bool const field = navigator_.current().is_text_field();
     for (auto const code_point : text) input_.push(code_point);
-    if (input_.empty()) return;
+    if (input_.empty() && !field) return;
+    field_ = field;
     to_edit_prompt(out_);
     std::print(out_, "{}", utf8_of(input_.text()));
     after_wrap_ = false;
   }
 
   // Erases the last code point of the input, on the terminal too. Navigating
-  // starts again when the input becomes empty.
+  // starts again when the input becomes empty, unless the state is a text field.
   //
   // Each code point is taken to fill one column. When the terminal's width is
   // known, an input that has wrapped onto more rows is erased right: the
@@ -196,10 +200,10 @@ private:
       after_wrap_ = width && (end - 1) % static_cast<std::size_t>(*width) == 0;
     }
     input_.erase();
-    if (input_.empty()) to_navigation_prompt(out_);
+    if (input_.empty() && !field_) to_navigation_prompt(out_);
   }
 
-  // Empties the input, and navigating starts again
+  // Empties the input, and navigating starts again unless the state is a text field
   void erase_all() {
     while (!input_.empty()) erase_one();
   }
@@ -228,6 +232,7 @@ private:
     auto result = navigator_.current().on_input(input_.text());
     if (result) {
       input_.clear();
+      field_ = false;
       if (!result->reply.empty()) std::print(out_, "\n{}", result->reply);
       if (result->next) {
         navigator_.enter(std::move(result->next));
@@ -247,6 +252,7 @@ private:
   HelpSource help_;
   bool help_next_ = false; // the last key showed the common keys, so help_key shows the user instruction
   InputBuffer input_;
+  bool field_ = false;      // the current state is a text field: typing even when the input is empty
   bool after_wrap_ = false; // the cursor is at the start of a row because a code point there was erased
 };
 

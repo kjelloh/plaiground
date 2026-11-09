@@ -4,6 +4,7 @@
 #include "core/fiscal_year.hpp"
 #include "core/project.hpp"
 
+#include <chrono>
 #include <expected>
 #include <filesystem>
 #include <string>
@@ -20,12 +21,16 @@ std::expected<std::filesystem::path, std::string> new_project_folder(Workspace c
 // must be the check digit (Luhn). Error text otherwise.
 std::expected<std::string, std::string> parse_orgnr(std::string_view text);
 
-// The first fiscal year from its first and last day, YYYY-MM-DD each,
-// separated by spaces or a dash between spaces (e.g. "2026-01-01 – 2026-12-31").
-// The first day must be the first of a month, the last day the last of a month
-// after it, and the year at most 18 months long (a first fiscal year may be
-// extended). Error text otherwise.
-std::expected<FiscalYear, std::string> parse_first_fiscal_year(std::string_view text);
+// The first month of the first fiscal year, YYYY-MM (e.g. 2026-05). Error text otherwise.
+std::expected<std::chrono::year_month, std::string> parse_first_month(std::string_view text);
+
+// The length of the first fiscal year in months, 1 to 18: a new company's first
+// fiscal year may be shortened or extended up to 18 months. Error text otherwise.
+std::expected<int, std::string> parse_first_year_length(std::string_view text);
+
+// The fiscal year starting on the first day of first_month and lasting months
+// months, e.g. 2026-05 and 12 give 2026-05-01 – 2027-04-30
+FiscalYear first_fiscal_year(std::chrono::year_month first_month, int months);
 
 // Creates a project in folder (see new_project_folder) from the details:
 // the folder, .cratchit/project.txt (`created`, `uuid` (new), `name`, `orgnr`)

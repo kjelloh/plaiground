@@ -5,10 +5,10 @@
 #include "core/path_value.hpp"
 #include "core/sie_project.hpp"
 
+#include <charconv>
 #include <chrono>
 #include <format>
 #include <system_error>
-#include <vector>
 
 namespace cratchit {
 
@@ -20,18 +20,6 @@ std::string_view trimmed(std::string_view text) {
   auto const first = text.find_first_not_of(" \t");
   if (first == std::string_view::npos) return {};
   return text.substr(first, text.find_last_not_of(" \t") - first + 1);
-}
-
-// The words of text, split at spaces and tabs
-std::vector<std::string_view> words_of(std::string_view text) {
-  std::vector<std::string_view> words;
-  while (!(text = trimmed(text)).empty()) {
-    auto const end = text.find_first_of(" \t");
-    words.push_back(text.substr(0, end));
-    if (end == std::string_view::npos) break;
-    text.remove_prefix(end);
-  }
-  return words;
 }
 
 bool luhn_ok(std::string_view digits) {
@@ -76,24 +64,30 @@ std::expected<std::string, std::string> parse_orgnr(std::string_view text) {
   return digits.substr(0, 6) + "-" + digits.substr(6);
 }
 
-std::expected<FiscalYear, std::string> parse_first_fiscal_year(std::string_view text) {
-  auto words = words_of(text);
-  if (words.size() == 3 && (words[1] == "-" || words[1] == "–")) words.erase(words.begin() + 1);
-  auto const usage = std::string("Skriv första och sista dagen, till exempel 2026-01-01 2026-12-31");
-  if (words.size() != 2) return std::unexpected(usage);
-  auto const start = parse_iso_date(words[0]);
-  auto const end = parse_iso_date(words[1]);
-  if (!start || !end) return std::unexpected(usage);
-  using namespace std::chrono;
-  if (start->day() != day{1}) return std::unexpected(std::format("{} är inte den första dagen i en månad", words[0]));
-  if (year_month_day_last(end->year(), month_day_last(end->month())) != *end) {
-    return std::unexpected(std::format("{} är inte den sista dagen i en månad", words[1]));
+std::expected<std::chrono::year_month, std::string> parse_first_month(std::string_view text) {
+  text = trimmed(text);
+  auto const date = text.size() == 7 ? parse_iso_date(std::string(text) + "-01") : std::nullopt;
+  if (!date) return std::unexpected(std::format("\"{}\" är ingen månad. Skriv år och månad, till exempel 2026-05", text));
+  return std::chrono::year_month(date->year(), date->month());
+}
+
+std::expected<int, std::string> parse_first_year_length(std::string_view text) {
+  text = trimmed(text);
+  int months = 0;
+  auto const [end, error] = std::from_chars(text.data(), text.data() + text.size(), months);
+  if (error != std::errc{} || end != text.data() + text.size() || text.empty()) {
+    return std::unexpected(std::format("\"{}\" är inget antal månader. Skriv till exempel 12", text));
   }
-  if (!(*start < *end)) return std::unexpected("Sista dagen måste komma efter första dagen");
-  auto const months = (end->year() - start->year()).count() * 12 +
-                      (static_cast<int>(static_cast<unsigned>(end->month())) - static_cast<int>(static_cast<unsigned>(start->month()))) + 1;
-  if (months > 18) return std::unexpected(std::format("Räkenskapsåret är {} månader. Det får vara högst 18", months));
-  return FiscalYear{format_iso_date(*start), format_iso_date(*end)};
+  if (months < 1 || months > 18) return std::unexpected("Det första räkenskapsåret får vara 1 till 18 månader");
+  return months;
+}
+
+FiscalYear first_fiscal_year(std::chrono::year_month first_month, int months) {
+  using namespace std::chrono;
+  auto const start = year_month_day(first_month / day{1});
+  auto const last_month = first_month + std::chrono::months(months - 1);
+  auto const end = year_month_day(last_month / last);
+  return {format_iso_date(start), format_iso_date(end)};
 }
 
 std::expected<Project, std::string> create_project_from_details(fs::path const& folder, std::string_view name,

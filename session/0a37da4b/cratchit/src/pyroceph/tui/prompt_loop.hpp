@@ -93,7 +93,9 @@ void show(Navigator const& navigator, std::FILE* out);
 //
 // Whenever a state with a start text (State::start_input) is shown, its input
 // starts with that text, e.g. a folder to type a path from. As long as the
-// start text is untouched, back_key and help_key work as when navigating.
+// start text is untouched, back_key and help_key work as when navigating. A
+// text field (State::is_text_field) starts the input even with no start text,
+// and the input stays open when emptied.
 //
 // Typing input: printable keys go into the input and are echoed. Backspace
 // and Delete erase one; when the input becomes empty, navigating starts

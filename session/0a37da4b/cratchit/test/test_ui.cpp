@@ -18,6 +18,7 @@
 
 namespace fs = std::filesystem;
 
+using pyroceph::tui::CodePoint;
 using pyroceph::tui::Navigator;
 using pyroceph::tui::OptionsList;
 using pyroceph::tui::View;
@@ -414,17 +415,12 @@ TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().help_topic(), topic::from_details);
-  auto next = [&navigator](std::u32string_view text) {
-    auto result = navigator.current().on_input(text);
-    ASSERT_TRUE(result) << result.error();
-    navigator.enter(std::move(result->next));
-  };
-  next(U"Exempel AB");
-  EXPECT_EQ(navigator.current().help_topic(), topic::details_orgnr);
-  next(U"556677-8899");
-  EXPECT_EQ(navigator.current().help_topic(), topic::details_year);
-  next(U"2026-01-01 2026-12-31");
-  EXPECT_EQ(navigator.current().help_topic(), topic::confirm_details_project);
+  for (auto const& [key, field_topic] : {std::pair{U'1', topic::details_name}, std::pair{U'2', topic::details_orgnr},
+                                         std::pair{U'3', topic::details_year}, std::pair{U'4', topic::details_months}}) {
+    ASSERT_TRUE(navigator.press(key));
+    EXPECT_EQ(navigator.current().help_topic(), field_topic);
+    ASSERT_TRUE(navigator.back());
+  }
   EXPECT_EQ(cratchit::ui::make_design_insufficiency_state("Val", "något")->help_topic(), topic::design_insufficiency);
 }
 
@@ -468,7 +464,23 @@ TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2025 (2025-01-01 – 2025-12-31)"}}));
 }
 
-TEST_F(RootMenuTest, FromDetailsCreatesTheProjectAndTheWorkspaceRemembersIt) {
+namespace {
+
+// Types text into the field the key leads to in the details form, and enters it
+std::expected<void, std::string> fill(Navigator& navigator, CodePoint key, std::u32string_view text) {
+  if (!navigator.press(key)) return std::unexpected("no field");
+  auto result = navigator.current().on_input(text);
+  if (!result) {
+    navigator.back();
+    return std::unexpected(result.error());
+  }
+  navigator.follow_back_to();
+  return {};
+}
+
+} // namespace
+
+TEST_F(RootMenuTest, FromDetailsIsAFormThatCreatesTheProjectOnEnter) {
   auto const folder = documents / "cratchit";
   ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-09"));
   Navigator navigator(cratchit::ui::make_root_menu(folder));
@@ -477,42 +489,40 @@ TEST_F(RootMenuTest, FromDetailsCreatesTheProjectAndTheWorkspaceRemembersIt) {
   ASSERT_TRUE(navigator.press(U'2'));
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Från uppgifter");
-  EXPECT_TRUE(navigator.current().start_input().empty());
-  // Each step refuses what it cannot take, and leads on with what it can
-  EXPECT_FALSE(navigator.current().on_input(U"A/B"));
-  auto name = navigator.current().on_input(U"Exempel AB");
-  ASSERT_TRUE(name) << name.error();
-  navigator.enter(std::move(name->next));
-  EXPECT_EQ(navigator.current().name(), "Exempel AB");
-  EXPECT_FALSE(navigator.current().on_input(U"556677-8898")); // wrong check digit
-  auto orgnr = navigator.current().on_input(U"5566778899");
-  ASSERT_TRUE(orgnr) << orgnr.error();
-  navigator.enter(std::move(orgnr->next));
-  EXPECT_EQ(navigator.current().name(), "556677-8899");
-  EXPECT_TRUE(navigator.current().start_input().ends_with(U"-01-01 " + navigator.current().start_input().substr(0, 4) + U"-12-31"));
-  auto year = navigator.current().on_input(U"2026-05-01 2027-04-30");
-  ASSERT_TRUE(year) << year.error();
-  navigator.enter(std::move(year->next));
-  EXPECT_EQ(navigator.current().name(), "Bekräfta");
-  EXPECT_FALSE(fs::exists(folder / "Exempel AB")); // nothing created before 1
-  // Back to the name: what was given is offered again
-  ASSERT_TRUE(navigator.back());
-  ASSERT_TRUE(navigator.back());
-  EXPECT_EQ(navigator.current().start_input(), U"5566778899");
-  ASSERT_TRUE(navigator.back());
-  EXPECT_EQ(navigator.current().start_input(), U"Exempel AB");
-  // On to Bekräfta again, and create
-  for (auto const text : {U"Exempel AB", U"556677-8899", U"2026-05-01 2027-04-30"}) {
-    auto result = navigator.current().on_input(text);
-    ASSERT_TRUE(result) << result.error();
-    navigator.enter(std::move(result->next));
-  }
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'1', "Namn: <ange organisationens namn>"},
+                         {U'2', "Organisationsnummer: <ange organisationens organisationsnummer>"},
+                         {U'3', "Räkenskapsår: <ange räkenskapsårets första månad>"},
+                         {U'4', "Första årets längd: 12 månader"}}));
+  // Enter before everything is given creates nothing
+  EXPECT_FALSE(navigator.press(U'\n'));
+  // A field is a text field, empty until given, then showing its value
   ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Namn");
+  EXPECT_TRUE(navigator.current().is_text_field());
+  EXPECT_TRUE(navigator.current().start_input().empty());
+  ASSERT_TRUE(navigator.back());
+  // Fields in any order; a refused value leaves the field as it was
+  ASSERT_TRUE(fill(navigator, U'2', U"5566778899"));
+  EXPECT_FALSE(fill(navigator, U'2', U"556677-8898"));
+  ASSERT_TRUE(fill(navigator, U'1', U"Exempel AB"));
+  ASSERT_TRUE(fill(navigator, U'3', U"2026-05"));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().start_input(), U"556677-8899");
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'1', "Namn: Exempel AB"}, {U'2', "Organisationsnummer: 556677-8899"},
+                         {U'3', "Räkenskapsår: 2026-05-01 – 2027-04-30"}, {U'4', "Första årets längd: 12 månader"}}));
+  ASSERT_TRUE(fill(navigator, U'4', U"8"));
+  EXPECT_EQ(navigator.current().options()[2].second, "Räkenskapsår: 2026-05-01 – 2026-12-31");
+  EXPECT_FALSE(fill(navigator, U'4', U"19"));
+  EXPECT_FALSE(fs::exists(folder / "Exempel AB")); // nothing created before Enter
+  // Enter creates and goes back to the workspace, which lists the project
+  ASSERT_TRUE(navigator.press(U'\n'));
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
   EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Exempel AB"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().name(), "Exempel AB");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2026/27 (2026-05-01 – 2027-04-30)"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2026 (2026-05-01 – 2026-12-31)"}}));
 }
 
 TEST_F(RootMenuTest, WorkspaceShowsItsProjectsInColumnsReadFromEachProject) {
