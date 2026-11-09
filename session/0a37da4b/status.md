@@ -76,6 +76,7 @@
 * Steg 66: Räkenskapsåren räknas fram från bokföringen fram till dagens datum (`list_years_until`): `0` är alltid det aktuella året, ett nytt år syns av sig självt och skrivs först när något görs i det. Varje år visar `bokfört: inget` eller `bokfört: N verifikationer`. `CRATCHIT_TODAY` sätter dagens datum för att prova; testerna kör på 2026-11-09. Manualen och README uppdaterade. 438 tester. Provkört med pipe på macOS mot en kopia av The ITfied AB, med och utan `CRATCHIT_TODAY=2027-05-02`.
 * Steg 67: Räkenskapsåren listas som `2027-05-01 – 2028-04-30  bokfört: inget`, utan årsnamn och parentes. Namnet står kvar i sökvägen. Manualen uppdaterad. 438 tester.
 * Steg 68: Listan över räkenskapsår slutar med ett tomt år före det äldsta bokförda, att importera ett tidigare år i. Ett tomt år som ansluter till bokföringen tar emot en SIE-fil med andra datum (1–18 månader): ett första år av annan längd bakåt, en omläggning framåt. `Bekräfta` visar vilket år cratchit räknade med och att användaren ansvarar för räkenskapsåret. Manualen uppdaterad. 445 tester. Provkört med pipe på macOS.
+* Steg 69: Linux-bygget rättat: `quoted` i `core/sie/writer.cpp` heter `sie_quoted`, så att GCC inte väljer `std::quoted` via ADL. Provbyggt och testat på macOS (445 tester); GCC finns inte lokalt, så Linux och Windows är inte provade.
 
 ## Bygg, kör och installera
 

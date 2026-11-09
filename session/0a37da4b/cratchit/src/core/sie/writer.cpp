@@ -12,7 +12,7 @@ namespace cratchit::sie {
 
 namespace {
 
-std::string quoted(std::string_view text) {
+std::string sie_quoted(std::string_view text) {
   std::string result = "\"";
   for (auto const c : text) {
     if (c == '"') {
@@ -28,7 +28,7 @@ std::string token(std::string_view text) {
   auto const plain = !text.empty() && std::ranges::none_of(text, [](char c) {
     return c == ' ' || c == '\t' || c == '"' || c == '{' || c == '}';
   });
-  return plain ? std::string(text) : quoted(text);
+  return plain ? std::string(text) : sie_quoted(text);
 }
 
 std::string date_text(Date date) {
@@ -56,7 +56,7 @@ std::string objects_text(Objects const& objects) {
     if (text.size() > 1) {
       text += ' ';
     }
-    text += std::format("{} {}", token(dimension), quoted(object));
+    text += std::format("{} {}", token(dimension), sie_quoted(object));
   }
   return text + "}";
 }
@@ -81,20 +81,20 @@ void write_identification(Document const& document, Writer& out) {
   }
   out.line(std::format("#SIETYP {}", token(document.sie_type)));
   if (!document.program.empty()) {
-    out.line(std::format("#PROGRAM {} {}", quoted(document.program), token(document.program_version)));
+    out.line(std::format("#PROGRAM {} {}", sie_quoted(document.program), token(document.program_version)));
   }
   if (document.generated) {
     out.line(std::format("#GEN {}{}", date_text(*document.generated),
-                         document.generated_by.empty() ? "" : " " + quoted(document.generated_by)));
+                         document.generated_by.empty() ? "" : " " + sie_quoted(document.generated_by)));
   }
   if (!document.company_id.empty()) {
     out.line(std::format("#FNR {}", token(document.company_id)));
   }
-  out.line(std::format("#FNAMN {}", quoted(document.company_name)));
+  out.line(std::format("#FNAMN {}", sie_quoted(document.company_name)));
   auto const& address = document.address;
   if (!address.contact.empty() || !address.street.empty() || !address.postal.empty() || !address.phone.empty()) {
-    out.line(std::format("#ADRESS {} {} {} {}", quoted(address.contact), quoted(address.street),
-                         quoted(address.postal), quoted(address.phone)));
+    out.line(std::format("#ADRESS {} {} {} {}", sie_quoted(address.contact), sie_quoted(address.street),
+                         sie_quoted(address.postal), sie_quoted(address.phone)));
   }
   for (auto const& year : document.years) {
     out.line(std::format("#RAR {} {} {}", year.index, date_text(year.start), date_text(year.end)));
@@ -121,13 +121,13 @@ void write_identification(Document const& document, Writer& out) {
     out.line(std::format("#TAXAR {}", token(document.tax_year)));
   }
   for (auto const& note : document.notes) {
-    out.line(std::format("#PROSA {}", quoted(note)));
+    out.line(std::format("#PROSA {}", sie_quoted(note)));
   }
 }
 
 void write_accounts(Document const& document, Writer& out) {
   for (auto const& account : document.accounts) {
-    out.line(std::format("#KONTO {} {}", token(account.number), quoted(account.name)));
+    out.line(std::format("#KONTO {} {}", token(account.number), sie_quoted(account.name)));
     if (!account.type.empty()) {
       out.line(std::format("#KTYP {} {}", token(account.number), token(account.type)));
     }
@@ -135,7 +135,7 @@ void write_accounts(Document const& document, Writer& out) {
       out.line(std::format("#SRU {} {}", token(account.number), token(account.sru)));
     }
     if (!account.unit.empty()) {
-      out.line(std::format("#ENHET {} {}", token(account.number), quoted(account.unit)));
+      out.line(std::format("#ENHET {} {}", token(account.number), sie_quoted(account.unit)));
     }
   }
 }
@@ -143,14 +143,14 @@ void write_accounts(Document const& document, Writer& out) {
 void write_dimensions(Document const& document, Writer& out) {
   for (auto const& dimension : document.dimensions) {
     if (dimension.super.empty()) {
-      out.line(std::format("#DIM {} {}", token(dimension.number), quoted(dimension.name)));
+      out.line(std::format("#DIM {} {}", token(dimension.number), sie_quoted(dimension.name)));
     } else {
-      out.line(std::format("#UNDERDIM {} {} {}", token(dimension.number), quoted(dimension.name),
+      out.line(std::format("#UNDERDIM {} {} {}", token(dimension.number), sie_quoted(dimension.name),
                            token(dimension.super)));
     }
   }
   for (auto const& object : document.objects) {
-    out.line(std::format("#OBJEKT {} {} {}", token(object.dimension), quoted(object.number), quoted(object.name)));
+    out.line(std::format("#OBJEKT {} {} {}", token(object.dimension), sie_quoted(object.number), sie_quoted(object.name)));
   }
 }
 
@@ -224,13 +224,13 @@ void write_balances(Document const& document, Writer& out) {
 // account {objects} amount date text [quantity [signature]]; date and text as "" when not given
 std::string transaction_line(std::string_view label, Transaction const& t, bool with_signature) {
   auto line = std::format("#{} {} {} {} {} {}", label, token(t.account), objects_text(t.objects),
-                          amount_text(t.amount), t.date ? date_text(*t.date) : "\"\"", quoted(t.text));
+                          amount_text(t.amount), t.date ? date_text(*t.date) : "\"\"", sie_quoted(t.text));
   auto const signature = with_signature && !t.signature.empty();
   if (!t.quantity.empty() || signature) {
     line += " " + (t.quantity.empty() ? std::string("\"\"") : token(t.quantity));
   }
   if (signature) {
-    line += " " + quoted(t.signature);
+    line += " " + sie_quoted(t.signature);
   }
   return line;
 }
@@ -238,12 +238,12 @@ std::string transaction_line(std::string_view label, Transaction const& t, bool 
 void write_vouchers(Document const& document, Writer& out) {
   for (auto const& voucher : document.vouchers) {
     auto line = std::format("#VER {} {} {} {}", token(voucher.series), token(voucher.number),
-                            date_text(voucher.date), quoted(voucher.text));
+                            date_text(voucher.date), sie_quoted(voucher.text));
     if (voucher.registered || !voucher.signature.empty()) {
       line += " " + (voucher.registered ? date_text(*voucher.registered) : std::string("\"\""));
     }
     if (!voucher.signature.empty()) {
-      line += " " + quoted(voucher.signature);
+      line += " " + sie_quoted(voucher.signature);
     }
     out.line(line);
     out.line("{");
