@@ -77,6 +77,7 @@
 * Steg 67: Räkenskapsåren listas som `2027-05-01 – 2028-04-30  bokfört: inget`, utan årsnamn och parentes. Namnet står kvar i sökvägen. Manualen uppdaterad. 438 tester.
 * Steg 68: Listan över räkenskapsår slutar med ett tomt år före det äldsta bokförda, att importera ett tidigare år i. Ett tomt år som ansluter till bokföringen tar emot en SIE-fil med andra datum (1–18 månader): ett första år av annan längd bakåt, en omläggning framåt. `Bekräfta` visar vilket år cratchit räknade med och att användaren ansvarar för räkenskapsåret. Manualen uppdaterad. 445 tester. Provkört med pipe på macOS.
 * Steg 69: Linux-bygget rättat: `quoted` i `core/sie/writer.cpp` heter `sie_quoted`, så att GCC inte väljer `std::quoted` via ADL. Provbyggt och testat på macOS (445 tester); GCC finns inte lokalt, så Linux och Windows är inte provade.
+* Steg 70: Provbyggt med GCC 16 lokalt (omslag i scratchpad). Rättat två GCC-fel i testerna från 'take 3': startvärden `{}` i `books::Posting` och `books::FiscalYear`, och aliaset `log` i `test_sie_file.cpp`. 445 tester går igenom med både GCC 16 och clang. Windows (MSVC) inte provat.
 
 ## Bygg, kör och installera
 

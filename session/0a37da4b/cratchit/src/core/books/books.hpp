@@ -56,12 +56,12 @@ struct Posting {
 
   Kind kind = Kind::normal;
   std::string account;
-  Objects objects;
+  Objects objects{};
   Amount amount = 0;
-  std::optional<Date> date; // when not given, the event's date
-  std::string text;
-  std::string quantity;
-  std::string signature;
+  std::optional<Date> date{}; // when not given, the event's date
+  std::string text{};
+  std::string quantity{};
+  std::string signature{};
   std::string source{}; // the statement entry it came from (stashed file:line); kept on waiting events only
 
   bool operator==(Posting const&) const = default;
@@ -116,8 +116,8 @@ struct FiscalYear {
   Date end;
   // The opening balances the source reported. Used only when the year before
   // is not in the books; else the year before's closing balances are carried.
-  std::map<std::string, Amount> reported_opening;
-  std::vector<Voucher> vouchers;
+  std::map<std::string, Amount> reported_opening{};
+  std::vector<Voucher> vouchers{};
   bool closed = false; // closed for new vouchers (open by default)
   // Events waiting for postings, oldest date first, ties in the order noted.
   // Add them with place_waiting only, so the order holds.

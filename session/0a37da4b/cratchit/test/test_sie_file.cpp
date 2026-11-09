@@ -13,7 +13,6 @@
 #include <vector>
 
 namespace fs = std::filesystem;
-namespace log = cratchit::log;
 
 using cratchit::Charset;
 using cratchit::sie::is_expected_text;
@@ -43,10 +42,10 @@ protected:
     root = fs::temp_directory_path() / (std::string("cratchit_test_") + info->name());
     fs::remove_all(root);
     fs::create_directories(root);
-    ASSERT_TRUE(log::open(root / "log.txt").has_value());
+    ASSERT_TRUE(cratchit::log::open(root / "log.txt").has_value());
   }
   void TearDown() override {
-    log::close();
+    cratchit::log::close();
     fs::remove_all(root);
   }
 
