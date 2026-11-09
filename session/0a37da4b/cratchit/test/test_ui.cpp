@@ -616,7 +616,7 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   EXPECT_EQ(navigator.current().name(), "older.se");
   EXPECT_EQ(navigator.current().view()[0], "Jämfört med older.se (Annat 2.0, skapad 2025-10-15):");
   EXPECT_EQ(navigator.current().view()[1], "Filen skapades 2025-10-15. Är det den senaste exporten från programmet?");
-  EXPECT_EQ(navigator.current().view()[2], "  I cratchit, inte i filen (1):");
+  EXPECT_EQ(navigator.current().view()[2], "  I räkenskapsåret, inte i filen (1):");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Skriv skillnaden till en SIE-fil"}}));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2025");
@@ -634,5 +634,5 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   ASSERT_TRUE(same) << same.error();
   navigator.enter(std::move(same->next));
   EXPECT_TRUE(navigator.current().options().empty());
-  EXPECT_EQ(navigator.current().view().back(), "Alla verifikationer i cratchit finns redan i SIE-filen. Det finns inget att exportera.");
+  EXPECT_EQ(navigator.current().view().back(), "Alla verifikationer i räkenskapsåret finns redan i SIE-filen. Det finns inget att exportera.");
 }

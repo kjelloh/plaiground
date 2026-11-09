@@ -63,15 +63,15 @@ public:
     } else if (comparison_.generated < today_iso()) {
       lines.push_back(std::format("Filen skapades {}. Är det den senaste exporten från programmet?", comparison_.generated));
     }
-    lines.push_back(std::format("  I cratchit, inte i filen ({}):", comparison_.books_only.size()));
+    lines.push_back(std::format("  I räkenskapsåret, inte i filen ({}):", comparison_.books_only.size()));
     for (auto const& voucher : comparison_.books_only) lines.push_back(voucher_line(voucher));
-    lines.push_back(std::format("  I filen, inte i cratchit ({}):", comparison_.file_only.size()));
+    lines.push_back(std::format("  I filen, inte i räkenskapsåret ({}):", comparison_.file_only.size()));
     for (auto const& voucher : comparison_.file_only) lines.push_back(voucher_line(voucher));
     if (!comparison_.file_only.empty()) {
-      lines.push_back("cratchit skriver ingen fil: SIE-filen har verifikationer som inte finns i cratchit, eller som ser annorlunda ut i "
-                        "cratchit. Program som Fortnox kan bara lägga till verifikationer, så de måste stämma först.");
+      lines.push_back("cratchit skriver ingen fil: SIE-filen har verifikationer som inte finns i räkenskapsåret, eller som ser annorlunda ut "
+                        "där. Program som Fortnox kan bara lägga till verifikationer, så de måste stämma först.");
     } else if (comparison_.books_only.empty()) {
-      lines.push_back("Alla verifikationer i cratchit finns redan i SIE-filen. Det finns inget att exportera.");
+      lines.push_back("Alla verifikationer i räkenskapsåret finns redan i SIE-filen. Det finns inget att exportera.");
     }
     return lines;
   }

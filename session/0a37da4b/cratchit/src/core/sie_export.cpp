@@ -87,10 +87,10 @@ std::expected<SieComparison, std::string> compare_with_sie(Project const& projec
 std::expected<Exported, std::string> export_difference(Project const& project, FiscalYear const& year,
                                                        SieComparison const& comparison, std::string_view today) {
   if (!comparison.file_only.empty()) {
-    return std::unexpected("SIE-filen har verifikationer som inte finns i cratchit, eller som ser annorlunda ut i cratchit. Program som Fortnox kan bara "
+    return std::unexpected("SIE-filen har verifikationer som inte finns i räkenskapsåret, eller som ser annorlunda ut där. Program som Fortnox kan bara "
                            "lägga till verifikationer, så de måste stämma först");
   }
-  if (comparison.books_only.empty()) return std::unexpected("Alla verifikationer i cratchit finns redan i SIE-filen");
+  if (comparison.books_only.empty()) return std::unexpected("Alla verifikationer i räkenskapsåret finns redan i SIE-filen");
   auto const loaded = load(project, year);
   if (!loaded) return std::unexpected(loaded.error());
   return write(project, *loaded, books::ExportKind::diff, today, comparison.books_only_index);
