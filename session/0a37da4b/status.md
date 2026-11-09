@@ -81,6 +81,7 @@
 * Steg 71: Windows-bygget rättat: MSVC C4146 i `core/amount.cpp` (`0 - x` i stället för `-x` för ett tal utan tecken). Kontrollerat med clangs konverterings- och skuggningsvarningar att inget liknande finns kvar. 445 tester med clang och GCC 16. MSVC inte provat lokalt.
 * Steg 72: Linux-testet `Books.WaitingEventsArePlacedByDateTiesInTheOrderNoted` rättat: `place_waiting` räknar indexet före `insert` (ordningen i `insert(...) - begin()` är ospecificerad, och GCC 14 tog `begin()` från före omflyttningen). 445 tester med clang och GCC 16.
 * Steg 73: Windows-bygget rättat: `CRATCHIT_TODAY` läses med `environment_variable` (`GetEnvironmentVariableA` på Windows) i stället för `std::getenv` (MSVC C4996). 445 tester med clang och GCC 16.
+* Steg 74: Windows-testet `DesignInsufficiencyState.LogsADesignInsufficiencyWithTheCallersPlace` rättat: loggfilen stängs innan testmappen tas bort. 445 tester med clang och GCC 16.
 
 ## Bygg, kör och installera
 

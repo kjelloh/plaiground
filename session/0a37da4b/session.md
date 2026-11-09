@@ -96,6 +96,9 @@ I am now churning along.
     * I get the feeling Claude generates learned code (and not best practice code)?
     * Anyhow, at least it is able to identify and adress the errors with changed code.
     * So tests and compiler errors will clean up the code (if though a bit inefficiently compared to getting the code correct from the beginning)?
+    * Another error example 'Testet misslyckas på Windows eftersom std::ifstream fortfarande har filen öppen när mappen tas bort.'.
+    * That does not sound like code a seasoned programmer would write (RAII anyone)?
+
 
 ## 20261108
 

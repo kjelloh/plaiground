@@ -31,9 +31,11 @@ TEST(DesignInsufficiencyState, LogsADesignInsufficiencyWithTheCallersPlace) {
   auto const line = std::source_location::current().line() + 1;
   auto const state = cratchit::ui::make_design_insufficiency_state("Val", "att göra något");
   cratchit::log::close();
-  std::ifstream in(file);
   std::ostringstream text;
-  text << in.rdbuf();
+  {
+    std::ifstream in(file);
+    text << in.rdbuf();
+  } // closed before the folder is removed: Windows does not remove an open file
   EXPECT_NE(text.str().find(std::format(" DESIGN_INSUFFICIENCY test_design_insufficiency.cpp:{} Val: att göra något\n", line)),
             std::string::npos)
       << text.str();
