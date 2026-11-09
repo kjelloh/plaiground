@@ -39,7 +39,7 @@ std::optional<Amount> parse_amount(std::string_view text) {
 }
 
 std::string format_amount(Amount amount) {
-  auto const magnitude = amount < 0 ? -static_cast<std::uint64_t>(amount) : static_cast<std::uint64_t>(amount);
+  auto const magnitude = amount < 0 ? 0 - static_cast<std::uint64_t>(amount) : static_cast<std::uint64_t>(amount); // 0 - x, not -x: MSVC warns (C4146)
   return std::format("{}{}.{:02}", amount < 0 ? "-" : "", magnitude / 100, magnitude % 100);
 }
 

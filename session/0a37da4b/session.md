@@ -73,6 +73,19 @@ I think I want to also create a list with things I like about what is in the app
     * E.g., ``` Cratchit > … > 2025/26 > Exportera SIE > Allt ```
     * E.g., ``` Cratchit > … > 2025/26 > Exportera SIE > Skillnad >> fortnox_export_20261109.se> ```
 
+I am now churning along.
+
+* Claude shines in scaffolding and fixing Github build errors.
+* And I get the impression that it can follow existing architecture in code quite well?
+
+    * At least I now have the impression that cratchit has a 'based' design.
+    * ADn Claude can extend with new UI operations following the design?
+    * I have not actually inspected the code so I don't know.
+    * I have decided in any case to go for functionality för now.
+    * Let's see if Claude gets good at refactoring also?
+    * Or maybe already is?
+    * Then I can come back and refactor the code should I spot openings for terser and cleaner design?  
+
 
 ## 20261108
 
