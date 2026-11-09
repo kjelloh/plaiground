@@ -174,7 +174,7 @@ En bokföring är bokföringen för en juridisk person, till exempel ett aktiebo
 ### Öppna en bokföring
 
 <!-- hjälp: bokforing -->
-Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Valen är bokföringens räkenskapsår: `0` är det aktuella året och `1`, `2`, `3` de äldre. Tryck ett års siffra för att öppna året. Tryck `-` för att gå tillbaka.
+Du har öppnat en bokföring. Ovanför prompten står mappen den ligger i. Valen är bokföringens räkenskapsår: `0` är det aktuella året och `1`, `2`, `3` de äldre. Tryck ett års siffra för att öppna året. Tryck `+` för att importera en SIE-fil. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
 Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens namn, och cratchit visar mappen den ligger i:
@@ -184,10 +184,48 @@ Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens nam
   0 2026/27 (2026-05-01 – 2027-04-30)
   1 2025/26 (2025-05-01 – 2026-04-30)
   2 2024/25 (2024-05-01 – 2025-04-30)
+  + Importera från SIE
 Cratchit > Samlingsmapp > The ITfied AB> 
 ```
 
 Valen är bokföringens räkenskapsår. `0` är det aktuella, det senaste i bokföringen, och `1`, `2`, `3` är åren före det, på samma sätt som i en SIE-fil men utan minustecken. Ett räkenskapsår som följer kalenderåret heter till exempel `2025`, och ett som går över två kalenderår heter till exempel `2025/26`. Har bokföringen fler än tio räkenskapsår visar cratchit de tio senaste och säger att det finns fler.
+
+### Importera från SIE
+
+<!-- hjälp: importera-sie -->
+Skriv sökvägen till SIE-filen och tryck Enter. Tab fyller i mappar och SIE-filer. cratchit läser filen och visar vilket räkenskapsår den gäller och vad den lägger till, innan något importeras. Så länge du inte har ändrat sökvägen går `-` tillbaka.
+<!-- /hjälp -->
+
+Med `+` i bokföringen tar du in en SIE-fil från ett annat bokföringsprogram, till exempel ett nytt räkenskapsår eller nya verifikationer i ett år som redan finns. SIE-filen avgör själv vilket räkenskapsår den gäller.
+
+1. Tryck `+` (*Importera från SIE*) i bokföringen.
+2. Skriv sökvägen till SIE-filen. Sökvägen börjar i bokföringens mapp, och Tab fyller i mappar och SIE-filer.
+3. Tryck Enter. cratchit läser filen och visar vad importen skulle göra.
+4. Kontrollera att räkenskapsåret är det du väntade dig, och tryck `1` (*Importera*).
+
+```text
+SIE-fil: /Users/anna/Downloads/TheITfiedAB.se (Fortnox 3.62.17, skapad 2026-11-09)
+Räkenskapsår: 2026-05-01 – 2027-04-30 (nytt i bokföringen)
+Verifikationer: 12 nya, 0 finns redan
+Konton: 1 nya, 0 med ändrat namn eller ändrade uppgifter
+cratchit flyttar SIE-filen till /Users/anna/Documents/cratchit/The ITfied AB/importerade_sie_filer.
+  1 Importera
+Cratchit > Samlingsmapp > The ITfied AB > Importera från SIE > Bekräfta> 
+```
+
+<!-- hjälp: bekrafta-import -->
+Ovanför prompten står vilket räkenskapsår SIE-filen gäller, om året är nytt i bokföringen eller redan finns, och vad importen lägger till. Tryck `1` för att importera, eller `-` för att gå tillbaka utan att importera något.
+<!-- /hjälp -->
+
+När importen är klar går cratchit tillbaka till bokföringen, som säger vad som importerades och visar räkenskapsåret i listan. SIE-filen flyttas till mappen `importerade_sie_filer` i bokföringens mapp. Finns en fil med samma namn där redan får den nya filen ett nummer.
+
+cratchit importerar ingenting, och visar varför, om:
+
+* filen inte är en SIE-fil, har fel eller saknar räkenskapsår,
+* filen gäller ett annat organisationsnummer än bokföringen,
+* filens räkenskapsår överlappar ett annat år i bokföringen, eller slutar på ett annat datum än samma år i bokföringen,
+* allt i filen redan finns i bokföringen,
+* importen skulle ändra eller ta bort verifikationer som redan finns i bokföringen. cratchit importerar än så länge bara det som är nytt.
 
 ### Räkenskapsår
 
@@ -392,6 +430,7 @@ Ett nystartat företag kan ha ett första räkenskapsår som är kortare eller l
 ## Kommer senare
 
 * En kontoplan för en ny bokföring från uppgifter. cratchit kommer att erbjuda BAS-kontoplanen.
+* Import av en SIE-fil som ändrar eller tar bort verifikationer som redan finns i bokföringen.
 
 ## Ordlista
 

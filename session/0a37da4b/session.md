@@ -13,7 +13,7 @@ It is now time to carry on making a full book keeping app from the sessions wher
 
 I have now vibe coded 'new project from SIE file'.
 
-I now decided to start a little list of things I 'miss' in the app while I test for each new functionality. I may need this list to remember what else to try to add to it when the main bits are implemented?
+I now decided to start a little list of things I 'miss' (or may need to attend to later) in the app while I test for each new functionality. I may need this list to remember what else to try to add to it when the main bits are implemented?
 
 * Consider to list projects with their creation date?
     * Now lists with creation date and more
@@ -44,6 +44,12 @@ I now decided to start a little list of things I 'miss' in the app while I test 
     * Export diff to SIE
     * We may enhance the 'diff' to ensure only 'extended' (disjunct set) is allowed
     * Such 'diff = disjunct' allows secure export to Fortnox that imports as 'append as new'
+* Consider to test the SIE file roundtrip through Fortnox again for this app?
+    * I did some simple tests in take 3.
+    * But maybe I should do another round-trip just in case?
+    * Consider with one new voucher (shall become the same new in Fortnox)
+    * Consider one removed (Nothing should actually happen in Fortnox?)
+    * Consider one mutated voucher (What does Fortnox do? Add as new? Ignore?)
 
 I think I want to also create a list with things I like about what is in the app.
 

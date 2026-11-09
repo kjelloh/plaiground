@@ -72,6 +72,7 @@ add_library(cratchit_core
   src/core/sie/lexer.cpp
   src/core/sie/writer.cpp
   src/core/sie_export.cpp
+  src/core/sie_import.cpp
   src/core/sie_project.cpp
   src/core/terminal_encoding.cpp
   src/core/version.cpp
@@ -107,6 +108,7 @@ add_library(cratchit_ui
   src/ui/forget_project_menu.cpp
   src/ui/project_menu.cpp
   src/ui/root_menu.cpp
+  src/ui/sie_import_menu.cpp
   src/ui/sie_project_menu.cpp
   src/ui/test_menu.cpp
   src/ui/workspace_menu.cpp

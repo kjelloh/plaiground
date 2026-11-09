@@ -69,6 +69,7 @@
 * Steg 59: Räkenskapsåret har `Exportera till SIE` med `Allt` (hela året med balanser) och `Skillnad` (verifikationerna som saknas i en vald SIE-fil, utan balanser), till `sie_<år>_allt.se` och `sie_<år>_skillnad.se` i bokföringens mapp. SIE-skrivaren och exporten flyttade från 'take 3' med tester (`core/sie/writer`, `core/books/export`, `core/version`); nytt är `core/sie_export`. Manualen uppdaterad. 414 tester. Provkört med pipe på macOS mot en kopia av The ITfied AB.
 * Steg 60: Noterat varför `Skillnad` finns: export till Fortnox, som bara kan lägga till verifikationer (beslut steg 60, manualen, kommentar i `core/sie_export.hpp`). Felmeddelandet när filen har verifikationer som saknas eller ser annorlunda ut i cratchit är omskrivet. 414 tester.
 * Steg 61: `Skillnad` ska jämföras med en färsk export från målprogrammet. Det står i vytexten, i hjälptexten och i manualen, och jämförelsen varnar när filen är skapad före i dag eller saknar datum. 414 tester.
+* Steg 62: `+ Importera från SIE` i bokföringen importerar en SIE-fils räkenskapsår (nytt eller befintligt) efter `Bekräfta`, och flyttar filen till `importerade_sie_filer`. Vägrar allt som skulle ändra eller ta bort befintliga verifikationer (`core/sie_import`, `ui/sie_import_menu`). Manualen uppdaterad. 421 tester. Provkört med pipe på macOS mot The ITfied AB:s SIE-filer.
 
 ## Bygg, kör och installera
 
@@ -89,5 +90,6 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 * Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden. De ska stå under *Kommer senare* i manualen.
 * Varje steg som ändrar det användaren ser uppdaterar `cratchit/docs/anvandarmanual.md`.
+* Notering, att återkomma till: kanske "forcerad import", "skriv över" eller liknande för SIE-importer som ändrar eller tar bort befintliga verifikationer (se beslut steg 62).
 * Notering: en BAS-kontoplan ska läggas i framework, och cratchit ska erbjuda den när en ny bokföring skapas från uppgifter (se beslut steg 54).
 * Bestäms av användaren. Troliga steg: prova `Befintlig` i en riktig terminal (särskilt Backspace över radbrytning). Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.
