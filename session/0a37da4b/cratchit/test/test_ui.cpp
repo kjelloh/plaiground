@@ -298,7 +298,7 @@ TEST(WorkspaceMenu, PlusLeadsToAddWithOpenExistingAndNew) {
   ASSERT_TRUE(navigator.press(U'+'));
   EXPECT_EQ(navigator.current().name(), "Lägg till");
   EXPECT_TRUE(navigator.current().view().empty());
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Öppna befintlig"}, {U'2', "Ny bokföring"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Befintlig"}, {U'2', "Ny"}}));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
 }
@@ -306,7 +306,7 @@ TEST(WorkspaceMenu, PlusLeadsToAddWithOpenExistingAndNew) {
 TEST(AddProjectMenu, OneLeadsToOpenExisting) {
   Navigator navigator(cratchit::ui::make_add_project_menu(workspace_at("/x/cratchit"), "/x"));
   ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().name(), "Öppna befintlig");
+  EXPECT_EQ(navigator.current().name(), "Befintlig");
   EXPECT_FALSE(navigator.current().view().empty());
   EXPECT_TRUE(navigator.current().options().empty());
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of("/x"));
@@ -322,7 +322,7 @@ TEST_F(RootMenuTest, OpenExistingCompletesFolderNames) {
   EXPECT_EQ(state->complete(typed).added, U" ITfied AB" + std::u32string(1, separator));
 }
 
-TEST_F(RootMenuTest, OpenExistingOpensTheProjectAndTheWorkspaceRemembersIt) {
+TEST_F(RootMenuTest, ExistingIsAddedAndTheWorkspaceListsIt) {
   auto const folder = documents / "cratchit";
   ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-08"));
   fs::create_directories(documents / "elsewhere" / "itfied" / ".cratchit");
@@ -332,21 +332,35 @@ TEST_F(RootMenuTest, OpenExistingOpensTheProjectAndTheWorkspaceRemembersIt) {
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'+'));
   ASSERT_TRUE(navigator.press(U'1'));
-  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "elsewhere" / "itfied"));
-  ASSERT_TRUE(result) << result.error();
-  EXPECT_EQ(result->reply, "Samlingsmappen kommer ihåg The ITfied AB.");
-  ASSERT_TRUE(result->next);
-  navigator.enter(std::move(result->next));
-  EXPECT_EQ(navigator.current().name(), "The ITfied AB");
-  EXPECT_EQ(navigator.current().view(),
-            (View{(documents / "elsewhere" / "itfied").string(), "Bokföringen har inga räkenskapsår än."}));
+  EXPECT_EQ(navigator.current().name(), "Befintlig");
+  auto const add = [&](fs::path const& project_folder) {
+    auto result = navigator.current().on_input(pyroceph::tui::path_input_of(project_folder));
+    EXPECT_TRUE(result) << result.error();
+    EXPECT_FALSE(result->next);
+    EXPECT_TRUE(navigator.follow_back_to());
+    return result->reply;
+  };
+  // Added: back in the workspace, which lists it
+  EXPECT_EQ(add(documents / "elsewhere" / "itfied"), "Samlingsmappen kommer ihåg The ITfied AB.");
+  EXPECT_EQ(navigator.path().size(), 2u);
+  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
+  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
   auto const entries = cratchit::read_path_values(folder / ".cratchit" / "workspace.txt");
   ASSERT_TRUE(entries);
   EXPECT_EQ(cratchit::find_value(*entries, "project.7"), (documents / "elsewhere" / "itfied").string());
-  // Back in the workspace, the project is listed
-  for (int i = 0; i < 3; ++i) ASSERT_TRUE(navigator.back());
-  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
-  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
+  // Added again: already remembered
+  ASSERT_TRUE(navigator.press(U'+'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(add(documents / "elsewhere" / "itfied"), "Samlingsmappen kommer redan ihåg The ITfied AB.");
+  // Moved: remembered at the new place
+  fs::rename(documents / "elsewhere", documents / "moved");
+  ASSERT_TRUE(navigator.press(U'+'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(add(documents / "moved" / "itfied"), "Samlingsmappen kommer ihåg The ITfied AB på det nya stället.");
+  auto const moved = cratchit::list_projects(*cratchit::open_workspace(folder, "2026-11-08"));
+  ASSERT_TRUE(moved);
+  ASSERT_EQ(moved->size(), 1u);
+  EXPECT_EQ((*moved)[0].folder, documents / "moved" / "itfied");
 }
 
 TEST_F(RootMenuTest, OpenExistingRefusesAFolderWithoutAProject) {
@@ -362,7 +376,7 @@ TEST_F(RootMenuTest, OpenExistingRefusesAFolderWithoutAProject) {
 TEST(AddProjectMenu, NewOffersFromSieAndFromDetails) {
   Navigator navigator(cratchit::ui::make_add_project_menu(workspace_at("/x/cratchit"), "/x"));
   ASSERT_TRUE(navigator.press(U'2'));
-  EXPECT_EQ(navigator.current().name(), "Ny bokföring");
+  EXPECT_EQ(navigator.current().name(), "Ny");
   EXPECT_TRUE(navigator.current().view().empty());
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Från SIE"}, {U'2', "Från uppgifter"}}));
   EXPECT_EQ(navigator.current().on_key(U'3'), nullptr);

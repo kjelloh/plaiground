@@ -47,12 +47,12 @@ Ovanför prompten visar cratchit det som hör till platsen du står på, och sed
 Varje val har en tangent framför sig. Tryck tangenten, utan Enter, så går du dit:
 
 ```text
-  1 Öppna befintlig
-  2 Ny bokföring
+  1 Befintlig
+  2 Ny
 Cratchit > Samlingsmapp > Lägg till> 
 ```
 
-Här tar `1` dig till *Öppna befintlig* och `2` till *Ny bokföring*.
+Här tar `1` dig till *Befintlig* och `2` till *Ny*. Menyvalen är korta. Trycker du `?` två gånger förklarar cratchit vad de betyder.
 
 ### Hjälp
 
@@ -205,7 +205,7 @@ Cratchit > Samlingsmapp > The ITfied AB > 2025/26>
 ### Lägg till
 
 <!-- hjälp: lagg-till -->
-Tryck `1` för att lägga till en bokföring som redan finns, eller `2` för att skapa en ny.
+Tryck `1` *Befintlig* för att lägga till en bokföring som redan finns men inte står i samlingsmappens lista, till exempel en som du har flyttat, kopierat eller tagit med från en annan dator. Tryck `2` *Ny* för att skapa en ny bokföring, från en SIE-fil eller från uppgifter om företaget.
 <!-- /hjälp -->
 
 Du kommer hit med `+` i samlingsmappen.
@@ -213,30 +213,33 @@ Du kommer hit med `+` i samlingsmappen.
 ### Lägga till en befintlig bokföring
 
 <!-- hjälp: oppna-befintlig -->
-Skriv sökvägen till mappen som bokföringen ligger i och tryck Enter. Tab fyller i mappnamn. Så länge du inte har ändrat sökvägen går `-` tillbaka. Annars tömmer Esc raden först.
+Skriv sökvägen till mappen som bokföringen ligger i och tryck Enter. Tab fyller i mappnamn. cratchit lägger till bokföringen i samlingsmappens lista och går tillbaka dit. Så länge du inte har ändrat sökvägen går `-` tillbaka. Annars tömmer Esc raden först.
 <!-- /hjälp -->
 
 Har du en bokföring som samlingsmappen inte listar tar du in den så här:
 
 1. Tryck `+` (*Lägg till bokföring*) i samlingsmappen.
-2. Tryck `1` (*Öppna befintlig*).
+2. Tryck `1` (*Befintlig*).
 3. Skriv sökvägen till mappen som bokföringen ligger i. Sökvägen börjar i samlingsmappen, och Tab fyller i mappnamnen (se [Skriva en sökväg](#skriva-en-sökväg)).
 4. Tryck Enter.
 
 ```text
-Cratchit > Samlingsmapp > Lägg till > Öppna befintlig: /Users/anna/Documents/Bokföringar/The ITfied AB/
+Cratchit > Samlingsmapp > Lägg till > Befintlig: /Users/anna/Documents/Bokföringar/The ITfied AB/
 Samlingsmappen kommer ihåg The ITfied AB.
-/Users/anna/Documents/Bokföringar/The ITfied AB
-Cratchit > Samlingsmapp > Lägg till > Öppna befintlig > The ITfied AB> 
+/Users/anna/Documents/cratchit
+    Namn           Org.nr       Skapad      Mapp
+  1 The ITfied AB  556782-8172  2026-10-23  ~/Documents/Bokföringar/The ITfied AB
+  + Lägg till bokföring
+Cratchit > Samlingsmapp> 
 ```
 
-cratchit öppnar bokföringen, och samlingsmappen kommer ihåg den. När du går tillbaka till samlingsmappen finns bokföringen i listan.
+cratchit går tillbaka till samlingsmappen, där bokföringen nu finns i listan. Där öppnar du den med dess siffra, som alla andra bokföringar.
 
 Ligger det ingen bokföring i mappen säger cratchit det, och sökvägen står kvar så att du kan rätta den.
 
 ### Flytta en bokföring
 
-Allt som hör till en bokföring ligger i dess mapp. Flytta eller kopiera mappen dit du vill ha den, och lägg sedan till den på det nya stället med *Öppna befintlig*. Samlingsmappen kommer då ihåg det nya stället i stället för det gamla.
+Allt som hör till en bokföring ligger i dess mapp. Flytta eller kopiera mappen dit du vill ha den, och lägg sedan till den på det nya stället med `+` och `1` (*Befintlig*). cratchit säger då "Samlingsmappen kommer ihåg … på det nya stället.", och listan visar den nya platsen.
 
 ### Ny bokföring
 
@@ -244,7 +247,7 @@ Allt som hör till en bokföring ligger i dess mapp. Flytta eller kopiera mappen
 Välj hur den nya bokföringen ska skapas: `1` från en SIE-fil eller `2` från namn, organisationsnummer och räkenskapsår.
 <!-- /hjälp -->
 
-Tryck `+` och sedan `2` (*Ny bokföring*). Där finns två val:
+Tryck `+` och sedan `2` (*Ny*). Där finns två val:
 
 * `1` *Från SIE*: skapa bokföringen från en SIE-fil (se nedan).
 * `2` *Från uppgifter*: skapa bokföringen från namn, organisationsnummer och räkenskapsår (se [Ny bokföring från uppgifter](#ny-bokföring-från-uppgifter)).
@@ -257,7 +260,7 @@ Skriv sökvägen till SIE-filen och tryck Enter. Tab fyller i mappar och SIE-fil
 
 En SIE-fil är en fil med bokföring som du har hämtat från ett annat bokföringsprogram. Så skapar du en bokföring från den:
 
-1. Tryck `+`, `2` (*Ny bokföring*) och `1` (*Från SIE*).
+1. Tryck `+`, `2` (*Ny*) och `1` (*Från SIE*).
 2. Skriv sökvägen till SIE-filen. Sökvägen börjar i samlingsmappen, och Tab fyller i mappar och SIE-filer.
 3. Tryck Enter. cratchit läser filen och visar vad den innehåller.
 4. Tryck `1` (*Skapa bokföringen*).
@@ -270,7 +273,7 @@ Verifikationer: 42
 Konton: 501
 cratchit skapar bokföringen i /Users/anna/Documents/cratchit/The ITfied AB och flyttar dit SIE-filen.
   1 Skapa bokföringen
-Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från SIE > Bekräfta> 
+Cratchit > Samlingsmapp > Lägg till > Ny > Från SIE > Bekräfta> 
 ```
 
 <!-- hjälp: bekrafta-sie -->
@@ -287,14 +290,14 @@ cratchit skapar ingenting om filen inte går att använda, till exempel om den i
 Välj en uppgift med dess siffra och fyll i den. När namn, organisationsnummer och räkenskapsår är ifyllda skapar Enter bokföringen. Du kan ändra en uppgift så många gånger du vill innan dess.
 <!-- /hjälp -->
 
-Har du ingen SIE-fil skapar du bokföringen från uppgifter om företaget. Tryck `+`, `2` (*Ny bokföring*) och `2` (*Från uppgifter*). Där fyller du i ett formulär:
+Har du ingen SIE-fil skapar du bokföringen från uppgifter om företaget. Tryck `+`, `2` (*Ny*) och `2` (*Från uppgifter*). Där fyller du i ett formulär:
 
 ```text
   1 Namn: <ange organisationens namn>
   2 Organisationsnummer: <ange organisationens organisationsnummer>
   3 Räkenskapsår: <ange räkenskapsårets första månad>
   4 Första årets längd: 12 månader
-Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter> 
+Cratchit > Samlingsmapp > Lägg till > Ny > Från uppgifter> 
 ```
 
 1. Tryck en uppgifts siffra. Raden är tom om uppgiften inte är ifylld, och visar det du skrev om den är det.
@@ -309,7 +312,7 @@ Bokföringen får ingen kontoplan än.
   2 Organisationsnummer: 556677-8899
   3 Räkenskapsår: 2026-05-01 – 2027-04-30
   4 Första årets längd: 12 månader
-Cratchit > Samlingsmapp > Lägg till > Ny bokföring > Från uppgifter> 
+Cratchit > Samlingsmapp > Lägg till > Ny > Från uppgifter> 
 ```
 
 Bokföringen får en mapp med företagets namn i samlingsmappen. Den får än så länge ingen kontoplan (se [Kommer senare](#kommer-senare)).

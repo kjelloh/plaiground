@@ -11,25 +11,30 @@ namespace cratchit::ui {
 // The key that adds to the list a state shows, e.g. a project to the workspace
 inline constexpr pyroceph::tui::CodePoint add_key = U'+';
 
-// Adds a project to the workspace, named "Lägg till" in the path:
-// * 1 "Öppna befintlig" opens an existing project that the workspace does not
-//   list yet (see make_open_existing_project).
-// * 2 "Ny bokföring" creates a new one, 1 from an SIE file ("Från SIE", see
+// Adds a project to the workspace, named "Lägg till" in the path. The options
+// are short; the help text says more:
+// * 1 "Befintlig" adds an existing project that the workspace does not list,
+//   e.g. moved, copied or from another computer (see make_open_existing_project).
+// * 2 "Ny" creates a new one, 1 from an SIE file ("Från SIE", see
 //   sie_project_menu.hpp) or 2 from name, organisation number and fiscal year
 //   ("Från uppgifter", see details_project_menu.hpp).
 // No input. Reached by + from the workspace. start_folder is where the user
 // starts typing the path of an existing project or of an SIE file. origin is
 // the state the user started from (the workspace), which the TUI goes back to
-// once a new project is created; nullptr to stay.
+// once a project is added or created; nullptr to stay.
 std::unique_ptr<pyroceph::tui::State> make_add_project_menu(Workspace workspace, std::filesystem::path start_folder,
                                                             pyroceph::tui::State const* origin = nullptr);
 
-// Opens an existing project, named "Öppna befintlig" in the path. The user
-// types the path of the project folder, starting from start_folder, and Tab
-// completes folder names. Enter opens the project there (see open_project),
-// makes the workspace remember it (see remember_project) and leads to the
-// project (see project_menu.hpp). When it cannot be opened the reason is shown
-// and the path is kept, to be corrected. No options.
-std::unique_ptr<pyroceph::tui::State> make_open_existing_project(Workspace workspace, std::filesystem::path start_folder);
+// Adds an existing project, named "Befintlig" in the path. The user types the
+// path of the project folder, starting from start_folder, and Tab completes
+// folder names. Enter checks the project there (see open_project), makes the
+// workspace remember it (see remember_project; a moved project is remembered
+// at its new place), says so ("Samlingsmappen kommer ihåg …", "… kommer redan
+// ihåg …" or "… kommer ihåg … på det nya stället.") and the TUI goes back to
+// origin (State::back_to), the workspace that lists it. Without origin it
+// stays. When it cannot be checked or remembered the reason is shown and the
+// path is kept, to be corrected. No options.
+std::unique_ptr<pyroceph::tui::State> make_open_existing_project(Workspace workspace, std::filesystem::path start_folder,
+                                                                pyroceph::tui::State const* origin = nullptr);
 
 } // namespace cratchit::ui

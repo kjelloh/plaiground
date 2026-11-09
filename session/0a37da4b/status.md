@@ -65,6 +65,7 @@
 * Steg 55: Samlingsmappen visar bokföringarna i kolumner (namn, org.nr, skapad, kort sökväg) med rubrikrad, och märker bokföringar som inte finns längre eller inte går att öppna. Uppgifterna läses från varje bokförings `project.txt` när listan visas (`describe_project`, `short_folder_text`); samlingsmappen vet bara sökvägarna. Manualen uppdaterad. 397 tester. Provkört med pipe på macOS.
 * Steg 56: En bokföring som inte finns längre eller inte går att öppna leder till en plats med `0 Glöm`, som tar bort den ur `workspace.txt` (`forget_project`, `ui/forget_project_menu`) och går tillbaka till samlingsmappen. Inga filer rörs. Manualen uppdaterad. 399 tester. Provkört med pipe på macOS.
 * Steg 57: `Från uppgifter` är ett formulär med fälten namn, organisationsnummer, räkenskapsårets första månad och första årets längd (1–18 månader). Fälten är textfält (`State::is_text_field` i `pyroceph`) som börjar med sitt värde; Enter tar värdet, `-` ångrar. Enter i formuläret skapar bokföringen när allt är ifyllt. Manualen uppdaterad. 402 tester. Provkört med pipe på macOS.
+* Steg 58: `Lägg till` har de korta valen `1 Befintlig` och `2 Ny` (hjälptexten förklarar dem). `Befintlig` (tidigare `Öppna befintlig`) går efter Enter tillbaka till samlingsmappen och säger om bokföringen är ny i listan, redan fanns där eller finns på ett nytt ställe. Alla bokföringar öppnas nu från samlingsmappen. Manualen uppdaterad. 402 tester. Provkört med pipe på macOS.
 
 ## Bygg, kör och installera
 
@@ -86,5 +87,4 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 * Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden. De ska stå under *Kommer senare* i manualen.
 * Varje steg som ändrar det användaren ser uppdaterar `cratchit/docs/anvandarmanual.md`.
 * Notering: en BAS-kontoplan ska läggas i framework, och cratchit ska erbjuda den när en ny bokföring skapas från uppgifter (se beslut steg 54).
-* Notering, att återkomma till: var `Öppna befintlig` hamnar. I dag leder Enter in i den öppnade bokföringen, och sökvägen blir `Cratchit > Samlingsmapp > Lägg till > Öppna befintlig > <bokföring>`. `Ny bokföring` (från SIE och från uppgifter) går i stället tillbaka till samlingsmappen (beslut steg 53). Inte bestämt om `Öppna befintlig` ska göra likadant (`back_to` till samlingsmappen) eller hamna i bokföringen direkt under samlingsmappen.
-* Bestäms av användaren. Troliga steg: prova `Öppna befintlig` i en riktig terminal (särskilt Backspace över radbrytning). Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.
+* Bestäms av användaren. Troliga steg: prova `Befintlig` i en riktig terminal (särskilt Backspace över radbrytning). Och kunna komma ihåg en samlingsmapp på ett annat ställe (i `runtime.txt`), kanske med `+` i roten.

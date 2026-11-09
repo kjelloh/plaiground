@@ -5,10 +5,11 @@
 #include "core/project.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/details_project_menu.hpp"
-#include "ui/project_menu.hpp"
 #include "ui/sie_project_menu.hpp"
 
+#include <algorithm>
 #include <format>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -26,8 +27,8 @@ using pyroceph::tui::State;
 using pyroceph::tui::View;
 
 // The captions, used both in the menu and for the states they lead to
-constexpr char const* open_existing_caption = "Öppna befintlig";
-constexpr char const* new_project_caption = "Ny bokföring";
+constexpr char const* open_existing_caption = "Befintlig";
+constexpr char const* new_project_caption = "Ny";
 constexpr char const* from_sie_caption = "Från SIE";
 constexpr char const* from_details_caption = "Från uppgifter";
 
@@ -55,13 +56,10 @@ private:
 
 class OpenExistingState : public State {
 public:
-  OpenExistingState(Workspace workspace, std::filesystem::path start_folder)
-      : workspace_(std::move(workspace)), start_folder_(std::move(start_folder)) {}
+  OpenExistingState(Workspace workspace, std::filesystem::path start_folder, State const* origin)
+      : workspace_(std::move(workspace)), start_folder_(std::move(start_folder)), origin_(origin) {}
   std::string name() const override { return open_existing_caption; }
-  View view() const override {
-    return {"Skriv sökvägen till mappen med bokföringen (den som har .cratchit/project.txt).",
-            "Tab fyller i mappnamn och Enter öppnar. - går tillbaka innan du skrivit något, Esc tömmer raden."};
-  }
+  View view() const override { return {"Skriv sökvägen till mappen med bokföringen och tryck Enter. Tab fyller i mappnamn."}; }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
   std::string help_topic() const override { return std::string(help_topic::open_existing); }
@@ -74,21 +72,33 @@ public:
       LOG_BUSINESS("Kunde inte öppna bokföringen i {}: {}", folder.string(), project.error());
       return std::unexpected(std::format("cratchit kunde inte öppna bokföringen: {}", project.error()));
     }
-    LOG_BUSINESS("Öppnade projektet {} i {}", project->name, project->folder.string());
-    std::string reply;
-    if (auto const remembered = remember_project(workspace_, *project); remembered) {
-      LOG_BUSINESS("Samlingsmappen {} kommer ihåg projektet {}", workspace_.folder.string(), project->uuid);
-      reply = std::format("Samlingsmappen kommer ihåg {}.", project->name);
-    } else {
-      LOG_BUSINESS("Samlingsmappen kunde inte komma ihåg projektet: {}", remembered.error());
-      reply = std::format("cratchit kunde inte skriva in bokföringen i samlingsmappen: {}", remembered.error());
+    // Where the workspace remembered it before, if it did
+    std::optional<std::filesystem::path> before;
+    if (auto const listed = list_projects(workspace_)) {
+      auto const found = std::ranges::find(*listed, project->uuid, &ListedProject::uuid);
+      if (found != listed->end()) before = found->folder;
     }
-    return Accepted(make_project_menu(std::move(*project)), std::move(reply));
+    if (auto const remembered = remember_project(workspace_, *project); !remembered) {
+      LOG_BUSINESS("Samlingsmappen kunde inte komma ihåg projektet: {}", remembered.error());
+      return std::unexpected(std::format("cratchit kunde inte skriva in bokföringen i samlingsmappen: {}", remembered.error()));
+    }
+    LOG_BUSINESS("Samlingsmappen {} kommer ihåg projektet {} ({}) i {}", workspace_.folder.string(), project->name,
+                 project->uuid, project->folder.string());
+    added_ = true;
+    if (!before) return Accepted(std::format("Samlingsmappen kommer ihåg {}.", project->name));
+    if (before->lexically_normal() == project->folder.lexically_normal()) {
+      return Accepted(std::format("Samlingsmappen kommer redan ihåg {}.", project->name));
+    }
+    return Accepted(std::format("Samlingsmappen kommer ihåg {} på det nya stället.", project->name));
   }
+  // Back to where the user started, the workspace, which now lists the project
+  State const* back_to() const override { return added_ ? origin_ : nullptr; }
 
 private:
   Workspace workspace_;
   std::filesystem::path start_folder_;
+  State const* origin_;
+  bool added_ = false;
 };
 
 class AddProjectState : public State {
@@ -99,7 +109,7 @@ public:
   View view() const override { return {}; }
   OptionsList options() const override { return {{U'1', open_existing_caption}, {U'2', new_project_caption}}; }
   OnKeyResult on_key(CodePoint key) override {
-    if (key == U'1') return make_open_existing_project(workspace_, start_folder_);
+    if (key == U'1') return make_open_existing_project(workspace_, start_folder_, origin_);
     if (key == U'2') return std::make_unique<NewProjectState>(workspace_, start_folder_, origin_);
     return nullptr;
   }
@@ -118,8 +128,9 @@ std::unique_ptr<State> make_add_project_menu(Workspace workspace, std::filesyste
   return std::make_unique<AddProjectState>(std::move(workspace), std::move(start_folder), origin);
 }
 
-std::unique_ptr<State> make_open_existing_project(Workspace workspace, std::filesystem::path start_folder) {
-  return std::make_unique<OpenExistingState>(std::move(workspace), std::move(start_folder));
+std::unique_ptr<State> make_open_existing_project(Workspace workspace, std::filesystem::path start_folder,
+                                                  State const* origin) {
+  return std::make_unique<OpenExistingState>(std::move(workspace), std::move(start_folder), origin);
 }
 
 } // namespace cratchit::ui
