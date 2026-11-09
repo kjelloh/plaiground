@@ -177,3 +177,8 @@ Kort logg över vad vi beslutat och varför.
 * Efter `1` går cratchit tillbaka till samlingsmappen, som för SIE (`back_to`).
 * Notering (användarens önskemål): en bokföring från uppgifter får ingen kontoplan än. cratchit ska erbjuda en BAS-kontoplan som läggs i framework (bredvid manualen), här i flödet för ny bokföring. `Bekräfta` säger att bokföringen inte får någon kontoplan än, och manualen tar upp det under *Kommer senare*.
 * Inget menyval leder längre till `Inte än`. Statet finns kvar för kommande luckor.
+* Steg 55: Samlingsmappen visar bokföringarna i kolumner med rubrikrad: `Namn`, `Org.nr`, `Skapad` och `Mapp` (användarens val). Rubriken står sist i vyn, indragen så att den står över valens text.
+* Samlingsmappen vet bara var bokföringarna ligger, `project.<uuid> = <mapp>` (användarens krav). Allt som visas läses från bokföringens egen `project.txt` varje gång listan visas eller ett val görs (`describe_project`). `ListedProject` har därför bara `uuid` och `folder`, och `list_projects` ger dem i ordningen i `workspace.txt`. Sorteringen efter namn görs när listan visas.
+* `Mapp` kortas (`short_folder_text`): relativt samlingsmappen när bokföringen ligger i den, annars med `~` när den ligger i hemkatalogen, annars hela sökvägen.
+* En bokföring vars mapp saknas märks `(finns inte längre)` (borttagen eller flyttad). En vars mapp finns men inte är bokföringen med det ihågkomna uuid:et, eller saknar namn, märks `(går inte att öppna)`. Båda visas med mappens namn och tomma kolumner. Märkningen står sist, så att kolumnerna håller.
+* Bredden räknas som en kolumn per kodpunkt.

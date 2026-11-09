@@ -7,6 +7,10 @@
 #include "ui/project_menu.hpp"
 
 #include <algorithm>
+#include <array>
+#include <optional>
+#include <string_view>
+#include <tuple>
 #include <cstddef>
 #include <format>
 #include <string>
@@ -22,6 +26,25 @@ using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
 using pyroceph::tui::View;
 
+// The width of UTF-8 text in columns, taking one column per code point
+std::size_t width_of(std::string_view text) {
+  return static_cast<std::size_t>(std::ranges::count_if(text, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
+}
+
+// text padded with spaces to width columns
+std::string padded(std::string text, std::size_t width) {
+  auto const used = width_of(text);
+  if (used < width) text.append(width - used, ' ');
+  return text;
+}
+
+// What is shown for a project, read from the project each time
+struct Row {
+  ListedProject listed;
+  ProjectSummary summary;
+  std::string folder; // short_folder_text
+};
+
 class WorkspaceState : public State {
 public:
   WorkspaceState(Workspace workspace, std::vector<ListedProject> projects)
@@ -32,17 +55,22 @@ public:
     if (!workspace_.initiated.empty()) lines.push_back("cratchit skapade en ny samlingsmapp.");
     lines.push_back(workspace_.folder.string());
     if (projects_.size() > max_listed_projects) lines.push_back("Samlingsmappen har fler bokföringar än cratchit visar här.");
+    auto const shown = rows();
+    if (!shown.empty()) lines.push_back(std::string(header_indent) + line_of({"Namn", "Org.nr", "Skapad", "Mapp"}, widths_of(shown)));
     return lines;
   }
   OptionsList options() const override {
     OptionsList result;
-    for (std::size_t i = 0; i < listed(); ++i) result.push_back({key_of(i), projects_[i].caption});
+    auto const shown = rows();
+    auto const widths = widths_of(shown);
+    for (std::size_t i = 0; i < shown.size(); ++i) result.push_back({key_of(i), caption_of(shown[i], widths)});
     result.push_back({add_key, "Lägg till bokföring"});
     return result;
   }
   OnKeyResult on_key(CodePoint key) override {
-    for (std::size_t i = 0; i < listed(); ++i) {
-      if (key == key_of(i)) return open(projects_[i]);
+    auto const shown = rows();
+    for (std::size_t i = 0; i < shown.size(); ++i) {
+      if (key == key_of(i)) return open(shown[i].listed);
     }
     if (key == add_key) return make_add_project_menu(workspace_, workspace_.folder, this);
     return nullptr;
@@ -60,7 +88,44 @@ public:
   }
 
 private:
-  std::size_t listed() const { return std::min(projects_.size(), max_listed_projects); }
+  // The header lines up with the options, which the TUI shows as "  <key> <caption>"
+  static constexpr std::string_view header_indent = "    ";
+
+  using Widths = std::array<std::size_t, 3>; // name, orgnr, created; the folder is last and not padded
+
+  // The projects shown, up to 9, each read from its project now, ordered by name then folder
+  std::vector<Row> rows() const {
+    std::vector<Row> result;
+    for (auto const& listed : projects_) {
+      result.push_back({listed, describe_project(listed), short_folder_text(listed.folder, workspace_.folder, home_)});
+    }
+    std::ranges::sort(result, {}, [](Row const& row) { return std::tie(row.summary.name, row.listed.folder); });
+    if (result.size() > max_listed_projects) result.resize(max_listed_projects);
+    return result;
+  }
+
+  static Widths widths_of(std::vector<Row> const& rows) {
+    Widths widths{width_of("Namn"), width_of("Org.nr"), width_of("Skapad")};
+    for (auto const& row : rows) {
+      widths[0] = std::max(widths[0], width_of(row.summary.name));
+      widths[1] = std::max(widths[1], width_of(row.summary.orgnr));
+      widths[2] = std::max(widths[2], width_of(row.summary.created));
+    }
+    return widths;
+  }
+
+  static std::string line_of(std::array<std::string, 4> const& columns, Widths const& widths) {
+    return std::format("{}  {}  {}  {}", padded(columns[0], widths[0]), padded(columns[1], widths[1]),
+                       padded(columns[2], widths[2]), columns[3]);
+  }
+
+  static std::string caption_of(Row const& row, Widths const& widths) {
+    auto line = line_of({row.summary.name, row.summary.orgnr, row.summary.created, row.folder}, widths);
+    if (row.summary.found == ProjectSummary::Found::missing) line += "  (finns inte längre)";
+    if (row.summary.found == ProjectSummary::Found::unreadable) line += "  (går inte att öppna)";
+    return line;
+  }
+
   static CodePoint key_of(std::size_t index) { return static_cast<CodePoint>(U'1' + index); }
 
   static OnKeyResult open(ListedProject const& listed) {
@@ -74,7 +139,11 @@ private:
   }
 
   Workspace workspace_;
-  std::vector<ListedProject> projects_;
+  std::vector<ListedProject> projects_; // only where the projects are; the rest is read from them when shown
+  std::optional<std::filesystem::path> home_ = [] -> std::optional<std::filesystem::path> {
+    if (auto const home = user_home()) return *home;
+    return std::nullopt;
+  }();
 };
 
 } // namespace

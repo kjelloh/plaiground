@@ -126,7 +126,7 @@ Tryck `-` för att gå tillbaka. Just nu finns inga sådana val.
 ## Samlingsmappen
 
 <!-- hjälp: samlingsmapp -->
-Samlingsmappen listar de bokföringar cratchit kommer ihåg. Tryck en bokförings siffra för att öppna den. Tryck `+` för att lägga till en bokföring.
+Samlingsmappen listar de bokföringar cratchit kommer ihåg, med namn, organisationsnummer, när de skapades och mappen de ligger i. Tryck en bokförings siffra för att öppna den. Tryck `+` för att lägga till en bokföring.
 <!-- /hjälp -->
 
 Tryck `0` i början för att öppna samlingsmappen.
@@ -135,10 +135,18 @@ Samlingsmappen listar de bokföringar den kommer ihåg, med tangenterna `1` till
 
 ```text
 /Users/anna/Documents/cratchit
-  1 The ITfied AB
+    Namn           Org.nr       Skapad      Mapp
+  1 Borttagen AB                            /Users/anna/Borttagen AB  (finns inte längre)
+  2 Exempel AB     556677-8899  2026-11-09  Exempel AB
+  3 The ITfied AB  556782-8172  2026-10-23  ~/Documents/Bokföringar/The ITfied AB
   + Lägg till bokföring
 Cratchit > Samlingsmapp> 
 ```
+
+* *Mapp* visar var bokföringen ligger. Ligger den i samlingsmappen står bara mappens namn, och ligger den i din hemkatalog börjar sökvägen med `~`.
+* Uppgifterna hämtas från bokföringen själv varje gång listan visas. Samlingsmappen kommer bara ihåg var bokföringarna ligger.
+* *(finns inte längre)* betyder att mappen är borttagen eller flyttad. Har du flyttat bokföringen lägger du till den igen på det nya stället (se [Flytta en bokföring](#flytta-en-bokföring)).
+* *(går inte att öppna)* betyder att mappen finns, men att den inte innehåller den bokföring samlingsmappen kommer ihåg.
 
 Har du fler än nio bokföringar visar cratchit de nio första och säger att det finns fler.
 

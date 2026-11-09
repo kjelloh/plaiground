@@ -4,6 +4,7 @@
 
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,19 +21,40 @@ struct Project {
   std::string name;             // the official name, e.g. "The ITfied AB"
 };
 
-// A project as the workspace remembers it, before it is opened
+// A project as the workspace remembers it: only where it is. Everything else
+// is read from the project itself (see describe_project).
 struct ListedProject {
   std::string uuid;
   std::filesystem::path folder; // full path, resolved from the workspace folder when relative
-  std::string caption;          // `name` from project.txt, or the folder name when the project cannot be opened
 };
 
 // The projects the workspace remembers: the `project.<uuid> = <folder>` entries
-// of its workspace.txt (as in take 3). A relative folder is read from the
-// workspace folder. Ordered by caption (then folder). The folders are not
-// searched. Error text when workspace.txt cannot be read, or an entry has no
-// uuid or no folder.
+// of its workspace.txt (as in take 3), in the order there. A relative folder is
+// read from the workspace folder. The folders are not searched. Error text when
+// workspace.txt cannot be read, or an entry has no uuid or no folder.
 std::expected<std::vector<ListedProject>, std::string> list_projects(Workspace const& workspace);
+
+// What a listed project's own project.txt says, read anew each time
+struct ProjectSummary {
+  enum class Found {
+    yes,        // project.txt read, with the listed uuid and a name
+    missing,    // the folder is gone (removed or moved)
+    unreadable, // the folder is there, but not a project with the listed uuid and a name
+  };
+  Found found = Found::yes;
+  std::string name;    // `name`, or the folder name when not found
+  std::string orgnr;   // `orgnr`, empty when not given or not found
+  std::string created; // `created`, empty when not given or not found
+};
+
+// Reads the listed project's .cratchit/project.txt (see open_project). Never fails:
+// a project that cannot be read is described as missing or unreadable.
+ProjectSummary describe_project(ListedProject const& listed);
+
+// How a project folder is shown: relative to the workspace folder when inside
+// it, else starting with ~ when inside home, else in full
+std::string short_folder_text(std::filesystem::path const& folder, std::filesystem::path const& workspace_folder,
+                              std::optional<std::filesystem::path> const& home);
 
 // Opens the project in folder: reads .cratchit/project.txt, which must hold a
 // `name` and the `uuid` the workspace lists it with. Never creates or changes

@@ -23,7 +23,14 @@ I now decided to start a little list of things I 'miss' in the app while I test 
 * Consider a way to 'prune' the list of remembered projects?
     * Perhaps a 'forget' option?
     * Perhaps a 'scan' that removes those where location no longer exists (moved/deleted by user)
-
+* Consider to provide a BAS account plan in framework and offer in 'new project from information)
+* Consider to import an account plan from an SIE-file?
+    * Only for project that lacks one to begin with
+* Consider a 'change BAS account plan'?
+    * Provide BAS 2026 from framework?
+    * Provide to i,port from SIE file?
+    * Consider to detect vouchers to accounts no longer in new plan?
+    * Consider mechanism to book change vouchers to move postings to accounts in new plan
 
 ## 20261108
 

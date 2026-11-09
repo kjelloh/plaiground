@@ -47,6 +47,12 @@ protected:
   fs::path documents;
 };
 
+// The options with only their first column, the name: text before two spaces
+OptionsList names_of(OptionsList options) {
+  for (auto& [key, caption] : options) caption = caption.substr(0, caption.find("  "));
+  return options;
+}
+
 } // namespace
 
 TEST_F(RootMenuTest, IsCratchitWithWorkspaceAsZeroAndTestMenuAsNine) {
@@ -151,7 +157,7 @@ TEST_F(RootMenuTest, WorkspaceListsItsProjectsAndOpensOne) {
   std::ofstream(folder / ".cratchit" / "workspace.txt") << "created = 2026-11-08\nproject.1 = itfied\nproject.2 = annat\n";
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Annat AB"}, {U'2', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
+  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Annat AB"}, {U'2', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
   EXPECT_EQ(navigator.current().view(), (View{(folder / "itfied").string(), "Bokföringen har inga räkenskapsår än."}));
@@ -166,7 +172,7 @@ TEST_F(RootMenuTest, ProjectThatCannotBeOpenedLeadsToAnError) {
   add_project(folder, "Utan namn", "1", "uuid = 1\n");
   Navigator navigator(cratchit::ui::make_root_menu(folder));
   ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Utan namn"}, {U'+', "Lägg till bokföring"}}));
+  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Utan namn"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Fel");
   ASSERT_EQ(navigator.current().view().size(), 1u);
@@ -195,14 +201,18 @@ TEST(WorkspaceMenu, WithoutProjectsShowsItsFolderAndOffersOnlyToAdd) {
 
 TEST(WorkspaceMenu, OffersNineProjectsAndSaysWhenThereAreMore) {
   std::vector<cratchit::ListedProject> projects;
-  for (char c = 'a'; c <= 'j'; ++c) projects.push_back({std::string(1, c), fs::path("/x/cratchit") / std::string(1, c), std::string(1, c)});
+  for (char c = 'a'; c <= 'j'; ++c) projects.push_back({std::string(1, c), fs::path("/x/cratchit") / std::string(1, c)});
   auto workspace = cratchit::ui::make_workspace_menu(workspace_at("/x/cratchit"), projects);
-  auto const options = workspace->options();
+  auto const options = names_of(workspace->options());
   ASSERT_EQ(options.size(), 10u);
   EXPECT_EQ(options[0], (pyroceph::tui::Option{U'1', "a"}));
   EXPECT_EQ(options[8], (pyroceph::tui::Option{U'9', "i"}));
   EXPECT_EQ(options[9], (pyroceph::tui::Option{U'+', "Lägg till bokföring"}));
-  EXPECT_EQ(workspace->view(), (View{fs::path("/x/cratchit").string(), "Samlingsmappen har fler bokföringar än cratchit visar här."}));
+  auto const view = workspace->view();
+  ASSERT_EQ(view.size(), 3u);
+  EXPECT_EQ(view[0], fs::path("/x/cratchit").string());
+  EXPECT_EQ(view[1], "Samlingsmappen har fler bokföringar än cratchit visar här.");
+  EXPECT_TRUE(view[2].starts_with("    Namn")) << view[2];
 }
 
 TEST(ProjectMenu, IsNamedByTheProjectAndShowsItsFolder) {
@@ -308,7 +318,7 @@ TEST_F(RootMenuTest, OpenExistingOpensTheProjectAndTheWorkspaceRemembersIt) {
   // Back in the workspace, the project is listed
   for (int i = 0; i < 3; ++i) ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
+  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
 }
 
 TEST_F(RootMenuTest, OpenExistingRefusesAFolderWithoutAProject) {
@@ -424,7 +434,7 @@ TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
   EXPECT_TRUE(fs::exists(folder / "Test AB" / "test.se"));
   EXPECT_EQ(navigator.path().size(), 2u);
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Test AB"}, {U'+', "Lägg till bokföring"}}));
+  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Test AB"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Test AB");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2025 (2025-01-01 – 2025-12-31)"}}));
@@ -471,8 +481,32 @@ TEST_F(RootMenuTest, FromDetailsCreatesTheProjectAndTheWorkspaceRemembersIt) {
   }
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Exempel AB"}, {U'+', "Lägg till bokföring"}}));
+  EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Exempel AB"}, {U'+', "Lägg till bokföring"}}));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Exempel AB");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "2026/27 (2026-05-01 – 2027-04-30)"}}));
+}
+
+TEST_F(RootMenuTest, WorkspaceShowsItsProjectsInColumnsReadFromEachProject) {
+  auto const folder = documents / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-09"));
+  add_project(folder, "Exempel AB", "1", "created = 2026-11-09\nuuid = 1\nname = Exempel AB\norgnr = 556677-8899\n");
+  add_project(folder, "Åtta", "2", "uuid = 2\nname = Åtta AB\n"); // no orgnr, no created
+  add_project(folder, "Fel", "3", "uuid = 9\nname = Fel AB\n");    // another uuid than remembered
+  std::ofstream(folder / ".cratchit" / "workspace.txt", std::ios::app) << "project.4 = Borta\n";
+  auto const workspace = cratchit::open_workspace(folder, "2026-11-09");
+  ASSERT_TRUE(workspace);
+  auto const projects = cratchit::list_projects(*workspace);
+  ASSERT_TRUE(projects) << projects.error();
+  auto const state = cratchit::ui::make_workspace_menu(*workspace, *projects);
+  EXPECT_EQ(state->view(), (View{folder.string(), "    Namn        Org.nr       Skapad      Mapp"}));
+  EXPECT_EQ(state->options(),
+            (OptionsList{{U'1', "Borta       " "             " "            Borta  (finns inte längre)"},
+                         {U'2', "Exempel AB  556677-8899  2026-11-09  Exempel AB"},
+                         {U'3', "Fel         " "             " "            Fel  (går inte att öppna)"},
+                         {U'4', "Åtta AB     " "             " "            Åtta"},
+                         {U'+', "Lägg till bokföring"}}));
+  // Read anew: a project renamed in its own file shows so at once
+  std::ofstream(folder / "Exempel AB" / ".cratchit" / "project.txt") << "uuid = 1\nname = Annat namn AB\norgnr = 556677-8899\n";
+  EXPECT_TRUE(state->options()[0].second.starts_with("Annat namn AB")) << state->options()[0].second;
 }

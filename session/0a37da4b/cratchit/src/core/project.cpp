@@ -6,7 +6,6 @@
 #include <format>
 #include <optional>
 #include <system_error>
-#include <tuple>
 
 namespace cratchit {
 
@@ -32,12 +31,44 @@ std::expected<std::vector<ListedProject>, std::string> list_projects(Workspace c
     }
     fs::path folder(entry.value);
     if (folder.is_relative()) folder = workspace.folder / folder;
-    auto caption = folder.filename().string();
-    if (auto const opened = open_project(folder, uuid)) caption = opened->name;
-    result.push_back({std::move(uuid), std::move(folder), std::move(caption)});
+    result.push_back({std::move(uuid), std::move(folder)});
   }
-  std::ranges::sort(result, {}, [](ListedProject const& p) { return std::tie(p.caption, p.folder); });
   return result;
+}
+
+ProjectSummary describe_project(ListedProject const& listed) {
+  ProjectSummary summary;
+  summary.name = listed.folder.filename().string();
+  std::error_code ec;
+  if (!fs::exists(listed.folder, ec)) {
+    summary.found = ProjectSummary::Found::missing;
+    return summary;
+  }
+  auto const project = open_project(listed.folder, listed.uuid);
+  if (!project) {
+    summary.found = ProjectSummary::Found::unreadable;
+    return summary;
+  }
+  summary.name = project->name;
+  if (auto const entries = read_path_values(project->file)) {
+    summary.orgnr = find_value(*entries, "orgnr").value_or("");
+    summary.created = find_value(*entries, "created").value_or("");
+  }
+  return summary;
+}
+
+std::string short_folder_text(fs::path const& folder, fs::path const& workspace_folder,
+                              std::optional<fs::path> const& home) {
+  auto const inside = [](fs::path const& path, fs::path const& base) -> std::optional<fs::path> {
+    auto const relative = path.lexically_normal().lexically_relative(base.lexically_normal());
+    if (relative.empty() || relative == "." || *relative.begin() == "..") return std::nullopt;
+    return relative;
+  };
+  if (auto const relative = inside(folder, workspace_folder)) return relative->string();
+  if (home) {
+    if (auto const relative = inside(folder, *home)) return (fs::path("~") / *relative).string();
+  }
+  return folder.string();
 }
 
 namespace {

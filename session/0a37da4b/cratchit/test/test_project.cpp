@@ -44,22 +44,33 @@ TEST_F(ProjectTest, FreshWorkspaceRemembersNoProjects) {
   EXPECT_TRUE(projects->empty());
 }
 
-TEST_F(ProjectTest, RememberedProjectsAreListedByName) {
+TEST_F(ProjectTest, RememberedProjectsAreListedOnlyByWhereTheyAre) {
   add_project(workspace.folder / "b", "uuid = 2\nname = Beta AB\n");
   add_project(root / "elsewhere", "created = 2026-10-23\nuuid = 1\nname = Gamma AB\norgnr = 556782-8172\n");
-  add_project(workspace.folder / "c", "uuid = 3\nname = Alfa AB\n");
   remember("project.2 = b");
   remember("project.1 = " + (root / "elsewhere").string());
-  remember("project.3 = " + (workspace.folder / "c").string());
   auto const projects = cratchit::list_projects(workspace);
   ASSERT_TRUE(projects.has_value()) << projects.error();
-  ASSERT_EQ(projects->size(), 3u);
-  EXPECT_EQ((*projects)[0].caption, "Alfa AB");
-  EXPECT_EQ((*projects)[0].uuid, "3");
-  EXPECT_EQ((*projects)[1].caption, "Beta AB");
-  EXPECT_EQ((*projects)[1].folder, workspace.folder / "b"); // relative is read from the workspace folder
-  EXPECT_EQ((*projects)[2].caption, "Gamma AB");
-  EXPECT_EQ((*projects)[2].folder, root / "elsewhere");
+  ASSERT_EQ(projects->size(), 2u);
+  EXPECT_EQ((*projects)[0].uuid, "2");
+  EXPECT_EQ((*projects)[0].folder, workspace.folder / "b"); // relative is read from the workspace folder
+  EXPECT_EQ((*projects)[1].uuid, "1");
+  EXPECT_EQ((*projects)[1].folder, root / "elsewhere");
+}
+
+TEST_F(ProjectTest, ProjectIsDescribedFromItsOwnFile) {
+  add_project(root / "elsewhere", "created = 2026-10-23\nuuid = 1\nname = Gamma AB\norgnr = 556782-8172\n");
+  auto summary = cratchit::describe_project({"1", root / "elsewhere"});
+  EXPECT_EQ(summary.found, cratchit::ProjectSummary::Found::yes);
+  EXPECT_EQ(summary.name, "Gamma AB");
+  EXPECT_EQ(summary.orgnr, "556782-8172");
+  EXPECT_EQ(summary.created, "2026-10-23");
+  // Read anew each time: a change in the project shows at once
+  add_project(root / "elsewhere", "uuid = 1\nname = Gamma Nya AB\n");
+  summary = cratchit::describe_project({"1", root / "elsewhere"});
+  EXPECT_EQ(summary.name, "Gamma Nya AB");
+  EXPECT_TRUE(summary.orgnr.empty());
+  EXPECT_TRUE(summary.created.empty());
 }
 
 TEST_F(ProjectTest, FoldersAreNotSearched) {
@@ -69,15 +80,34 @@ TEST_F(ProjectTest, FoldersAreNotSearched) {
   EXPECT_TRUE(projects->empty());
 }
 
-TEST_F(ProjectTest, ProjectThatCannotBeOpenedIsListedByFolderName) {
+TEST_F(ProjectTest, ProjectThatIsGoneOrCannotBeOpenedIsDescribedByFolderName) {
   add_project(workspace.folder / "Fel uuid", "uuid = 2\nname = Alfa AB\n");
-  remember("project.1 = Fel uuid");
-  remember("project.9 = Saknas");
-  auto const projects = cratchit::list_projects(workspace);
-  ASSERT_TRUE(projects.has_value()) << projects.error();
-  ASSERT_EQ(projects->size(), 2u);
-  EXPECT_EQ((*projects)[0].caption, "Fel uuid");
-  EXPECT_EQ((*projects)[1].caption, "Saknas");
+  auto const unreadable = cratchit::describe_project({"1", workspace.folder / "Fel uuid"});
+  EXPECT_EQ(unreadable.found, cratchit::ProjectSummary::Found::unreadable);
+  EXPECT_EQ(unreadable.name, "Fel uuid");
+  EXPECT_TRUE(unreadable.orgnr.empty());
+  auto const missing = cratchit::describe_project({"9", workspace.folder / "Saknas"});
+  EXPECT_EQ(missing.found, cratchit::ProjectSummary::Found::missing);
+  EXPECT_EQ(missing.name, "Saknas");
+}
+
+TEST(ShortFolder, InsideTheWorkspaceIsRelative) {
+  EXPECT_EQ(cratchit::short_folder_text("/home/anna/Documents/cratchit/Exempel AB", "/home/anna/Documents/cratchit",
+                                        fs::path("/home/anna")),
+            "Exempel AB");
+}
+
+TEST(ShortFolder, InsideHomeStartsWithTilde) {
+  EXPECT_EQ(cratchit::short_folder_text("/home/anna/Bokföring/Exempel AB", "/home/anna/Documents/cratchit",
+                                        fs::path("/home/anna")),
+            (fs::path("~") / "Bokföring" / "Exempel AB").string());
+}
+
+TEST(ShortFolder, ElsewhereIsInFull) {
+  EXPECT_EQ(cratchit::short_folder_text("/srv/books/Exempel AB", "/home/anna/Documents/cratchit", fs::path("/home/anna")),
+            fs::path("/srv/books/Exempel AB").string());
+  EXPECT_EQ(cratchit::short_folder_text("/home/anna/Exempel AB", "/home/anna/Documents/cratchit", std::nullopt),
+            fs::path("/home/anna/Exempel AB").string());
 }
 
 TEST_F(ProjectTest, EntryWithoutUuidOrFolderIsAnError) {
