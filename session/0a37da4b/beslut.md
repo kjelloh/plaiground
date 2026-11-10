@@ -308,3 +308,11 @@ Arbetshypotes för bokföringen (användarens val). Inget är slutgiltigt: vi ju
 * `documents` och `retracted_from` från skissen väntar. Båda behöver lagras, och filerna i `.cratchit` är en öppen fråga. Av samma skäl heter filerna fortfarande `events.csv` och `event_postings.csv`.
 * `Posting::source` sparas fortfarande bara på utkast. Regeln att den ska följa med vid bokföringen införs med åtgärden *bokför* (steg 3).
 * Användaren trevar sig fram och väljer själv vad som görs härnäst (användarens val). Ordningen att bygga i ovan är bara ett förslag. Begreppen, datamodellen och åtgärderna i arbetshypotesen gäller fortfarande. Krockar ett önskemål med dem, säger Claude det innan något byggs, och användaren avgör.
+* Steg 76: Listan visas i räkenskapsårets state, inte i ett eget state för bokföringen (användarens val). Vyn visar aktuell zoom. Raderna är inga val, och valen är oförändrade.
+  * Zoomen är för närvarande alltid hela året. Hur man zoomar in är inte bestämt.
+  * Raden `Bokfört: …` ersätts av en sammanfattning av zoomen: `Hela året: 37 verifikationer, 1 utkast`, `Hela året: inget bokfört`. Utkast nämns bara när det finns några.
+  * Listan är nyast överst och äldre neråt (användarens val), högst tio rader, och sist `… N äldre` när några inte visas. Tio rader är en startpunkt.
+  * Användaren funderar på en funktion som fixerar den äldsta posten, och då vore `… N nyare` överst rimligt. Det väntar.
+  * Ordningen: efter datum, och på samma datum utkast före verifikationer och senare i bokföringen före tidigare. Verifikationerna sorteras efter datum, eftersom en SIE-fil inte alltid har dem i datumordning.
+  * En rad: serie och nummer (för ett utkast dess stadium: `händelse`, `kontoutdrag`, `obalanserat`, `klart`), datum, belopp och text. Beloppet skrivs med `format_amount` (`1118.00`), som i `Skillnad`. Ett utkast utan belopp visar vad dess konteringar flyttar.
+  * Det som en export eller import skrev står kvar på tredje raden, före listan.

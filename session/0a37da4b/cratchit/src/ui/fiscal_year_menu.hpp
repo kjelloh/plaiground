@@ -10,7 +10,9 @@ namespace cratchit::ui {
 
 // A fiscal year of an opened project. Its name is the year's label (see
 // label_of), so the path reads e.g. "Cratchit > Samlingsmapp > The ITfied AB > 2025/26".
-// Its view shows the period, and what the last export or import did. Its
+// Its view shows the period, what the current zoom holds, what the last export
+// or import did, and the zoom's vouchers and drafts, newest first (see
+// year_view; for now the zoom is the whole year). Its
 // options are 2 "Importera från SIE" (see sie_import_menu.hpp; the file must be
 // for this year) and 1 "Exportera till SIE", a menu of its own:
 // * 1 "Allt" writes the whole year with balances (see export_all) and goes back

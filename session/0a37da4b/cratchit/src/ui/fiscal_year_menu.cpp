@@ -8,6 +8,7 @@
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/sie_import_menu.hpp"
+#include "ui/year_view.hpp"
 
 #include <format>
 #include <string>
@@ -150,8 +151,10 @@ public:
   FiscalYearState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) {}
   std::string name() const override { return label_of(year_); }
   View view() const override {
-    View lines{std::format("Räkenskapsår {} – {}", year_.start, year_.end), std::format("Bokfört: {}", booked())};
+    auto const zoom = current_view();
+    View lines{std::format("Räkenskapsår {} – {}", year_.start, year_.end), zoom.summary};
     if (!report_.empty()) lines.push_back(report_);
+    lines.insert(lines.end(), zoom.rows.begin(), zoom.rows.end());
     return lines;
   }
   OptionsList options() const override { return {{U'1', export_caption}, {U'2', "Importera från SIE"}}; }
@@ -175,14 +178,11 @@ public:
   void report(std::string text) { report_ = std::move(text); }
 
 private:
-  // What is booked in the year, read now: "inget" or "37 verifikationer"
-  std::string booked() const {
+  // The current zoom of the year as it is in the books now (for now the whole year)
+  YearView current_view() const {
     auto const books = books::read_books(project_.folder);
     auto const start = parse_iso_date(year_.start);
-    auto const* found = books && start ? books->year_starting(*start) : nullptr;
-    auto const vouchers = found != nullptr ? found->vouchers.size() : 0;
-    if (vouchers == 0) return "inget";
-    return std::format("{} {}", vouchers, vouchers == 1 ? "verifikation" : "verifikationer");
+    return year_view(books && start ? books->year_starting(*start) : nullptr);
   }
 
   Project project_;

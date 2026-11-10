@@ -285,7 +285,7 @@ TEST_F(RootMenuTest, ProjectOffersItsFiscalYearsTheCurrentAsZero) {
                                                         {U'3', "2023-05-01 – 2024-04-30  bokfört: inget"}}));
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "2024/25");
-  EXPECT_EQ(navigator.current().view(), (View{"Räkenskapsår 2024-05-01 – 2025-04-30", "Bokfört: inget"}));
+  EXPECT_EQ(navigator.current().view(), (View{"Räkenskapsår 2024-05-01 – 2025-04-30", "Hela året: inget bokfört"}));
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Exportera till SIE"}, {U'2', "Importera från SIE"}}));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
@@ -609,9 +609,12 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2025");
   EXPECT_TRUE(fs::exists(project->folder / "sie_2025_allt.se"));
-  ASSERT_EQ(navigator.current().view().size(), 3u);
-  EXPECT_EQ(navigator.current().view()[1], "Bokfört: 2 verifikationer");
+  ASSERT_EQ(navigator.current().view().size(), 5u);
+  EXPECT_EQ(navigator.current().view()[1], "Hela året: 2 verifikationer");
   EXPECT_TRUE(navigator.current().view()[2].starts_with("cratchit skrev sie_2025_allt.se i ")) << navigator.current().view()[2];
+  // Then the year's vouchers, newest first
+  EXPECT_EQ(navigator.current().view()[3], "  A 2         2025-03-01        200.00  Sale");
+  EXPECT_EQ(navigator.current().view()[4], "  A 1         2025-02-01        100.00  Sale");
   // Again: never overwritten
   ASSERT_TRUE(navigator.press(U'1'));
   ASSERT_TRUE(navigator.press(U'1'));
@@ -709,7 +712,8 @@ TEST_F(RootMenuTest, ImportListsTheChangedVouchersAPageAtATime) {
   // Importing takes the changes and goes back to the fiscal year, which says so
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2025");
-  ASSERT_EQ(navigator.current().view().size(), 3u);
+  ASSERT_EQ(navigator.current().view().size(), 14u); // then the ten newest of the year's 12 vouchers, and "… 2 äldre"
+  EXPECT_EQ(navigator.current().view()[13], "  … 2 äldre");
   EXPECT_TRUE(navigator.current().view()[2].starts_with("cratchit importerade changed.se: ")) << navigator.current().view()[2];
   auto const books = cratchit::books::read_books(project->folder);
   ASSERT_TRUE(books) << books.error();
@@ -734,7 +738,7 @@ TEST_F(RootMenuTest, AYearNotBookedYetCanBeImportedIntoAndExported) {
   // 2026 is not booked: export gives an empty year
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "2026");
-  EXPECT_EQ(navigator.current().view()[1], "Bokfört: inget");
+  EXPECT_EQ(navigator.current().view()[1], "Hela året: inget bokfört");
   ASSERT_TRUE(navigator.press(U'1'));
   ASSERT_TRUE(navigator.press(U'1'));
   auto const lexed = cratchit::sie::lex_file(project->folder / "sie_2026_allt.se");
@@ -749,7 +753,7 @@ TEST_F(RootMenuTest, AYearNotBookedYetCanBeImportedIntoAndExported) {
   navigator.enter(std::move(result->next));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2026");
-  EXPECT_EQ(navigator.current().view()[1], "Bokfört: 1 verifikation");
+  EXPECT_EQ(navigator.current().view()[1], "Hela året: 1 verifikation");
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().options()[0].second, "2026-01-01 – 2026-12-31  bokfört: 1 verifikation");
   EXPECT_EQ(cratchit::list_fiscal_years(*project)->size(), 2u);
@@ -795,7 +799,7 @@ TEST_F(RootMenuTest, AChangeOfFiscalYearFromSieShowsAndTheYearTakesItsDates) {
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2026");
   EXPECT_EQ(navigator.current().view()[0], "Räkenskapsår 2026-01-01 – 2026-04-30");
-  EXPECT_EQ(navigator.current().view()[1], "Bokfört: 1 verifikation");
+  EXPECT_EQ(navigator.current().view()[1], "Hela året: 1 verifikation");
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().options()[0].second, "2026-05-01 – 2027-04-30  bokfört: inget");
   EXPECT_EQ(navigator.current().options()[1].second, "2026-01-01 – 2026-04-30  bokfört: 1 verifikation");

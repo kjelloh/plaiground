@@ -35,6 +35,7 @@ add_executable(cratchit_tests
   test_today.cpp
   test_transcoder.cpp
   test_ui.cpp
+  test_year_view.cpp
   test_utf16.cpp
   test_utf8.cpp
 )

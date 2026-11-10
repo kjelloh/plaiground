@@ -112,6 +112,7 @@ add_library(cratchit_ui
   src/ui/sie_project_menu.cpp
   src/ui/test_menu.cpp
   src/ui/workspace_menu.cpp
+  src/ui/year_view.cpp
 )
 target_include_directories(cratchit_ui PUBLIC src)
 target_link_libraries(cratchit_ui PUBLIC pyroceph cratchit_core PRIVATE cratchit_warnings)

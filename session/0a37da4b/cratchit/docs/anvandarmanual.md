@@ -202,18 +202,37 @@ Ett år där inget är bokfört fungerar som de andra: du kan importera till det
 ### Räkenskapsår
 
 <!-- hjälp: rakenskapsar -->
-Du har öppnat ett räkenskapsår i bokföringen. Ovanför prompten står vilken period det gäller. Tryck `1` för att exportera året till en SIE-fil, eller `2` för att importera en SIE-fil för året. Tryck `-` för att gå tillbaka till bokföringen.
+Du har öppnat ett räkenskapsår i bokföringen. Överst står vilken period det gäller och vad året innehåller. Under det visar cratchit årets verifikationer och utkast, de nyaste först. Listan är bara en vy, raderna är inga val. Tryck `1` för att exportera året till en SIE-fil, eller `2` för att importera en SIE-fil för året. Tryck `-` för att gå tillbaka till bokföringen.
 <!-- /hjälp -->
 
 Tryck räkenskapsårets siffra i bokföringen. Prompten får då årets namn:
 
 ```text
 Räkenskapsår 2025-05-01 – 2026-04-30
-Bokfört: 116 verifikationer
+Hela året: 116 verifikationer
+  M 5         2026-04-30         89.98  Momsrapport_2026-04-01-2026-04-30
+  A 59        2026-04-22       2020.00  Skatt
+  E 25        2026-04-20        361.25  LOOPIA AB
+  …
+  E 21        2026-03-30       1233.75  LOOPIA AB
+  … 106 äldre
   1 Exportera till SIE
   2 Importera från SIE
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26> 
 ```
+
+Andra raden säger vad listan gäller och vad den innehåller, till exempel `Hela året: 37 verifikationer, 1 utkast`. Är inget bokfört står det `Hela året: inget bokfört`. Än så länge visar listan alltid hela året.
+
+Listan visar de tio nyaste raderna. Finns det fler står det sist hur många äldre som inte visas. En verifikation visar serie och nummer, datum, belopp och text. Ett utkast visar i stället hur långt det har kommit:
+
+| Står det | Betyder |
+|---|---|
+| `händelse` | Utkastet har datum och kanske text och belopp, men inga konteringar |
+| `kontoutdrag` | Utkastet har konteringar, till exempel från ett kontoutdrag, men ingen text |
+| `obalanserat` | Utkastet har text och konteringar, men konteringarna balanserar inte eller stämmer inte med beloppet |
+| `klart` | Utkastet kan bokföras |
+
+Du kan ännu inte skapa utkast i cratchit.
 
 ### Importera från SIE
 
@@ -472,3 +491,5 @@ Ett nystartat företag kan ha ett första räkenskapsår som är kortare eller l
 | kontoplan | Listan över bokföringens konton, till exempel BAS-kontoplanen |
 | SIE-fil | En fil med bokföring i ett standardformat, som bokföringsprogram använder för att lämna över bokföring till varandra |
 | räkenskapsår | Den period, oftast tolv månader, som bokföringen räknas och avslutas för |
+| verifikation | En bokförd affärshändelse, med serie och nummer, till exempel `A 12` |
+| utkast | En affärshändelse som ännu inte är bokförd. Allt i den kan ändras |
