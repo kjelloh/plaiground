@@ -242,3 +242,59 @@ Kort logg över vad vi beslutat och varför.
 * Steg 72: Testet `Books.WaitingEventsArePlacedByDateTiesInTheOrderNoted` föll på Linux (GCC 14) med index som 14757396431792573812 (nära `0xCCCC…`). `FiscalYear::place_waiting` från 'take 3' gjorde `waiting.insert(at, …) - waiting.begin()`. C++ bestämmer inte i vilken ordning sidorna av `-` räknas ut. GCC 14 tog `begin()` först, och `insert` flyttade sedan elementen till nytt minne när vektorn växte. clang och GCC 16 räknar höger sida sist, så felet syntes inte här. Indexet räknas nu ut före `insert`. Inga fler sådana uttryck i `src` eller `test`.
 * Steg 73: Windows-bygget föll på C4996 i `main.cpp`: `std::getenv("CRATCHIT_TODAY")` från steg 66 (MSVC kallar `getenv` osäker, och varningar är fel). Miljövariabler läses nu med `environment_variable(name)` i `core/dot_folder`: `GetEnvironmentVariableA` på Windows, `std::getenv` annars, som `dot_folder.cpp` redan gör för `USERPROFILE`/`HOME`. Ingen annan funktion som MSVC kallar osäker används utanför en gren som bara byggs på macOS och Linux.
 * Steg 74: Testet `DesignInsufficiencyState.LogsADesignInsufficiencyWithTheCallersPlace` föll på Windows: "remove_all: The process cannot access the file because it is being used by another process". Testet hade loggfilen öppen i en `std::ifstream` när det tog bort mappen, och Windows tar inte bort en öppen fil (macOS och Linux gör det). Strömmen stängs nu i ett eget block innan mappen tas bort. Inga andra tester tar bort filer medan en ström är öppen i samma test.
+
+## 2026-11-10
+
+Arbetshypotes för bokföringen (användarens val). Inget är slutgiltigt: vi justerar när vi prövar oss fram i koden. Om gränssnittet beslutar vi inget nu. Det tar vi när listan införs och vi ser hur det känns.
+
+* Begrepp:
+  * **Affärshändelse** (`Event`): det som hände, med rubrik, belopp och datum. Allt cratchit bokför är en affärshändelse, eftersom den påverkar resultatet eller balansen.
+  * **Kontering** (`Posting`): ett belopp på ett BAS-konto (debet positivt, kredit negativt).
+  * **Utkast** (`Draft`): en affärshändelse på väg in i böckerna. Allt i den får ändras. Ersätter `WaitingEvent` från 'take 3', som redan är händelse plus konteringar.
+  * **Verifikation** (`Voucher`): en bokförd affärshändelse med serie och nummer. Den ändras bara enligt reglerna för att bevara historiken (strukna och tillagda konteringar, `Posting::Kind`).
+  * **Underlag** (`Document`): filen på disken som visar händelsen, till exempel faktura, kvitto eller avtal.
+  * **Kontoutdragsrad** (`StatementEntry`): en rad från bankens fil. Den blir ett utkast med en enda kontering.
+  * **Avstämning** (`BalanceCheck`): ett saldo från banken (konto, datum, belopp). cratchit bokför den aldrig. Den visar om böckerna stämmer med verkligheten.
+* "Verifikation" betyder posten i böckerna, som i SIE (`#VER`) och Fortnox. Bokföringslagen räknar posten och underlaget tillsammans som verifikationen, så ordvalet krockar inte med lagen.
+* Ett utkast lagrar inget slag. cratchit räknar fram stadiet ur innehållet:
+  * `händelse`: rubrik, belopp och datum men inga konteringar ('take 3':s event).
+  * `kontoutdrag`: konteringar men ingen rubrik ('take 3':s statement entry).
+  * `obalanserat`: konteringarna balanserar inte, eller summerar inte till beloppet.
+  * `klart`: allt ifyllt och balanserat, så utkastet kan bokföras.
+* Skiss av datamodellen:
+  * `Draft`: `event` (rubrik och belopp får vara tomma), `noted`, `postings` (var och en med `source` när den kom från ett kontoutdrag), `documents` och `retracted_from` (verifikationen den togs tillbaka från, om någon).
+  * `Document`: `file` relativt bokföringens mapp, och `sha256` så att cratchit hittar filen igen om den har flyttats.
+  * `Voucher` får `documents`.
+  * `FiscalYear` får `drafts` (i stället för `waiting`) och `checks` (avstämningar).
+* Åtgärder i modellen:
+  * **Bokför**: ett `klart` utkast blir en verifikation med nästa nummer i serien.
+  * **Ändra**: allt i ett utkast får ändras fritt.
+  * **Slå ihop**: två utkast blir ett, till exempel när kontoposter och en händelse visar sig vara samma affärshändelse.
+  * **Dela upp**: ett utkast blir dess händelse och dess konteringar. Konteringarna går tillbaka till sina kontoutdragsrader via `source`.
+  * **Ta tillbaka**: verifikationen blir ett utkast igen. Det gäller bara den sista verifikationen i en serie.
+  * **Rätta**: en bokförd verifikation får strukna och tillagda konteringar.
+  * **Länka underlag**: gäller både utkast och verifikationer.
+* Regler:
+  * **Inga luckor i numreringen.** Därför får bara den sista verifikationen i en serie tas tillbaka.
+  * **Ingen tagning tillbaka efter export.** En verifikation som har exporterats (till exempel till Fortnox via SIE) eller ligger i ett låst år ska inte tas tillbaka utan rättas. cratchit behöver alltså komma ihåg vad som har exporterats.
+  * **Spårbarhet.** Varje kontering behåller sin `source` även efter bokföringen, så att en verifikation alltid går att följa tillbaka till kontoutdraget och underlaget.
+* Underlag:
+  * cratchit länkar underlag med sökväg och kontrollsumma.
+  * Ett utkast ska kunna skapas från en pdf. Koden för pdf till text finns.
+  * cratchit ska komma ihåg var användaren har pekat ut underlag.
+* Ordning att bygga i. Varje steg går att använda för sig:
+  1. `Draft` ersätter `WaitingEvent`, och stadiet räknas fram (kärnan och tester).
+  2. Räkenskapsårets lista med verifikationer och utkast, bara visning.
+  3. Skapa, ändra och bokföra ett utkast.
+  4. Ta tillbaka den sista verifikationen och rätta en verifikation.
+  5. Kontoutdrag läses in som utkast, och saldon som avstämningar.
+  6. Slå ihop och dela upp.
+  7. Underlag.
+* Frågor som väntar tills koden behöver svaret (användarens val):
+  * Är *utkast*, *underlag* och *avstämning* rätt namn?
+  * Ska en avstämning vara en egen sorts rad, eller ett utkast med saldo?
+  * Slag av händelse (faktura, kvitto, betalning, omföring, rättelse): ett fält som användaren väljer, eller framräknat ur konton och underlag?
+  * Ska ett underlag byta namn vid bokföringen (`A12 …`), eller ska cratchit lämna filen orörd och bara komma ihåg kopplingen?
+  * Ta tillbaka efter export: ska cratchit vägra, eller varna och låta användaren ansvara?
+  * Hur lagras utkast, underlag och avstämningar i `.cratchit`? I dag finns `events.csv` och `event_postings.csv` för väntande händelser. Filerna bestäms tillsammans innan cratchit skapar någon ny fil.
+  * Gränssnittet: listans utseende, tangenterna och hur man zoomar in.

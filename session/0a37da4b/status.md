@@ -101,6 +101,7 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
+* Bokföringen: arbetshypotesen och ordningen att bygga i står i `beslut.md` under 2026-11-10. Första steget är `Draft` i stället för `WaitingEvent`.
 * Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden. De ska stå under *Kommer senare* i manualen.
 * Varje steg som ändrar det användaren ser uppdaterar `cratchit/docs/anvandarmanual.md`.
 * Notering, att återkomma till: kanske "forcerad import", "skriv över" eller liknande för SIE-importer som tar bort eller byter ut befintliga verifikationer, eller ändrar deras datum eller text (se beslut steg 62 och 63).

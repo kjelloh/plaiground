@@ -83,6 +83,26 @@ Jag känner mig nu mogen att försöka få till en design av hur själva bokför
 
 Så var börjar jag så att Claude implementerar en bra design som håller hela vägen då vy bygger ut till den kompletta samlingen av funktioner för bokföringen?
 
+Jag bad Claude läsa min tankar ovan och komma med en sammanfattning och ett förslag på data-modell och appen beteende.
+
+* Jag blev trygg att Claude verkar föreslå något som ligger helt i linje med mina önskemål och tankar.
+* Men jag bad att Claude dokumenterade beslutet som preliminärt så vi kan skriva på det medan vi provar ut funktioner och beteenden.
+
+Det här tyckte jag var bra med Claudes sammanfattning
+
+* Begreppen: affärshändelse, kontering, utkast, verifikation, underlag, kontoutdragsrad och avstämning. 
+    * Och "verifikation" betyder den bokförda posten.
+* 'Stadiet' räknas fram.
+    * ett utkast lagrar inget slag. cratchit avgör om det är händelse, kontoutdrag, obalanserat eller klart utifrån vad det innehåller.
+* En skiss av datamodellen: Draft, Document, att Voucher får underlag och att FiscalYear får drafts och checks.
+* Åtgärderna: bokför, ändra, slå ihop, dela upp, ta tillbaka, rätta och länka underlag.
+    * UI för dessa beslutas allt eftersom vi prövar oss fram.
+* Reglerna: inga luckor i numreringen, ingen tagning tillbaka efter export och att varje kontering behåller sin källa.
+* Frågorna som väntar tills koden behöver svaren.
+    * listans utseende
+    * UI-tangenterna
+    * hur man zoomar in.
+
 
 ## 20261109
 
