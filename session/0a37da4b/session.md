@@ -123,6 +123,145 @@ Det här tyckte jag var bra med Claudes sammanfattning
         * Texten borde relatera till riktiga kontot och inte kopplat BAS-konto?
         * Typ 'Saldo skattekonto' (eller helt enkelt texten från kontoutdraget för posten?)
 
+Nu har Claude gjort en vy av listan av potentiella verifikationer.
+
+Nu ville jag införa 'zoom' in i listan (för att till slut välja en post att jobba med)
+
+* Claude föreslog att text + Enter gav state en chans att filtrera på inmatad text.
+* Jag ville ha tangent-för-tangent-zoom och började chatta.
+* Det blev en diskussion kring hur och om detta passar den design vi har just nu.
+* När jag fått lite insikter i hur API:et ser ut mellan TUI och State blev det mer komplicerat än jag hade hoppats.
+    * Så tyckte jag i alla fall.
+    * Det är möjligt att Claude hade fått till det.
+    * Men jag ville inte baksätesköra då jag inte har studerat koden alls.
+    * Jag har bara en mental bild av hur jag satte 'tonen' i början och hur jag tror det utvecklats.
+* Till slut beslöt jag att avbryta och ta omtag.
+
+Nu har jag bett Claude om ett förslag igen.
+
+* Nu blir det text-inmatning med tab-to-update (inspirerat av sökvägs-inmatning)
+
+Claude gjorde sin grej och jag testade.
+
+* Man matar in text och trycker Tab
+* Listan smalnar av efter filtrering på verifikationsnummer.
+* Enter då bara en post är kvar 'öppnar' verifikationen.
+
+Helt ok för nu tycker jag.
+
+Nu bad jag Claude föreslå ett UI så att man kan editera en vald verifikation.
+
+* Jag är ganska trött nu på sena kvällen.
+* SÅ jag valde att låta Claude göra sin grej så jag kan testa (och backa om det inte blir bra)
+* Jag valde dock att alla val skall vara siffror.
+    * Jag trodde det stod i ett beslut redan.
+    * Men Claude föreslog bokstäver på val (så vad vet jag?)
+    * Kanske är beslut.md och status.md redan för stora för kontext-fönstret?
+
+Nu har jag testat vad Claude föreslog.
+
+* NEJ. Det blev inte bra.
+
+    ```text
+    Cratchit > Samlingsmapp > The ITfied AB > 2026/27: d11
+    D 11        2026-10-12        311.25  Loopia Faktura
+    Cratchit > Samlingsmapp > The ITfied AB > 2026/27: d11
+    Verifikation D 11  (registrerad 2026-10-30)
+    Datum: 2026-10-12
+    Text: Loopia Faktura
+    Belopp: 311.25
+    2440        -311.25  Leverantörsskulder
+    6210         249.00  Telekommunikation
+    2641          62.25  Debiterad ingående moms
+    3 Konteringar (3)
+    4 Ny kontering
+    0 Spara
+    Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > D 11> 
+    ```
+
+    * Inga val möjliga på Datum och Text (utan förklaring)
+        * Ja, vi har beslutat att inte tillåta det på bokförd verifikation.
+        * Men på detta sätt förstår användaren inte varför?
+        * Speciellt som andra program (Fortnox) tillåter att text och datum ändras.
+    * Inga val på konteringar?
+        * Att behöva gå via '3 konteringar' känns onödigt?
+        * I ett 'formulär' vill jag kunna välja konteringen direkt.
+
+* Jag prövar att skissa ett eget förslag:
+
+    ```text
+    Cratchit > Samlingsmapp > The ITfied AB > 2026/27: d11
+    0. Verifikation D 11  (registrerad 2026-10-30)
+    1. Datum: 2026-10-12
+    2. Text: Loopia Faktura
+       Belopp: 311.25
+    4. 2440        -311.25  Leverantörsskulder
+    5. 6210         249.00  Telekommunikation
+    6. 2641          62.25  Debiterad ingående moms
+    +  Lägg till kontering
+    Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > D 11> 
+    ```
+    * Väljer man 0 har man valt hela verifikationen.
+
+        * Underval kan vara 'ändringsverifikation'
+        * Lyft ut till utkast
+
+    * Val 1 och 2 öppnar för ändring
+
+        * För bokförd verifikation blir valet 'FEL: Lyft ut till utkast för att ändra'
+        * Eller varning: Bokförd verifikation skall egentligen inte döpas om eller flyttas i tiden. Är du säker på att ändringen inte förändrar bokföringens beskrivning av finansiella händelser?
+        * Om ja tillåter programmet ändringen.
+
+    * Valen 4..6 öppnar formulär för att ändra vald kontering
+    * '+' öppnar formulär för en ny kontering.
+
+Jag vill också att man kan välja BAS-konto på kontots namn (med tab-utfyllnad för lista med matchande namn)
+
+Jag valde att avsluta Claude och backa koden för ett omtag.
+
+DESSUTOM EN BUG!
+
+* Det går inte att välja ensiffriga löpnummer om det finns flersiffriga!
+
+    * Om D11,D12 och D1 finns
+    * Så ger 'D1' och 'D1 ' samma filter.
+    * Claude verkar ha varit för smart!
+    * Med enkel fulltext-sökning hade 'D1 ' bara matchat D1?
+    * Eller tänker jag fel?
+    
+At this stage I had a confused Claude again?
+
+* Why does this happen.
+* All day all was so smooth!
+* Now Claude did several confusing things.
+
+    * It allowed Enter on a not yet fully zoomed-in list
+    * It built a Release while I was testing on Debug (fix did not take)
+    * It failed to find the bug (I had to suspect tab-to-complete was different from Enter)
+
+* The Enter-to-edit on a multi-entry list view
+    * It made Enter do a match of its own (ignoring the view shown to the user)
+    * So tab-to-zoom showed three items.
+    * But Enter on the same input opened the single digit entry.
+* Now Claude fixed so Enter and Tab behaves 'the same'
+
+    * But now I got the path extended 'Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > D1… > D1 > D 1> '
+    * What is going on?
+* AHA! Claude had actually decided to have the 'zoom' extend the state!
+
+    * So now I have messed up the design Claude went for?
+    * That is, Claude implemented a state-to-state zoom-in?
+    * Each new state carries a narrowed list?
+    * Maybe that was in fact a good design after all?
+    * I wonder what kind of ugly 'fix' Claude had to come up with?
+
+I feel we now went down the wrong rabbit hole?
+
+I now reverted back to 7f2f1a8 (git reset --hard 7f2f1a8)
+
+* But I saved this session.md
+
+
 
 ## 20261109
 
