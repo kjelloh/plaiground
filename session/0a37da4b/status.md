@@ -102,7 +102,7 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bokföringen: arbetshypotesen och ordningen att bygga i står i `beslut.md` under 2026-11-10. Steg 1 är klart (steg 75). Nästa är steg 2: räkenskapsårets lista med verifikationer och utkast, bara visning.
+* Bokföringen: arbetshypotesen och ordningen att bygga i står i `beslut.md` under 2026-11-10. Användaren trevar sig fram och väljer nästa steg. Ordningen i `beslut.md` är bara ett förslag.
 * Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden. De ska stå under *Kommer senare* i manualen.
 * Varje steg som ändrar det användaren ser uppdaterar `cratchit/docs/anvandarmanual.md`.
 * Notering, att återkomma till: kanske "forcerad import", "skriv över" eller liknande för SIE-importer som tar bort eller byter ut befintliga verifikationer, eller ändrar deras datum eller text (se beslut steg 62 och 63).

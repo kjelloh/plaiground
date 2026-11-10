@@ -282,7 +282,7 @@ Arbetshypotes för bokföringen (användarens val). Inget är slutgiltigt: vi ju
   * cratchit länkar underlag med sökväg och kontrollsumma.
   * Ett utkast ska kunna skapas från en pdf. Koden för pdf till text finns.
   * cratchit ska komma ihåg var användaren har pekat ut underlag.
-* Ordning att bygga i. Varje steg går att använda för sig:
+* Ordning att bygga i (ett förslag som användaren inte följer, se nedan). Varje steg går att använda för sig:
   1. `Draft` ersätter `WaitingEvent`, och stadiet räknas fram (kärnan och tester).
   2. Räkenskapsårets lista med verifikationer och utkast, bara visning.
   3. Skapa, ändra och bokföra ett utkast.
@@ -307,3 +307,4 @@ Arbetshypotes för bokföringen (användarens val). Inget är slutgiltigt: vi ju
   * Strukna konteringar (`Posting::Kind::removed`) räknas inte.
 * `documents` och `retracted_from` från skissen väntar. Båda behöver lagras, och filerna i `.cratchit` är en öppen fråga. Av samma skäl heter filerna fortfarande `events.csv` och `event_postings.csv`.
 * `Posting::source` sparas fortfarande bara på utkast. Regeln att den ska följa med vid bokföringen införs med åtgärden *bokför* (steg 3).
+* Användaren trevar sig fram och väljer själv vad som görs härnäst (användarens val). Ordningen att bygga i ovan är bara ett förslag. Begreppen, datamodellen och åtgärderna i arbetshypotesen gäller fortfarande. Krockar ett önskemål med dem, säger Claude det innan något byggs, och användaren avgör.
