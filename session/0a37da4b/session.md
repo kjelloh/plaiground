@@ -15,6 +15,75 @@ Claude state files.
 * [Claude beslut.md](./beslut.md)
 * [Claude status.md](./status.md)
 
+## 20261110
+
+Now I think it is time to design the core 'book keeping' mechanism.
+
+* I want a very efficient 'one key to action' UI also for the book keeping operations.
+* And we need at least the whole list of entered vouchers to operate on.
+* But we also have to interact with book keeping artefakts on disk.
+* From take 3 we have vouchers defined.
+    * I believe the design became One vouchers contains 'posts' on BAS accounts?
+* Also from take 3 we have 'events' and 'account statement entries'
+    * The thing we ended calling 'event' was basically a voucher with no posts?
+    * And the thing we called 'account statement entry' was a single Post.
+    * Although I thing an 'account statement entry' could also be and/or contain a Saldo.
+* For our new UI I would like to be able to process and work on all these in the same list!
+    * They all (voucher, event, account posting entry) are different stages of an entry into the books!
+    * With an account saldo entry being more of a 'check point' to ensure ours books comply with reality.
+    * Maybe we can invent something kind-of a 'voucher prototype'?
+    * Or something with a (better?) name that defines it as something 'on the way' of becoming a full entry of a financial event into the books?
+    * Or maybe we make the existing voucher to something that can be in a 'prototype' state?
+    * Such a 'prototype' can now represent any of the things we had in take 3 (a voucher, an event or an account entry about a posting to the account as a posting to a BAS account) 
+* If we can make the 'voucher prototype' design work for us, then we can imagine some nifty way of working with the book keeping.
+    * We can enter the prototype as a full entry when it balances and is correct in its description, date, amount and postings?
+    * We can allow the last entry (voucher) of a series to be brought out of the books and made into a prototype to work on it.
+    * We can edit a prototype quite freely as it is not yet in the books.
+    * We can merge two prototypes into one (two account postings and an event is in fact the same event)
+    * We can split a prototype into its event and its postings.
+    * The work flow seems like easy to understand and trackable both forward (to become a voucher) and backwards (undo back to event, account statement entries etc...)?
+* Finally, it would be nice if we could also add a way for cratchit to track (link to) documents (probably mostly pdf:s) that are the invoice, receipt, or what have you (are these called 'drafts')?
+    * We have code to turn pdfs to text to get to the information.
+    * It seems we can create what we call an 'event' in take 3 from a pdf?
+    * So a prototype voucher with a link to a pdf can track the pdf from the 'books'
+    * We can even imagine that when comitting a prototype to the books it can prefix the tracked file with the voucher series and number?
+
+Och om jag försöker beskriva mina tankar på svenska.
+
+Jag känner mig nu mogen att försöka få till en design av hur själva bokföringen skall eller kan gå till.
+
+* Jag vill att bokföringen skall gå att utföra med så få knapptryckningar som möjligt.
+* I bästa fall skall man kunna importera pdf:er och kontoutdrag som man lagt i bokföringens mapp (på något bra ställe som skapar ordning och reda)
+    * Det vore bra om appen kunde anpassa sig till hur användarens mapp redan ser ut?
+    * Eller i alla fall komma ihåg när användaren pekat ut saker en gång.
+* Allra minst skall man så klart kunna jobba med poster enligt BAS-bokföringen.
+    * Se alla bokförda verifikationer för aktuellt år.
+    * Kunna välja ut en bokförd verifikation och editera den (enligt bevara-historien-reglerna)
+    * Jag vill ha en snabb och enkel metod att med enkla knapptryckningar 'zooma in' på en befintlig post i bokföringen.
+    * Man skall kunna soma in på serie, på nummer, på datum.
+    * Kanske också zooma in på BAS-konto, fuzzy-text-sökning, belopp, mm (zooma på innehåll alltså)
+    * Kanske också zooma in på typ av händelse (Faktura, Kvitto, Betalning, Omföring, korrigering,osv...)
+* Från take 3 har vi tre slags 'händelser'
+    * Där hade vi 'vanliga' verifikationer som är de som ligger i bokföringen.
+    * Vi hade också 'statement entry' som var poster från kontoutdrag.
+    * Och via hade 'event' som var bara rubrik, belopp och datum.
+
+* Men nu ser jag en möjlighet att hantera de tre typerna från take 3 på ett enhetligt sätt.
+    * Det vi kallade 'event' är ju i princip en verifikation utan bokningar på några BAS konton.
+    * Och det vi kallade 'statement entry' är ju bokningar på ett BAS konto, men utan rubrik eller belopp?
+    * Kanske kan vi pröva att införa en slags 'prototyp' för en kommande verifikation att bokföra?
+    * För en prototyp kan vi ändra på alla delar tills vi har en komplett beskrivning av en finansiell händelse.
+* Jag märker dock att jag har problem med begreppen redan här.
+    * Är inte en 'verifikation' egentligen själva fakturan, kvittot eller annat underlag som beskriver den finansiella händelsen?
+    * Vi har ju redan använt 'verifikation' som själva den bokförda posten i bokföringen.
+    * Vad skall vi då kalla det dokument på disken som beskriver denna händelse?
+    * Kan vi kalla det för 'underlag'?
+    * Och är allt vi bokför en finansiell händelse?
+    * Jo, jag tror det! Vi bokför händelser som påverkar det finansiella resultatet och balansen.
+
+Så var börjar jag så att Claude implementerar en bra design som håller hela vägen då vy bygger ut till den kompletta samlingen av funktioner för bokföringen?
+
+
 ## 20261109
 
 I now switch to english again (so I can share my thoughts to a wider audience?)
