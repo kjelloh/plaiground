@@ -103,6 +103,26 @@ Det här tyckte jag var bra med Claudes sammanfattning
     * UI-tangenterna
     * hur man zoomar in.
 
+* Listan som Claude föreslog 'sladdar' lite (lite oklar vad som är vad)?
+
+    ```text
+    Ett räkenskapsår får en lista i datumordning med tre slags rader:
+
+    A12  2026-09-03  Kontorsmaterial Clas Ohlson      412,50   verifikation
+    ·    2026-09-05  —                                1 250,00 kontoutdrag (1930)
+    ·    2026-09-05  Faktura Telia september          1 250,00 händelse  📎
+    ✓    2026-09-30  Saldo 1930                      48 112,00 stämmer
+    ```
+
+    * A12 är en bokförd verifikation OK
+    * Är nästa en kontering på 1630 från kontoutdrag?
+    * I så fall kan den göras bättre om den får sin text från kontoutdraget?
+    * Nästa är en affärshändelse 'Faktura Telia' med en länk till dokumentationen av händelsen?
+    * Sista är en avstämning från ett kontoutdrag?
+        * Blir kanske tydligare då vi inför funktionen?
+        * Texten borde relatera till riktiga kontot och inte kopplat BAS-konto?
+        * Typ 'Saldo skattekonto' (eller helt enkelt texten från kontoutdraget för posten?)
+
 
 ## 20261109
 

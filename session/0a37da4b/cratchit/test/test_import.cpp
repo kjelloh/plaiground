@@ -334,11 +334,11 @@ TEST(Import, ACorrectionAndWhatItCorrectsAreDroppedTheRestWaits) {
   EXPECT_EQ(plan.registered_after_file, 2u); // D 1 was registered before the file was made
   EXPECT_EQ(plan.reverted.size(), 3u);
   EXPECT_EQ(plan.books.years[0].vouchers.size(), 2u);
-  ASSERT_EQ(plan.books.years[0].waiting.size(), 1u);
-  EXPECT_EQ(plan.books.years[0].waiting[0].noted, 2026y / October / 1);
-  // Brought back by a file, D 1 takes its waiting event off the list; another waiting event stays
+  ASSERT_EQ(plan.books.years[0].drafts.size(), 1u);
+  EXPECT_EQ(plan.books.years[0].drafts[0].noted, 2026y / October / 1);
+  // Brought back by a file, D 1 takes its draft off the list; another draft stays
   auto reverted = plan.books;
-  reverted.years[0].place_waiting({{"Coffee", 2000, 2025y / April / 2}, 2025y / April / 2,
+  reverted.years[0].place_draft({{"Coffee", 2000, 2025y / April / 2}, 2025y / April / 2,
                                    {{cratchit::books::Posting::Kind::normal, "6570", {}, 2000, 2025y / April / 2, "",
                                      "", "", ""}}});
   auto const back = plan_import(
@@ -348,9 +348,9 @@ TEST(Import, ACorrectionAndWhatItCorrectsAreDroppedTheRestWaits) {
                                                "#TRANS 1930 {} -20\r\n}\r\n")));
   EXPECT_TRUE(back.errors.empty()) << all(back.errors);
   EXPECT_FALSE(back.reverts());
-  EXPECT_EQ(back.waiting_booked, std::vector<std::string>{"2025-04-02 \"Lunch\" as D 1"});
-  ASSERT_EQ(back.books.years[0].waiting.size(), 1u);
-  EXPECT_EQ(back.books.years[0].waiting[0].event.heading, "Coffee");
+  EXPECT_EQ(back.drafts_booked, std::vector<std::string>{"2025-04-02 \"Lunch\" as D 1"});
+  ASSERT_EQ(back.books.years[0].drafts.size(), 1u);
+  EXPECT_EQ(back.books.years[0].drafts[0].event.heading, "Coffee");
   // Not in a closed year
   books.years[0].closed = true;
   auto const closed = plan_import(books, known, parse_sie(file_2025()));
@@ -487,19 +487,19 @@ TEST(Import, AVoucherMissingFromTheFileWaits) {
   EXPECT_TRUE(plan.errors.empty()) << all(plan.errors);
   EXPECT_TRUE(plan.reverts());
   EXPECT_EQ(plan.demoted, std::vector<std::string>{"A 2"});
-  EXPECT_EQ(plan.reverted, std::vector<std::string>{"Demoted to a waiting event A 2 in fiscal year 2025-01-01 - "
+  EXPECT_EQ(plan.reverted, std::vector<std::string>{"Demoted to a draft A 2 in fiscal year 2025-01-01 - "
                                                     "2025-12-31: 2025-03-01 \"Bank cost\": row 6570 10.00, row 1930 "
                                                     "-10.00"});
   auto const& year = plan.books.years[0];
   ASSERT_EQ(year.vouchers.size(), 1u);
   EXPECT_EQ(year.vouchers[0].series + year.vouchers[0].number, "A1");
-  ASSERT_EQ(year.waiting.size(), 1u);
-  EXPECT_EQ(year.waiting[0].event.heading, "Bank cost");
-  EXPECT_EQ(year.waiting[0].event.amount, 1000);
-  EXPECT_EQ(year.waiting[0].noted, 2025y / March / 1); // no registration date: the voucher's date
-  ASSERT_EQ(year.waiting[0].postings.size(), 2u);
-  EXPECT_EQ(year.waiting[0].postings[0].account, "6570");
-  EXPECT_EQ(year.waiting[0].postings[0].date, 2025y / March / 1);
+  ASSERT_EQ(year.drafts.size(), 1u);
+  EXPECT_EQ(year.drafts[0].event.heading, "Bank cost");
+  EXPECT_EQ(year.drafts[0].event.amount, 1000);
+  EXPECT_EQ(year.drafts[0].noted, 2025y / March / 1); // no registration date: the voucher's date
+  ASSERT_EQ(year.drafts[0].postings.size(), 2u);
+  EXPECT_EQ(year.drafts[0].postings[0].account, "6570");
+  EXPECT_EQ(year.drafts[0].postings[0].date, 2025y / March / 1);
   EXPECT_FALSE(cratchit::books::nothing_to_import(books, plan));
 }
 

@@ -83,6 +83,7 @@
 * Steg 73: Windows-bygget rättat: `CRATCHIT_TODAY` läses med `environment_variable` (`GetEnvironmentVariableA` på Windows) i stället för `std::getenv` (MSVC C4996). 445 tester med clang och GCC 16.
 * Steg 74: Windows-testet `DesignInsufficiencyState.LogsADesignInsufficiencyWithTheCallersPlace` rättat: loggfilen stängs innan testmappen tas bort. 445 tester med clang och GCC 16.
 * 2026-11-09: GitHub Actions grönt igen på Linux, macOS och Windows (efter steg 69–74): bygge och alla 445 tester. Felen kom från kod som flyttats från 'take 3' och aldrig byggts med GCC eller MSVC, och från `std::getenv` i `main.cpp`.
+* Steg 75: Bokföringens steg 1 (arbetshypotesen 2026-11-10). `WaitingEvent` heter `Draft` (utkast), `FiscalYear::waiting` heter `drafts` och `place_waiting` heter `place_draft`. I importen heter det `draft_of` och `drafts_booked`. `stage(draft)` räknar fram stadiet ur innehållet: `event`, `statement`, `unbalanced` eller `ready` (`DraftStage` i `core/books/books.hpp`). Filerna `events.csv` och `event_postings.csv` är oförändrade. Inget syns i gränssnittet, så manualen är oförändrad. 452 tester med clang. GCC och MSVC inte provade.
 
 ## Bygg, kör och installera
 
@@ -101,7 +102,7 @@ Se [cratchit/README.md](cratchit/README.md). Byggstegen står bara där.
 
 ## Nästa steg
 
-* Bokföringen: arbetshypotesen och ordningen att bygga i står i `beslut.md` under 2026-11-10. Första steget är `Draft` i stället för `WaitingEvent`.
+* Bokföringen: arbetshypotesen och ordningen att bygga i står i `beslut.md` under 2026-11-10. Steg 1 är klart (steg 75). Nästa är steg 2: räkenskapsårets lista med verifikationer och utkast, bara visning.
 * Luckor i gränssnittet hittas med en sökning efter `make_design_insufficiency_state` i koden. De ska stå under *Kommer senare* i manualen.
 * Varje steg som ändrar det användaren ser uppdaterar `cratchit/docs/anvandarmanual.md`.
 * Notering, att återkomma till: kanske "forcerad import", "skriv över" eller liknande för SIE-importer som tar bort eller byter ut befintliga verifikationer, eller ändrar deras datum eller text (se beslut steg 62 och 63).

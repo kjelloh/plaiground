@@ -298,3 +298,12 @@ Arbetshypotes för bokföringen (användarens val). Inget är slutgiltigt: vi ju
   * Ta tillbaka efter export: ska cratchit vägra, eller varna och låta användaren ansvara?
   * Hur lagras utkast, underlag och avstämningar i `.cratchit`? I dag finns `events.csv` och `event_postings.csv` för väntande händelser. Filerna bestäms tillsammans innan cratchit skapar någon ny fil.
   * Gränssnittet: listans utseende, tangenterna och hur man zoomar in.
+* Steg 75 (bokföringens steg 1): `WaitingEvent` heter `Draft`, `FiscalYear::waiting` heter `drafts`, `place_waiting` heter `place_draft`, och i importen heter det `draft_of` och `drafts_booked`. Loggtexten i importen säger "Demoted to a draft".
+* `stage(draft)` ger `DraftStage`, och `Draft` lagrar inget slag:
+  * `event`: inga konteringar som räknas, även när rubriken är tom.
+  * `statement`: konteringar men ingen rubrik, även när de balanserar.
+  * `unbalanced`: rubrik och konteringar, men inte `ready`.
+  * `ready`: rubrik, belopp skilt från noll, varje kontering på ett konto, konteringarna balanserar, och debet summerar till beloppet.
+  * Strukna konteringar (`Posting::Kind::removed`) räknas inte.
+* `documents` och `retracted_from` från skissen väntar. Båda behöver lagras, och filerna i `.cratchit` är en öppen fråga. Av samma skäl heter filerna fortfarande `events.csv` och `event_postings.csv`.
+* `Posting::source` sparas fortfarande bara på utkast. Regeln att den ska följa med vid bokföringen införs med åtgärden *bokför* (steg 3).

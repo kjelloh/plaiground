@@ -330,10 +330,10 @@ void merge_master_data(ImportPlan& plan, sie::Document const& document, bool is_
 }
 
 
-// A voucher in the books leaving it as a waiting event: its event, noted on its registration day, its counted
+// A voucher in the books leaving it as a draft: its event, noted on its registration day, its counted
 // postings each with its date
-WaitingEvent waiting_of(Voucher const& voucher) {
-  WaitingEvent waiting{voucher.event, voucher.registered.value_or(voucher.event.date)};
+Draft draft_of(Voucher const& voucher) {
+  Draft draft{voucher.event, voucher.registered.value_or(voucher.event.date)};
   for (auto const& posting : voucher.postings) {
     if (posting.kind == Posting::Kind::removed) {
       continue;
@@ -342,9 +342,9 @@ WaitingEvent waiting_of(Voucher const& voucher) {
     row.kind = Posting::Kind::normal;
     row.date = posting.date.value_or(voucher.event.date);
     row.signature.clear();
-    waiting.postings.push_back(std::move(row));
+    draft.postings.push_back(std::move(row));
   }
-  return waiting;
+  return draft;
 }
 
 // Makes the year's vouchers the file's (see plan_import)
@@ -488,7 +488,7 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
     if (fate[b] == Fate::open) {
       fate[b] = Fate::demoted;
       plan.demoted.push_back(voucher_name(year.vouchers[b]));
-      leaving(b, "Demoted to a waiting event");
+      leaving(b, "Demoted to a draft");
     }
   }
 
@@ -502,7 +502,7 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
 
   std::vector<Voucher> vouchers;
   std::vector<Voucher const*> from_file; // put in place by the file: renamed, replaced, added
-  std::vector<WaitingEvent> demoted; // placed after the waiting events the file brings are taken off
+  std::vector<Draft> demoted; // placed after the drafts the file brings are taken off
   for (std::size_t b = 0; b < year.vouchers.size(); ++b) {
     switch (fate[b]) {
     case Fate::stays:
@@ -517,7 +517,7 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
       break;
     }
     case Fate::demoted:
-      demoted.push_back(waiting_of(year.vouchers[b]));
+      demoted.push_back(draft_of(year.vouchers[b]));
       break;
     default:
       break;
@@ -532,30 +532,30 @@ void merge_vouchers(ImportPlan& plan, sie::Document const& document, FiscalYear&
   }
   year.vouchers = std::move(vouchers);
 
-  // Waiting events the file brings as vouchers
-  auto const as_voucher = [](WaitingEvent const& waiting) {
-    return Voucher{"", "", waiting.event, std::nullopt, "", waiting.postings};
+  // Drafts the file brings as vouchers
+  auto const as_voucher = [](Draft const& draft) {
+    return Voucher{"", "", draft.event, std::nullopt, "", draft.postings};
   };
-  std::vector<bool> booked(year.waiting.size(), false);
+  std::vector<bool> booked(year.drafts.size(), false);
   for (auto const* voucher : from_file) {
     auto const rows = counted_rows(*voucher);
-    for (std::size_t w = 0; w < year.waiting.size() && !rows.empty(); ++w) {
-      auto const& waiting = year.waiting[w];
-      if (!booked[w] && waiting.event.date == voucher->event.date && counted_rows(as_voucher(waiting)) == rows) {
+    for (std::size_t w = 0; w < year.drafts.size() && !rows.empty(); ++w) {
+      auto const& draft = year.drafts[w];
+      if (!booked[w] && draft.event.date == voucher->event.date && counted_rows(as_voucher(draft)) == rows) {
         booked[w] = true;
-        plan.waiting_booked.push_back(std::format("{} \"{}\" as {}", format_iso_date(waiting.event.date),
-                                                  waiting.event.heading, voucher_name(*voucher)));
+        plan.drafts_booked.push_back(std::format("{} \"{}\" as {}", format_iso_date(draft.event.date),
+                                                 draft.event.heading, voucher_name(*voucher)));
         break;
       }
     }
   }
-  for (std::size_t w = year.waiting.size(); w-- > 0;) {
+  for (std::size_t w = year.drafts.size(); w-- > 0;) {
     if (booked[w]) {
-      year.waiting.erase(year.waiting.begin() + static_cast<std::ptrdiff_t>(w));
+      year.drafts.erase(year.drafts.begin() + static_cast<std::ptrdiff_t>(w));
     }
   }
-  for (auto& waiting : demoted) {
-    year.place_waiting(std::move(waiting));
+  for (auto& draft : demoted) {
+    year.place_draft(std::move(draft));
   }
 }
 

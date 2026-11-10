@@ -62,7 +62,7 @@ struct Posting {
   std::string text{};
   std::string quantity{};
   std::string signature{};
-  std::string source{}; // the statement entry it came from (stashed file:line); kept on waiting events only
+  std::string source{}; // the statement entry it came from (stashed file:line); kept on drafts only
 
   bool operator==(Posting const&) const = default;
 };
@@ -101,15 +101,29 @@ struct Voucher {
   bool operator==(Voucher const&) const = default;
 };
 
-// An event noted to be posted later, e.g. an invoice or a receipt, with the
-// postings it has so far (e.g. from statement entries), to be completed into a voucher
-struct WaitingEvent {
-  Event event; // the amount without sign, as in a voucher
+// A financial event on its way into the books: anything in it may change
+// until it is complete and booked as a voucher. It may hold just the event
+// (e.g. an invoice or a receipt noted), just postings (e.g. from statement
+// entries), or both. It stores no kind; see stage.
+struct Draft {
+  Event event; // the amount without sign, as in a voucher; heading and amount may be empty
   Date noted;  // the day it was noted
   Postings postings{}; // each with its date and text
 
-  bool operator==(WaitingEvent const&) const = default;
+  bool operator==(Draft const&) const = default;
 };
+
+// How far a draft has come, worked out from what it holds
+enum class DraftStage {
+  event,      // no postings: just the event (also when its heading is empty)
+  statement,  // postings but no heading, e.g. from statement entries
+  unbalanced, // heading and postings, but not ready (see ready)
+  ready,      // can be booked: a heading, an amount, postings each on an account,
+              // that balance and whose debit adds up to the amount
+};
+
+// The stage of draft (removed postings do not count)
+DraftStage stage(Draft const& draft);
 
 struct FiscalYear {
   Date start;
@@ -119,14 +133,14 @@ struct FiscalYear {
   std::map<std::string, Amount> reported_opening{};
   std::vector<Voucher> vouchers{};
   bool closed = false; // closed for new vouchers (open by default)
-  // Events waiting for postings, oldest date first, ties in the order noted.
-  // Add them with place_waiting only, so the order holds.
-  std::vector<WaitingEvent> waiting{};
+  // Drafts not yet in the books, oldest date first, ties in the order noted.
+  // Add them with place_draft only, so the order holds.
+  std::vector<Draft> drafts{};
 
   // True when date is within the year
   bool holds(Date date) const;
-  // Places event among the waiting events by its date, after those of the same date; its index
-  std::size_t place_waiting(WaitingEvent event);
+  // Places draft among the drafts by its date, after those of the same date; its index
+  std::size_t place_draft(Draft draft);
 };
 
 struct Address {
@@ -187,7 +201,7 @@ std::expected<Books, std::string> read_books(std::filesystem::path const& projec
 
 // Writes the books of a project, creating folders as needed. Only files whose
 // content changes are written; those are returned, in the order written. A
-// year's events.csv exists only while the year has waiting events, and its
+// year's events.csv exists only while the year has drafts, and its
 // event_postings.csv only while they have postings. A year's
 // postings are in postings.csv; transactions.csv, its name before, is read
 // when postings.csv is missing and removed on writing.

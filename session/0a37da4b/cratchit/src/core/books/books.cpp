@@ -260,7 +260,7 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
     if (!noted) {
       return std::unexpected(noted.error());
     }
-    year.waiting.push_back({{row[1], *amount, *date}, *noted});
+    year.drafts.push_back({{row[1], *amount, *date}, *noted});
   }
   auto const event_postings_path = year_folder / event_postings_file;
   if (fs::exists(event_postings_path, ec)) {
@@ -270,7 +270,7 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
     }
     for (auto const& row : *event_postings) {
       auto const event = all_digits(row[0]) && row[0].size() < 9 ? std::stoul(row[0]) : 0;
-      if (event == 0 || event > year.waiting.size()) {
+      if (event == 0 || event > year.drafts.size()) {
         return std::unexpected(
             std::format("{}: event {} is not in {}", event_postings_path.string(), row[0], events_file));
       }
@@ -288,11 +288,11 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
       posting.date = *date;
       posting.text = row[4];
       posting.source = row[5];
-      year.waiting[event - 1].postings.push_back(std::move(posting));
+      year.drafts[event - 1].postings.push_back(std::move(posting));
     }
   }
   // Files written before the date order are in the order noted
-  std::ranges::stable_sort(year.waiting, {}, [](WaitingEvent const& waiting) { return waiting.event.date; });
+  std::ranges::stable_sort(year.drafts, {}, [](Draft const& draft) { return draft.event.date; });
   return year;
 }
 
@@ -347,17 +347,33 @@ Amount sum(Postings const& postings) {
   return debit(postings) - credit(postings);
 }
 
+DraftStage stage(Draft const& draft) {
+  auto const counted = [](Posting const& posting) { return posting.kind != Posting::Kind::removed; };
+  if (std::ranges::none_of(draft.postings, counted)) {
+    return DraftStage::event;
+  }
+  if (draft.event.heading.empty()) {
+    return DraftStage::statement;
+  }
+  auto const on_accounts = std::ranges::all_of(draft.postings, [&](Posting const& posting) {
+    return !counted(posting) || !posting.account.empty();
+  });
+  auto const ready = on_accounts && draft.event.amount != 0 && sum(draft.postings) == 0 &&
+                     debit(draft.postings) == draft.event.amount;
+  return ready ? DraftStage::ready : DraftStage::unbalanced;
+}
+
 bool FiscalYear::holds(Date date) const {
   return start <= date && date <= end;
 }
 
-std::size_t FiscalYear::place_waiting(WaitingEvent event) {
-  auto const at = std::ranges::upper_bound(waiting, event.event.date, {},
-                                           [](WaitingEvent const& other) { return other.event.date; });
+std::size_t FiscalYear::place_draft(Draft draft) {
+  auto const at = std::ranges::upper_bound(drafts, draft.event.date, {},
+                                           [](Draft const& other) { return other.event.date; });
   // The index first: insert may move the elements, and C++ does not say which side of a - b is evaluated
   // first, so insert(...) - begin() may take begin() from before the move (GCC 14 does)
-  auto const index = static_cast<std::size_t>(at - waiting.begin());
-  waiting.insert(at, std::move(event));
+  auto const index = static_cast<std::size_t>(at - drafts.begin());
+  drafts.insert(at, std::move(draft));
   return index;
 }
 
@@ -550,9 +566,9 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
     files.emplace_back(year_folder / postings_file, csv_text(postings_header, posting_rows));
     gone.push_back(year_folder / old_postings_file);
     rows.clear();
-    for (auto const& waiting : year.waiting) {
-      rows.push_back({format_iso_date(waiting.event.date), waiting.event.heading, format_amount(waiting.event.amount),
-                      format_iso_date(waiting.noted)});
+    for (auto const& draft : year.drafts) {
+      rows.push_back({format_iso_date(draft.event.date), draft.event.heading, format_amount(draft.event.amount),
+                      format_iso_date(draft.noted)});
     }
     if (rows.empty()) {
       gone.push_back(year_folder / events_file);
@@ -560,8 +576,8 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
       files.emplace_back(year_folder / events_file, csv_text(events_header, rows));
     }
     rows.clear();
-    for (std::size_t i = 0; i < year.waiting.size(); ++i) {
-      for (auto const& posting : year.waiting[i].postings) {
+    for (std::size_t i = 0; i < year.drafts.size(); ++i) {
+      for (auto const& posting : year.drafts[i].postings) {
         rows.push_back({std::to_string(i + 1), posting.account, format_amount(posting.amount),
                         optional_date_text(posting.date), posting.text, posting.source});
       }

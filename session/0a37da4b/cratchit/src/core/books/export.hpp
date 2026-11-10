@@ -26,7 +26,7 @@ namespace cratchit::books {
 // either is not zero, #RES of each other account (result accounts, and the
 // 9xxx memo accounts BAS gives no kind) where it is not zero, then
 // the year's vouchers (year 0 only) with their postings as #TRANS, #RTRANS
-// (added) and #BTRANS (removed). Waiting events are not exported; nor are
+// (added) and #BTRANS (removed). Drafts are not exported; nor are
 // object or period balances, which the books do not keep.
 // With only (indexes into the year's vouchers), a part of the year: just those
 // vouchers, and no balances (#IB, #UB, #RES), so no program takes balances from it.

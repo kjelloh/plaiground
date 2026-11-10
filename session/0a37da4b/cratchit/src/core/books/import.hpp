@@ -51,12 +51,12 @@ struct ImportPlan {
   std::vector<std::string> renamed;  // the same voucher under another name, e.g. "D 5 as D 7"
   std::vector<std::string> replaced; // in the books, replaced by the file's voucher with the same series and number
   std::vector<std::string> dropped;  // in the books, a correction and the voucher it corrects, both left out
-  std::vector<std::string> demoted;  // in the books, now waiting events
+  std::vector<std::string> demoted;  // in the books, now drafts
   std::vector<std::string> reverted; // each of them in full, for the log
   std::size_t registered_after_file = 0; // replaced, dropped and demoted ones registered after the file's #GEN
-  // Waiting events the file brings as vouchers (the same date and counted postings), taken off the waiting list,
+  // Drafts the file brings as vouchers (the same date and counted postings), taken off the drafts,
   // e.g. `2026-07-03 "AVGIFTER NORDEA" as A 12`
-  std::vector<std::string> waiting_booked;
+  std::vector<std::string> drafts_booked;
 
   // True when there are errors and a forced import would take every one of them
   bool can_force() const { return !errors.empty() && forceable == errors.size(); }
@@ -96,11 +96,11 @@ struct Forcing {
 //   it; of those left, a voucher with the same date as another and its counted
 //   postings turned (a correction and what it corrects; not a credit note on
 //   another day) is dropped with it; the others become
-//   waiting events with their counted postings (demoted), noted on their
+//   drafts with their counted postings (demoted), noted on their
 //   registration day. The file's other vouchers are added. Any change in a
 //   closed year is an error. Each voucher the file puts in place (added,
-//   renamed or replaced) takes one waiting event with the same date and
-//   counted postings off the year's waiting list (waiting_booked).
+//   renamed or replaced) takes one draft with the same date and
+//   counted postings off the year's drafts (drafts_booked).
 //   Row dates the file is silent about are kept: a row of a voucher the file
 //   puts in place (or leaves as it is) that has no date in the file takes the
 //   date of a row of the books' voucher with the same account and amount, when
