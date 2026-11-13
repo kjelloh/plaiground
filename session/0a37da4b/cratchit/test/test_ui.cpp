@@ -286,9 +286,45 @@ TEST_F(RootMenuTest, ProjectOffersItsFiscalYearsTheCurrentAsZero) {
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "2024/25");
   EXPECT_EQ(navigator.current().view(), (View{"Räkenskapsår 2024-05-01 – 2025-04-30", "Hela året: inget bokfört"}));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Exportera till SIE"}, {U'2', "Importera från SIE"}}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Årsflöde"}, {U'1', "Exportera till SIE"}, {U'2', "Importera från SIE"}}));
   EXPECT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "The ITfied AB");
+}
+
+TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
+  Navigator navigator(cratchit::ui::make_project_menu(
+      project_with_books(documents / "p", "year.2025-05-01 = 2026-04-30\n")));
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Årsflöde");
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Utkast"},
+                         {U'1', "Bokfört"},
+                         {U'2', "Momsrapport"},
+                         {U'3', "Bokslut"},
+                         {U'4', "Årsredovisning"},
+                         {U'5', "Årsstämma"},
+                         {U'6', "Rapport till Bolagsverket"},
+                         {U'7', "Deklaration till SKV"}}));
+  // Every step but Bokslut is not there yet
+  for (auto const& [key, caption] : navigator.current().options()) {
+    if (key == U'3') continue;
+    ASSERT_TRUE(navigator.press(key));
+    EXPECT_EQ(navigator.current().name(), "Inte än (" + caption + ")");
+    ASSERT_TRUE(navigator.back());
+  }
+  EXPECT_FALSE(navigator.press(U'8'));
+  // Bokslut has Avstämning, not there yet
+  ASSERT_TRUE(navigator.press(U'3'));
+  EXPECT_EQ(navigator.current().name(), "Bokslut");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Avstämning"}}));
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Inte än (Avstämning)");
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "2025/26");
 }
 
 TEST_F(RootMenuTest, ProjectSaysWhenItsFiscalYearsCannotBeRead) {
@@ -427,6 +463,12 @@ TEST_F(RootMenuTest, EveryStateHasItsHelpTopic) {
   EXPECT_EQ(navigator.current().help_topic(), topic::project);
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().help_topic(), topic::fiscal_year);
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::year_flow);
+  ASSERT_TRUE(navigator.press(U'3'));
+  EXPECT_EQ(navigator.current().help_topic(), topic::closing);
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'2')); // trasig has no name

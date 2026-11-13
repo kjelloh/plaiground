@@ -8,6 +8,7 @@
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/sie_import_menu.hpp"
+#include "ui/year_flow_menu.hpp"
 #include "ui/year_view.hpp"
 
 #include <format>
@@ -157,8 +158,14 @@ public:
     lines.insert(lines.end(), zoom.rows.begin(), zoom.rows.end());
     return lines;
   }
-  OptionsList options() const override { return {{U'1', export_caption}, {U'2', "Importera från SIE"}}; }
+  OptionsList options() const override {
+    return {{U'0', "Årsflöde"}, {U'1', export_caption}, {U'2', "Importera från SIE"}};
+  }
   OnKeyResult on_key(CodePoint key) override {
+    if (key == U'0') {
+      report_.clear();
+      return make_year_flow_menu();
+    }
     if (key == U'1') {
       report_.clear();
       return std::make_unique<ExportState>(*this, project_, year_);

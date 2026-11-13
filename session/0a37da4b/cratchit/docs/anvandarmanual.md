@@ -121,7 +121,7 @@ Utvecklaren av cratchit har inte infört att … ännu.
 Cratchit > … > Inte än (<valet>)> 
 ```
 
-Tryck `-` för att gå tillbaka. Just nu finns inga sådana val.
+Tryck `-` för att gå tillbaka. Just nu gäller det valen i [Årsflöde](#årsflöde) och i dess *Bokslut*.
 
 ## Samlingsmappen
 
@@ -202,7 +202,7 @@ Ett år där inget är bokfört fungerar som de andra: du kan importera till det
 ### Räkenskapsår
 
 <!-- hjälp: rakenskapsar -->
-Du har öppnat ett räkenskapsår i bokföringen. Överst står vilken period det gäller och vad året innehåller. Under det visar cratchit årets verifikationer och utkast, de nyaste först. Listan är bara en vy, raderna är inga val. Tryck `1` för att exportera året till en SIE-fil, eller `2` för att importera en SIE-fil för året. Tryck `-` för att gå tillbaka till bokföringen.
+Du har öppnat ett räkenskapsår i bokföringen. Överst står vilken period det gäller och vad året innehåller. Under det visar cratchit årets verifikationer och utkast, de nyaste först. Listan är bara en vy, raderna är inga val. Tryck `0` för årets arbete i *Årsflöde*, `1` för att exportera året till en SIE-fil, eller `2` för att importera en SIE-fil för året. Tryck `-` för att gå tillbaka till bokföringen.
 <!-- /hjälp -->
 
 Tryck räkenskapsårets siffra i bokföringen. Prompten får då årets namn:
@@ -216,6 +216,7 @@ Hela året: 116 verifikationer
   …
   E 21        2026-03-30       1233.75  LOOPIA AB
   … 106 äldre
+  0 Årsflöde
   1 Exportera till SIE
   2 Importera från SIE
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26> 
@@ -233,6 +234,35 @@ Listan visar de tio nyaste raderna. Finns det fler står det sist hur många äl
 | `klart` | Utkastet kan bokföras |
 
 Du kan ännu inte skapa utkast i cratchit.
+
+### Årsflöde
+
+<!-- hjälp: arsflode -->
+Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. Bara `3 Bokslut` leder vidare än så länge, de andra valen säger vad som saknas. Tryck `-` för att gå tillbaka till räkenskapsåret.
+<!-- /hjälp -->
+
+Tryck `0` i räkenskapsåret:
+
+```text
+Arbetet med räkenskapsåret, i den ordning det brukar göras.
+  0 Utkast
+  1 Bokfört
+  2 Momsrapport
+  3 Bokslut
+  4 Årsredovisning
+  5 Årsstämma
+  6 Rapport till Bolagsverket
+  7 Deklaration till SKV
+Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde> 
+```
+
+Valen finns i menyn, men cratchit kan inte utföra dem än (se [Inte än](#inte-än) och [Kommer senare](#kommer-senare)).
+
+#### Bokslut
+
+<!-- hjälp: bokslut -->
+Bokslutet avslutar räkenskapsåret. Tryck `0` för avstämning mot kontoutdrag. Den finns inte än. Tryck `-` för att gå tillbaka till Årsflöde.
+<!-- /hjälp -->
 
 ### Importera från SIE
 
@@ -475,6 +505,9 @@ Skriv hur många månader det första räkenskapsåret är och tryck Enter, 1 ti
 Ett nystartat företag kan ha ett första räkenskapsår som är kortare eller längre än tolv månader. Startar företaget till exempel i maj och ska ha kalenderår, blir det första räkenskapsåret 8 månader: maj till december.
 
 ## Kommer senare
+
+* Valen i Årsflöde: utkast som du skapar, ändrar och bokför, arbete med årets verifikationer, momsrapport, årsredovisning, årsstämma, rapport till Bolagsverket och deklaration till Skatteverket.
+* Avstämning mot kontoutdrag i bokslutet, till exempel 1920 mot plusgirot, 1930 mot sparkontot och 1630 mot skattekontot.
 
 * En kontoplan för en ny bokföring från uppgifter. cratchit kommer att erbjuda BAS-kontoplanen.
 * Import av en SIE-fil som tar bort eller byter ut verifikationer som redan finns i bokföringen, eller ändrar deras datum eller text.

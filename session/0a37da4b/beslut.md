@@ -316,3 +316,15 @@ Arbetshypotes för bokföringen (användarens val). Inget är slutgiltigt: vi ju
   * Ordningen: efter datum, och på samma datum utkast före verifikationer och senare i bokföringen före tidigare. Verifikationerna sorteras efter datum, eftersom en SIE-fil inte alltid har dem i datumordning.
   * En rad: serie och nummer (för ett utkast dess stadium: `händelse`, `kontoutdrag`, `obalanserat`, `klart`), datum, belopp och text. Beloppet skrivs med `format_amount` (`1118.00`), som i `Skillnad`. Ett utkast utan belopp visar vad dess konteringar flyttar.
   * Det som en export eller import skrev står kvar på tredje raden, före listan.
+
+## 2026-11-13
+
+* Steg 77: Räkenskapsåret får statet **Årsflöde** på `0` (användarens val av namn och tangent). Det har valen `0 Utkast`, `1 Bokfört`, `2 Momsrapport`, `3 Bokslut`, `4 Årsredovisning`, `5 Årsstämma`, `6 Rapport till Bolagsverket` och `7 Deklaration till SKV`. De leder till *Inte än* tills de byggs.
+  * Listan stannar i räkenskapsårets state (beslutet från steg 76 gäller). Valen `1 Exportera till SIE` och `2 Importera från SIE` är oförändrade.
+  * **Avstämning hör till bokslutet**, för nu som `0 Avstämning` i `3 Bokslut` (användarens val).
+* Arbetshypotes (användarens idé): **ett år får lämna utkast till nästa år.** Användaren bokför dem när hen går in på det året. cratchit bokför aldrig något i ett annat år på egen hand.
+  * Bokslutet lämnar utkast till omföringen av årets resultat (2099 → 2098) första dagen nästa år.
+  * Årsstämman lämnar utkast till resultatfördelningen (2098 → 2091 och utdelning) med stämmans datum.
+  * Andra kandidater (Claudes förslag): återföring av bokslutets periodiseringar (17xx, 29xx) och skillnaden mellan slutlig och preliminär skatt efter deklarationen.
+  * Öppen fråga: ett utkast som kommer från ett annat år behöver ett ursprung. Det ändrar formatet i `events.csv` och bestäms tillsammans innan något sparas.
+* Öppen fråga (användaren återkommer): ska bokslutets bokningar vara vanliga utkast i årets lista, eller ska *Bokslut* (och *Årsstämma*) ha egna `Utkast` och `Bokfört`? Claude föreslår vanliga utkast, och att *Bokslut* visar samma lista zoomad på det bokslutet har skapat.

@@ -15,6 +15,80 @@ Claude state files.
 * [Claude beslut.md](./beslut.md)
 * [Claude status.md](./status.md)
 
+## 20261113
+
+Nu har jag en idé till UI för själva flödet av bokföringen.
+
+* Jag inför ett faktiskt state i räkenskapsår för det praktiska bokföringsarbetet.
+* Vad kan vara ett bra namn för detta state?
+    * Kanske 'Löpande'?
+    * Kanske bara 'Bokföring'? (Men då passar kanske inte hela årsflödet?)
+* I detta state har jag underval för flödet över året.
+    0. Utkast
+    1. Bokfört
+    2. Momsrapport
+    3. Bokslut
+    4. Årsredovisning
+    5. Årsstämma
+    6. Rapport till Bolagsverket
+    7. Deklaration till SKV
+
+Jag kan börja med att införa denna struktur med flödet som 'Inte Än' tillstånd?
+
+* Claude föreslog 'Årsflöde'. Jag tycker det är bästa förslaget än så länge?
+    * Claude föreslog val '3' men jag vill att det skall vara val '0'.
+* Claude identifierade att flödet involverar förra året.
+    * Det är 'Årsstämma' som ju genomförs och bokförs året efter avslutat år.
+    * Jag tycker nog att det är ok?
+    * Vi kan ju lösa det som att 'Årsstämma' blir ett utkast som läggs 'året efter'?
+    * Så kan användaren ta tag i det då hen går in på det året?
+    * Detsamma gäller inledande års verifikationer som omför förra årets 'årets resultat' till årets 'förra årets' resultat.
+    * Men även dessa kan ju genereras som utkast till nästa år då aktuellt år är avslutat?
+* Det känns som vi generellt kan låta ett år generera utkast till nästa år?
+    * Bokslut generar utkast till omföring året efter avslutat år
+    * Årsstämma generera utkast till bokföring av resultatfördelning året efter avslutat år
+    * Finns det fler händelser under ett år som skall bokföras nästa år?
+* Claude frågar om var 'avstämning' passar in?
+    * Jag tycker för nu att det hör till bokslutet
+    * Kanske som val 0 i bokslutet?
+    * Jag funderar också om operationer i bokslutet kan bli utkast
+    * Så bokföring som resultat av bokslut hamnar i det vanliga bokföringsflödet?
+    * Alternativet är att ha egna underval 'Utkast' och 'Bokfört' under 'Bokslut'?
+    * Det kanske inte är så dumt ändå?
+    * Då kan även 'Årsstämma' ha underval 'utkast' (men på nästa år)?
+    * Jag får återkomma till det.
+
+Claude förstod vad jag menade och skapade nya meny-strukturen ok.
+
+## 20261111
+
+Jag beslöt nu att göra bokslut i mitt företag 'manuellt' så jag får det gjort.
+
+Och jag kan dokumentera vad jag vill ha för stöd i cratchit för att kunna göra detta enkelt.
+
+* Jag vill få hjälp att stämma av balanser mot kontoutdrag
+
+    * 1920 saldo skall stämma med mitt plusgirokonto (Nordea kontoutdrag)
+    * 1930 saldo skall stämma med mitt sparkontoutdrag (Nordea kontoutdrag)
+    * 1630 saldo skall stämma med skattekonto kontoutdrag
+
+* Jag vill få hjälp att stämma av att resultat är korrekt omfört på nya året + stämmobeslut
+
+    * Förra årets 'årets resultat' skall bli årets 'förra årets resultat'
+        * FÖRVIRRANDE!
+        * Lämpligen en I-verifikation första dagen som flyttar 2099 -> 2098
+    * Stämmobeslutet om resultatfördelning skall bokföras
+        * På stämman beslutas hur 2098 skall fördelas.
+        * Vanligen fördelas resultatet till utdelning + ny räkning
+        * Ny räkning är 2091 Balanserat Resultat
+        * Lämpligen en I-verifikation med datum då stämman tog beslutet
+
+* En extrafunktion skulle kunna vara att kunna se resultatflödet över åren?
+
+    * Varje år ett resultat från bokslut
+    * Varje nytt år blir förra årets 'årets resultat' till årets 'förra årets resultat'
+    * Varje år hur stämman fördelat resultatet (utdelning vs ny räkning)
+
 ## 20261110
 
 Now I think it is time to design the core 'book keeping' mechanism.
