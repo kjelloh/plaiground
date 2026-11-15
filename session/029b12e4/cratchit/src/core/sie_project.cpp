@@ -127,6 +127,9 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const&
   plan.name = document.company_name;
   plan.orgnr = document.orgnr;
   plan.alert = lexed->alert;
+  plan.program = document.program_version.empty() ? document.program
+                                                  : std::format("{} {}", document.program, document.program_version);
+  plan.generated = document.generated;
   plan.import = books::plan_import({}, {plan.name, {}}, document);
   if (!plan.import.errors.empty()) return std::unexpected(errors_text(plan.import.errors));
   return plan;

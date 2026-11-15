@@ -481,25 +481,26 @@ En SIE-fil är en fil med bokföring som du har hämtat från ett annat bokföri
 1. Tryck `+`, `2` (*Ny*) och `1` (*Från SIE*).
 2. Skriv sökvägen till SIE-filen. Sökvägen börjar i samlingsmappen, och Tab fyller i mappar och SIE-filer.
 3. Tryck Enter. cratchit läser filen och visar vad den innehåller.
-4. Tryck `1` (*Skapa bokföringen*).
+4. Tryck `J` (*Ja*) för att skapa bokföringen, eller `N` (*Nej*) för att välja en annan fil.
 
 ```text
 SIE-fil: /Users/anna/Documents/cratchit/TheITfiedAB.se
-Innehåll: 2026-05-01 – 2027-04-30  skapad 2026-10-19  42 ver. t.o.m. 2026-10-12  A 21 · D 11 · M 10
-Företag: The ITfied AB (556782-8172)
-Räkenskapsår: 2026-05-01 – 2027-04-30
-Verifikationer: 42
-Konton: 501
-cratchit skapar bokföringen i /Users/anna/Documents/cratchit/The ITfied AB och flyttar SIE-filen till importerade_sie_filer där.
-  1 Skapa bokföringen
+  Företag:        The ITfied AB (556782-8172)
+  Räkenskapsår:   2026-05-01 – 2027-04-30
+  Skapad:         2026-10-19 (Fortnox 3.62.17)
+  Verifikationer: 42 t.o.m. 2026-10-12  A 21 · D 11 · M 10
+  Konton:         501
+Skapa bokföringen från SIE-filen?
+  J Ja
+  N Nej
 Cratchit > Samlingsmapp > Lägg till > Ny > Från SIE > Bekräfta> 
 ```
 
 <!-- hjälp: bekrafta-sie -->
-Ovanför prompten står vad cratchit hittade i SIE-filen och var bokföringen skapas. Tryck `1` för att skapa bokföringen. cratchit går då tillbaka till samlingsmappen, där bokföringen finns i listan. Tryck `-` för att gå tillbaka utan att skapa något.
+Ovanför prompten står vad cratchit hittade i SIE-filen: företaget, räkenskapsåret, när och med vilket program filen skapades, verifikationerna och kontona. Tryck `J` för att skapa bokföringen. Tryck `N` eller `-` för att gå tillbaka och välja en annan fil; sökvägen börjar då i mappen där du valde filen.
 <!-- /hjälp -->
 
-cratchit skapar en ny mapp med företagets namn bredvid SIE-filen, tar in hela filen och flyttar SIE-filen till mappen `importerade_sie_filer` i den nya mappen, där också senare importerade SIE-filer hamnar. Sedan går cratchit tillbaka till samlingsmappen, där den nya bokföringen nu finns i listan.
+cratchit skapar en ny mapp med företagets namn bredvid SIE-filen, tar in hela filen och flyttar SIE-filen till mappen `importerade_sie_filer` i den nya mappen, där också senare importerade SIE-filer hamnar. Sedan går cratchit tillbaka till samlingsmappen, där den nya bokföringen nu finns i listan. (Med [Ny bokföring här](#ny-bokföring-här) hamnar bokföringen i stället i mappen du startade i.)
 
 cratchit skapar ingenting om filen inte går att använda, till exempel om den inte är en SIE-fil, har fel eller saknar företagets namn eller räkenskapsår. Det gäller också om det redan finns en mapp med företagets namn bredvid filen. Orsaken står då under prompten, och sökvägen står kvar så att du kan rätta den.
 

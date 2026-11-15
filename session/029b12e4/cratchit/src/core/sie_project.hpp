@@ -22,6 +22,8 @@ struct SieProjectPlan {
   std::string name;               // #FNAMN
   std::string orgnr;              // #ORGNR, may be empty
   std::string alert;              // when the file was not read as CP437 (see sie::lex_file), else empty
+  std::string program;            // #PROGRAM name and version, e.g. "Fortnox 3.62.17", or empty
+  std::optional<Date> generated;  // #GEN
   books::ImportPlan import;       // the books after importing the whole file into empty books
 };
 

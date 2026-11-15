@@ -524,10 +524,11 @@ TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
   ASSERT_TRUE(result->next);
   navigator.enter(std::move(result->next));
   EXPECT_EQ(navigator.current().name(), "Bekräfta");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Skapa bokföringen"}}));
-  EXPECT_FALSE(fs::exists(folder / "Test AB")); // nothing created before 1
-  // 1 creates the project and goes back to where the user started, the workspace, which lists it
-  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}}));
+  EXPECT_FALSE(navigator.press(U'\n')); // Enter only shows the options again
+  EXPECT_FALSE(fs::exists(folder / "Test AB")); // nothing created before J
+  // J creates the project and goes back to where the user started, the workspace, which lists it
+  ASSERT_TRUE(navigator.press(U'J'));
   EXPECT_TRUE(fs::exists(folder / "Test AB" / "importerade_sie_filer" / "test.se"));
   EXPECT_EQ(navigator.path().size(), 2u);
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
@@ -989,10 +990,15 @@ TEST_F(RootMenuTest, NewProjectHereFromSieStartsInTheWorkingFolderAndCreatesTheP
   ASSERT_TRUE(result->next);
   navigator.enter(std::move(result->next));
   EXPECT_EQ(navigator.current().name(), "Bekräfta");
-  EXPECT_EQ(navigator.current().view().back(),
-            std::format("cratchit skapar bokföringen i {} och flyttar SIE-filen till importerade_sie_filer där.", seed.string()));
-  EXPECT_FALSE(fs::exists(seed / ".cratchit")); // nothing created before 1
-  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().view(),
+            (View{"SIE-fil: " + (seed / "older" / "test.se").string(),
+                  "  Företag:        Test AB: provet (556000-0001)",
+                  "  Räkenskapsår:   2025-01-01 – 2025-12-31",
+                  "  Verifikationer: 1 t.o.m. 2025-02-01  A 1",
+                  "  Konton:         2",
+                  "Skapa bokföringen från SIE-filen?"}));
+  EXPECT_FALSE(fs::exists(seed / ".cratchit")); // nothing created before J
+  ASSERT_TRUE(navigator.press(U'j'));
   // Created in the working folder itself, the file moved into its importerade_sie_filer
   EXPECT_TRUE(fs::is_regular_file(seed / ".cratchit" / "project.txt"));
   EXPECT_TRUE(fs::is_regular_file(seed / "importerade_sie_filer" / "test.se"));
@@ -1020,9 +1026,28 @@ TEST_F(RootMenuTest, NewProjectHereFromSieTakesAFileAlreadyInImportedSieFiles) {
   auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed / "importerade_sie_filer") + U"test.se");
   ASSERT_TRUE(result) << result.error();
   navigator.enter(std::move(result->next));
-  EXPECT_EQ(navigator.current().view().back(),
-            std::format("cratchit skapar bokföringen i {}. SIE-filen ligger redan i importerade_sie_filer där.", seed.string()));
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'J'));
   EXPECT_TRUE(fs::is_regular_file(seed / ".cratchit" / "project.txt"));
   EXPECT_TRUE(fs::is_regular_file(seed / "importerade_sie_filer" / "test.se"));
+}
+
+TEST_F(RootMenuTest, NoInConfirmGoesBackToChooseAnotherFileInTheSameFolder) {
+  auto const workspace = documents / "cratchit";
+  auto const seed = documents / "_seed";
+  fs::create_directories(seed / "older");
+  std::ofstream(seed / "older" / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#PROGRAM \"Fortnox\" 3.62\r\n#GEN 20261019\r\n#FNAMN \"Test AB\"\r\n"
+         "#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n#KONTO 1930 \"Bank\"\r\n";
+  Navigator navigator(cratchit::ui::make_root_menu(workspace, seed));
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed / "older") + U"test.se");
+  ASSERT_TRUE(result) << result.error();
+  navigator.enter(std::move(result->next));
+  EXPECT_EQ(navigator.current().view()[3], "  Skapad:         2026-10-19 (Fortnox 3.62)");
+  ASSERT_TRUE(navigator.press(U'N'));
+  EXPECT_EQ(navigator.current().name(), "Från SIE");
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(seed / "older"));
+  EXPECT_FALSE(fs::exists(seed / ".cratchit"));
+  EXPECT_TRUE(fs::exists(seed / "older" / "test.se"));
 }

@@ -29,39 +29,58 @@ using pyroceph::tui::View;
 
 std::string date_text(Date const& date) { return format_iso_date(date); }
 
+// J and N, in either case
+bool is_key(CodePoint key, CodePoint upper) { return key == upper || key == upper - U'A' + U'a'; }
+
 class ConfirmSieProjectState : public State {
 public:
-  ConfirmSieProjectState(Workspace workspace, SieProjectPlan plan, State const* origin)
-      : workspace_(std::move(workspace)), plan_(std::move(plan)), origin_(origin),
-        contents_(describe_sie_file(plan_.sie_file).front()) {}
+  ConfirmSieProjectState(Workspace workspace, SieProjectPlan plan, State const* origin, State const* from_sie)
+      : workspace_(std::move(workspace)), plan_(std::move(plan)), origin_(origin), from_sie_(from_sie),
+        summary_(summarize_sie_file(plan_.sie_file)) {}
   std::string name() const override { return "Bekräfta"; }
   View view() const override {
-    if (created_) return {std::format("cratchit har skapat bokföringen i {}.", plan_.folder.string())};
+    if (created_) return {std::format("cratchit har skapat bokföringen {}.", plan_.name)};
     View lines;
     lines.push_back(std::format("SIE-fil: {}", plan_.sie_file.string()));
-    lines.push_back("Innehåll: " + contents_);
     if (!plan_.alert.empty()) lines.push_back(plan_.alert);
-    lines.push_back(plan_.orgnr.empty() ? std::format("Företag: {}", plan_.name)
-                                        : std::format("Företag: {} ({})", plan_.name, plan_.orgnr));
-    lines.push_back(std::format("Räkenskapsår: {} – {}", date_text(plan_.import.year_start), date_text(plan_.import.year_end)));
-    lines.push_back(std::format("Verifikationer: {}", plan_.import.vouchers_added));
-    lines.push_back(std::format("Konton: {}", plan_.import.books.accounts.size()));
-    std::error_code ec;
-    if (std::filesystem::equivalent(plan_.sie_file.parent_path(), plan_.folder / imported_sie_folder_name, ec)) {
-      lines.push_back(std::format("cratchit skapar bokföringen i {}. SIE-filen ligger redan i {} där.", plan_.folder.string(),
-                                  imported_sie_folder_name));
-    } else {
-      lines.push_back(std::format("cratchit skapar bokföringen i {} och flyttar SIE-filen till {} där.",
-                                  plan_.folder.string(), imported_sie_folder_name));
+    auto const row = [&lines](std::string_view label, std::string const& value) {
+      lines.push_back(std::format("  {:<16}{}", std::string(label) + ":", value));
+    };
+    row("Företag", plan_.orgnr.empty() ? plan_.name : std::format("{} ({})", plan_.name, plan_.orgnr));
+    row("Räkenskapsår", std::format("{} – {}", date_text(plan_.import.year_start), date_text(plan_.import.year_end)));
+    if (plan_.generated || !plan_.program.empty()) {
+      std::string created = plan_.generated ? date_text(*plan_.generated) : std::string();
+      if (!plan_.program.empty()) created += created.empty() ? plan_.program : std::format(" ({})", plan_.program);
+      row("Skapad", created);
     }
+    auto vouchers = std::to_string(plan_.import.vouchers_added);
+    if (summary_ && summary_->last_date) vouchers += " t.o.m. " + date_text(*summary_->last_date);
+    if (summary_ && !summary_->series.empty()) {
+      std::string series;
+      for (auto const& [name, number] : summary_->series) series += (series.empty() ? "" : " · ") + name + " " + number;
+      vouchers += "  " + series;
+    }
+    row("Verifikationer", vouchers);
+    row("Konton", std::to_string(plan_.import.books.accounts.size()));
+    lines.push_back("Skapa bokföringen från SIE-filen?");
     return lines;
   }
   OptionsList options() const override {
     if (created_) return {};
-    return {{U'1', "Skapa bokföringen"}};
+    return {{U'J', "Ja"}, {U'N', "Nej"}};
+  }
+  // N goes back to "Från SIE", to choose another file
+  State const* back_to() const override {
+    if (created_) return origin_;
+    return declined_ ? from_sie_ : nullptr;
   }
   OnKeyResult on_key(CodePoint key) override {
-    if (created_ || key != U'1') return nullptr;
+    if (created_) return nullptr;
+    if (is_key(key, U'N')) {
+      declined_ = true;
+      return nullptr;
+    }
+    if (!is_key(key, U'J')) return nullptr;
     auto project = create_project_from_sie(plan_, today_iso());
     if (!project) {
       LOG_BUSINESS("Kunde inte skapa bokföringen från {}: {}", plan_.sie_file.string(), project.error());
@@ -78,15 +97,16 @@ public:
     }
     return nullptr; // back to where the user started (back_to)
   }
-  State const* back_to() const override { return created_ ? origin_ : nullptr; }
   std::string help_topic() const override { return std::string(help_topic::confirm_sie_project); }
 
 private:
   Workspace workspace_;
   SieProjectPlan plan_;
-  State const* origin_; // where the user started, gone back to once created
-  std::string contents_; // the file's summary (see summary_line), read once
+  State const* origin_;   // where the user started, gone back to once created
+  State const* from_sie_; // where the file was chosen, gone back to on N
+  std::expected<SieSummary, std::string> summary_; // the file's last date and series, read once
   bool created_ = false;
+  bool declined_ = false;
 };
 
 class FromSieState : public State {
@@ -100,7 +120,8 @@ public:
   }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
-  std::u32string start_input() const override { return pyroceph::tui::path_input_of(start_folder_); }
+  // The folder of the file chosen last, so that going back from "Bekräfta" offers its neighbours
+  std::u32string start_input() const override { return pyroceph::tui::path_input_of(chosen_folder_.value_or(start_folder_)); }
   Completion complete(std::u32string_view text) const override {
     return pyroceph::tui::complete_path(
         text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); }, describe_sie_file,
@@ -108,12 +129,13 @@ public:
   }
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);
+    chosen_folder_ = file.parent_path();
     auto plan = plan_project_from_sie(file, here_);
     if (!plan) {
       LOG_BUSINESS("Kan inte skapa bokföring från {}: {}", file.string(), plan.error());
       return std::unexpected(std::format("cratchit kan inte skapa bokföringen: {}", plan.error()));
     }
-    return Accepted(std::make_unique<ConfirmSieProjectState>(workspace_, std::move(*plan), origin_));
+    return Accepted(std::make_unique<ConfirmSieProjectState>(workspace_, std::move(*plan), origin_, this));
   }
   std::string help_topic() const override { return std::string(help_topic::from_sie); }
 
@@ -122,6 +144,7 @@ private:
   std::filesystem::path start_folder_;
   State const* origin_;
   std::optional<std::filesystem::path> here_; // the working folder to create the project in, else a new folder
+  std::optional<std::filesystem::path> chosen_folder_;
 };
 
 } // namespace
