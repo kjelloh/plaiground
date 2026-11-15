@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <format>
+#include <map>
+#include <charconv>
 #include <system_error>
 
 namespace cratchit {
@@ -84,6 +86,95 @@ std::string change_text(ChangedVoucher const& changed) {
   return std::format("{} {}  {}  {}: {}", changed.series, changed.number, changed.date, changed.heading, what);
 }
 
+namespace {
+
+std::optional<long long> number_of(std::string const& text) {
+  long long value = 0;
+  auto const [end, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+  if (ec != std::errc() || end != text.data() + text.size()) return std::nullopt;
+  return value;
+}
+
+// Numbers as ranges, e.g. {60, 61, 62, 63, 65} -> "60–63, 65"
+std::string ranges_text(std::vector<long long> numbers) {
+  std::ranges::sort(numbers);
+  std::string text;
+  for (std::size_t i = 0; i < numbers.size();) {
+    auto j = i;
+    while (j + 1 < numbers.size() && numbers[j + 1] == numbers[j] + 1) ++j;
+    if (!text.empty()) text += ", ";
+    text += j == i ? std::to_string(numbers[i]) : std::format("{}–{}", numbers[i], numbers[j]);
+    i = j + 1;
+  }
+  return text;
+}
+
+std::string highest(std::vector<std::string> const& numbers) {
+  std::optional<long long> best;
+  for (auto const& n : numbers) {
+    if (auto const v = number_of(n); v && (!best || *v > *best)) best = v;
+  }
+  return best ? std::to_string(*best) : (numbers.empty() ? std::string() : numbers.back());
+}
+
+// The series of the year in the books (may be none) and in the file, and the gaps in the file's series
+void compare_series(books::FiscalYear const* year, sie::Document const& document, SieImportPlan& plan) {
+  std::map<std::string, std::vector<std::string>> in_books;
+  std::map<std::string, std::vector<std::string>> in_file;
+  if (year != nullptr) {
+    for (auto const& v : year->vouchers) in_books[v.series].push_back(v.number);
+  }
+  for (auto const& v : document.vouchers) in_file[v.series].push_back(v.number);
+  std::map<std::string, SeriesComparison> series;
+  for (auto const& [name, numbers] : in_books) series[name].books_last = highest(numbers);
+  for (auto const& [name, numbers] : in_file) {
+    auto& compared = series[name];
+    compared.file_last = highest(numbers);
+    auto const& books_numbers = in_books[name];
+    std::vector<long long> added;
+    std::vector<long long> all;
+    for (auto const& n : numbers) {
+      auto const v = number_of(n);
+      if (!v) continue;
+      all.push_back(*v);
+      if (std::ranges::find(books_numbers, n) == books_numbers.end()) added.push_back(*v);
+    }
+    compared.new_numbers = ranges_text(added);
+    // The file must join the books without gaps: its numbers in a series follow one another
+    std::ranges::sort(all);
+    std::vector<long long> missing;
+    for (std::size_t i = 1; i < all.size(); ++i) {
+      for (auto n = all[i - 1] + 1; n < all[i]; ++n) missing.push_back(n);
+    }
+    if (!missing.empty()) {
+      plan.blockers.push_back(std::format("Serie {} i filen har en lucka: {} {} saknas.", name, name, ranges_text(missing)));
+    }
+  }
+  for (auto& [name, compared] : series) {
+    compared.series = name;
+    plan.series.push_back(std::move(compared));
+  }
+}
+
+// The books' vouchers that the file would not leave as they are
+void find_in_the_way(books::FiscalYear const* year, books::ImportPlan const& import, SieImportPlan& plan) {
+  if (year == nullptr) return;
+  auto const named = [](std::vector<std::string> const& names, books::Voucher const& v) {
+    return std::ranges::find(names, std::format("{} {}", v.series, v.number)) != names.end();
+  };
+  for (auto const& v : year->vouchers) {
+    std::string why;
+    if (named(import.renamed, v)) why = "finns i filen under ett annat nummer";
+    else if (named(import.replaced, v)) why = "har annat innehåll i filen";
+    else if (named(import.dropped, v)) why = "finns inte i filen (en rättelse och det den rättar)";
+    else if (named(import.demoted, v)) why = "finns inte i filen";
+    if (why.empty()) continue;
+    plan.in_the_way.push_back({v.series, v.number, format_iso_date(v.event.date), v.event.heading, v.event.amount, why});
+  }
+}
+
+} // namespace
+
 std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project, fs::path const& sie_file,
                                                           std::optional<FiscalYear> const& year) {
   std::error_code ec;
@@ -117,26 +208,53 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
   plan.program = document.program_version.empty() ? document.program : std::format("{} {}", document.program, document.program_version);
   if (document.generated) plan.generated = format_iso_date(*document.generated);
   plan.alert = lexed->alert;
-  plan.new_year = books->year_starting(document.year(0)->start) == nullptr;
+  auto const file_start = document.year(0)->start;
+  plan.new_year = books->year_starting(file_start) == nullptr;
   plan.expected = expected;
+  // A new year must join the books: no fiscal year left out between
+  if (plan.new_year && !books->years.empty()) {
+    auto const& oldest = books->years.front();
+    auto const& latest = books->years.back();
+    bool const after_latest = file_start == next_day(latest.end);
+    bool const before_oldest = next_day(document.year(0)->end) == oldest.start;
+    if (!after_latest && !before_oldest) {
+      return std::unexpected(std::format(
+          "SIE-filens räkenskapsår {} – {} ansluter inte till bokföringen, som har {} – {}. Importera först åren "
+          "emellan, så att bokföringen inte får några luckor",
+          format_iso_date(file_start), format_iso_date(document.year(0)->end), format_iso_date(oldest.start),
+          format_iso_date(latest.end)));
+    }
+  }
   plan.import = books::plan_import(*books, identity, document);
   auto const& import = plan.import;
-  if (!import.errors.empty()) return std::unexpected(errors_text(import.errors));
+  auto const* year_in_books = books->year_starting(file_start);
+  compare_series(year_in_books, document, plan);
+  if (!import.errors.empty()) {
+    plan.blockers.insert(plan.blockers.begin(), errors_text(import.errors));
+    return plan;
+  }
   if (import.reverts() || import.vouchers_forced > 0) {
-    return std::unexpected(std::format(
-        "Importen skulle ta bort eller byta ut verifikationer som redan finns i bokföringen ({} med annat nummer, {} "
-        "ersatta, {} borttagna, {} till väntande). cratchit importerar än så länge bara nya verifikationer och strukna "
-        "eller tillagda rader",
-        import.renamed.size(), import.replaced.size(), import.dropped.size(), import.demoted.size()));
+    find_in_the_way(year_in_books, import, plan);
+    auto const count = plan.in_the_way.size();
+    plan.blockers.push_back(std::format("Bokföringen har {} {} som filen skulle ta bort eller byta ut. cratchit importerar "
+                                        "än så länge bara nya verifikationer och strukna eller tillagda rader.",
+                                        count, count == 1 ? "verifikation" : "verifikationer"));
+    return plan;
   }
   auto changed = changed_vouchers(*books, import.books, import.year_start);
-  if (!changed) return std::unexpected(changed.error());
+  if (!changed) {
+    plan.blockers.push_back(changed.error() + ".");
+    return plan;
+  }
   plan.changed = std::move(*changed);
-  if (books::nothing_to_import(*books, import)) return std::unexpected("Allt i SIE-filen finns redan i bokföringen");
+  if (plan.blockers.empty() && books::nothing_to_import(*books, import)) {
+    plan.blockers.push_back("Allt i SIE-filen finns redan i bokföringen.");
+  }
   return plan;
 }
 
 std::expected<SieImported, std::string> import_sie(Project const& project, SieImportPlan const& plan, Date today) {
+  if (!plan.possible()) return std::unexpected(plan.blockers.front());
   if (auto written = books::write_books(project.folder, plan.import.books); !written) return std::unexpected(written.error());
   if (plan.import.identity_changed) {
     auto entries = read_path_values(project.file);

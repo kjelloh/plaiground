@@ -2,6 +2,7 @@
 
 #include "core/sie_summary.hpp"
 #include "core/date.hpp"
+#include "core/fiscal_year.hpp"
 #include "core/log.hpp"
 #include "core/sie_import.hpp"
 #include "core/sie_project.hpp"
@@ -11,6 +12,7 @@
 
 #include <algorithm>
 #include <format>
+#include <optional>
 #include <utility>
 
 namespace cratchit::ui {
@@ -28,59 +30,110 @@ using pyroceph::tui::View;
 
 using Report = std::function<void(std::string, FiscalYear)>;
 
-// "SIE-fil: <file>", then "(<program>, skapad <day>)" with what the file tells
-std::string file_line(SieImportPlan const& plan) {
-  auto line = std::format("SIE-fil: {}", plan.sie_file.string());
-  if (!plan.program.empty() && !plan.generated.empty()) return line + std::format(" ({}, skapad {})", plan.program, plan.generated);
-  if (!plan.program.empty()) return line + std::format(" ({})", plan.program);
-  if (!plan.generated.empty()) return line + std::format(" (skapad {})", plan.generated);
-  return line;
-}
-
 // "1 ny verifikation", "2 nya verifikationer"
 std::string new_vouchers_text(std::size_t count) {
   return count == 1 ? "1 ny verifikation" : std::format("{} nya verifikationer", count);
 }
 
+// One series compared, e.g. "A  bokföringen t.o.m. A 59, filen t.o.m. A 63, nya: A 60–63"
+std::string series_text(SeriesComparison const& s, std::size_t width) {
+  auto const name = s.series + std::string(width > s.series.size() ? width - s.series.size() : 0, ' ');
+  std::string text;
+  if (s.books_last.empty()) {
+    text = std::format("bara i filen, t.o.m. {} {}", s.series, s.file_last);
+  } else if (s.file_last.empty()) {
+    text = std::format("bara i bokföringen, t.o.m. {} {}", s.series, s.books_last);
+  } else if (s.books_last == s.file_last && s.new_numbers.empty()) {
+    text = std::format("lika, t.o.m. {} {}", s.series, s.file_last);
+  } else {
+    text = std::format("bokföringen t.o.m. {} {}, filen t.o.m. {} {}", s.series, s.books_last, s.series, s.file_last);
+  }
+  if (!s.new_numbers.empty()) text += std::format(", nya: {} {}", s.series, s.new_numbers);
+  return "  " + name + "  " + text;
+}
+
 class ConfirmImportState : public State {
 public:
-  ConfirmImportState(Project project, SieImportPlan plan, State const* origin, Report report)
-      : project_(std::move(project)), plan_(std::move(plan)), origin_(origin), report_(std::move(report)),
-        contents_(describe_sie_file(plan_.sie_file).front()) {}
+  ConfirmImportState(Project project, SieImportPlan plan, FiscalYear year, State const* origin, State const* chooser,
+                     Report report)
+      : project_(std::move(project)), plan_(std::move(plan)), year_(std::move(year)), origin_(origin),
+        chooser_(chooser), report_(std::move(report)), summary_(summarize_sie_file(plan_.sie_file)) {}
   std::string name() const override { return "Bekräfta"; }
   View view() const override {
     if (imported_) return {"cratchit har importerat SIE-filen."};
     auto const& import = plan_.import;
     View lines;
-    lines.push_back(file_line(plan_));
-    lines.push_back("Innehåll: " + contents_);
+    lines.push_back(std::format("SIE-fil: {}", plan_.sie_file.string()));
     if (!plan_.alert.empty()) lines.push_back(plan_.alert);
+    auto const row = [&lines](std::string_view label, std::string const& value) {
+      lines.push_back(std::format("  {:<16}{}", std::string(label) + ":", value));
+    };
+    auto const status = summary_ ? status_of(*summary_, today_date()) : std::nullopt;
+    auto year = std::format("{} – {}", format_iso_date(import.year_start), format_iso_date(import.year_end));
+    if (status) year += ", " + status_text(SieStatus{status->status, false});
+    if (plan_.expected) year += std::format(" (cratchit räknade med {} – {})", plan_.expected->start, plan_.expected->end);
+    row("Räkenskapsår", year);
     if (plan_.expected) {
-      lines.push_back(std::format("Räkenskapsår: {} – {} (cratchit räknade med {} – {})", format_iso_date(import.year_start),
-                                  format_iso_date(import.year_end), plan_.expected->start, plan_.expected->end));
-      lines.push_back("cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att "
-                      "räkenskapsåret är korrekt.");
-    } else {
-      lines.push_back(std::format("Räkenskapsår: {} – {}", format_iso_date(import.year_start), format_iso_date(import.year_end)));
+      row("Ansvar", "cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att "
+                    "räkenskapsåret är korrekt.");
     }
-    lines.push_back(std::format("Verifikationer: {} {}, {} {}, {} finns redan", import.vouchers_added,
-                                import.vouchers_added == 1 ? "ny" : "nya", plan_.changed.size(),
-                                plan_.changed.size() == 1 ? "ändrad" : "ändrade", import.vouchers_known));
-    if (!plan_.changed.empty()) {
-      lines.push_back("Ändrade (strukna och tillagda rader):");
-      for (std::size_t i = 0; i < shown(); ++i) lines.push_back("  " + change_text(plan_.changed[i]));
-      if (shown() < plan_.changed.size()) {
-        lines.push_back(std::format("  … och {} till. Tryck 2 för fler.", plan_.changed.size() - shown()));
+    if (!plan_.generated.empty() || !plan_.program.empty()) {
+      auto created = plan_.generated;
+      if (!plan_.program.empty()) created += created.empty() ? plan_.program : std::format(" ({})", plan_.program);
+      row("Skapad", created);
+    }
+    if (summary_) {
+      auto vouchers = std::to_string(summary_->vouchers);
+      if (summary_->last_date) vouchers += " t.o.m. " + format_iso_date(*summary_->last_date);
+      row("Verifikationer", vouchers);
+    }
+    if (status && status->warning) row("Varning", "Ett räkenskapsår före förra året ska vara fullbordat. Kontrollera SIE-filen.");
+    if (status && status->status == YearStatus::mismatch) {
+      row("Varning", std::format("Ett resultat är bokfört på 8999, men balansräkningen balanserar inte (skillnad {}).",
+                                 format_amount(summary_->balance)));
+    }
+
+    lines.push_back(plan_.new_year ? "Jämfört med bokföringen (räkenskapsåret är nytt):"
+                                   : std::format("Jämfört med bokföringen ({}):", label_of(year_)));
+    std::size_t width = 0;
+    for (auto const& s : plan_.series) width = std::max(width, s.series.size());
+    for (auto const& s : plan_.series) {
+      lines.push_back(series_text(s, width));
+      for (auto const& v : plan_.in_the_way) {
+        if (v.series != s.series) continue;
+        lines.push_back(std::format("      {} {}  {}  {}  {}  {}", v.series, v.number, v.date, v.heading,
+                                    format_amount(v.amount), v.why));
       }
     }
-    lines.push_back(std::format("Konton: {} nya, {} med ändrat namn eller ändrade uppgifter", import.accounts_added,
-                                import.accounts_changed));
-    if (import.identity_changed) lines.push_back(std::format("Bokföringen får organisationsnummer {}.", import.identity.orgnr));
+    if (!plan_.changed.empty()) {
+      lines.push_back("  Ändrade (strukna och tillagda rader):");
+      for (std::size_t i = 0; i < shown(); ++i) lines.push_back("    " + change_text(plan_.changed[i]));
+      if (shown() < plan_.changed.size()) {
+        lines.push_back(std::format("    … och {} till. Tryck 2 för fler.", plan_.changed.size() - shown()));
+      }
+    }
+    if (plan_.possible()) {
+      lines.push_back(std::format("  Konton: {} nya, {} med ändrat namn eller ändrade uppgifter", import.accounts_added,
+                                  import.accounts_changed));
+      if (import.identity_changed) lines.push_back(std::format("  Bokföringen får organisationsnummer {}.", import.identity.orgnr));
+      auto what = new_vouchers_text(import.vouchers_added);
+      if (!plan_.changed.empty()) what += std::format(", {} {}", plan_.changed.size(), plan_.changed.size() == 1 ? "ändrad" : "ändrade");
+      lines.push_back(std::format("Importen går att göra: {}.", what));
+      lines.push_back("Importera SIE-filen?");
+    } else {
+      lines.push_back("Importen går inte att göra:");
+      for (auto const& blocker : plan_.blockers) lines.push_back("  " + blocker);
+    }
     return lines;
   }
   OptionsList options() const override {
     if (imported_) return {};
-    OptionsList result{{U'1', "Importera"}};
+    OptionsList result;
+    if (plan_.possible()) {
+      result = {{U'J', "Ja"}, {U'N', "Nej"}};
+    } else {
+      result = {{U'N', "Tillbaka"}};
+    }
     if (shown() < plan_.changed.size()) result.push_back({more_key, "Mer…"});
     return result;
   }
@@ -91,7 +144,12 @@ public:
     return true;
   }
   OnKeyResult on_key(CodePoint key) override {
-    if (imported_ || key != U'1') return nullptr;
+    if (imported_) return nullptr;
+    if (key == U'N') { // keys match exactly (beslut.md)
+      declined_ = true;
+      return nullptr;
+    }
+    if (key != U'J' || !plan_.possible()) return nullptr;
     auto const imported = import_sie(project_, plan_, today_date());
     if (!imported) {
       LOG_BUSINESS("Kunde inte importera {} i {}: {}", plan_.sie_file.string(), project_.folder.string(), imported.error());
@@ -114,7 +172,11 @@ public:
     }
     return nullptr; // back to the fiscal year (back_to)
   }
-  State const* back_to() const override { return imported_ ? origin_ : nullptr; }
+  // Imported: back to the fiscal year. N: back to choose another file.
+  State const* back_to() const override {
+    if (imported_) return origin_;
+    return declined_ ? chooser_ : nullptr;
+  }
   std::string help_topic() const override { return std::string(help_topic::confirm_import); }
 
 private:
@@ -125,11 +187,14 @@ private:
 
   Project project_;
   SieImportPlan plan_;
-  State const* origin_;
+  FiscalYear year_;     // the fiscal year the user stands in
+  State const* origin_; // the fiscal year, gone back to once imported
+  State const* chooser_; // where the file was chosen, gone back to on N
   Report report_;
-  std::string contents_; // the file's summary (see summary_line), read once
+  std::expected<SieSummary, std::string> summary_; // the file's status and last date, read once
   std::size_t pages_ = 1;
   bool imported_ = false;
+  bool declined_ = false;
 };
 
 class ImportSieState : public State {
@@ -140,7 +205,10 @@ public:
   View view() const override { return {"Skriv sökvägen till SIE-filen och tryck Enter. Tab fyller i mappar och SIE-filer."}; }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
-  std::u32string start_input() const override { return pyroceph::tui::path_input_of(project_.folder); }
+  // The folder of the file chosen last, so that going back from "Bekräfta" offers its neighbours
+  std::u32string start_input() const override {
+    return pyroceph::tui::path_input_of(chosen_folder_.value_or(project_.folder));
+  }
   Completion complete(std::u32string_view text) const override {
     return pyroceph::tui::complete_path(
         text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); }, describe_sie_file,
@@ -148,12 +216,13 @@ public:
   }
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);
+    chosen_folder_ = file.parent_path();
     auto plan = plan_sie_import(project_, file, year_);
     if (!plan) {
       LOG_BUSINESS("Kan inte importera {} i {}: {}", file.string(), project_.folder.string(), plan.error());
       return std::unexpected(std::format("cratchit kan inte importera filen: {}", plan.error()));
     }
-    return Accepted(std::make_unique<ConfirmImportState>(project_, std::move(*plan), origin_, report_));
+    return Accepted(std::make_unique<ConfirmImportState>(project_, std::move(*plan), year_, origin_, this, report_));
   }
   std::string help_topic() const override { return std::string(help_topic::import_sie); }
 
@@ -162,6 +231,7 @@ private:
   FiscalYear year_;
   State const* origin_;
   Report report_;
+  std::optional<std::filesystem::path> chosen_folder_;
 };
 
 } // namespace

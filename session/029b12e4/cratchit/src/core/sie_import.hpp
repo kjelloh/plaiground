@@ -29,6 +29,24 @@ struct ChangedVoucher {
 // "A 12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd"
 std::string change_text(ChangedVoucher const& changed);
 
+// One series of the year, in the books and in the file
+struct SeriesComparison {
+  std::string series;
+  std::string books_last;  // the highest number in the books, empty when none
+  std::string file_last;   // the highest number in the file, empty when none
+  std::string new_numbers; // the file's numbers not in the books as ranges, e.g. "60–63, 65", empty when none
+};
+
+// A voucher of the books that the file would not leave as it is
+struct VoucherInTheWay {
+  std::string series;
+  std::string number;
+  std::string date;    // YYYY-MM-DD
+  std::string heading;
+  Amount amount = 0;
+  std::string why;     // "finns inte i filen", "har annat innehåll i filen", ...
+};
+
 // What importing an SIE file into a project will do. Read from the books and the file; nothing written yet.
 struct SieImportPlan {
   std::filesystem::path sie_file;
@@ -39,17 +57,29 @@ struct SieImportPlan {
   std::optional<FiscalYear> expected; // the year cratchit counted with, when the file's year adjoins it with other dates
   books::ImportPlan import;
   std::vector<ChangedVoucher> changed; // vouchers in the books with rows struck or added, by series and number
+  std::vector<SeriesComparison> series; // the year's series in the books and in the file, by series
+  std::vector<VoucherInTheWay> in_the_way; // vouchers of the books the file would remove or replace
+  std::vector<std::string> blockers;  // why the import cannot be done, for the user; empty when it can
+
+  bool possible() const { return blockers.empty(); }
 };
 
 // Plans importing the SIE file's fiscal year 0 into the project's books (see
 // books::plan_import), with the project's name and organisation number read
-// now. Error text, and nothing to import, when the books or the file cannot be
-// read, the file is no SIE file or has errors, the plan has errors (e.g. another
-// organisation number, or a fiscal year that overlaps one in the books), the
-// file has nothing new, or the import would change vouchers already in the
-// books otherwise than by struck and added rows (another date or text), or
-// rename, replace, drop or demote them: for now cratchit only adds vouchers,
-// and rows to vouchers as SIE allows. Writes nothing.
+// now, and compares the file with the books, series by series. Writes nothing.
+//
+// Error text when the comparison cannot be made: the books or the file cannot
+// be read, the file is no SIE file or has errors, it is for another fiscal year
+// (see year below), or its year is new and would leave a gap in the books (it
+// must start the day after the latest year or end the day before the oldest).
+//
+// Otherwise a plan, whose blockers say why the import cannot be done, if so:
+// the plan has errors (e.g. another organisation number), a series of the file
+// has a gap in its numbers (the file must join the books without gaps), the
+// import would change vouchers already in the books otherwise than by struck
+// and added rows (another date or text), or rename, replace, drop or demote
+// them (in_the_way names them), or the file has nothing new: for now cratchit
+// only adds vouchers, and rows to vouchers as SIE allows.
 //
 // With year, the file must be for that fiscal year (its #RAR 0), else error text
 // naming the file's year: the user imports into the year they stand in. A year

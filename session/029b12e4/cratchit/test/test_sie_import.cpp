@@ -90,27 +90,77 @@ TEST_F(SieImportTest, NewVouchersAreAddedToAYearInTheBooks) {
   EXPECT_EQ(books->years[0].vouchers.size(), 3u);
 }
 
-TEST_F(SieImportTest, NothingNewIsRefused) {
+TEST_F(SieImportTest, NothingNewIsNotPossible) {
   auto const plan = cratchit::plan_sie_import(project, write("same.se", sie_file(2025, balanced_balances(), sale_and_cost(2025))));
-  ASSERT_FALSE(plan);
-  EXPECT_EQ(plan.error(), "Allt i SIE-filen finns redan i bokföringen");
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_FALSE(plan->possible());
+  EXPECT_EQ(plan->blockers, (std::vector<std::string>{"Allt i SIE-filen finns redan i bokföringen."}));
+  ASSERT_EQ(plan->series.size(), 1u);
+  EXPECT_EQ(plan->series[0].books_last, "2");
+  EXPECT_EQ(plan->series[0].file_last, "2");
+  EXPECT_EQ(plan->series[0].new_numbers, "");
+  EXPECT_FALSE(cratchit::import_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09")));
 }
 
-TEST_F(SieImportTest, RemovingAVoucherIsRefused) {
+TEST_F(SieImportTest, RemovingAVoucherIsNotPossibleAndNamesIt) {
   // The file lacks A 2, which the books have: importing would demote it
   auto const plan = cratchit::plan_sie_import(project, write("less.se", sie_file(2025, "", sale(2025, 1, "0201"))));
-  ASSERT_FALSE(plan);
-  EXPECT_TRUE(plan.error().starts_with("Importen skulle ta bort eller byta ut verifikationer")) << plan.error();
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_FALSE(plan->possible());
+  // The file's A 1 is another sale (100, not 500), and it lacks A 2
+  ASSERT_EQ(plan->in_the_way.size(), 2u);
+  EXPECT_EQ(plan->in_the_way[0].number, "1");
+  EXPECT_EQ(plan->in_the_way[0].why, "har annat innehåll i filen");
+  EXPECT_EQ(plan->in_the_way[1].series, "A");
+  EXPECT_EQ(plan->in_the_way[1].number, "2");
+  EXPECT_EQ(plan->in_the_way[1].heading, "Bank cost");
+  EXPECT_EQ(plan->in_the_way[1].why, "finns inte i filen");
+  EXPECT_TRUE(plan->blockers.back().starts_with("Bokföringen har 2 verifikationer som filen skulle ta bort")) << plan->blockers.back();
   auto const books = cratchit::books::read_books(project.folder);
   ASSERT_TRUE(books);
   EXPECT_EQ(books->years[0].vouchers.size(), 2u);
 }
 
-TEST_F(SieImportTest, AnotherOrgnrIsRefused) {
+TEST_F(SieImportTest, AnotherOrgnrIsNotPossible) {
   auto const plan = cratchit::plan_sie_import(
       project, write("other.se", sie_file(2026, "", sale(2026, 1, "0110"), "\"Test AB\"", "556000-0002")));
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_FALSE(plan->possible());
+  EXPECT_NE(plan->blockers.front().find("556000-0002"), std::string::npos) << plan->blockers.front();
+}
+
+TEST_F(SieImportTest, NewVouchersAreComparedSeriesBySeriesAsRanges) {
+  auto const plan = cratchit::plan_sie_import(
+      project, write("more.se", sie_file(2025, balanced_balances(),
+                                         sale_and_cost(2025) + sale(2025, 3, "0401") + sale(2025, 4, "0402") +
+                                             sale(2025, 5, "0403"))));
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_TRUE(plan->possible());
+  ASSERT_EQ(plan->series.size(), 1u);
+  EXPECT_EQ(plan->series[0].series, "A");
+  EXPECT_EQ(plan->series[0].books_last, "2");
+  EXPECT_EQ(plan->series[0].file_last, "5");
+  EXPECT_EQ(plan->series[0].new_numbers, "3–5");
+}
+
+TEST_F(SieImportTest, AGapInASeriesOfTheFileIsNotPossible) {
+  // A 3 is missing between the books' A 2 and the file's A 4
+  auto const plan = cratchit::plan_sie_import(
+      project, write("gap.se", sie_file(2025, balanced_balances(), sale_and_cost(2025) + sale(2025, 4, "0401"))));
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_FALSE(plan->possible());
+  EXPECT_EQ(plan->blockers, (std::vector<std::string>{"Serie A i filen har en lucka: A 3 saknas."}));
+}
+
+TEST_F(SieImportTest, ANewYearThatLeavesAGapInTheBooksIsRefused) {
+  // The books have 2025; 2027 would leave 2026 out
+  auto const plan = cratchit::plan_sie_import(project, write("2027.se", sie_file(2027, "", sale(2027, 1, "0110"))));
   ASSERT_FALSE(plan);
-  EXPECT_NE(plan.error().find("556000-0002"), std::string::npos) << plan.error();
+  EXPECT_EQ(plan.error(), "SIE-filens räkenskapsår 2027-01-01 – 2027-12-31 ansluter inte till bokföringen, som har "
+                          "2025-01-01 – 2025-12-31. Importera först åren emellan, så att bokföringen inte får några luckor");
+  // 2026 and 2024 join it
+  EXPECT_TRUE(cratchit::plan_sie_import(project, write("2026.se", sie_file(2026, "", sale(2026, 1, "0110")))));
+  EXPECT_TRUE(cratchit::plan_sie_import(project, write("2024.se", sie_file(2024, "", sale(2024, 1, "0110")))));
 }
 
 TEST_F(SieImportTest, NoSieFileIsRefused) {
@@ -152,9 +202,10 @@ TEST_F(SieImportTest, AnotherTextOfAVoucherIsRefused) {
   auto file = with_a2_rows(struck_and_added);
   file.replace(file.find("\"Bank cost\""), 11, "\"Bank fee\"");
   auto const plan = cratchit::plan_sie_import(project, write("text.se", file));
-  ASSERT_FALSE(plan);
-  EXPECT_EQ(plan.error(), "Verifikationen A 2 har ett annat datum eller en annan text i filen. cratchit tar bara emot "
-                          "strukna och tillagda rader i befintliga verifikationer");
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_EQ(plan->blockers, (std::vector<std::string>{"Verifikationen A 2 har ett annat datum eller en annan text i "
+                                                      "filen. cratchit tar bara emot strukna och tillagda rader i "
+                                                      "befintliga verifikationer."}));
 }
 
 TEST(ChangeText, SaysWhatChanged) {

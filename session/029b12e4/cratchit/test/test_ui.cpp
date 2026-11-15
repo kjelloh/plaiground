@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -746,18 +747,19 @@ TEST_F(RootMenuTest, ImportListsTheChangedVouchersAPageAtATime) {
     for (auto const& line : navigator.current().view()) count += line.starts_with(start) ? 1 : 0;
     return count;
   };
-  EXPECT_EQ(lines("Verifikationer: 0 nya, 12 ändrade, 0 finns redan"), 1u);
-  EXPECT_EQ(lines("  A "), 10u);
-  EXPECT_EQ(lines("  … och 2 till. Tryck 2 för fler."), 1u);
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Importera"}, {U'2', "Mer…"}}));
+  EXPECT_EQ(lines("  A  lika, t.o.m. A 12"), 1u);
+  EXPECT_EQ(lines("Importen går att göra: 0 nya verifikationer, 12 ändrade."), 1u);
+  EXPECT_EQ(lines("    A "), 10u);
+  EXPECT_EQ(lines("    … och 2 till. Tryck 2 för fler."), 1u);
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}, {U'2', "Mer…"}}));
   // Mer… shows the rest, in place
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Bekräfta");
-  EXPECT_EQ(lines("  A "), 12u);
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Importera"}}));
+  EXPECT_EQ(lines("    A "), 12u);
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}}));
   EXPECT_FALSE(navigator.press(U'2'));
   // Importing takes the changes and goes back to the fiscal year, which says so
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'J'));
   EXPECT_EQ(navigator.current().name(), "2025");
   ASSERT_EQ(navigator.current().view().size(), 14u); // then the ten newest of the year's 12 vouchers, and "… 2 äldre"
   EXPECT_EQ(navigator.current().view()[13], "  … 2 äldre");
@@ -798,7 +800,7 @@ TEST_F(RootMenuTest, AYearNotBookedYetCanBeImportedIntoAndExported) {
   auto result = navigator.current().on_input(pyroceph::tui::path_input_of(documents) + U"next.se");
   ASSERT_TRUE(result) << result.error();
   navigator.enter(std::move(result->next));
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'J'));
   EXPECT_EQ(navigator.current().name(), "2026");
   EXPECT_EQ(navigator.current().view()[1], "Hela året: 1 verifikation");
   ASSERT_TRUE(navigator.back());
@@ -839,12 +841,11 @@ TEST_F(RootMenuTest, AChangeOfFiscalYearFromSieShowsAndTheYearTakesItsDates) {
   ASSERT_TRUE(result) << result.error();
   navigator.enter(std::move(result->next));
   auto const view = navigator.current().view();
-  ASSERT_GE(view.size(), 4u);
+  ASSERT_GE(view.size(), 3u);
   EXPECT_EQ(view[0], "SIE-fil: " + (documents / "change.se").string());
-  EXPECT_EQ(view[1], "Innehåll: 2026-01-01 – 2026-04-30  ofullbordat  1 ver. t.o.m. 2026-02-01  A 1");
-  EXPECT_EQ(view[2], "Räkenskapsår: 2026-01-01 – 2026-04-30 (cratchit räknade med 2026-01-01 – 2026-12-31)");
-  EXPECT_EQ(view[3], "cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att räkenskapsåret är korrekt.");
-  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(view[1], "  Räkenskapsår:   2026-01-01 – 2026-04-30, ofullbordat (cratchit räknade med 2026-01-01 – 2026-12-31)");
+  EXPECT_EQ(view[2], "  Ansvar:         cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att räkenskapsåret är korrekt.");
+  ASSERT_TRUE(navigator.press(U'J'));
   EXPECT_EQ(navigator.current().name(), "2026");
   EXPECT_EQ(navigator.current().view()[0], "Räkenskapsår 2026-01-01 – 2026-04-30");
   EXPECT_EQ(navigator.current().view()[1], "Hela året: 1 verifikation");
@@ -1092,4 +1093,47 @@ TEST_F(RootMenuTest, ConfirmWarnsForAnIncompleteYearOlderThanLastYearAndForAMism
   auto const wrong = confirm(U"wrong.se");
   EXPECT_EQ(wrong[2], "  Räkenskapsår:   2024-01-01 – 2024-12-31, misstämmer");
   EXPECT_EQ(wrong[3], "  Varning:        Ett resultat är bokfört på 8999, men balansräkningen balanserar inte (skillnad 100.00).");
+}
+
+TEST_F(RootMenuTest, ImportThatIsNotPossibleShowsWhyAndGoesBackToChooseAnotherFile) {
+  auto const folder = documents / "cratchit";
+  auto const sie = [](std::string const& vouchers) {
+    return "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+           "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n" + vouchers;
+  };
+  auto const sale = [](int number, char const* date, char const* amount) {
+    return std::format("#VER A {} {} \"Sale\"\r\n{{\r\n#TRANS 1930 {{}} {}\r\n#TRANS 3010 {{}} -{}\r\n}}\r\n", number, date,
+                       amount, amount);
+  };
+  fs::create_directories(folder);
+  std::ofstream(documents / "full.se", std::ios::binary) << sie(sale(1, "20250201", "100") + sale(2, "20250301", "200"));
+  auto plan = cratchit::plan_project_from_sie(documents / "full.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  fs::create_directories(documents / "older");
+  std::ofstream(documents / "older" / "less.se", std::ios::binary) << sie(sale(1, "20250201", "100"));
+  auto workspace = cratchit::open_workspace(folder, "2026-11-09");
+  ASSERT_TRUE(workspace);
+  ASSERT_TRUE(cratchit::remember_project(*workspace, *project));
+  Navigator navigator(cratchit::ui::make_root_menu(folder));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'1')); // 2025, the year before the one now
+  ASSERT_TRUE(navigator.press(U'2'));
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "older") + U"less.se");
+  ASSERT_TRUE(result) << result.error();
+  navigator.enter(std::move(result->next));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  auto const view = navigator.current().view();
+  auto const has = [&view](std::string const& line) { return std::ranges::find(view, line) != view.end(); };
+  EXPECT_TRUE(has("Jämfört med bokföringen (2025):"));
+  EXPECT_TRUE(has("  A  bokföringen t.o.m. A 2, filen t.o.m. A 1"));
+  EXPECT_TRUE(has("      A 2  2025-03-01  Sale  200.00  finns inte i filen"));
+  EXPECT_TRUE(has("Importen går inte att göra:"));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'N', "Tillbaka"}}));
+  EXPECT_FALSE(navigator.press(U'J'));
+  ASSERT_TRUE(navigator.press(U'N'));
+  EXPECT_EQ(navigator.current().name(), "Importera från SIE");
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(documents / "older"));
 }

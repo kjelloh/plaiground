@@ -333,37 +333,61 @@ Bokslutet avslutar räkenskapsåret. Tryck `0` för avstämning mot kontoutdrag.
 ### Importera från SIE
 
 <!-- hjälp: importera-sie -->
-Skriv sökvägen till en SIE-fil för det här räkenskapsåret och tryck Enter. Tab fyller i mappar och SIE-filer. cratchit läser filen och visar vad den lägger till och ändrar, innan något importeras. Så länge du inte har ändrat sökvägen går `-` tillbaka.
+Skriv sökvägen till en SIE-fil för det här räkenskapsåret och tryck Enter. Tab fyller i mappar och SIE-filer. cratchit jämför filen med bokföringen och visar om importen går att göra, innan något importeras. Så länge du inte har ändrat sökvägen går `-` tillbaka.
 <!-- /hjälp -->
 
 I ett räkenskapsår tar du in en SIE-fil för samma år från ett annat bokföringsprogram, till exempel nya verifikationer. Filen måste gälla just det räkenskapsåret. Gäller den ett annat år säger cratchit det och importerar ingenting.
 
 1. Tryck `2` (*Importera från SIE*) i räkenskapsåret.
 2. Skriv sökvägen till SIE-filen. Sökvägen börjar i bokföringens mapp, och Tab fyller i mappar och SIE-filer.
-3. Tryck Enter. cratchit läser filen och visar vad importen skulle göra.
-4. Kontrollera det som står, och tryck `1` (*Importera*).
+3. Tryck Enter. cratchit jämför filen med bokföringen, serie för serie, och säger om importen går att göra.
+4. Kontrollera det som står. Tryck `J` (*Ja*) för att importera, eller `N` (*Nej*) för att välja en annan fil.
 
 ```text
-SIE-fil: /Users/anna/Downloads/TheITfiedAB.se (Fortnox 3.62.17, skapad 2026-11-09)
-Innehåll: 2025-05-01 – 2026-04-30  skapad 2026-11-09  116 ver. t.o.m. 2026-04-30  A 82 · D 11 · M 23
-Räkenskapsår: 2025-05-01 – 2026-04-30
-Verifikationer: 12 nya, 0 ändrade, 104 finns redan
-Konton: 1 nya, 0 med ändrat namn eller ändrade uppgifter
-  1 Importera
+SIE-fil: /Users/anna/Företaget/SIE-filer/TheITfiedAB20261112_102636.se
+  Räkenskapsår:   2025-05-01 – 2026-04-30, fullbordat
+  Skapad:         2026-11-12 (Fortnox 3.62.17)
+  Verifikationer: 120 t.o.m. 2026-04-30
+Jämfört med bokföringen (2025/26):
+  A  lika, t.o.m. A 59
+  D  lika, t.o.m. D 26
+  I  bokföringen t.o.m. I 1, filen t.o.m. I 5, nya: I 2–5
+  Konton: 0 nya, 0 med ändrat namn eller ändrade uppgifter
+Importen går att göra: 4 nya verifikationer.
+Importera SIE-filen?
+  J Ja
+  N Nej
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Importera från SIE > Bekräfta> 
 ```
 
+Går importen inte att göra står det varför, och verifikationerna i bokföringen som filen skulle ta bort eller byta ut står under sin serie. Då finns bara `N` (*Tillbaka*):
+
+```text
+Jämfört med bokföringen (2025/26):
+  D  bokföringen t.o.m. D 28, filen t.o.m. D 26
+      D 27  2026-04-12  Loopia Faktura  311.25  finns inte i filen
+      D 28  2026-04-30  Telia  1250.00  finns inte i filen
+Importen går inte att göra:
+  Bokföringen har 2 verifikationer som filen skulle ta bort eller byta ut. …
+  N Tillbaka
+```
+
 <!-- hjälp: bekrafta-import -->
-Ovanför prompten står SIE-filen, räkenskapsåret och vad importen lägger till eller ändrar. Ändrade verifikationer listas tio i taget, och `2` (*Mer…*) visar fler. Tryck `1` för att importera, eller `-` för att gå tillbaka utan att importera något.
+Ovanför prompten står SIE-filen och hur den förhåller sig till bokföringen, serie för serie: hur långt bokföringen och filen räcker, och vilka verifikationer som är nya. Sist står om importen går att göra, och annars varför. Ändrade verifikationer listas tio i taget, och `2` (*Mer…*) visar fler. Tryck `J` för att importera. Tryck `N` eller `-` för att gå tillbaka och välja en annan fil; sökvägen börjar då i mappen där du valde filen.
 <!-- /hjälp -->
 
 När importen är klar går cratchit tillbaka till räkenskapsåret, som säger vad som importerades. SIE-filen ligger kvar där den låg (se [Dina filer](#dina-filer)).
 
-cratchit importerar ingenting, och visar varför, om:
+cratchit säger direkt under prompten att filen inte går att använda, och visar ingen jämförelse, om:
 
 * filen inte är en SIE-fil, har fel eller saknar räkenskapsår,
-* filen gäller ett annat organisationsnummer än bokföringen,
 * filen gäller ett annat räkenskapsår än det du står i (se nedan om år som ansluter),
+* filens räkenskapsår är nytt men inte ansluter till bokföringen. Ett nytt år måste börja dagen efter det senaste bokförda årets sista dag, eller sluta dagen före det äldsta årets första dag. Bokföringen får inga luckor mellan åren.
+
+*Bekräfta* visar jämförelsen, men säger att importen inte går att göra, om:
+
+* filen gäller ett annat organisationsnummer än bokföringen,
+* en serie i filen har en lucka, till exempel `Serie A i filen har en lucka: A 12 saknas.` Filen ska ansluta till bokföringen utan luckor,
 * allt i filen redan finns i bokföringen,
 * importen skulle ta bort eller byta ut verifikationer som redan finns i bokföringen,
 * en verifikation som redan finns har ett annat datum eller en annan text i filen.
@@ -376,8 +400,8 @@ cratchit importerar ingenting, och visar varför, om:
 *Bekräfta* visar då vilket år cratchit räknade med:
 
 ```text
-Räkenskapsår: 2026-01-01 – 2026-04-30 (cratchit räknade med 2026-01-01 – 2026-12-31)
-cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att räkenskapsåret är korrekt.
+  Räkenskapsår:   2026-01-01 – 2026-04-30, ofullbordat (cratchit räknade med 2026-01-01 – 2026-12-31)
+  Ansvar:         cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att räkenskapsåret är korrekt.
 ```
 
 Efter importen har året filens datum, och de följande åren räknas från det, tolv månader i taget. I alla andra år måste filen ha exakt samma datum som året.
