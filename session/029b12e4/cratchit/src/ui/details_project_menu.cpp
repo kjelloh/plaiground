@@ -49,7 +49,7 @@ std::u32string u32_of(std::string_view utf8) {
 // The details of the form, each empty (or nothing) until the user gives it
 struct Details {
   std::string name;
-  std::filesystem::path folder; // <workspace>/<name>
+  std::filesystem::path folder; // <workspace>/<name>, or the working folder when made here
   std::string orgnr;            // NNNNNN-NNNN
   std::optional<std::chrono::year_month> first_month;
   int months = 12; // the first fiscal year's length
@@ -86,12 +86,18 @@ private:
 
 class DetailsFormState : public State {
 public:
-  DetailsFormState(Workspace workspace, State const* origin) : workspace_(std::move(workspace)), origin_(origin) {}
-  std::string name() const override { return "Från uppgifter"; }
+  DetailsFormState(Workspace workspace, State const* origin, std::optional<std::filesystem::path> here)
+      : workspace_(std::move(workspace)), origin_(origin), here_(here.has_value()) {
+    if (here) details_.folder = *here;
+  }
+  std::string name() const override { return here_ ? "Ny bokföring här" : "Från uppgifter"; }
+  bool here() const { return here_; }
   View view() const override {
     if (created_) return {std::format("cratchit har skapat bokföringen i {}.", details_.folder.string())};
     if (!details_.complete()) {
-      return {"Välj en uppgift och fyll i den. När namn, organisationsnummer och räkenskapsår är ifyllda skapar Enter bokföringen."};
+      View view{"Välj en uppgift och fyll i den. När namn, organisationsnummer och räkenskapsår är ifyllda skapar Enter bokföringen."};
+      if (here_) view.push_back(std::format("Bokföringen hamnar i {}.", details_.folder.string()));
+      return view;
     }
     return {std::format("Tryck Enter för att skapa bokföringen i {}.", details_.folder.string()),
             "Bokföringen får ingen kontoplan än."};
@@ -115,7 +121,9 @@ public:
     return nullptr;
   }
   State const* back_to() const override { return created_ ? origin_ : nullptr; }
-  std::string help_topic() const override { return std::string(help_topic::from_details); }
+  std::string help_topic() const override {
+    return std::string(here_ ? help_topic::here : help_topic::from_details);
+  }
 
   // The value a field shows, as typed
   std::string value_of(Field field) const {
@@ -135,6 +143,12 @@ public:
   std::expected<void, std::string> take(Field field, std::string const& text) {
     switch (field) {
     case Field::name: {
+      if (here_) {
+        auto const first = text.find_first_not_of(' ');
+        if (first == std::string::npos) return std::unexpected(std::string("Skriv organisationens namn."));
+        details_.name = text.substr(first, text.find_last_not_of(' ') - first + 1);
+        return {};
+      }
       auto folder = new_project_folder(workspace_, text);
       if (!folder) return std::unexpected(folder.error());
       details_.folder = *folder;
@@ -166,7 +180,8 @@ public:
 private:
   OnKeyResult create() {
     auto const year = details_.year();
-    auto project = create_project_from_details(details_.folder, details_.name, details_.orgnr, year, today_iso());
+    auto project = here_ ? create_project_here(details_.folder, details_.name, details_.orgnr, year, today_iso())
+                         : create_project_from_details(details_.folder, details_.name, details_.orgnr, year, today_iso());
     if (!project) {
       LOG_BUSINESS("Kunde inte skapa bokföringen {}: {}", details_.name, project.error());
       return pyroceph::tui::make_error_state(std::format("cratchit kunde inte skapa bokföringen: {}", project.error()));
@@ -185,6 +200,7 @@ private:
   Workspace workspace_;
   State const* origin_;
   Details details_;
+  bool here_; // made in the working folder itself, not in a new folder in the workspace
   bool created_ = false;
 };
 
@@ -200,7 +216,9 @@ std::string FieldState::name() const {
 
 View FieldState::view() const {
   switch (field_) {
-  case Field::name: return {"Skriv organisationens namn och tryck Enter. Bokföringen får en mapp med det namnet i samlingsmappen."};
+  case Field::name:
+    if (form_.here()) return {"Skriv organisationens namn och tryck Enter."};
+    return {"Skriv organisationens namn och tryck Enter. Bokföringen får en mapp med det namnet i samlingsmappen."};
   case Field::orgnr: return {"Skriv organisationsnumret och tryck Enter, till exempel 556677-8899."};
   case Field::first_month: return {"Skriv räkenskapsårets första månad och tryck Enter, till exempel 2026-05."};
   case Field::months:
@@ -222,7 +240,7 @@ State const* FieldState::back_to() const { return taken_ ? &form_ : nullptr; }
 
 std::string FieldState::help_topic() const {
   switch (field_) {
-  case Field::name: return std::string(help_topic::details_name);
+  case Field::name: return std::string(form_.here() ? help_topic::here_name : help_topic::details_name);
   case Field::orgnr: return std::string(help_topic::details_orgnr);
   case Field::first_month: return std::string(help_topic::details_year);
   case Field::months: return std::string(help_topic::details_months);
@@ -233,7 +251,11 @@ std::string FieldState::help_topic() const {
 } // namespace
 
 std::unique_ptr<State> make_project_from_details(Workspace workspace, State const* origin) {
-  return std::make_unique<DetailsFormState>(std::move(workspace), origin);
+  return std::make_unique<DetailsFormState>(std::move(workspace), origin, std::nullopt);
+}
+
+std::unique_ptr<State> make_project_here(Workspace workspace, std::filesystem::path folder, State const* origin) {
+  return std::make_unique<DetailsFormState>(std::move(workspace), origin, std::move(folder));
 }
 
 } // namespace cratchit::ui

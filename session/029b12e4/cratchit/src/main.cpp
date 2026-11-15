@@ -98,7 +98,7 @@ int main() {
     // The workspace is opened when the user chooses it (0 in the root), or at once
     // with the project when cratchit is started in a project folder
     auto const workspace_folder = cratchit::default_workspace_folder();
-    pyroceph::tui::Navigator navigator(cratchit::ui::make_root_menu(workspace_folder));
+    pyroceph::tui::Navigator navigator(cratchit::ui::make_root_menu(workspace_folder, cwd));
     // A project in the working folder is opened at once
     for (auto const& line : cratchit::ui::open_working_folder_project(navigator, workspace_folder, cwd)) {
       std::println("{}", line);

@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -122,4 +123,70 @@ TEST_F(DetailsProjectTest, CreatesProjectAndBooksWithTheYear) {
   auto const books_txt = cratchit::read_path_values(folder / ".cratchit" / "books" / "books.txt");
   ASSERT_TRUE(books_txt) << books_txt.error();
   EXPECT_EQ(books_txt->size(), 1u);
+}
+
+// A project in the working folder itself
+
+namespace {
+
+// An empty folder of its own for each test, removed afterwards
+struct HereFolder {
+  HereFolder() {
+    auto const* info = ::testing::UnitTest::GetInstance()->current_test_info();
+    root = fs::temp_directory_path() / (std::string("cratchit_here_test_") + info->name());
+    fs::remove_all(root);
+    fs::create_directories(root);
+  }
+  ~HereFolder() { fs::remove_all(root); }
+  fs::path root;
+};
+
+} // namespace
+
+TEST(ProjectHere, IsAllowedInAFolderWithoutDotFolder) {
+  HereFolder here;
+  fs::create_directories(here.root / "company" / "Avtal");
+  EXPECT_TRUE(cratchit::check_project_here(here.root / "company", here.root / "workspace", here.root / "home"));
+}
+
+TEST(ProjectHere, IsRefusedInHomeWorkspaceADotFolderAndInsideAProject) {
+  HereFolder here;
+  fs::create_directories(here.root / "home");
+  fs::create_directories(here.root / "workspace");
+  fs::create_directories(here.root / "dotted" / ".cratchit");
+  fs::create_directories(here.root / "project" / ".cratchit");
+  std::ofstream(here.root / "project" / ".cratchit" / "project.txt") << "uuid = 1\nname = P\n";
+  fs::create_directories(here.root / "project" / "inside" / "deeper");
+  auto const refused = [&](fs::path const& folder, std::string const& start) {
+    auto const checked = cratchit::check_project_here(folder, here.root / "workspace", here.root / "home");
+    ASSERT_FALSE(checked) << folder.string();
+    EXPECT_TRUE(checked.error().starts_with(start)) << checked.error();
+  };
+  refused(here.root / "home", "Arbetsmappen är din hemkatalog");
+  refused(here.root / "workspace", "Arbetsmappen är samlingsmappen");
+  refused(here.root / "dotted", "Arbetsmappen har redan en .cratchit-mapp");
+  refused(here.root / "project", "Arbetsmappen har redan en .cratchit-mapp");
+  refused(here.root / "project" / "inside" / "deeper", "Arbetsmappen ligger inuti bokföringen i");
+}
+
+TEST(ProjectHere, IsCreatedInTheFolderItselfLeavingTheRestAlone) {
+  HereFolder here;
+  auto const folder = here.root / "The ITfied";
+  fs::create_directories(folder / "Avtal");
+  std::ofstream(folder / "brev.txt") << "hej\n";
+  auto const project = cratchit::create_project_here(folder, "The ITfied AB", "556782-8172",
+                                                     FiscalYear{"2026-05-01", "2027-04-30"}, "2026-11-15");
+  ASSERT_TRUE(project) << project.error();
+  EXPECT_EQ(project->folder, folder);
+  EXPECT_EQ(project->name, "The ITfied AB");
+  auto const entries = cratchit::read_path_values(folder / ".cratchit" / "project.txt");
+  ASSERT_TRUE(entries);
+  EXPECT_EQ(cratchit::find_value(*entries, "name"), "The ITfied AB");
+  EXPECT_EQ(cratchit::find_value(*entries, "orgnr"), "556782-8172");
+  EXPECT_TRUE(fs::is_regular_file(folder / ".cratchit" / "books" / "books.txt"));
+  EXPECT_TRUE(fs::is_directory(folder / "Avtal"));
+  EXPECT_TRUE(fs::is_regular_file(folder / "brev.txt"));
+  // Not twice
+  EXPECT_FALSE(cratchit::create_project_here(folder, "The ITfied AB", "556782-8172",
+                                             FiscalYear{"2026-05-01", "2027-04-30"}, "2026-11-15"));
 }

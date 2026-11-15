@@ -16,7 +16,7 @@ Manualen beskriver det som finns i cratchit i dag och växer i takt med programm
 ## Starta och avsluta
 
 <!-- hjälp: start -->
-Du står i början av cratchit. Tryck `0` för att öppna samlingsmappen med dina bokföringar. Tryck `q` för att avsluta.
+Du står i början av cratchit. Tryck `0` för att öppna samlingsmappen med dina bokföringar. Har mappen du startade cratchit i ingen bokföring, skapar `1` en ny bokföring i den. Tryck `q` för att avsluta.
 <!-- /hjälp -->
 
 Starta cratchit genom att skriva `cratchit` i en terminal och trycka Enter:
@@ -533,6 +533,38 @@ Skriv hur många månader det första räkenskapsåret är och tryck Enter, 1 ti
 <!-- /hjälp -->
 
 Ett nystartat företag kan ha ett första räkenskapsår som är kortare eller längre än tolv månader. Startar företaget till exempel i maj och ska ha kalenderår, blir det första räkenskapsåret 8 månader: maj till december.
+
+### Ny bokföring här
+
+<!-- hjälp: ny-bokforing-har -->
+Fyll i organisationens namn, organisationsnummer och räkenskapsår. Enter skapar då bokföringen i mappen du startade cratchit i, och samlingsmappen kommer ihåg den. Andra filer i mappen rör cratchit inte.
+<!-- /hjälp -->
+
+Vill du ha bokföringen i en mapp som redan finns, till exempel företagets mapp med avtal och fakturor, startar du cratchit i den mappen:
+
+```sh
+cd ~/Företaget
+cratchit
+```
+
+Har mappen ingen bokföring finns valet `1 Ny bokföring här`:
+
+```text
+  0 Samlingsmapp
+  1 Ny bokföring här
+  9 Testmeny
+Cratchit> 
+```
+
+Tryck `1` och fyll i formuläret som i [Ny bokföring från uppgifter](#ny-bokföring-från-uppgifter). Skillnaden är var bokföringen hamnar: i mappen du startade i, i en `.cratchit`-mapp, och inte i en ny mapp i samlingsmappen. Namnet blir bara organisationens namn, inget mappnamn.
+
+När bokföringen är skapad kommer du tillbaka till början, och samlingsmappen kommer ihåg bokföringen. Nästa gång du startar cratchit i mappen öppnas bokföringen direkt (se [Starta i en bokföring](#starta-i-en-bokföring)).
+
+cratchit skapar ingen bokföring i en mapp som redan har en `.cratchit`-mapp, i din hemkatalog, i samlingsmappen eller i en mapp som ligger inuti en annan bokföring. Då leder `1` till *Fel*, som säger varför.
+
+<!-- hjälp: har-namn -->
+Skriv organisationens namn och tryck Enter, till exempel The ITfied AB. Namnet är bara namnet; bokföringen hamnar i mappen du startade cratchit i.
+<!-- /hjälp -->
 
 ## Kommer senare
 

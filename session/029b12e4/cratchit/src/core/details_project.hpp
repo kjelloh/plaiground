@@ -7,6 +7,7 @@
 #include <chrono>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -31,6 +32,23 @@ std::expected<int, std::string> parse_first_year_length(std::string_view text);
 // The fiscal year starting on the first day of first_month and lasting months
 // months, e.g. 2026-05 and 12 give 2026-05-01 – 2027-04-30
 FiscalYear first_fiscal_year(std::chrono::year_month first_month, int months);
+
+// Why cratchit makes no new project in folder itself (the folder cratchit was
+// started in, see create_project_here). Refused: a folder that already has a
+// .cratchit folder (a project, the runtime in home, a workspace), the home
+// folder, the workspace folder, and a folder inside a project (a folder above
+// it has .cratchit/project.txt). Nothing when cratchit may make one there.
+std::expected<void, std::string> check_project_here(std::filesystem::path const& folder,
+                                                    std::optional<std::filesystem::path> const& workspace_folder,
+                                                    std::optional<std::filesystem::path> const& home);
+
+// Creates a project in folder itself, which must exist and have no .cratchit
+// folder (see check_project_here): the files of create_project_from_details,
+// without a new folder. Nothing else in folder is touched. Error text when any
+// step fails; what was created before stays.
+std::expected<Project, std::string> create_project_here(std::filesystem::path const& folder, std::string_view name,
+                                                        std::string_view orgnr, FiscalYear const& year,
+                                                        std::string_view today);
 
 // Creates a project in folder (see new_project_folder) from the details:
 // the folder, .cratchit/project.txt (`created`, `uuid` (new), `name`, `orgnr`)

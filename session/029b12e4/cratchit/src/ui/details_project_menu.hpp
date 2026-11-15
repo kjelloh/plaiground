@@ -3,6 +3,7 @@
 #include "core/dot_folder.hpp"
 #include "pyroceph/tui/state.hpp"
 
+#include <filesystem>
 #include <memory>
 
 namespace cratchit::ui {
@@ -26,5 +27,12 @@ namespace cratchit::ui {
 // error state. No confirmation: the form shows everything before Enter.
 std::unique_ptr<pyroceph::tui::State> make_project_from_details(Workspace workspace,
                                                                 pyroceph::tui::State const* origin = nullptr);
+
+// The same form, named "Ny bokföring här" in the path, for a project in folder
+// itself (the working folder, see check_project_here), not in a new folder in
+// the workspace: the name is any text that is not blank, and Enter creates the
+// project with create_project_here. The workspace remembers it, as above.
+std::unique_ptr<pyroceph::tui::State> make_project_here(Workspace workspace, std::filesystem::path folder,
+                                                        pyroceph::tui::State const* origin = nullptr);
 
 } // namespace cratchit::ui

@@ -90,6 +90,36 @@ FiscalYear first_fiscal_year(std::chrono::year_month first_month, int months) {
   return {format_iso_date(start), format_iso_date(end)};
 }
 
+namespace {
+
+// True when a and b are the same folder on disk (links resolved); false when either is missing
+bool same_folder(fs::path const& a, fs::path const& b) {
+  std::error_code ec;
+  return fs::equivalent(a, b, ec) && !ec;
+}
+
+} // namespace
+
+std::expected<void, std::string> check_project_here(fs::path const& folder, std::optional<fs::path> const& workspace_folder,
+                                                    std::optional<fs::path> const& home) {
+  std::error_code ec;
+  if (home && same_folder(folder, *home)) {
+    return std::unexpected(std::string("Arbetsmappen är din hemkatalog. Starta cratchit i bokföringens egen mapp."));
+  }
+  if (workspace_folder && same_folder(folder, *workspace_folder)) {
+    return std::unexpected(std::string("Arbetsmappen är samlingsmappen. Starta cratchit i bokföringens egen mapp."));
+  }
+  if (fs::exists(folder / ".cratchit", ec)) {
+    return std::unexpected(std::format("Arbetsmappen har redan en .cratchit-mapp: {}", (folder / ".cratchit").string()));
+  }
+  for (auto above = folder.parent_path(); !above.empty() && above != above.parent_path(); above = above.parent_path()) {
+    if (fs::is_regular_file(above / ".cratchit" / "project.txt", ec)) {
+      return std::unexpected(std::format("Arbetsmappen ligger inuti bokföringen i {}.", above.string()));
+    }
+  }
+  return {};
+}
+
 std::expected<Project, std::string> create_project_from_details(fs::path const& folder, std::string_view name,
                                                                 std::string_view orgnr, FiscalYear const& year,
                                                                 std::string_view today) {
@@ -97,8 +127,16 @@ std::expected<Project, std::string> create_project_from_details(fs::path const& 
   if (!fs::create_directory(folder, ec)) {
     return std::unexpected(std::format("Kan inte skapa {}: {}", folder.string(), ec ? ec.message() : std::string("mappen finns redan")));
   }
+  return create_project_here(folder, name, orgnr, year, today);
+}
+
+std::expected<Project, std::string> create_project_here(fs::path const& folder, std::string_view name,
+                                                        std::string_view orgnr, FiscalYear const& year,
+                                                        std::string_view today) {
+  std::error_code ec;
   if (!fs::create_directory(folder / ".cratchit", ec)) {
-    return std::unexpected(std::format("Kan inte skapa {}: {}", (folder / ".cratchit").string(), ec.message()));
+    return std::unexpected(std::format("Kan inte skapa {}: {}", (folder / ".cratchit").string(),
+                                       ec ? ec.message() : std::string("mappen finns redan")));
   }
   Project project{folder, folder / ".cratchit" / "project.txt", new_uuid(), std::string(name)};
   PathValues const entries{{"created", std::string(today)}, {"uuid", project.uuid}, {"name", project.name},

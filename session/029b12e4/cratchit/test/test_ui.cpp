@@ -909,3 +909,58 @@ TEST_F(RootMenuTest, StartInAFolderWithABrokenProjectStaysAtTheRootAndSaysWhy) {
   EXPECT_EQ(navigator.path().size(), 1u);
   EXPECT_FALSE(fs::exists(workspace / ".cratchit" / "workspace.txt"));
 }
+
+// A new project in the working folder (1 in the root)
+
+TEST_F(RootMenuTest, OneIsOfferedOnlyWhenTheWorkspaceFolderIsKnownAndHoldsNoProject) {
+  auto const workspace = documents / "cratchit";
+  EXPECT_EQ(cratchit::ui::make_root_menu(workspace)->options(),
+            (OptionsList{{U'0', "Samlingsmapp"}, {U'9', "Testmeny"}}));
+  fs::create_directories(documents / "company");
+  auto const root = cratchit::ui::make_root_menu(workspace, documents / "company");
+  EXPECT_EQ(root->options(), (OptionsList{{U'0', "Samlingsmapp"}, {U'1', "Ny bokföring här"}, {U'9', "Testmeny"}}));
+  EXPECT_TRUE(root->view().empty());
+  fs::create_directories(documents / "company" / ".cratchit");
+  std::ofstream(documents / "company" / ".cratchit" / "project.txt") << "uuid = 1\nname = Företaget AB\n";
+  EXPECT_EQ(root->options(), (OptionsList{{U'0', "Samlingsmapp"}, {U'9', "Testmeny"}}));
+  EXPECT_EQ(root->view(), (View{"Arbetsmappen har bokföringen Företaget AB. Du hittar den i samlingsmappen."}));
+}
+
+TEST_F(RootMenuTest, NewProjectHereIsCreatedInTheWorkingFolderAndRemembered) {
+  auto const workspace = documents / "cratchit";
+  auto const company = documents / "The ITfied";
+  fs::create_directories(company / "Avtal");
+  Navigator navigator(cratchit::ui::make_root_menu(workspace, company));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Ny bokföring här");
+  EXPECT_EQ(navigator.current().view().back(), std::format("Bokföringen hamnar i {}.", company.string()));
+  EXPECT_FALSE(fill(navigator, U'1', U"   ")); // blank
+  ASSERT_TRUE(fill(navigator, U'1', U"The ITfied AB"));
+  ASSERT_TRUE(fill(navigator, U'2', U"556782-8172"));
+  ASSERT_TRUE(fill(navigator, U'3', U"2026-05"));
+  EXPECT_FALSE(fs::exists(company / ".cratchit")); // nothing created before Enter
+  // Enter creates it here and goes back to the root, which no longer offers 1
+  ASSERT_TRUE(navigator.press(U'\n'));
+  EXPECT_EQ(navigator.current().name(), "Cratchit");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Samlingsmapp"}, {U'9', "Testmeny"}}));
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Arbetsmappen har bokföringen The ITfied AB. Du hittar den i samlingsmappen."}));
+  EXPECT_TRUE(fs::is_regular_file(company / ".cratchit" / "project.txt"));
+  EXPECT_TRUE(fs::is_directory(company / "Avtal"));
+  EXPECT_FALSE(fs::exists(workspace / "The ITfied AB")); // no folder in the workspace
+  // The workspace remembers it
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(names_of(navigator.current().options()),
+            (OptionsList{{U'1', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
+}
+
+TEST_F(RootMenuTest, NewProjectHereIsRefusedWithTheReason) {
+  auto const workspace = documents / "cratchit";
+  fs::create_directories(workspace);
+  Navigator navigator(cratchit::ui::make_root_menu(workspace, workspace));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Fel");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"cratchit skapar ingen bokföring här. Arbetsmappen är samlingsmappen. Starta cratchit i bokföringens egen mapp."}));
+  EXPECT_FALSE(fs::exists(workspace / ".cratchit" / "project.txt"));
+}
