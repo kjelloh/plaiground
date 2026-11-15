@@ -156,3 +156,20 @@ TEST_F(PathCompletionTest, FoldersAreNotDescribed) {
   EXPECT_EQ(completed.added, U"rkiv" + separator());
   EXPECT_TRUE(completed.notes.empty());
 }
+
+TEST_F(PathCompletionTest, ListLaysOutTheMatchingFilesAndFoldersItself) {
+  fs::create_directories(root / "arkiv");
+  std::ofstream(root / "b.se") << "b";
+  std::ofstream(root / "a.se") << "a";
+  std::vector<fs::path> got_files;
+  std::vector<fs::path> got_folders;
+  auto const completion = complete_path(
+      typed(U""), true, {}, size_of, [&](std::vector<fs::path> const& files, std::vector<fs::path> const& folders) {
+        got_files = files;
+        got_folders = folders;
+        return std::vector<std::string>{"Rubrik", "  rad"};
+      });
+  EXPECT_EQ(completion.candidates, (std::vector<std::string>{"Rubrik", "  rad"}));
+  EXPECT_EQ(got_files, (std::vector<fs::path>{root / "a.se", root / "b.se"}));
+  EXPECT_EQ(got_folders, (std::vector<fs::path>{root / "arkiv"}));
+}

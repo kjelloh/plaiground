@@ -145,7 +145,8 @@ public:
   std::u32string start_input() const override { return pyroceph::tui::path_input_of(project_.folder); }
   Completion complete(std::u32string_view text) const override {
     return pyroceph::tui::complete_path(
-        text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); }, describe_sie_file);
+        text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); }, describe_sie_file,
+        list_sie_files);
   }
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);

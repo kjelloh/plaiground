@@ -127,17 +127,24 @@ Cratchit > Samlingsmapp > Lägg till: x
 När cratchit vill ha en mapp står en sökväg redan på raden, och du fortsätter skriva därifrån.
 
 * **Tab** fyller i resten av ett mappnamn. Passar flera mappar fyller cratchit i så långt deras namn är lika. Kan cratchit inte fylla i mer listar den mapparna och skriver raden igen under listan.
-* När du letar upp en **SIE-fil** fyller Tab också i filnamn, och under varje SIE-fil i listan står vad filen innehåller. När Tab fyller i en enda fil, eller när hela namnet redan står på raden, visar cratchit samma rad under sökvägen:
+* När du letar upp en **SIE-fil** fyller Tab också i filnamn. Listar Tab flera SIE-filer grupperas de på räkenskapsår, med det senaste året först. Inom ett år står den senast skapade filen först, och varje fil har en rad i kolumner:
 
   ```text
-  Cratchit > Ny bokföring här > Från SIE> : /Users/anna/Företaget/TheITfiedAB20261112_1
-    TheITfiedAB20261112_102636.se
-        2025-05-01 – 2026-04-30  skapad 2026-11-12  120 ver. t.o.m. 2026-04-30  A 59 · D 26 · M 5
-    TheITfiedAB20261112_111418.se
-        2024-05-01 – 2025-04-30  skapad 2026-11-12  115 ver. t.o.m. 2025-04-30  A 62 · D 21 · M 4
+  Cratchit > Ny bokföring här > Från SIE: /Users/anna/Företaget/SIE-filer/
+    2025-05-01 – 2026-04-30
+      TheITfiedAB20261112_102636.se  skapad 2026-11-12  120 ver.  t.o.m. 2026-04-30  A 59 · D 26 · M 5
+      TheITfiedAB20261019_105220.se  skapad 2026-10-19  116 ver.  t.o.m. 2026-04-30  A 59 · D 26 · M 5
+    2024-05-01 – 2025-04-30
+      TheITfiedAB20261019_105234.se  skapad 2026-10-19  115 ver.  t.o.m. 2025-04-30  A 62 · D 21 · M 4
+    Går inte att läsa
+      Sie4 fil tom mars -10.se       Unknown encoding: …
+    Mappar
+      arkiv/
   ```
 
-  Raden visar räkenskapsåret, när filen skapades, hur många verifikationer den har och datumet på den senaste, och det sista numret i varje serie. Går filen inte att läsa står orsaken där i stället. Uppgifter som filen saknar visas inte.
+  Kolumnerna är filens namn, när filen skapades, hur många verifikationer den har, datumet på den senaste och det sista numret i varje serie. En fil utan räkenskapsår står under *Utan räkenskapsår*, och en fil som inte går att läsa under *Går inte att läsa*, med orsaken. Uppgifter som filen saknar lämnas tomma.
+
+  När Tab fyller i en enda fil, eller när hela namnet redan står på raden, visar cratchit filens innehåll på en rad under sökvägen, med räkenskapsåret först.
 * **`-`** går tillbaka så länge du inte har ändrat sökvägen som stod där. Har du ändrat den tömmer du först raden med Esc, och sedan går `-` tillbaka.
 * **Enter** lämnar sökvägen till cratchit. Går det inte att använda den visar cratchit varför, och sökvägen står kvar så att du kan rätta den.
 

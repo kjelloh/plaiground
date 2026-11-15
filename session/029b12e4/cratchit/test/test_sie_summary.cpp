@@ -53,3 +53,56 @@ TEST(SieSummary, SaysWhyAFileCannotBeRead) {
   EXPECT_EQ(cratchit::describe_sie_file(file.path.parent_path() / "finns_inte.se"),
             (std::vector<std::string>{"(går inte att läsa: filen går inte att öppna)"}));
 }
+
+// Listing the files found with Tab
+
+namespace {
+
+// Files of their own for each test, in a folder removed afterwards
+struct SieFolder {
+  SieFolder() {
+    auto const* info = ::testing::UnitTest::GetInstance()->current_test_info();
+    root = fs::temp_directory_path() / (std::string("cratchit_sie_list_") + info->name());
+    fs::remove_all(root);
+    fs::create_directories(root);
+  }
+  ~SieFolder() { fs::remove_all(root); }
+  fs::path add(std::string const& name, std::string const& text) {
+    std::ofstream(root / name, std::ios::binary) << text;
+    return root / name;
+  }
+  fs::path root;
+};
+
+std::string sie(std::string const& year, std::string const& generated, std::string const& vouchers) {
+  return "#FLAGGA 0\r\n#SIETYP 4\r\n" + (generated.empty() ? std::string() : "#GEN " + generated + "\r\n") +
+         (year.empty() ? std::string() : "#RAR 0 " + year + "\r\n") + vouchers;
+}
+
+} // namespace
+
+TEST(SieList, GroupsByFiscalYearLatestFirstAndTheLatestCreatedFirstInColumns) {
+  SieFolder folder;
+  auto const old_2025 = folder.add("a.se", sie("20250101 20251231", "20251001", voucher("A", "1", "20250301")));
+  auto const new_2025 = folder.add("bb.se", sie("20250101 20251231", "20260115",
+                                                voucher("A", "1", "20250301") + voucher("A", "2", "20251231")));
+  auto const only_2026 = folder.add("c.se", sie("20260101 20261231", "", ""));
+  auto const no_year = folder.add("d.se", sie("", "20260101", ""));
+  auto const broken = folder.add("e.se", "ingen SIE-fil\r\n");
+  fs::create_directories(folder.root / "arkiv");
+  auto const lines = cratchit::list_sie_files({old_2025, new_2025, only_2026, no_year, broken}, {folder.root / "arkiv"});
+  auto const separator = std::string(1, static_cast<char>(fs::path::preferred_separator));
+  EXPECT_EQ(lines, (std::vector<std::string>{
+                       "2026-01-01 – 2026-12-31",
+                       "  c.se " + std::string(2 + 17 + 2, ' ') + "0 ver.", // no created date: its column stays empty
+                       "2025-01-01 – 2025-12-31",
+                       "  bb.se  skapad 2026-01-15  2 ver.  t.o.m. 2025-12-31  A 2",
+                       "  a.se   skapad 2025-10-01  1 ver.  t.o.m. 2025-03-01  A 1",
+                       "Utan räkenskapsår",
+                       "  d.se   skapad 2026-01-01  0 ver.",
+                       "Går inte att läsa",
+                       "  e.se   #SIETYP saknas",
+                       "Mappar",
+                       "  arkiv" + separator,
+                   }));
+}

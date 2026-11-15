@@ -71,8 +71,8 @@ std::u32string path_input_of(fs::path const& folder) {
 fs::path path_of(std::u32string_view typed) { return fs::path(encoded(typed)); }
 
 Completion complete_path(std::u32string_view typed, bool files,
-                         std::function<bool(fs::path const&)> const& accept_file,
-                         std::function<std::vector<std::string>(fs::path const&)> const& describe_file) {
+                         std::function<bool(fs::path const&)> const& accept_file, DescribeFile const& describe_file,
+                         ListCandidates const& list) {
   auto const cut = typed.find_last_of(separators);
   if (cut == std::u32string_view::npos) return {};
   auto const folder = path_of(typed.substr(0, cut + 1));
@@ -111,6 +111,13 @@ Completion complete_path(std::u32string_view typed, bool files,
   }
   if (agreed > prefix.size()) return {names.front().text.substr(prefix.size(), agreed - prefix.size()), {}, {}};
   Completion result;
+  if (list) {
+    std::vector<fs::path> found_files;
+    std::vector<fs::path> found_folders;
+    for (auto const& name : names) (name.is_folder ? found_folders : found_files).push_back(folder / path_of(name.text));
+    result.candidates = list(found_files, found_folders);
+    return result;
+  }
   for (auto const& name : names) {
     result.candidates.push_back(utf8_of(name.text));
     for (auto const& line : describe(name)) result.candidates.push_back("    " + line);

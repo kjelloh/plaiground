@@ -35,4 +35,13 @@ std::string summary_line(SieSummary const& summary);
 // The lines to show under an SIE file's name: its summary line, or why it cannot be read
 std::vector<std::string> describe_sie_file(std::filesystem::path const& file);
 
+// The SIE files and folders found with Tab, laid out to choose from: a heading
+// per fiscal year (#RAR 0, latest first), and under it a line per file in
+// columns: name, created (#GEN), vouchers and the latest date, and the highest
+// number per series. Within a year the latest created file comes first. Then
+// "Utan räkenskapsår", "Går inte att läsa" (with the reason) and "Mappar".
+// Headings are not indented; their lines are indented two spaces.
+std::vector<std::string> list_sie_files(std::vector<std::filesystem::path> const& files,
+                                        std::vector<std::filesystem::path> const& folders);
+
 } // namespace cratchit

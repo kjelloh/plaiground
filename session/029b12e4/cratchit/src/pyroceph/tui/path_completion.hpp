@@ -29,8 +29,14 @@ std::filesystem::path path_of(std::u32string_view typed);
 // With describe_file, a file gets lines that tell what it holds: listed
 // indented under its name among the candidates, and as notes when the file is
 // the one match (also when its whole name is typed already).
+// With list, the client lays out the candidates itself (e.g. grouped, in
+// columns): it gets the matching files and folders, each sorted by name, and
+// gives the lines to list.
+using DescribeFile = std::function<std::vector<std::string>(std::filesystem::path const&)>;
+using ListCandidates = std::function<std::vector<std::string>(std::vector<std::filesystem::path> const& files,
+                                                              std::vector<std::filesystem::path> const& folders)>;
 Completion complete_path(std::u32string_view typed, bool files = false,
                          std::function<bool(std::filesystem::path const&)> const& accept_file = {},
-                         std::function<std::vector<std::string>(std::filesystem::path const&)> const& describe_file = {});
+                         DescribeFile const& describe_file = {}, ListCandidates const& list = {});
 
 } // namespace pyroceph::tui

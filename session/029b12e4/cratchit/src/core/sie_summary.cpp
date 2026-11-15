@@ -82,6 +82,109 @@ std::string summary_line(SieSummary const& summary) {
   return line;
 }
 
+namespace {
+
+// The width of UTF-8 text in the terminal, counted in code points
+std::size_t width_of(std::string_view text) {
+  return static_cast<std::size_t>(std::ranges::count_if(text, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
+}
+
+std::string padded(std::string const& text, std::size_t width) {
+  auto const used = width_of(text);
+  return used < width ? text + std::string(width - used, ' ') : text;
+}
+
+std::string series_text(SieSummary const& summary) {
+  std::string series;
+  for (auto const& [name, number] : summary.series) {
+    if (!series.empty()) series += " · ";
+    series += std::format("{} {}", name, number);
+  }
+  return series;
+}
+
+std::string year_text(std::pair<Date, Date> const& year) {
+  return std::format("{} – {}", format_iso_date(year.first), format_iso_date(year.second));
+}
+
+struct Listed {
+  std::string name;
+  std::expected<SieSummary, std::string> summary;
+};
+
+} // namespace
+
+std::vector<std::string> list_sie_files(std::vector<fs::path> const& files, std::vector<fs::path> const& folders) {
+  std::vector<Listed> listed;
+  for (auto const& file : files) {
+    auto const name = file.filename().u8string();
+    listed.push_back({std::string(name.begin(), name.end()), summarize_sie_file(file)});
+  }
+  // Columns as wide as their widest entry, the same in every group
+  std::size_t name_width = 0;
+  std::size_t count_width = 0;
+  for (auto const& entry : listed) {
+    name_width = std::max(name_width, width_of(entry.name));
+    if (entry.summary) count_width = std::max(count_width, std::to_string(entry.summary->vouchers).size());
+  }
+  auto const line_of = [&](Listed const& entry) {
+    auto const& summary = *entry.summary;
+    auto line = "  " + padded(entry.name, name_width);
+    line += "  " + padded(summary.generated ? "skapad " + format_iso_date(*summary.generated) : std::string(), 17);
+    auto const count = std::to_string(summary.vouchers);
+    line += "  " + std::string(count_width - count.size(), ' ') + count + " ver.";
+    line += "  " + padded(summary.last_date ? "t.o.m. " + format_iso_date(*summary.last_date) : std::string(), 17);
+    if (auto const series = series_text(summary); !series.empty()) line += "  " + series;
+    while (!line.empty() && line.back() == ' ') line.pop_back();
+    return line;
+  };
+
+  // The fiscal years, latest first; within one, the latest created first
+  std::vector<Listed const*> with_year;
+  std::vector<Listed const*> without_year;
+  std::vector<Listed const*> unreadable;
+  for (auto const& entry : listed) {
+    if (!entry.summary) unreadable.push_back(&entry);
+    else if (entry.summary->year) with_year.push_back(&entry);
+    else without_year.push_back(&entry);
+  }
+  std::ranges::stable_sort(with_year, [](Listed const* a, Listed const* b) {
+    auto const& x = *a->summary;
+    auto const& y = *b->summary;
+    if (x.year != y.year) return *y.year < *x.year;
+    return y.generated < x.generated; // an unknown created date (nullopt) sorts last
+  });
+  std::ranges::stable_sort(without_year, [](Listed const* a, Listed const* b) {
+    return b->summary->generated < a->summary->generated;
+  });
+
+  std::vector<std::string> lines;
+  std::optional<std::pair<Date, Date>> heading;
+  for (auto const* entry : with_year) {
+    if (heading != entry->summary->year) {
+      heading = entry->summary->year;
+      lines.push_back(year_text(*heading));
+    }
+    lines.push_back(line_of(*entry));
+  }
+  if (!without_year.empty()) {
+    lines.push_back("Utan räkenskapsår");
+    for (auto const* entry : without_year) lines.push_back(line_of(*entry));
+  }
+  if (!unreadable.empty()) {
+    lines.push_back("Går inte att läsa");
+    for (auto const* entry : unreadable) lines.push_back("  " + padded(entry->name, name_width) + "  " + entry->summary.error());
+  }
+  if (!folders.empty()) {
+    lines.push_back("Mappar");
+    for (auto const& folder : folders) {
+      auto const name = folder.filename().u8string();
+      lines.push_back("  " + std::string(name.begin(), name.end()) + static_cast<char>(fs::path::preferred_separator));
+    }
+  }
+  return lines;
+}
+
 std::vector<std::string> describe_sie_file(fs::path const& file) {
   auto const summary = summarize_sie_file(file);
   if (!summary) return {std::format("(går inte att läsa: {})", summary.error())};
