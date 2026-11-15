@@ -2,6 +2,7 @@
 
 #include "core/sie/document.hpp"
 #include "core/sie/file.hpp"
+#include "core/dot_folder.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -48,7 +49,18 @@ std::expected<SieSummary, std::string> summarize_sie_file(fs::path const& file) 
   summary.generated = document.generated;
   summary.vouchers = document.vouchers.size();
   std::map<std::string, std::string> highest;
+  auto const is_balance_account = [](std::string const& account) {
+    return !account.empty() && (account.front() == '1' || account.front() == '2');
+  };
+  for (auto const& opening : document.opening) {
+    if (opening.year == 0 && is_balance_account(opening.account)) summary.balance += opening.amount;
+  }
   for (auto const& voucher : document.vouchers) {
+    for (auto const& row : voucher.transactions) {
+      if (row.kind == sie::Transaction::Kind::removed) continue; // struck, does not count
+      if (is_balance_account(row.account)) summary.balance += row.amount;
+      if (row.account == "8999") summary.result_booked = true;
+    }
     if (!summary.last_date || *summary.last_date < voucher.date) summary.last_date = voucher.date;
     auto [it, added] = highest.try_emplace(voucher.series, voucher.number);
     if (!added && number_less(it->second, voucher.number)) it->second = voucher.number;
@@ -57,9 +69,35 @@ std::expected<SieSummary, std::string> summarize_sie_file(fs::path const& file) 
   return summary;
 }
 
-std::string summary_line(SieSummary const& summary) {
+std::optional<SieStatus> status_of(SieSummary const& summary, Date today) {
+  if (!summary.year) return std::nullopt;
+  auto const end = summary.year->second;
+  if (!(end < today)) return SieStatus{YearStatus::ongoing, false};
+  if (summary.balance == 0) return SieStatus{YearStatus::complete, false};
+  if (summary.result_booked) return SieStatus{YearStatus::mismatch, false};
+  // Last year may lack its closing still; a year before it must not
+  auto year_after_end = std::chrono::year_month_day(end.year() + std::chrono::years(1), end.month(), end.day());
+  if (!year_after_end.ok()) year_after_end = std::chrono::year_month_day(year_after_end.year() / year_after_end.month() / std::chrono::last);
+  return SieStatus{YearStatus::incomplete, year_after_end < today};
+}
+
+std::string status_text(SieStatus status) {
+  std::string text;
+  switch (status.status) {
+  case YearStatus::ongoing: text = "pågående"; break;
+  case YearStatus::incomplete: text = "ofullbordat"; break;
+  case YearStatus::complete: text = "fullbordat"; break;
+  case YearStatus::mismatch: text = "misstämmer"; break;
+  }
+  return status.warning ? text + " !" : text;
+}
+
+Date today_date() { return parse_iso_date(today_iso()).value_or(Date{}); }
+
+std::string summary_line(SieSummary const& summary, Date today) {
   std::vector<std::string> parts;
   if (summary.year) parts.push_back(std::format("{} – {}", format_iso_date(summary.year->first), format_iso_date(summary.year->second)));
+  if (auto const status = status_of(summary, today)) parts.push_back(status_text(*status));
   if (summary.generated) parts.push_back(std::format("skapad {}", format_iso_date(*summary.generated)));
   if (summary.last_date) {
     parts.push_back(std::format("{} ver. t.o.m. {}", summary.vouchers, format_iso_date(*summary.last_date)));
@@ -121,15 +159,24 @@ std::vector<std::string> list_sie_files(std::vector<fs::path> const& files, std:
     listed.push_back({std::string(name.begin(), name.end()), summarize_sie_file(file)});
   }
   // Columns as wide as their widest entry, the same in every group
+  auto const today = today_date();
+  auto const status_column = [today](SieSummary const& summary) {
+    auto const status = status_of(summary, today);
+    return status ? status_text(*status) : std::string();
+  };
   std::size_t name_width = 0;
   std::size_t count_width = 0;
+  std::size_t status_width = 0;
   for (auto const& entry : listed) {
     name_width = std::max(name_width, width_of(entry.name));
-    if (entry.summary) count_width = std::max(count_width, std::to_string(entry.summary->vouchers).size());
+    if (!entry.summary) continue;
+    count_width = std::max(count_width, std::to_string(entry.summary->vouchers).size());
+    status_width = std::max(status_width, width_of(status_column(*entry.summary)));
   }
   auto const line_of = [&](Listed const& entry) {
     auto const& summary = *entry.summary;
     auto line = "  " + padded(entry.name, name_width);
+    if (status_width > 0) line += "  " + padded(status_column(summary), status_width);
     line += "  " + padded(summary.generated ? "skapad " + format_iso_date(*summary.generated) : std::string(), 17);
     auto const count = std::to_string(summary.vouchers);
     line += "  " + std::string(count_width - count.size(), ' ') + count + " ver.";
@@ -188,7 +235,7 @@ std::vector<std::string> list_sie_files(std::vector<fs::path> const& files, std:
 std::vector<std::string> describe_sie_file(fs::path const& file) {
   auto const summary = summarize_sie_file(file);
   if (!summary) return {std::format("(går inte att läsa: {})", summary.error())};
-  return {summary_line(*summary)};
+  return {summary_line(*summary, today_date())};
 }
 
 } // namespace cratchit

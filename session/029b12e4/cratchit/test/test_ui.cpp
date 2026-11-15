@@ -838,7 +838,7 @@ TEST_F(RootMenuTest, AChangeOfFiscalYearFromSieShowsAndTheYearTakesItsDates) {
   auto const view = navigator.current().view();
   ASSERT_GE(view.size(), 4u);
   EXPECT_EQ(view[0], "SIE-fil: " + (documents / "change.se").string());
-  EXPECT_EQ(view[1], "Innehåll: 2026-01-01 – 2026-04-30  1 ver. t.o.m. 2026-02-01  A 1");
+  EXPECT_EQ(view[1], "Innehåll: 2026-01-01 – 2026-04-30  ofullbordat  1 ver. t.o.m. 2026-02-01  A 1");
   EXPECT_EQ(view[2], "Räkenskapsår: 2026-01-01 – 2026-04-30 (cratchit räknade med 2026-01-01 – 2026-12-31)");
   EXPECT_EQ(view[3], "cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att räkenskapsåret är korrekt.");
   ASSERT_TRUE(navigator.press(U'1'));
@@ -993,7 +993,7 @@ TEST_F(RootMenuTest, NewProjectHereFromSieStartsInTheWorkingFolderAndCreatesTheP
   EXPECT_EQ(navigator.current().view(),
             (View{"SIE-fil: " + (seed / "older" / "test.se").string(),
                   "  Företag:        Test AB: provet (556000-0001)",
-                  "  Räkenskapsår:   2025-01-01 – 2025-12-31",
+                  "  Räkenskapsår:   2025-01-01 – 2025-12-31, ofullbordat",
                   "  Verifikationer: 1 t.o.m. 2025-02-01  A 1",
                   "  Konton:         2",
                   "Skapa bokföringen från SIE-filen?"}));
@@ -1050,4 +1050,33 @@ TEST_F(RootMenuTest, NoInConfirmGoesBackToChooseAnotherFileInTheSameFolder) {
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(seed / "older"));
   EXPECT_FALSE(fs::exists(seed / ".cratchit"));
   EXPECT_TRUE(fs::exists(seed / "older" / "test.se"));
+}
+
+TEST_F(RootMenuTest, ConfirmWarnsForAnIncompleteYearOlderThanLastYearAndForAMismatch) {
+  auto const workspace = documents / "cratchit";
+  auto const seed = documents / "_seed";
+  fs::create_directories(seed);
+  auto const head = std::string("#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n"
+                                "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n#KONTO 8999 \"Result\"\r\n#KONTO 2099 \"Result\"\r\n");
+  auto const sale = std::string("#VER A 1 20240201 \"Sale\"\r\n{\r\n#TRANS 1930 {} 500.00\r\n#TRANS 3010 {} -500.00\r\n}\r\n");
+  // 2024 ended more than a year before the tests' today (2026-11-09)
+  std::ofstream(seed / "old.se", std::ios::binary) << head << "#RAR 0 20240101 20241231\r\n" << sale;
+  std::ofstream(seed / "wrong.se", std::ios::binary)
+      << head << "#RAR 0 20240101 20241231\r\n" << sale
+      << "#VER M 1 20241231 \"Result\"\r\n{\r\n#TRANS 8999 {} 400.00\r\n#TRANS 2099 {} -400.00\r\n}\r\n";
+  auto const confirm = [&](char32_t const* name) {
+    Navigator navigator(cratchit::ui::make_root_menu(workspace, seed));
+    EXPECT_TRUE(navigator.press(U'1'));
+    EXPECT_TRUE(navigator.press(U'1'));
+    auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed) + name);
+    EXPECT_TRUE(result) << result.error();
+    navigator.enter(std::move(result->next));
+    return navigator.current().view();
+  };
+  auto const old = confirm(U"old.se");
+  EXPECT_EQ(old[2], "  Räkenskapsår:   2024-01-01 – 2024-12-31, ofullbordat");
+  EXPECT_EQ(old[3], "  Varning:        Ett räkenskapsår före förra året ska vara fullbordat. Kontrollera SIE-filen.");
+  auto const wrong = confirm(U"wrong.se");
+  EXPECT_EQ(wrong[2], "  Räkenskapsår:   2024-01-01 – 2024-12-31, misstämmer");
+  EXPECT_EQ(wrong[3], "  Varning:        Ett resultat är bokfört på 8999, men balansräkningen balanserar inte (skillnad 100.00).");
 }

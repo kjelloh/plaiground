@@ -47,7 +47,17 @@ public:
       lines.push_back(std::format("  {:<16}{}", std::string(label) + ":", value));
     };
     row("Företag", plan_.orgnr.empty() ? plan_.name : std::format("{} ({})", plan_.name, plan_.orgnr));
-    row("Räkenskapsår", std::format("{} – {}", date_text(plan_.import.year_start), date_text(plan_.import.year_end)));
+    auto const status = summary_ ? status_of(*summary_, today_date()) : std::nullopt;
+    auto year = std::format("{} – {}", date_text(plan_.import.year_start), date_text(plan_.import.year_end));
+    if (status) year += ", " + status_text(SieStatus{status->status, false});
+    row("Räkenskapsår", year);
+    if (status && status->warning) {
+      row("Varning", "Ett räkenskapsår före förra året ska vara fullbordat. Kontrollera SIE-filen.");
+    }
+    if (status && status->status == YearStatus::mismatch) {
+      row("Varning", std::format("Ett resultat är bokfört på 8999, men balansräkningen balanserar inte (skillnad {}).",
+                                 format_amount(summary_->balance)));
+    }
     if (plan_.generated || !plan_.program.empty()) {
       std::string created = plan_.generated ? date_text(*plan_.generated) : std::string();
       if (!plan_.program.empty()) created += created.empty() ? plan_.program : std::format(" ({})", plan_.program);

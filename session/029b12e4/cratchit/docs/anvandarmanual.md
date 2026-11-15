@@ -131,20 +131,35 @@ När cratchit vill ha en mapp står en sökväg redan på raden, och du fortsät
 
   ```text
   Cratchit > Ny bokföring här > Från SIE: /Users/anna/Företaget/SIE-filer/
+    2026-05-01 – 2027-04-30
+      TheITfiedAB20261019_105108.se  pågående       skapad 2026-10-19   17 ver.  t.o.m. 2026-06-30  A 10 · D 3 · M 1
     2025-05-01 – 2026-04-30
-      TheITfiedAB20261112_102636.se  skapad 2026-11-12  120 ver.  t.o.m. 2026-04-30  A 59 · D 26 · M 5
-      TheITfiedAB20261019_105220.se  skapad 2026-10-19  116 ver.  t.o.m. 2026-04-30  A 59 · D 26 · M 5
-    2024-05-01 – 2025-04-30
-      TheITfiedAB20261019_105234.se  skapad 2026-10-19  115 ver.  t.o.m. 2025-04-30  A 62 · D 21 · M 4
+      TheITfiedAB20261112_102636.se  fullbordat     skapad 2026-11-12  120 ver.  t.o.m. 2026-04-30  A 59 · D 26 · M 5
+      TheITfiedAB20261019_105220.se  ofullbordat    skapad 2026-10-19  116 ver.  t.o.m. 2026-04-30  A 59 · D 26 · M 5
+    2015-05-01 – 2016-04-30
+      2326 ITFied 1505-1604.se       ofullbordat !  skapad 2016-06-17  247 ver.  t.o.m. 2016-04-30  A 113 · D 63
     Går inte att läsa
       Sie4 fil tom mars -10.se       Unknown encoding: …
     Mappar
       arkiv/
   ```
 
-  Kolumnerna är filens namn, när filen skapades, hur många verifikationer den har, datumet på den senaste och det sista numret i varje serie. En fil utan räkenskapsår står under *Utan räkenskapsår*, och en fil som inte går att läsa under *Går inte att läsa*, med orsaken. Uppgifter som filen saknar lämnas tomma.
+  Kolumnerna är filens namn, räkenskapsårets status (se nedan), när filen skapades, hur många verifikationer den har, datumet på den senaste och det sista numret i varje serie. En fil utan räkenskapsår står under *Utan räkenskapsår*, och en fil som inte går att läsa under *Går inte att läsa*, med orsaken. Uppgifter som filen saknar lämnas tomma.
 
-  När Tab fyller i en enda fil, eller när hela namnet redan står på raden, visar cratchit filens innehåll på en rad under sökvägen, med räkenskapsåret först.
+  När Tab fyller i en enda fil, eller när hela namnet redan står på raden, visar cratchit filens innehåll på en rad under sökvägen, med räkenskapsåret och dess status först.
+
+#### Räkenskapsårets status i en SIE-fil
+
+cratchit visar vad SIE-filen säger om sitt räkenskapsår, räknat från dagens datum:
+
+* **pågående**: räkenskapsåret har inte tagit slut än.
+* **ofullbordat**: räkenskapsåret är slut, men balansräkningen i filen balanserar inte, och inget resultat är bokfört på 8999 (*Årets resultat*). Det gäller till exempel ett år utan bokslut, eller en fil som skapades innan året var slut.
+* **fullbordat**: balansräkningen i filen balanserar, det vill säga årets resultat är bokfört.
+* **misstämmer**: ett resultat är bokfört på 8999, men balansräkningen balanserar ändå inte.
+
+Ett `!` efter *ofullbordat* betyder att räkenskapsåret är äldre än förra året, alltså slutade för mer än ett år sedan. Ett sådant år ska vara fullbordat. Kontrollera då om det finns en annan fil för samma år.
+
+*Fullbordat* säger bara att bokföringen i filen hänger ihop och att resultatet är bokfört. Det säger inte att årsredovisningen är inlämnad, eller att året är låst i programmet som skapade filen. cratchit hindrar inte att du väljer en fil med någon status; du avgör om filen passar.
 * **`-`** går tillbaka så länge du inte har ändrat sökvägen som stod där. Har du ändrat den tömmer du först raden med Esc, och sedan går `-` tillbaka.
 * **Enter** lämnar sökvägen till cratchit. Går det inte att använda den visar cratchit varför, och sökvägen står kvar så att du kan rätta den.
 
@@ -486,7 +501,7 @@ En SIE-fil är en fil med bokföring som du har hämtat från ett annat bokföri
 ```text
 SIE-fil: /Users/anna/Documents/cratchit/TheITfiedAB.se
   Företag:        The ITfied AB (556782-8172)
-  Räkenskapsår:   2026-05-01 – 2027-04-30
+  Räkenskapsår:   2026-05-01 – 2027-04-30, pågående
   Skapad:         2026-10-19 (Fortnox 3.62.17)
   Verifikationer: 42 t.o.m. 2026-10-12  A 21 · D 11 · M 10
   Konton:         501
@@ -497,7 +512,7 @@ Cratchit > Samlingsmapp > Lägg till > Ny > Från SIE > Bekräfta>
 ```
 
 <!-- hjälp: bekrafta-sie -->
-Ovanför prompten står vad cratchit hittade i SIE-filen: företaget, räkenskapsåret, när och med vilket program filen skapades, verifikationerna och kontona. Tryck `J` för att skapa bokföringen. Tryck `N` eller `-` för att gå tillbaka och välja en annan fil; sökvägen börjar då i mappen där du valde filen.
+Ovanför prompten står vad cratchit hittade i SIE-filen: företaget, räkenskapsåret och dess status (pågående, ofullbordat, fullbordat eller misstämmer), när och med vilket program filen skapades, verifikationerna och kontona. En rad *Varning* säger till om ett äldre år är ofullbordat eller om filen misstämmer. Tryck `J` för att skapa bokföringen. Tryck `N` eller `-` för att gå tillbaka och välja en annan fil; sökvägen börjar då i mappen där du valde filen.
 <!-- /hjälp -->
 
 cratchit skapar en ny mapp med företagets namn bredvid SIE-filen, tar in hela filen och flyttar SIE-filen till mappen `importerade_sie_filer` i den nya mappen, där också senare importerade SIE-filer hamnar. Sedan går cratchit tillbaka till samlingsmappen, där den nya bokföringen nu finns i listan. (Med [Ny bokföring här](#ny-bokföring-här) hamnar bokföringen i stället i mappen du startade i.)
