@@ -2,6 +2,11 @@
 
 ```#029b12e4```
 
+## Common
+
+* Bygg med: cmake --build cratchit/build/Debug -j
+* Installera med: sudo cmake --install cratchit/build/Debug
+
 ## 20261115
 
 Nu vill jag försöka skapa en prouktionsredo Cratychit från tidigare sessioner.

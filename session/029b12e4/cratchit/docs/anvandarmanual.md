@@ -23,7 +23,7 @@ Starta cratchit genom att skriva `cratchit` i en terminal och trycka Enter:
 
 ```text
 Byggd: 14:32:05 2026-11-15 (Release)
-Från: /Users/du/.local/bin/cratchit
+Från: /usr/local/bin/cratchit
 Version: 0.1.0
 Tryck ? för gemensamma val.
 
@@ -38,6 +38,25 @@ De tre första raderna visar vilket cratchit som körs:
 * `Version`: cratchits version.
 
 Kontrollera raderna när du har byggt eller installerat cratchit. Visar de en gammal tid eller en annan mapp, så kör du ett annat cratchit än du tror.
+
+### Starta i en bokföring
+
+Startar du cratchit i en bokförings mapp, alltså en mapp med en `.cratchit`-mapp som har `project.txt`, öppnar cratchit den bokföringen direkt:
+
+```text
+cratchit öppnade bokföringen i arbetsmappen: The ITfied AB
+Samlingsmappen kommer ihåg The ITfied AB.
+Tryck ? för gemensamma val.
+
+...
+Cratchit > Samlingsmapp > The ITfied AB> 
+```
+
+* Du står då i bokföringen, som om du hade valt samlingsmappen och sedan bokföringen. Med `-` går du tillbaka till samlingsmappen.
+* Samlingsmappen kommer ihåg bokföringen. Nästa gång du startar cratchit i en annan mapp finns den i listan i samlingsmappen.
+* cratchit tittar bara i mappen du startar i, inte i mapparna ovanför.
+* Två bokföringar med samma `uuid` i `project.txt` räknas som samma bokföring, till exempel en kopia av din bokföring som du provar på. Startar du i kopian kommer samlingsmappen ihåg kopian i stället för originalet, och cratchit säger det: `Samlingsmappen kommer ihåg The ITfied AB här i stället för i …`. Starta i originalet igen för att samlingsmappen ska komma ihåg det.
+* Går bokföringen inte att öppna börjar cratchit i början och säger varför.
 
 Tryck `q` för att avsluta.
 

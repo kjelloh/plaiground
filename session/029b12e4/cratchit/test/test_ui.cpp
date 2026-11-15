@@ -12,6 +12,7 @@
 #include "ui/help_topics.hpp"
 #include "ui/project_menu.hpp"
 #include "ui/root_menu.hpp"
+#include "ui/start.hpp"
 #include "ui/test_menu.hpp"
 #include "ui/workspace_menu.hpp"
 
@@ -845,4 +846,66 @@ TEST_F(RootMenuTest, AChangeOfFiscalYearFromSieShowsAndTheYearTakesItsDates) {
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().options()[0].second, "2026-05-01 – 2027-04-30  bokfört: inget");
   EXPECT_EQ(navigator.current().options()[1].second, "2026-01-01 – 2026-04-30  bokfört: 1 verifikation");
+}
+
+// Starting in a project folder
+
+TEST_F(RootMenuTest, StartInAFolderWithoutProjectStaysAtTheRoot) {
+  auto const workspace = documents / "cratchit";
+  Navigator navigator(cratchit::ui::make_root_menu(workspace));
+  EXPECT_TRUE(cratchit::ui::open_working_folder_project(navigator, workspace, documents).empty());
+  EXPECT_EQ(navigator.path().size(), 1u);
+  EXPECT_FALSE(fs::exists(workspace)); // nothing created
+}
+
+TEST_F(RootMenuTest, StartInAProjectFolderOpensTheProjectAndRemembersIt) {
+  auto const workspace = documents / "cratchit";
+  auto const project = documents / "elsewhere" / "itfied";
+  fs::create_directories(project / ".cratchit");
+  std::ofstream(project / ".cratchit" / "project.txt") << "uuid = 7\nname = The ITfied AB\n";
+  {
+    Navigator navigator(cratchit::ui::make_root_menu(workspace));
+    EXPECT_EQ(cratchit::ui::open_working_folder_project(navigator, workspace, project),
+              (std::vector<std::string>{"cratchit öppnade bokföringen i arbetsmappen: The ITfied AB",
+                                        "Samlingsmappen kommer ihåg The ITfied AB."}));
+    ASSERT_EQ(navigator.path().size(), 3u);
+    EXPECT_EQ(navigator.path()[1]->name(), "Samlingsmapp");
+    EXPECT_EQ(navigator.current().name(), "The ITfied AB");
+    // Back in the workspace, which lists it
+    ASSERT_TRUE(navigator.back());
+    EXPECT_EQ(names_of(navigator.current().options()),
+              (OptionsList{{U'1', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
+  }
+  auto const entries = cratchit::read_path_values(workspace / ".cratchit" / "workspace.txt");
+  ASSERT_TRUE(entries);
+  EXPECT_EQ(cratchit::find_value(*entries, "project.7"), project.string());
+  {
+    // Started there again: already remembered, nothing more to say
+    Navigator navigator(cratchit::ui::make_root_menu(workspace));
+    EXPECT_EQ(cratchit::ui::open_working_folder_project(navigator, workspace, project),
+              (std::vector<std::string>{"cratchit öppnade bokföringen i arbetsmappen: The ITfied AB"}));
+  }
+  {
+    // A copy with the same uuid elsewhere (e.g. test data): remembered there instead
+    auto const copy = documents / "copy";
+    fs::create_directories(copy / ".cratchit");
+    fs::copy_file(project / ".cratchit" / "project.txt", copy / ".cratchit" / "project.txt");
+    Navigator navigator(cratchit::ui::make_root_menu(workspace));
+    EXPECT_EQ(cratchit::ui::open_working_folder_project(navigator, workspace, copy),
+              (std::vector<std::string>{
+                  "cratchit öppnade bokföringen i arbetsmappen: The ITfied AB",
+                  std::format("Samlingsmappen kommer ihåg The ITfied AB här i stället för i {}.", project.string())}));
+  }
+}
+
+TEST_F(RootMenuTest, StartInAFolderWithABrokenProjectStaysAtTheRootAndSaysWhy) {
+  auto const workspace = documents / "cratchit";
+  fs::create_directories(documents / "broken" / ".cratchit");
+  std::ofstream(documents / "broken" / ".cratchit" / "project.txt") << "uuid = 7\n"; // no name
+  Navigator navigator(cratchit::ui::make_root_menu(workspace));
+  auto const lines = cratchit::ui::open_working_folder_project(navigator, workspace, documents / "broken");
+  ASSERT_EQ(lines.size(), 1u);
+  EXPECT_TRUE(lines[0].starts_with("cratchit kunde inte öppna bokföringen i arbetsmappen: ")) << lines[0];
+  EXPECT_EQ(navigator.path().size(), 1u);
+  EXPECT_FALSE(fs::exists(workspace / ".cratchit" / "workspace.txt"));
 }

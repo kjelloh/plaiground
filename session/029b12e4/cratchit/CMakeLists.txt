@@ -110,6 +110,7 @@ add_library(cratchit_ui
   src/ui/root_menu.cpp
   src/ui/sie_import_menu.cpp
   src/ui/sie_project_menu.cpp
+  src/ui/start.cpp
   src/ui/test_menu.cpp
   src/ui/workspace_menu.cpp
   src/ui/year_flow_menu.cpp
@@ -157,7 +158,8 @@ add_custom_target(cratchit_framework ALL
 )
 add_dependencies(cratchit_framework cratchit)
 
-# Installs the program and its framework into <prefix>/bin (e.g. ~/.local/bin):
+# Installs the program and its framework into <prefix>/bin, by default for the whole
+# computer (CMAKE_INSTALL_PREFIX: /usr/local, on Windows C:/Program Files/cratchit):
 # bin/cratchit and bin/.cratchit/. The libraries are static and built into the program.
 include(GNUInstallDirs)
 install(TARGETS cratchit RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
