@@ -157,7 +157,7 @@ public:
   View view() const override {
     auto const zoom = current_view();
     View lines{std::format("Räkenskapsår {} – {}", year_.start, year_.end), zoom.summary};
-    if (!report_.empty()) lines.push_back(report_);
+    lines.insert(lines.end(), report_.begin(), report_.end());
     lines.insert(lines.end(), zoom.rows.begin(), zoom.rows.end());
     return lines;
   }
@@ -175,8 +175,8 @@ public:
     }
     if (key == U'2') {
       report_.clear();
-      return make_sie_import_menu(project_, year_, this, [this](std::string text, FiscalYear imported) {
-        report(std::move(text));
+      return make_sie_import_menu(project_, year_, this, [this](View text, FiscalYear imported) {
+        report_ = std::move(text);
         year_ = std::move(imported); // the file's dates, e.g. a first year of another length or a change of fiscal year
       });
     }
@@ -185,7 +185,7 @@ public:
   std::string help_topic() const override { return std::string(help_topic::fiscal_year); }
 
   // Shown in the view, e.g. what an export wrote, until the user goes on from here
-  void report(std::string text) { report_ = std::move(text); }
+  void report(std::string text) { report_ = {std::move(text)}; }
 
 private:
   // The current zoom of the year as it is in the books now (for now the whole year)
@@ -197,7 +197,7 @@ private:
 
   Project project_;
   FiscalYear year_;
-  std::string report_;
+  View report_; // what was just done, shown until the user goes on from here
 };
 
 OnKeyResult ExportState::on_key(CodePoint key) {

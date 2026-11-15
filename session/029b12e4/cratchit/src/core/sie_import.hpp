@@ -60,6 +60,9 @@ struct SieImportPlan {
   std::vector<SeriesComparison> series; // the year's series in the books and in the file, by series
   std::vector<VoucherInTheWay> in_the_way; // vouchers of the books the file would remove or replace
   std::vector<std::string> blockers;  // why the import cannot be done, for the user; empty when it can
+  bool replaceable = false; // not possible only because of vouchers in the way: the year can be replaced with the file
+  bool year_closed = false; // the year in the books is closed (from take 3); it may still be replaced
+  bool year_after = false;  // the books have a year after the file's, whose opening balances follow it
 
   bool possible() const { return blockers.empty(); }
 };
@@ -79,7 +82,8 @@ struct SieImportPlan {
 // import would change vouchers already in the books otherwise than by struck
 // and added rows (another date or text), or rename, replace, drop or demote
 // them (in_the_way names them), or the file has nothing new: for now cratchit
-// only adds vouchers, and rows to vouchers as SIE allows.
+// only adds vouchers, and rows to vouchers as SIE allows. When the vouchers in
+// the way are the only blockers, the plan is replaceable (see replace_year_with_sie).
 //
 // With year, the file must be for that fiscal year (its #RAR 0), else error text
 // naming the file's year: the user imports into the year they stand in. A year
@@ -103,5 +107,23 @@ struct SieImported {
 // in the inventory of its fiscal year (see record_sie_use). The SIE file is
 // never moved or changed. Error text when any step fails; what was written before stays.
 std::expected<SieImported, std::string> import_sie(Project const& project, SieImportPlan const& plan, Date today);
+
+// What replace_year_with_sie did
+struct SieReplaced {
+  std::vector<VoucherInTheWay> removed; // gone from the books, as the plan named them
+  std::size_t vouchers = 0;             // the year's vouchers now, all from the file
+  InventoryEntry entry;                 // the SIE file's entry in the inventory of its fiscal year
+};
+
+// Burns the bridges: makes the plan's fiscal year exactly what the SIE file
+// holds, on day today. The year's vouchers are all taken out and the file's
+// put in (see books::plan_import on the emptied year); what differed is gone.
+// The year's drafts stay, except those the file books. A closed year stays
+// closed. Accounts, company details and the opening balances of later years
+// follow as for an import. Each removed voucher is logged with its rows, for
+// traceability, and the file is recorded in the inventory as "ersätt". The
+// plan must be replaceable. Error text when the books or the file cannot be
+// read or written; what was written before stays.
+std::expected<SieReplaced, std::string> replace_year_with_sie(Project const& project, SieImportPlan const& plan, Date today);
 
 } // namespace cratchit

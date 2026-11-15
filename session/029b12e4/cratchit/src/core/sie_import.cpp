@@ -3,6 +3,7 @@
 #include "core/inventory.hpp"
 
 #include "core/date.hpp"
+#include "core/log.hpp"
 #include "core/path_value.hpp"
 #include "core/sie/document.hpp"
 #include "core/sie/file.hpp"
@@ -228,22 +229,40 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
   plan.import = books::plan_import(*books, identity, document);
   auto const& import = plan.import;
   auto const* year_in_books = books->year_starting(file_start);
+  plan.year_closed = year_in_books != nullptr && year_in_books->closed;
+  plan.year_after = std::ranges::any_of(books->years, [&](books::FiscalYear const& y) { return document.year(0)->end < y.start; });
   compare_series(year_in_books, document, plan);
-  if (!import.errors.empty()) {
+  auto const gaps = !plan.blockers.empty(); // a gap in a series: never replaced
+  // A closed year refuses the vouchers in the way; that conflict, like the others, can be replaced
+  bool const closed_conflict = plan.year_closed && import.reverts() && import.errors.size() == 1;
+  if (!import.errors.empty() && !closed_conflict) {
     plan.blockers.insert(plan.blockers.begin(), errors_text(import.errors));
     return plan;
   }
   if (import.reverts() || import.vouchers_forced > 0) {
     find_in_the_way(year_in_books, import, plan);
     auto const count = plan.in_the_way.size();
-    plan.blockers.push_back(std::format("Bokföringen har {} {} som filen skulle ta bort eller byta ut. cratchit importerar "
-                                        "än så länge bara nya verifikationer och strukna eller tillagda rader.",
-                                        count, count == 1 ? "verifikation" : "verifikationer"));
+    plan.blockers.push_back(std::format("Bokföringen har {} {} som filen skulle ta bort eller byta ut.", count,
+                                        count == 1 ? "verifikation" : "verifikationer"));
+    plan.replaceable = !gaps;
     return plan;
   }
   auto changed = changed_vouchers(*books, import.books, import.year_start);
   if (!changed) {
+    // The vouchers with another date or text are in the way
+    if (auto const* after = import.books.year_starting(file_start); year_in_books != nullptr && after != nullptr) {
+      for (auto const& v : year_in_books->vouchers) {
+        auto const found = std::ranges::find_if(after->vouchers, [&](books::Voucher const& w) {
+          return w.series == v.series && w.number == v.number;
+        });
+        if (found != after->vouchers.end() && (found->event.date != v.event.date || found->event.heading != v.event.heading)) {
+          plan.in_the_way.push_back({v.series, v.number, format_iso_date(v.event.date), v.event.heading, v.event.amount,
+                                     "har annat datum eller annan text i filen"});
+        }
+      }
+    }
     plan.blockers.push_back(changed.error() + ".");
+    plan.replaceable = !gaps && !plan.in_the_way.empty();
     return plan;
   }
   plan.changed = std::move(*changed);
@@ -253,20 +272,74 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
   return plan;
 }
 
-std::expected<SieImported, std::string> import_sie(Project const& project, SieImportPlan const& plan, Date today) {
-  if (!plan.possible()) return std::unexpected(plan.blockers.front());
-  if (auto written = books::write_books(project.folder, plan.import.books); !written) return std::unexpected(written.error());
-  if (plan.import.identity_changed) {
+namespace {
+
+// Writes the planned books and the identity, and records the SIE file in the inventory (it stays where it is)
+std::expected<InventoryEntry, std::string> write_import(Project const& project, fs::path const& sie_file,
+                                                        books::ImportPlan const& import, SieUse const& use, Date today) {
+  if (auto written = books::write_books(project.folder, import.books); !written) return std::unexpected(written.error());
+  if (import.identity_changed) {
     auto entries = read_path_values(project.file);
     if (!entries) return std::unexpected(entries.error());
-    set_value(*entries, "orgnr", plan.import.identity.orgnr);
-    set_value(*entries, "name", plan.import.identity.name);
+    set_value(*entries, "orgnr", import.identity.orgnr);
+    set_value(*entries, "name", import.identity.name);
     if (auto written = write_path_values(project.file, *entries); !written) return std::unexpected(written.error());
   }
-  // The SIE file stays where it is; the inventory tells where the books come from
-  auto entry = record_sie_use(project.folder, plan.sie_file, {"import", plan.import.vouchers_added, plan.changed.size()}, today);
-  if (!entry) return std::unexpected(std::format("cratchit importerade filen, men kunde inte skriva förteckningen: {}", entry.error()));
+  auto entry = record_sie_use(project.folder, sie_file, use, today);
+  if (!entry) return std::unexpected(std::format("cratchit skrev bokföringen, men kunde inte skriva förteckningen: {}", entry.error()));
+  return entry;
+}
+
+} // namespace
+
+std::expected<SieImported, std::string> import_sie(Project const& project, SieImportPlan const& plan, Date today) {
+  if (!plan.possible()) return std::unexpected(plan.blockers.front());
+  auto entry = write_import(project, plan.sie_file, plan.import, {"import", plan.import.vouchers_added, plan.changed.size()}, today);
+  if (!entry) return std::unexpected(entry.error());
   return SieImported{std::move(*entry)};
+}
+
+std::expected<SieReplaced, std::string> replace_year_with_sie(Project const& project, SieImportPlan const& plan, Date today) {
+  if (!plan.replaceable) return std::unexpected(std::string("Räkenskapsåret kan inte ersättas med den här SIE-filen"));
+  auto books = books::read_books(project.folder);
+  if (!books) return std::unexpected(books.error());
+  books::Identity identity{project.name, {}};
+  if (auto const entries = read_path_values(project.file)) identity.orgnr = find_value(*entries, "orgnr").value_or("");
+  auto const lexed = sie::lex_file(plan.sie_file);
+  if (!lexed) return std::unexpected(lexed.error());
+  auto const document = sie::parse_document(lexed->lines).document;
+  if (!document.year(0)) return std::unexpected("SIE-filen saknar räkenskapsår (#RAR 0)");
+  // The year emptied of its vouchers (its drafts stay), and opened so that the file may fill it
+  auto emptied = *books;
+  auto const year = std::ranges::find_if(emptied.years, [&](books::FiscalYear const& y) { return y.start == document.year(0)->start; });
+  if (year == emptied.years.end()) return std::unexpected(std::string("Räkenskapsåret finns inte i bokföringen"));
+  auto const before = *year;
+  year->vouchers.clear();
+  year->closed = false;
+  auto import = books::plan_import(emptied, identity, document);
+  if (!import.errors.empty()) return std::unexpected(errors_text(import.errors));
+  auto replaced = std::ranges::find_if(import.books.years, [&](books::FiscalYear const& y) { return y.start == before.start; });
+  if (replaced != import.books.years.end()) replaced->closed = before.closed;
+  auto const vouchers = replaced != import.books.years.end() ? replaced->vouchers.size() : 0;
+
+  // What is gone, logged with its rows, for traceability
+  LOG_BUSINESS("Ersätter räkenskapsåret {} – {} i projektet {} ({}) med {}: {} verifikationer försvinner, {} kommer från filen",
+               format_iso_date(before.start), format_iso_date(before.end), project.name, project.uuid, plan.sie_file.string(),
+               plan.in_the_way.size(), vouchers);
+  for (auto const& gone : plan.in_the_way) {
+    auto const found = std::ranges::find_if(before.vouchers, [&](books::Voucher const& v) {
+      return v.series == gone.series && v.number == gone.number;
+    });
+    LOG_BUSINESS("Ersätt: {} {} {} \"{}\" {} försvinner ({})", gone.series, gone.number, gone.date, gone.heading,
+                 format_amount(gone.amount), gone.why);
+    if (found == before.vouchers.end()) continue;
+    for (auto const& row : found->postings) {
+      LOG_BUSINESS("Ersätt:   {} {} {}", row.account, format_amount(row.amount), row.date ? format_iso_date(*row.date) : std::string());
+    }
+  }
+  auto entry = write_import(project, plan.sie_file, import, {"ersätt", vouchers, 0}, today);
+  if (!entry) return std::unexpected(entry.error());
+  return SieReplaced{plan.in_the_way, vouchers, std::move(*entry)};
 }
 
 } // namespace cratchit

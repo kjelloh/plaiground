@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace cratchit::ui {
 
@@ -25,6 +26,6 @@ namespace cratchit::ui {
 // (State::back_to), the fiscal year. A failure leads to the error state.
 std::unique_ptr<pyroceph::tui::State> make_sie_import_menu(Project project, FiscalYear year,
                                                            pyroceph::tui::State const* origin,
-                                                           std::function<void(std::string, FiscalYear)> report);
+                                                           std::function<void(std::vector<std::string>, FiscalYear)> report);
 
 } // namespace cratchit::ui

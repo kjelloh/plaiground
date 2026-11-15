@@ -299,3 +299,45 @@ TEST(FiscalYearBefore, IsTwelveMonthsEndingTheDayBefore) {
   EXPECT_EQ(cratchit::months_of({"2023-07-01", "2024-12-31"}), 18);
   EXPECT_EQ(cratchit::months_of({"2026-01-01", "2026-04-30"}), 4);
 }
+
+TEST_F(SieImportTest, ReplacingMakesTheYearExactlyTheFilesAndKeepsItsDrafts) {
+  // The file has another A 1 and lacks A 2: both in the way
+  auto const file = write("less.se", sie_file(2025, "", sale(2025, 1, "0201")));
+  auto const plan = cratchit::plan_sie_import(project, file);
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_FALSE(plan->possible());
+  ASSERT_TRUE(plan->replaceable);
+  EXPECT_FALSE(plan->year_after);
+  auto const replaced = cratchit::replace_year_with_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09"));
+  ASSERT_TRUE(replaced) << replaced.error();
+  EXPECT_EQ(replaced->removed.size(), 2u);
+  EXPECT_EQ(replaced->vouchers, 1u);
+  EXPECT_EQ(replaced->entry.use, "ersätt");
+  auto const books = cratchit::books::read_books(project.folder);
+  ASSERT_TRUE(books) << books.error();
+  ASSERT_EQ(books->years[0].vouchers.size(), 1u);
+  EXPECT_EQ(books->years[0].vouchers[0].event.amount, 10000); // the file's A 1: 100.00
+  EXPECT_TRUE(fs::exists(file));
+  // Now the file is the books: importing it again has nothing new
+  auto const again = cratchit::plan_sie_import(project, file);
+  ASSERT_TRUE(again) << again.error();
+  EXPECT_EQ(again->blockers, (std::vector<std::string>{"Allt i SIE-filen finns redan i bokföringen."}));
+}
+
+TEST_F(SieImportTest, AnotherTextOfAVoucherIsReplaceable) {
+  auto file = with_a2_rows(struck_and_added);
+  file.replace(file.find("\"Bank cost\""), 11, "\"Bank fee\"");
+  auto const plan = cratchit::plan_sie_import(project, write("text.se", file));
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(plan->replaceable);
+  ASSERT_EQ(plan->in_the_way.size(), 1u);
+  EXPECT_EQ(plan->in_the_way[0].number, "2");
+  EXPECT_EQ(plan->in_the_way[0].why, "har annat datum eller annan text i filen");
+}
+
+TEST_F(SieImportTest, AnotherOrgnrIsNotReplaceable) {
+  auto const plan = cratchit::plan_sie_import(
+      project, write("other.se", sie_file(2025, "", sale(2025, 1, "0201"), "\"Test AB\"", "556000-0002")));
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_FALSE(plan->replaceable);
+}

@@ -2,6 +2,7 @@
 #include "core/dot_folder.hpp"
 #include "core/fiscal_year.hpp"
 #include "core/inventory.hpp"
+#include "core/sie_import.hpp"
 #include "core/path_value.hpp"
 #include "core/sie/document.hpp"
 #include "core/sie/file.hpp"
@@ -1095,7 +1096,7 @@ TEST_F(RootMenuTest, ConfirmWarnsForAnIncompleteYearOlderThanLastYearAndForAMism
   EXPECT_EQ(wrong[3], "  Varning:        Ett resultat är bokfört på 8999, men balansräkningen balanserar inte (skillnad 100.00).");
 }
 
-TEST_F(RootMenuTest, ImportThatIsNotPossibleShowsWhyAndGoesBackToChooseAnotherFile) {
+TEST_F(RootMenuTest, ImportInTheWayOffersToReplaceTheYearWhichBurnsTheBridges) {
   auto const folder = documents / "cratchit";
   auto const sie = [](std::string const& vouchers) {
     return "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
@@ -1130,10 +1131,63 @@ TEST_F(RootMenuTest, ImportThatIsNotPossibleShowsWhyAndGoesBackToChooseAnotherFi
   EXPECT_TRUE(has("Jämfört med bokföringen (2025):"));
   EXPECT_TRUE(has("  A  bokföringen t.o.m. A 2, filen t.o.m. A 1"));
   EXPECT_TRUE(has("      A 2  2025-03-01  Sale  200.00  finns inte i filen"));
-  EXPECT_TRUE(has("Importen går inte att göra:"));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'N', "Tillbaka"}}));
-  EXPECT_FALSE(navigator.press(U'J'));
+  EXPECT_TRUE(has("Importen går inte att göra. Bokföringen har 1 verifikation som filen skulle ta bort eller byta ut."));
+  EXPECT_EQ(view.back(), "Ersätt året med SIE-filens innehåll?");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}}));
+  // J shows what replacing takes away; nothing is changed yet
+  ASSERT_TRUE(navigator.press(U'J'));
+  EXPECT_EQ(navigator.current().name(), "Ersätt");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Räkenskapsåret 2025 blir exakt som SIE-filen.", "Det här försvinner ur bokföringen:",
+                  "  A 2  2025-03-01  Sale  200.00  finns inte i filen", "Ersätt räkenskapsåret med SIE-filen?"}));
+  EXPECT_EQ(cratchit::books::read_books(project->folder)->years[0].vouchers.size(), 2u);
+  // - goes back a step, N back to choose another file
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
   ASSERT_TRUE(navigator.press(U'N'));
   EXPECT_EQ(navigator.current().name(), "Importera från SIE");
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(documents / "older"));
+  // J, J: the year is the file's, and the fiscal year says what is gone
+  result = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "older") + U"less.se");
+  ASSERT_TRUE(result) << result.error();
+  navigator.enter(std::move(result->next));
+  ASSERT_TRUE(navigator.press(U'J'));
+  ASSERT_TRUE(navigator.press(U'J'));
+  EXPECT_EQ(navigator.current().name(), "2025");
+  auto const after = navigator.current().view();
+  EXPECT_EQ(after[2], "cratchit ersatte räkenskapsåret med less.se: 1 verifikationer, alla från filen.");
+  EXPECT_EQ(after[3], "Det här försvann. Bokför det igen från underlag eller kontoutdrag om det behövs:");
+  EXPECT_EQ(after[4], "  A 2  2025-03-01  Sale  200.00  finns inte i filen");
+  auto const books = cratchit::books::read_books(project->folder);
+  ASSERT_TRUE(books) << books.error();
+  ASSERT_EQ(books->years[0].vouchers.size(), 1u);
+  EXPECT_EQ(books->years[0].vouchers[0].number, "1");
+  auto const inventory = cratchit::read_inventory(project->folder, cratchit::parse_iso_date("2025-01-01"));
+  ASSERT_TRUE(inventory) << inventory.error();
+  EXPECT_EQ(inventory->back().use, "ersätt");
+  EXPECT_TRUE(fs::exists(documents / "older" / "less.se")); // the file stays where it is
+}
+
+TEST_F(RootMenuTest, ImportWithAGapIsNotPossibleAndNotReplaceable) {
+  auto const folder = documents / "cratchit";
+  auto const sie = [](std::string const& vouchers) {
+    return "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+           "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n" + vouchers;
+  };
+  auto const sale = [](int number, char const* date) {
+    return std::format("#VER A {} {} \"Sale\"\r\n{{\r\n#TRANS 1930 {{}} 100\r\n#TRANS 3010 {{}} -100\r\n}}\r\n", number, date);
+  };
+  fs::create_directories(folder);
+  std::ofstream(documents / "start.se", std::ios::binary) << sie(sale(1, "20250201") + sale(2, "20250301"));
+  auto plan = cratchit::plan_project_from_sie(documents / "start.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  // A 3 is missing, and A 2 is gone: in the way, but the gap keeps it from being replaced
+  std::ofstream(documents / "gap.se", std::ios::binary) << sie(sale(1, "20250201") + sale(4, "20250401"));
+  auto import = cratchit::plan_sie_import(*project, documents / "gap.se");
+  ASSERT_TRUE(import) << import.error();
+  EXPECT_FALSE(import->possible());
+  EXPECT_FALSE(import->replaceable);
+  EXPECT_FALSE(cratchit::replace_year_with_sie(*project, *import, *cratchit::parse_iso_date("2026-11-09")));
 }

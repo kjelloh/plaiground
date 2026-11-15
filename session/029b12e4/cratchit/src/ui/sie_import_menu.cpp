@@ -28,7 +28,7 @@ using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
 using pyroceph::tui::View;
 
-using Report = std::function<void(std::string, FiscalYear)>;
+using Report = std::function<void(View, FiscalYear)>;
 
 // "1 ny verifikation", "2 nya verifikationer"
 std::string new_vouchers_text(std::size_t count) {
@@ -120,6 +120,11 @@ public:
       if (!plan_.changed.empty()) what += std::format(", {} {}", plan_.changed.size(), plan_.changed.size() == 1 ? "ändrad" : "ändrade");
       lines.push_back(std::format("Importen går att göra: {}.", what));
       lines.push_back("Importera SIE-filen?");
+    } else if (plan_.replaceable) {
+      std::string why;
+      for (auto const& blocker : plan_.blockers) why += " " + blocker;
+      lines.push_back("Importen går inte att göra." + why);
+      lines.push_back("Ersätt året med SIE-filens innehåll?");
     } else {
       lines.push_back("Importen går inte att göra:");
       for (auto const& blocker : plan_.blockers) lines.push_back("  " + blocker);
@@ -129,7 +134,7 @@ public:
   OptionsList options() const override {
     if (imported_) return {};
     OptionsList result;
-    if (plan_.possible()) {
+    if (plan_.possible() || plan_.replaceable) {
       result = {{U'J', "Ja"}, {U'N', "Nej"}};
     } else {
       result = {{U'N', "Tillbaka"}};
@@ -149,7 +154,9 @@ public:
       declined_ = true;
       return nullptr;
     }
-    if (key != U'J' || !plan_.possible()) return nullptr;
+    if (key != U'J') return nullptr;
+    if (plan_.replaceable) return make_replace_state();
+    if (!plan_.possible()) return nullptr;
     auto const imported = import_sie(project_, plan_, today_date());
     if (!imported) {
       LOG_BUSINESS("Kunde inte importera {} i {}: {}", plan_.sie_file.string(), project_.folder.string(), imported.error());
@@ -165,9 +172,9 @@ public:
     for (auto const& note : plan_.import.notes) LOG_BUSINESS("SIE-import: {}", note);
     if (report_) {
       FiscalYear const year{format_iso_date(plan_.import.year_start), format_iso_date(plan_.import.year_end)};
-      report_(std::format("cratchit importerade {}: {} och {} {} i räkenskapsåret {} – {}.",
-                          plan_.sie_file.filename().string(), new_vouchers_text(plan_.import.vouchers_added),
-                          plan_.changed.size(), plan_.changed.size() == 1 ? "ändrad" : "ändrade", year.start, year.end),
+      report_({std::format("cratchit importerade {}: {} och {} {} i räkenskapsåret {} – {}.",
+                           plan_.sie_file.filename().string(), new_vouchers_text(plan_.import.vouchers_added),
+                           plan_.changed.size(), plan_.changed.size() == 1 ? "ändrad" : "ändrade", year.start, year.end)},
               year);
     }
     return nullptr; // back to the fiscal year (back_to)
@@ -184,6 +191,7 @@ private:
   static constexpr std::size_t page = 10;
   static constexpr CodePoint more_key = U'2';
   std::size_t shown() const { return std::min(plan_.changed.size(), page * pages_); }
+  std::unique_ptr<State> make_replace_state() const;
 
   Project project_;
   SieImportPlan plan_;
@@ -196,6 +204,94 @@ private:
   bool imported_ = false;
   bool declined_ = false;
 };
+
+// The vouchers that are gone, one per line, e.g. "D 27  2026-04-12  Loopia Faktura  311.25  finns inte i filen"
+std::vector<std::string> gone_lines(std::vector<VoucherInTheWay> const& gone, std::string_view indent) {
+  std::vector<std::string> lines;
+  for (auto const& v : gone) {
+    lines.push_back(std::format("{}{} {}  {}  {}  {}  {}", indent, v.series, v.number, v.date, v.heading,
+                                format_amount(v.amount), v.why));
+  }
+  return lines;
+}
+
+// "Ersätt": what replacing the year with the file takes away and brings in, and J to burn the bridges
+class ReplaceState : public State {
+public:
+  ReplaceState(Project project, SieImportPlan plan, FiscalYear year, State const* origin, State const* chooser, Report report)
+      : project_(std::move(project)), plan_(std::move(plan)), year_(std::move(year)), origin_(origin), chooser_(chooser),
+        report_(std::move(report)) {}
+  std::string name() const override { return "Ersätt"; }
+  View view() const override {
+    View lines{std::format("Räkenskapsåret {} blir exakt som SIE-filen.", label_of(year_))};
+    lines.push_back("Det här försvinner ur bokföringen:");
+    auto const gone = gone_lines(plan_.in_the_way, "  ");
+    lines.insert(lines.end(), gone.begin(), gone.end());
+    std::vector<std::string> coming;
+    for (auto const& s : plan_.series) {
+      if (!s.new_numbers.empty()) coming.push_back(std::format("{} {}", s.series, s.new_numbers));
+    }
+    if (!coming.empty()) {
+      std::string text;
+      for (auto const& c : coming) text += (text.empty() ? "" : ", ") + c;
+      lines.push_back("Det här kommer in från filen:");
+      lines.push_back("  " + text);
+    }
+    if (plan_.year_after) lines.push_back("Ingående balanser i följande räkenskapsår räknas om.");
+    if (plan_.year_closed) lines.push_back("Varning: räkenskapsåret är stängt. Det ersätts ändå och förblir stängt.");
+    lines.push_back("Ersätt räkenskapsåret med SIE-filen?");
+    return lines;
+  }
+  OptionsList options() const override {
+    if (replaced_) return {};
+    return {{U'J', "Ja"}, {U'N', "Nej"}};
+  }
+  OnKeyResult on_key(CodePoint key) override {
+    if (replaced_) return nullptr;
+    if (key == U'N') { // keys match exactly (beslut.md)
+      declined_ = true;
+      return nullptr;
+    }
+    if (key != U'J') return nullptr;
+    auto const replaced = replace_year_with_sie(project_, plan_, today_date());
+    if (!replaced) {
+      LOG_BUSINESS("Kunde inte ersätta {} med {}: {}", label_of(year_), plan_.sie_file.string(), replaced.error());
+      return pyroceph::tui::make_error_state(std::format("cratchit kunde inte ersätta räkenskapsåret: {}", replaced.error()));
+    }
+    replaced_ = true;
+    if (report_) {
+      View text{std::format("cratchit ersatte räkenskapsåret med {}: {} verifikationer, alla från filen.",
+                            plan_.sie_file.filename().string(), replaced->vouchers)};
+      if (!replaced->removed.empty()) {
+        text.push_back("Det här försvann. Bokför det igen från underlag eller kontoutdrag om det behövs:");
+        auto const gone = gone_lines(replaced->removed, "  ");
+        text.insert(text.end(), gone.begin(), gone.end());
+      }
+      report_(std::move(text), FiscalYear{format_iso_date(plan_.import.year_start), format_iso_date(plan_.import.year_end)});
+    }
+    return nullptr; // back to the fiscal year (back_to)
+  }
+  // Replaced: back to the fiscal year. N: back to choose another file.
+  State const* back_to() const override {
+    if (replaced_) return origin_;
+    return declined_ ? chooser_ : nullptr;
+  }
+  std::string help_topic() const override { return std::string(help_topic::replace_sie); }
+
+private:
+  Project project_;
+  SieImportPlan plan_;
+  FiscalYear year_;
+  State const* origin_;
+  State const* chooser_;
+  Report report_;
+  bool replaced_ = false;
+  bool declined_ = false;
+};
+
+std::unique_ptr<State> ConfirmImportState::make_replace_state() const {
+  return std::make_unique<ReplaceState>(project_, plan_, year_, origin_, chooser_, report_);
+}
 
 class ImportSieState : public State {
 public:

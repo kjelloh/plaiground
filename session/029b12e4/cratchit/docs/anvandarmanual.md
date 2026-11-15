@@ -11,8 +11,9 @@ Manualen beskriver det som finns i cratchit i dag och växer i takt med programm
 3. [Samlingsmappen](#samlingsmappen)
 4. [Bokföringar](#bokföringar)
 5. [Dina filer](#dina-filer)
-6. [Kommer senare](#kommer-senare)
-7. [Ordlista](#ordlista)
+6. [Om bokföringen har blivit fel](#om-bokföringen-har-blivit-fel)
+7. [Kommer senare](#kommer-senare)
+8. [Ordlista](#ordlista)
 
 ## Starta och avsluta
 
@@ -360,20 +361,23 @@ Importera SIE-filen?
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Importera från SIE > Bekräfta> 
 ```
 
-Går importen inte att göra står det varför, och verifikationerna i bokföringen som filen skulle ta bort eller byta ut står under sin serie. Då finns bara `N` (*Tillbaka*):
+Går importen inte att göra står det varför, och verifikationerna i bokföringen som filen skulle ta bort eller byta ut står under sin serie. Är det just de verifikationerna som hindrar importen kan du i stället ersätta räkenskapsåret med filens innehåll (se [Ersätta ett räkenskapsår med en SIE-fil](#ersätta-ett-räkenskapsår-med-en-sie-fil)):
 
 ```text
 Jämfört med bokföringen (2025/26):
   D  bokföringen t.o.m. D 28, filen t.o.m. D 26
       D 27  2026-04-12  Loopia Faktura  311.25  finns inte i filen
       D 28  2026-04-30  Telia  1250.00  finns inte i filen
-Importen går inte att göra:
-  Bokföringen har 2 verifikationer som filen skulle ta bort eller byta ut. …
-  N Tillbaka
+Importen går inte att göra. Bokföringen har 2 verifikationer som filen skulle ta bort eller byta ut.
+Ersätt året med SIE-filens innehåll?
+  J Ja
+  N Nej
 ```
 
+Hindrar något annat importen, till exempel en lucka i en serie, finns bara `N` (*Tillbaka*).
+
 <!-- hjälp: bekrafta-import -->
-Ovanför prompten står SIE-filen och hur den förhåller sig till bokföringen, serie för serie: hur långt bokföringen och filen räcker, och vilka verifikationer som är nya. Sist står om importen går att göra, och annars varför. Ändrade verifikationer listas tio i taget, och `2` (*Mer…*) visar fler. Tryck `J` för att importera. Tryck `N` eller `-` för att gå tillbaka och välja en annan fil; sökvägen börjar då i mappen där du valde filen.
+Ovanför prompten står SIE-filen och hur den förhåller sig till bokföringen, serie för serie: hur långt bokföringen och filen räcker, och vilka verifikationer som är nya. Sist står om importen går att göra, och annars varför. Ändrade verifikationer listas tio i taget, och `2` (*Mer…*) visar fler. Tryck `J` för att importera, eller, när cratchit frågar om att ersätta året, för att se vad en ersättning tar bort. Tryck `N` eller `-` för att gå tillbaka och välja en annan fil; sökvägen börjar då i mappen där du valde filen.
 <!-- /hjälp -->
 
 När importen är klar går cratchit tillbaka till räkenskapsåret, som säger vad som importerades. SIE-filen ligger kvar där den låg (se [Dina filer](#dina-filer)).
@@ -407,6 +411,40 @@ cratchit säger direkt under prompten att filen inte går att använda, och visa
 Efter importen har året filens datum, och de följande åren räknas från det, tolv månader i taget. I alla andra år måste filen ha exakt samma datum som året.
 
 **Ändrade verifikationer.** En verifikation som redan är bokförd får enligt SIE bara ändras genom att rader stryks (`#BTRANS`) och nya rader läggs till (`#RTRANS`). Det som redan står får inte ändras. Sådana ändringar tar cratchit emot. *Bekräfta* listar då varje ändrad verifikation, till exempel `A 12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd`, tio i taget, och `2` (*Mer…*) visar fler. Ändringarna skrivs också i loggen.
+
+### Ersätta ett räkenskapsår med en SIE-fil
+
+När en import inte går att göra, därför att bokföringen har verifikationer som filen skulle ta bort eller byta ut, frågar cratchit om du vill ersätta räkenskapsåret med filens innehåll. Tryck `J`, så visar cratchit vad som försvinner:
+
+```text
+Räkenskapsåret 2025/26 blir exakt som SIE-filen.
+Det här försvinner ur bokföringen:
+  D 27  2026-04-12  Loopia Faktura  311.25  finns inte i filen
+  D 28  2026-04-30  Telia  1250.00  finns inte i filen
+Det här kommer in från filen:
+  I 2–5
+Ingående balanser i följande räkenskapsår räknas om.
+Ersätt räkenskapsåret med SIE-filen?
+  J Ja
+  N Nej
+Cratchit > … > Importera från SIE > Bekräfta > Ersätt> 
+```
+
+<!-- hjälp: ersatt-sie -->
+Ovanför prompten står vad som försvinner ur bokföringen och vad som kommer in från SIE-filen. Tryck `J` för att ersätta räkenskapsåret med filens innehåll. Det som försvinner är borta; bokför det igen från underlag eller kontoutdrag om det behövs. Tryck `N` för att välja en annan fil, eller `-` för att gå tillbaka ett steg.
+<!-- /hjälp -->
+
+Att ersätta är att bränna broarna och göra om:
+
+* Räkenskapsårets verifikationer blir exakt filens. Det som skilde sig är borta ur bokföringen. cratchit sparar ingen kopia.
+* Årets utkast ligger kvar, utom de som motsvarar en verifikation i filen.
+* Konton och företagsuppgifter tas från filen som vid en import, och ingående balanser i följande år räknas om.
+* Är året stängt ersätts det ändå, och förblir stängt.
+* cratchit skriver i sin logg vad som försvann, med alla rader, och för in filen i förteckningen.
+
+Efteråt går cratchit tillbaka till räkenskapsåret, som visar vad som försvann. Bokför det igen från underlag eller kontoutdrag om det behövs.
+
+cratchit erbjuder inte att ersätta när filen har ett annat organisationsnummer, när en serie i filen har en lucka eller när allt redan finns i bokföringen.
 
 ### Exportera till SIE
 
@@ -649,6 +687,22 @@ När du skapar en bokföring från en SIE-fil eller importerar en, ligger filen 
 Förteckningen ligger i bokföringens `.cratchit`-mapp, en för hela bokföringen och en för varje räkenskapsår. cratchit visar den inte än.
 
 Har en bokföring en mapp `importerade_sie_filer` från en tidigare version av cratchit, rör cratchit inte den. Du kan flytta tillbaka filerna eller ta bort mappen när du vill.
+
+## Om bokföringen har blivit fel
+
+Det här är recept för att ta sig ur en bokföring som inte stämmer med det andra bokföringsprogrammet eller med dina SIE-filer. Börja alltid med att hämta en färsk SIE-fil för hela året från programmet som har rätt bokföring.
+
+**Importen går inte att göra, därför att bokföringen har verifikationer som filen saknar eller har ändrat.** Importera filen och svara `J` på frågan *Ersätt året med SIE-filens innehåll?*. Se efter vad som försvinner, och tryck `J` igen. Bokför sedan det som försvann igen från underlag eller kontoutdrag, om det behövs.
+
+**Fel SIE-fil är importerad i ett räkenskapsår.** Importera rätt fil för samma år. Går importen inte att göra, ersätt året med filens innehåll som ovan.
+
+**En SIE-fil har en lucka i en serie.** cratchit tar inte emot den, varken som import eller ersättning. Hämta en ny export från programmet. Tab-listan visar serierna och räkenskapsårets status för varje fil, så att du kan välja en som är hel.
+
+**Ett nytt räkenskapsår ansluter inte till bokföringen.** Importera först åren emellan, ett i taget, så att bokföringen inte får några luckor.
+
+**En testbokföring ska börja om från sitt frö.** Ta bort `.cratchit`-mappen i testmappen, starta cratchit där och välj `1` (*Ny bokföring här*) och `1` (*Från SIE*). Samlingsmappen behåller en rad för den gamla, som du tar bort med *Glöm*. Gör aldrig så med din riktiga bokföring.
+
+**Hela den riktiga bokföringen ska byggas om från SIE-filer.** Skapa en ny bokföring i en ny mapp från det äldsta årets SIE-fil, och importera de följande åren ett i taget. Glöm sedan den gamla bokföringen i samlingsmappen.
 
 ## Kommer senare
 
