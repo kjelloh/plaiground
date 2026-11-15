@@ -341,3 +341,15 @@ TEST_F(SieImportTest, AnotherOrgnrIsNotReplaceable) {
   ASSERT_TRUE(plan) << plan.error();
   EXPECT_FALSE(plan->replaceable);
 }
+
+TEST(YearsBeforeCurrent, CountsTheYearsAfterUntilTheOneTodayLiesIn) {
+  cratchit::FiscalYear const year{"2025-05-01", "2026-04-30"};
+  EXPECT_EQ(cratchit::years_before_current(year, "2025-06-01"), 0);
+  EXPECT_EQ(cratchit::years_before_current(year, "2026-04-30"), 0);
+  EXPECT_EQ(cratchit::years_before_current(year, "2026-05-01"), 1);
+  EXPECT_EQ(cratchit::years_before_current(year, "2026-11-15"), 1);
+  EXPECT_EQ(cratchit::years_before_current({"2017-05-01", "2018-04-30"}, "2026-11-15"), 9);
+  EXPECT_EQ(cratchit::years_before_current({"2016-05-01", "2017-04-30"}, "2026-11-15"), 10);
+  // A first year of another length counts as one
+  EXPECT_EQ(cratchit::years_before_current({"2025-01-01", "2025-04-30"}, "2026-11-15"), 2);
+}

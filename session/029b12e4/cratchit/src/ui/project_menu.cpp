@@ -39,7 +39,8 @@ public:
     } else if (years_.empty()) {
       lines.push_back("Bokföringen har inga räkenskapsår än.");
     } else if (years_.size() > max_listed_fiscal_years) {
-      lines.push_back("Bokföringen har fler räkenskapsår än cratchit visar här.");
+      lines.push_back(std::format("cratchit visar bara det aktuella räkenskapsåret och {} äldre. Bokföringen har fler.",
+                                  max_older_fiscal_years));
     }
     return lines;
   }

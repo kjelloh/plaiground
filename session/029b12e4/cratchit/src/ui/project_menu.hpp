@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/fiscal_year.hpp"
 #include "core/project.hpp"
 #include "pyroceph/tui/state.hpp"
 
@@ -9,7 +10,7 @@
 namespace cratchit::ui {
 
 // The most fiscal years a project offers, as the keys 0..9
-inline constexpr std::size_t max_listed_fiscal_years = 10;
+inline constexpr std::size_t max_listed_fiscal_years = 1 + max_older_fiscal_years; // the current year and the older ones
 
 // An opened project. Its name is the project's name, so the path reads e.g.
 // "Cratchit > Samlingsmapp > The ITfied AB". Its view shows the folder (and

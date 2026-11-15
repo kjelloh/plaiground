@@ -1,6 +1,7 @@
 #include "ui/sie_project_menu.hpp"
 
 #include "core/sie_summary.hpp"
+#include "core/fiscal_year.hpp"
 #include "core/log.hpp"
 #include "core/project.hpp"
 #include "core/sie_import.hpp"
@@ -51,6 +52,11 @@ public:
     row("Räkenskapsår", year);
     if (status && status->warning) {
       row("Varning", "Ett räkenskapsår före förra året ska vara fullbordat. Kontrollera SIE-filen.");
+    }
+    FiscalYear const file_year{date_text(plan_.import.year_start), date_text(plan_.import.year_end)};
+    if (years_before_current(file_year, today_iso()) > max_older_fiscal_years) {
+      row("Varning", std::format("cratchit visar bara det aktuella räkenskapsåret och {} äldre. {} kommer inte att synas.",
+                                 max_older_fiscal_years, label_of(file_year)));
     }
     if (status && status->status == YearStatus::mismatch) {
       row("Varning", std::format("Ett resultat är bokfört på 8999, men balansräkningen balanserar inte (skillnad {}).",

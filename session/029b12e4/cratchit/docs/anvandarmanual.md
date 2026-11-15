@@ -255,7 +255,9 @@ Tryck bokföringens siffra i samlingsmappen. Prompten får då bokföringens nam
 Cratchit > Samlingsmapp > The ITfied AB> 
 ```
 
-Valen är bokföringens räkenskapsår. `0` är det aktuella året, det som dagens datum ligger i, och `1`, `2`, `3` är åren före det, på samma sätt som i en SIE-fil men utan minustecken. Listan går tillbaka till det äldsta året med bokföring, och sist står året före det, med `bokfört: inget`. Det året finns där för att du ska kunna importera ett tidigare år från en SIE-fil. När du har gjort det står nästa tidigare år sist, och så vidare. Listan visar varje års första och sista dag. När du öppnar ett år får det ett kort namn i prompten: `2025` för ett år som följer kalenderåret, och till exempel `2025/26` för ett som går över två kalenderår. Har bokföringen fler än tio räkenskapsår visar cratchit de tio senaste och säger att det finns fler.
+Valen är bokföringens räkenskapsår. `0` är det aktuella året, det som dagens datum ligger i, och `1`, `2`, `3` är åren före det, på samma sätt som i en SIE-fil men utan minustecken. Listan går tillbaka till det äldsta året med bokföring, och sist står året före det, med `bokfört: inget`. Det året finns där för att du ska kunna importera ett tidigare år från en SIE-fil. När du har gjort det står nästa tidigare år sist, och så vidare. Listan visar varje års första och sista dag. När du öppnar ett år får det ett kort namn i prompten: `2025` för ett år som följer kalenderåret, och till exempel `2025/26` för ett som går över två kalenderår.
+
+**cratchit hanterar för närvarande det aktuella räkenskapsåret och högst 9 äldre.** Listan har plats för tio år, `0`–`9`, och det tomma året före det äldsta bokförda räknas in. Du kan alltså importera bakåt tills listan är full. Har bokföringen fler år syns de inte, och det går inte att importera fler år bakåt; cratchit säger då `cratchit visar bara det aktuella räkenskapsåret och 9 äldre. Bokföringen har fler.` Det är en begränsning tills vidare.
 
 Räkenskapsåren finns oavsett om något är bokfört i dem. När ett nytt räkenskapsår börjar dyker det upp som `0` med `bokfört: inget`, och de andra åren flyttas ett steg. Du behöver inte skapa det. Varje år efter det första är tolv månader och börjar dagen efter förra årets sista dag. Ett första år som är kortare eller längre följs alltså av helt vanliga år. Ett räkenskapsår som läggs om kan du bara ta in från en SIE-fil (se [Importera från SIE](#importera-från-sie)).
 
@@ -446,6 +448,35 @@ Efteråt går cratchit tillbaka till räkenskapsåret, som visar vad som försva
 
 cratchit erbjuder inte att ersätta när filen har ett annat organisationsnummer, när en serie i filen har en lucka eller när allt redan finns i bokföringen.
 
+### Bygga upp bokföringen från SIE-filer
+
+Det här är ett och samma sätt att arbeta när du
+
+* **flyttar in** bokföringen från ett annat program och vill ha historiken med,
+* **håller cratchit i takt** med ett annat program som du fortfarande använder,
+* **lagar** en bokföring som inte längre stämmer med programmet som har rätt bokföring.
+
+Du bygger år för år, från det senaste räkenskapsåret bakåt. Så ansluter varje år till det som redan finns, bokföringen får inga luckor, och året du arbetar i är på plats först.
+
+**Förbered.** Exportera en SIE-fil per räkenskapsår från programmet och lägg dem i en mapp. När du letar upp filerna med Tab visar cratchit år och status för varje fil (se [Räkenskapsårets status i en SIE-fil](#räkenskapsårets-status-i-en-sie-fil)). Välj filer som är *fullbordat* för passerade år. Det innevarande året är *pågående*, och förra året kan vara *ofullbordat* om bokslutet inte är gjort.
+
+**Steg 1, bara när bokföringen inte finns än.** Starta cratchit i företagets mapp och välj `1` (*Ny bokföring här*) och `1` (*Från SIE*) med det senaste räkenskapsårets fil (se [Ny bokföring här](#ny-bokföring-här)).
+
+**Steg 2, ett år i taget, från det senaste bakåt.** Öppna året i listan över räkenskapsår och välj `2` (*Importera från SIE*) med årets fil. För ett äldre år som inte finns än öppnar du det tomma året sist i listan.
+
+* Går importen att göra: tryck `J`.
+* Går den inte att göra på grund av konflikter: svara `J` på *Ersätt året med SIE-filens innehåll?*, se vad som försvinner, och tryck `J` igen (se [Ersätta ett räkenskapsår med en SIE-fil](#ersätta-ett-räkenskapsår-med-en-sie-fil)). Bokför det som försvann igen från underlag eller kontoutdrag, om det behövs.
+
+**Gränser.** cratchit hanterar det aktuella räkenskapsåret och högst 9 äldre; med 2026/27 som aktuellt år kan du gå tillbaka till 2017/18. Varje år måste ansluta till de som finns, och en fil med en lucka i en serie tar cratchit inte emot.
+
+Så här blir det för de tre fallen:
+
+| Fall | Gör så här |
+| --- | --- |
+| Flytta in | Steg 1, sedan steg 2 för de äldre åren. |
+| Hålla i takt | Steg 2 för de år som har ändrats i det andra programmet, oftast bara det innevarande. |
+| Laga | Steg 2 för de år som är fel. *Ersätt* lagar på plats, i samma bokföring, utan att något behöver tas bort. |
+
 ### Exportera till SIE
 
 <!-- hjälp: exportera-sie -->
@@ -581,6 +612,8 @@ Ovanför prompten står vad cratchit hittade i SIE-filen: företaget, räkenskap
 
 cratchit skapar en ny mapp med företagets namn bredvid SIE-filen och tar in hela filen. SIE-filen ligger kvar där den låg (se [Dina filer](#dina-filer)). Sedan går cratchit tillbaka till samlingsmappen, där den nya bokföringen nu finns i listan. (Med [Ny bokföring här](#ny-bokföring-här) hamnar bokföringen i stället i mappen du startade i.)
 
+Ligger filens räkenskapsår mer än 9 år före det aktuella står det en varning i *Bekräfta*: året kommer inte att synas i listan över räkenskapsår, eftersom cratchit för närvarande hanterar det aktuella året och högst 9 äldre. Bokföringen skapas ändå om du trycker `J`.
+
 cratchit skapar ingenting om filen inte går att använda, till exempel om den inte är en SIE-fil, har fel eller saknar företagets namn eller räkenskapsår. Det gäller också om det redan finns en mapp med företagets namn bredvid filen. Orsaken står då under prompten, och sökvägen står kvar så att du kan rätta den.
 
 ### Ny bokföring från uppgifter
@@ -625,7 +658,7 @@ Skriv organisationsnumret och tryck Enter, med eller utan bindestreck, till exem
 <!-- /hjälp -->
 
 <!-- hjälp: uppgifter-rakenskapsar -->
-Skriv räkenskapsårets första månad och tryck Enter, till exempel 2026-05. Räkenskapsåret börjar den första dagen i den månaden.
+Skriv räkenskapsårets första månad och tryck Enter, till exempel 2026-05. Räkenskapsåret börjar den första dagen i den månaden. cratchit hanterar det aktuella räkenskapsåret och högst 9 äldre, så ett tidigare första år tar cratchit inte emot.
 <!-- /hjälp -->
 
 <!-- hjälp: uppgifter-langd -->
@@ -690,19 +723,15 @@ Har en bokföring en mapp `importerade_sie_filer` från en tidigare version av c
 
 ## Om bokföringen har blivit fel
 
-Det här är recept för att ta sig ur en bokföring som inte stämmer med det andra bokföringsprogrammet eller med dina SIE-filer. Börja alltid med att hämta en färsk SIE-fil för hela året från programmet som har rätt bokföring.
+Börja alltid med att hämta en färsk SIE-fil för hela året från programmet som har rätt bokföring.
 
-**Importen går inte att göra, därför att bokföringen har verifikationer som filen saknar eller har ändrat.** Importera filen och svara `J` på frågan *Ersätt året med SIE-filens innehåll?*. Se efter vad som försvinner, och tryck `J` igen. Bokför sedan det som försvann igen från underlag eller kontoutdrag, om det behövs.
-
-**Fel SIE-fil är importerad i ett räkenskapsår.** Importera rätt fil för samma år. Går importen inte att göra, ersätt året med filens innehåll som ovan.
+**Bokföringen stämmer inte med det andra programmet**, till exempel därför att en import inte går att göra, eller därför att fel SIE-fil är importerad i ett år. Gör steg 2 i [Bygga upp bokföringen från SIE-filer](#bygga-upp-bokföringen-från-sie-filer) för de år som är fel. Går importen inte att göra ersätter du året med filens innehåll.
 
 **En SIE-fil har en lucka i en serie.** cratchit tar inte emot den, varken som import eller ersättning. Hämta en ny export från programmet. Tab-listan visar serierna och räkenskapsårets status för varje fil, så att du kan välja en som är hel.
 
 **Ett nytt räkenskapsår ansluter inte till bokföringen.** Importera först åren emellan, ett i taget, så att bokföringen inte får några luckor.
 
 **En testbokföring ska börja om från sitt frö.** Ta bort `.cratchit`-mappen i testmappen, starta cratchit där och välj `1` (*Ny bokföring här*) och `1` (*Från SIE*). Samlingsmappen behåller en rad för den gamla, som du tar bort med *Glöm*. Gör aldrig så med din riktiga bokföring.
-
-**Hela den riktiga bokföringen ska byggas om från SIE-filer.** Skapa en ny bokföring i en ny mapp från det äldsta årets SIE-fil, och importera de följande åren ett i taget. Glöm sedan den gamla bokföringen i samlingsmappen.
 
 ## Kommer senare
 

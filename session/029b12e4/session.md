@@ -44,4 +44,6 @@ I have now went 'full steam ahead' and vibe coded what I think is 'from SIE-File
 * Some enhanced checks and reports on SIE-file to import
 * Enhanced meta-data about SIE-files (covered year, status complete/ongoing,inconsistent)
 
-ALl in all 14 steps as recorded by Claude in [status.md](./status.md)
+I also had time to adjust tge manual about rebuilding books from scratch using SIE-files
+
+ALl in all 17 steps as recorded by Claude in [status.md](./status.md)

@@ -47,6 +47,13 @@ std::u32string u32_of(std::string_view utf8) {
   return result;
 }
 
+// The first fiscal year must be the current one or at most 9 before it (beslut.md); first_month names it in the error
+std::expected<void, std::string> within_handled_years(FiscalYear const& year, std::string_view first_month) {
+  if (years_before_current(year, today_iso()) <= max_older_fiscal_years) return {};
+  return std::unexpected(std::format("cratchit hanterar bara det aktuella räkenskapsåret och {} äldre. {} är för tidigt.",
+                                     max_older_fiscal_years, first_month));
+}
+
 // The details of the form, each empty (or nothing) until the user gives it
 struct Details {
   std::string name;
@@ -168,12 +175,21 @@ public:
     case Field::first_month: {
       auto month = parse_first_month(text);
       if (!month) return std::unexpected(month.error());
+      if (auto const handled = within_handled_years(first_fiscal_year(*month, details_.months), text); !handled) {
+        return std::unexpected(handled.error());
+      }
       details_.first_month = *month;
       return {};
     }
     case Field::months: {
       auto months = parse_first_year_length(text);
       if (!months) return std::unexpected(months.error());
+      if (details_.first_month) {
+        auto const handled = within_handled_years(first_fiscal_year(*details_.first_month, *months),
+                                                  std::format("{:04}-{:02}", static_cast<int>(details_.first_month->year()),
+                                                              static_cast<unsigned>(details_.first_month->month())));
+        if (!handled) return std::unexpected(handled.error());
+      }
       details_.months = *months;
       return {};
     }

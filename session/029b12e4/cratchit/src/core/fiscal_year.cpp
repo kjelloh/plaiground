@@ -47,6 +47,14 @@ std::expected<std::vector<FiscalYear>, std::string> list_fiscal_years(Project co
   return result;
 }
 
+int years_before_current(FiscalYear const& year, std::string_view today) {
+  auto const day = parse_iso_date(today);
+  if (!day) return 0;
+  int count = 0;
+  for (auto current = year; *parse_iso_date(current.end) < *day; current = year_after(current)) ++count;
+  return count;
+}
+
 FiscalYear year_after(FiscalYear const& year) {
   using namespace std::chrono;
   auto const end = *parse_iso_date(year.end);

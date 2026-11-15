@@ -346,7 +346,7 @@ TEST_F(RootMenuTest, ProjectOffersTenFiscalYearsAndSaysWhenThereAreMore) {
   ASSERT_EQ(project->options().size(), 10u);
   EXPECT_EQ(project->options().front(), (pyroceph::tui::Option{U'0', "2019-01-01 – 2019-12-31  bokfört: inget"}));
   EXPECT_EQ(project->options().back(), (pyroceph::tui::Option{U'9', "2010-01-01 – 2010-12-31  bokfört: inget"}));
-  EXPECT_EQ(project->view().back(), "Bokföringen har fler räkenskapsår än cratchit visar här.");
+  EXPECT_EQ(project->view().back(), "cratchit visar bara det aktuella räkenskapsåret och 9 äldre. Bokföringen har fler.");
 }
 
 TEST(WorkspaceMenu, PlusLeadsToAddWithOpenExistingAndNew) {
@@ -1190,4 +1190,37 @@ TEST_F(RootMenuTest, ImportWithAGapIsNotPossibleAndNotReplaceable) {
   EXPECT_FALSE(import->possible());
   EXPECT_FALSE(import->replaceable);
   EXPECT_FALSE(cratchit::replace_year_with_sie(*project, *import, *cratchit::parse_iso_date("2026-11-09")));
+}
+
+TEST_F(RootMenuTest, FromDetailsRefusesAFirstYearOlderThanNineBeforeTheCurrent) {
+  // The tests' today is 2026-11-09: 2016 ended ten years before 2026
+  auto const folder = documents / "cratchit";
+  ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-09"));
+  Navigator navigator(cratchit::ui::make_root_menu(folder));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'+'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'3'));
+  auto const refused = navigator.current().on_input(U"2016-01");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "cratchit hanterar bara det aktuella räkenskapsåret och 9 äldre. 2016-01 är för tidigt.");
+  EXPECT_TRUE(navigator.current().on_input(U"2017-01"));
+}
+
+TEST_F(RootMenuTest, FromSieWarnsWhenTheYearWillNotShow) {
+  auto const workspace = documents / "cratchit";
+  auto const seed = documents / "_seed";
+  fs::create_directories(seed);
+  std::ofstream(seed / "old.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20160101 20161231\r\n";
+  Navigator navigator(cratchit::ui::make_root_menu(workspace, seed));
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed) + U"old.se");
+  ASSERT_TRUE(result) << result.error();
+  navigator.enter(std::move(result->next));
+  auto const view = navigator.current().view();
+  EXPECT_NE(std::ranges::find(view, "  Varning:        cratchit visar bara det aktuella räkenskapsåret och 9 äldre. 2016 kommer inte att synas."),
+            view.end());
 }

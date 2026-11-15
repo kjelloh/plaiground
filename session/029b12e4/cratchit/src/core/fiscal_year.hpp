@@ -45,6 +45,15 @@ struct ListedYear {
 // when the books cannot be read. today is YYYY-MM-DD.
 std::expected<std::vector<ListedYear>, std::string> list_years_until(Project const& project, std::string_view today);
 
+// For now cratchit handles the current fiscal year and at most this many older
+// ones (beslut.md): the UI lists them as 0..9.
+inline constexpr int max_older_fiscal_years = 9;
+
+// How many fiscal years before the current one year is, counting twelve-month
+// years after it (see year_after) until the one today lies in: 0 when today
+// lies in year, or before its end. today is YYYY-MM-DD.
+int years_before_current(FiscalYear const& year, std::string_view today);
+
 // The fiscal year twelve months long that starts the day after year
 FiscalYear year_after(FiscalYear const& year);
 
