@@ -1,6 +1,7 @@
 #include "core/books/books.hpp"
 #include "core/dot_folder.hpp"
 #include "core/fiscal_year.hpp"
+#include "core/inventory.hpp"
 #include "core/path_value.hpp"
 #include "core/sie/document.hpp"
 #include "core/sie/file.hpp"
@@ -529,7 +530,9 @@ TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
   EXPECT_FALSE(fs::exists(folder / "Test AB")); // nothing created before J
   // J creates the project and goes back to where the user started, the workspace, which lists it
   ASSERT_TRUE(navigator.press(U'J'));
-  EXPECT_TRUE(fs::exists(folder / "Test AB" / "importerade_sie_filer" / "test.se"));
+  EXPECT_TRUE(fs::exists(folder / "Test AB" / ".cratchit" / "project.txt"));
+  EXPECT_TRUE(fs::exists(folder / "test.se")); // the SIE file stays where it is
+  EXPECT_FALSE(fs::exists(folder / "Test AB" / "importerade_sie_filer"));
   EXPECT_EQ(navigator.path().size(), 2u);
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
   EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Test AB"}, {U'+', "Lägg till bokföring"}}));
@@ -695,7 +698,7 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   // Against a file with every voucher: nothing to write
   ASSERT_TRUE(navigator.press(U'1'));
   ASSERT_TRUE(navigator.press(U'2'));
-  auto same = navigator.current().on_input(pyroceph::tui::path_input_of(project->folder / "importerade_sie_filer") + U"full.se");
+  auto same = navigator.current().on_input(pyroceph::tui::path_input_of(folder) + U"full.se"); // where it stayed
   ASSERT_TRUE(same) << same.error();
   navigator.enter(std::move(same->next));
   EXPECT_TRUE(navigator.current().options().empty());
@@ -998,12 +1001,20 @@ TEST_F(RootMenuTest, NewProjectHereFromSieStartsInTheWorkingFolderAndCreatesTheP
                   "  Konton:         2",
                   "Skapa bokföringen från SIE-filen?"}));
   EXPECT_FALSE(fs::exists(seed / ".cratchit")); // nothing created before J
-  ASSERT_TRUE(navigator.press(U'j'));
-  // Created in the working folder itself, the file moved into its importerade_sie_filer
+  // Keys match exactly: j and n do nothing
+  EXPECT_FALSE(navigator.press(U'j'));
+  EXPECT_FALSE(navigator.press(U'n'));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  EXPECT_FALSE(fs::exists(seed / ".cratchit"));
+  ASSERT_TRUE(navigator.press(U'J'));
+  // Created in the working folder itself; the SIE file stays where it is, recorded in the inventory
   EXPECT_TRUE(fs::is_regular_file(seed / ".cratchit" / "project.txt"));
-  EXPECT_TRUE(fs::is_regular_file(seed / "importerade_sie_filer" / "test.se"));
-  EXPECT_FALSE(fs::exists(seed / "older" / "test.se"));
-  EXPECT_TRUE(fs::is_directory(seed / "older"));
+  EXPECT_TRUE(fs::is_regular_file(seed / "older" / "test.se"));
+  EXPECT_FALSE(fs::exists(seed / "importerade_sie_filer"));
+  auto const inventory = cratchit::read_inventory(seed, cratchit::parse_iso_date("2025-01-01"));
+  ASSERT_TRUE(inventory) << inventory.error();
+  ASSERT_EQ(inventory->size(), 1u);
+  EXPECT_EQ((*inventory)[0].path, "older/test.se");
   EXPECT_EQ(navigator.current().name(), "Cratchit");
   EXPECT_EQ(navigator.current().view(),
             (View{"Arbetsmappen har bokföringen Test AB: provet. Du hittar den i samlingsmappen."}));

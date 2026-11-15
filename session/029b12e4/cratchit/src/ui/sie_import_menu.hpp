@@ -18,8 +18,8 @@ namespace cratchit::ui {
 // 1 "Importera". When the file cannot be imported the reason is shown and the
 // path is kept.
 //
-// "Bekräfta" 1 imports (see import_sie: the books, and the SIE file moved to
-// importerade_sie_filer), gives report what was done and the year imported
+// "Bekräfta" 1 imports (see import_sie: the books, and the SIE file recorded in
+// the inventory; the file stays where it is), gives report what was done and the year imported
 // (its dates are the file's, which may differ from year's when it adjoins the
 // books, see plan_sie_import), and the TUI goes back to origin
 // (State::back_to), the fiscal year. A failure leads to the error state.

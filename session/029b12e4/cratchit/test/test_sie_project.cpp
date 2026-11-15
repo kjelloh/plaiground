@@ -1,5 +1,7 @@
 #include "core/sie_project.hpp"
 
+#include "core/inventory.hpp"
+
 #include "core/fiscal_year.hpp"
 #include "core/path_value.hpp"
 #include "sie_test_file.hpp"
@@ -83,10 +85,16 @@ TEST_F(SieProjectTest, CreateMakesTheProjectImportsTheFileAndMovesIt) {
   ASSERT_TRUE(books) << books.error();
   ASSERT_EQ(books->years.size(), 1u);
   EXPECT_EQ(books->years[0].vouchers.size(), 2u);
-  // The SIE file moved into the project folder, and no copy is stashed
-  EXPECT_FALSE(fs::exists(file));
-  EXPECT_TRUE(fs::exists(folder / "importerade_sie_filer" / "test.se"));
+  // The SIE file stays where it is, recorded in the inventory of its year, and no copy is stashed
+  EXPECT_TRUE(fs::exists(file));
+  EXPECT_FALSE(fs::exists(folder / "importerade_sie_filer"));
   EXPECT_FALSE(fs::exists(folder / ".cratchit" / "imports"));
+  auto const inventory = cratchit::read_inventory_file(folder / ".cratchit" / "books" / "2025-01-01" / "inventory.csv");
+  ASSERT_TRUE(inventory) << inventory.error();
+  ASSERT_EQ(inventory->size(), 1u);
+  EXPECT_EQ((*inventory)[0].use, "ny bokföring");
+  EXPECT_EQ((*inventory)[0].name, "test.se");
+  EXPECT_EQ((*inventory)[0].path, "../test.se"); // relative to the project folder, also outside it
 }
 
 TEST_F(SieProjectTest, ExistingFolderIsAnError) {

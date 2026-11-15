@@ -6,6 +6,7 @@ add_executable(cratchit_tests
   test_csv.cpp
   test_date.cpp
   test_import.cpp
+  test_inventory.cpp
   test_sie_check.cpp
   test_sie_document.cpp
   test_sie_export.cpp
@@ -13,6 +14,7 @@ add_executable(cratchit_tests
   test_sie_import.cpp
   test_sie_lexer.cpp
   test_sie_project.cpp
+  test_sha256.cpp
   test_sie_summary.cpp
   test_cp437.cpp
   test_decoder.cpp

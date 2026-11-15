@@ -18,3 +18,12 @@ Beslut som gäller i den här sessionen. Beslut från tidigare sessioner gäller
   * **misstämmer**: något är bokfört på 8999, men balansräkningen balanserar inte (eller, senare, en kontroll visar fel).
   * Statusen är information. cratchit hindrar inte att användaren väljer en fil med någon status. *Fullbordat* betyder inte inlämnad årsredovisning eller låst år.
   * "Oriktigt" valdes bort: *oriktig uppgift* är ett skatterättsligt begrepp.
+* **Tangenter matchas exakt.** Ett val som visas som `J` nås bara med `J`, inte med `j` (användarens regel: enkel kod). cratchit gör undantag bara när bekvämligheten inte gör det otydligare vad tangenten gör, och undantaget skrivs in här. Inga undantag än.
+* **cratchit verkar utan att märkas.** cratchit flyttar, döper om, ändrar och tar aldrig bort användarens egna filer. cratchit skriver i sina egna `.cratchit`-mappar, och skapar synliga filer och mappar bara när användaren ber om just det (en ny bokföring i en ny mapp, en export till SIE). Ersätter beslutet att SIE-filen flyttas till `importerade_sie_filer`. Gamla `importerade_sie_filer`-mappar lämnas orörda.
+* **Förteckning** (i koden `Inventory`) är cratchits uppsikt över bokföringens mapp: de filer bokföringen har fått något från, kända på SHA-256 av innehållet (egen implementering, `core/sha256`, testad mot NIST). Första versionen gäller SIE-filer som läses in.
+  * Två nivåer: `.cratchit/inventory.csv` för hela bokföringen och `.cratchit/books/<årets start>/inventory.csv` per räkenskapsår, där årets poster ersätter bokföringens för samma fil (användarens val: mappen kan vara olika ordnad över åren). En SIE-fil hamnar i förteckningen för sitt räkenskapsår (`#RAR 0`).
+  * CSV med rubrikrad, en rad per inläsning: `sha256, kind, name, path, size, read, use, generated, program, year_start, year_end, status, vouchers_added, vouchers_changed`.
+  * `path` är relativ till bokföringens mapp, också för filer utanför den (användarens val: hela mappen ska kunna flyttas till en annan plats och dator).
+  * En post skrivs bara när en fil används (ny bokföring, import), inte när Tab listar filer. Förteckningen fylls inte i i efterhand.
+  * SHA-värdet visas aldrig i gränssnittet (användarens val; det hör hemma i ett administratörsgränssnitt som inte görs nu). Det får stå i loggen.
+  * Ingen märkning `inläst` i Tab-listan och ingen rad om källan i räkenskapsåret för nu (användarens val).

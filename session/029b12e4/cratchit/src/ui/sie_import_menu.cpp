@@ -76,7 +76,6 @@ public:
     lines.push_back(std::format("Konton: {} nya, {} med ändrat namn eller ändrade uppgifter", import.accounts_added,
                                 import.accounts_changed));
     if (import.identity_changed) lines.push_back(std::format("Bokföringen får organisationsnummer {}.", import.identity.orgnr));
-    lines.push_back(std::format("cratchit flyttar SIE-filen till {}.", (project_.folder / imported_sie_folder_name).string()));
     return lines;
   }
   OptionsList options() const override {
@@ -93,25 +92,24 @@ public:
   }
   OnKeyResult on_key(CodePoint key) override {
     if (imported_ || key != U'1') return nullptr;
-    auto const imported = import_sie(project_, plan_);
+    auto const imported = import_sie(project_, plan_, today_date());
     if (!imported) {
       LOG_BUSINESS("Kunde inte importera {} i {}: {}", plan_.sie_file.string(), project_.folder.string(), imported.error());
       return pyroceph::tui::make_error_state(std::format("cratchit kunde inte importera SIE-filen: {}", imported.error()));
     }
     imported_ = true;
-    LOG_BUSINESS("Importerade {} i projektet {} ({}): räkenskapsåret {} – {}, {} nya verifikationer, {} nya konton; filen "
-                 "flyttad till {}",
-                 plan_.sie_file.string(), project_.name, project_.uuid, format_iso_date(plan_.import.year_start),
-                 format_iso_date(plan_.import.year_end), plan_.import.vouchers_added, plan_.import.accounts_added,
-                 imported->moved_to.string());
+    LOG_BUSINESS("Importerade {} (sha256 {}) i projektet {} ({}): räkenskapsåret {} – {}, {} nya verifikationer, {} nya "
+                 "konton; filen ligger kvar",
+                 plan_.sie_file.string(), imported->entry.sha256, project_.name, project_.uuid,
+                 format_iso_date(plan_.import.year_start), format_iso_date(plan_.import.year_end),
+                 plan_.import.vouchers_added, plan_.import.accounts_added);
     for (auto const& changed : plan_.changed) LOG_BUSINESS("SIE-import ändrade verifikationen {}", change_text(changed));
     for (auto const& note : plan_.import.notes) LOG_BUSINESS("SIE-import: {}", note);
     if (report_) {
       FiscalYear const year{format_iso_date(plan_.import.year_start), format_iso_date(plan_.import.year_end)};
-      report_(std::format("cratchit importerade {}: {} och {} {} i räkenskapsåret {} – {}. Filen ligger nu i {}.",
+      report_(std::format("cratchit importerade {}: {} och {} {} i räkenskapsåret {} – {}.",
                           plan_.sie_file.filename().string(), new_vouchers_text(plan_.import.vouchers_added),
-                          plan_.changed.size(), plan_.changed.size() == 1 ? "ändrad" : "ändrade", year.start, year.end,
-                          imported_sie_folder_name),
+                          plan_.changed.size(), plan_.changed.size() == 1 ? "ändrad" : "ändrade", year.start, year.end),
               year);
     }
     return nullptr; // back to the fiscal year (back_to)

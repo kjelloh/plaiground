@@ -17,16 +17,15 @@ namespace cratchit::ui {
 // is shown and the path is kept, to be corrected. No options.
 //
 // "Bekräfta" 1 creates the project (see create_project_from_sie): a folder
-// named after the company next to the SIE file, with the whole file imported,
-// and the file moved into it. The workspace remembers the project, and the TUI
+// named after the company next to the SIE file, with the whole file imported
+// and recorded in the inventory; the file stays where it is. The workspace remembers the project, and the TUI
 // goes back to origin (State::back_to), where the user started, e.g. the
 // workspace that now lists the project. Without origin "Bekräfta" stays and says
 // that the project was created, offering nothing more. A failure leads to the
 // error state.
 //
 // With here (the working folder), the project is created in that folder
-// itself instead (see plan_project_from_sie), and the SIE file is moved into
-// its importerade_sie_filer.
+// itself instead (see plan_project_from_sie). The SIE file stays where it is.
 std::unique_ptr<pyroceph::tui::State> make_project_from_sie(Workspace workspace, std::filesystem::path start_folder,
                                                             pyroceph::tui::State const* origin = nullptr,
                                                             std::optional<std::filesystem::path> here = std::nullopt);

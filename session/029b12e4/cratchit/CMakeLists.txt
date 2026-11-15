@@ -62,6 +62,7 @@ add_library(cratchit_core
   src/core/details_project.cpp
   src/core/dot_folder.cpp
   src/core/fiscal_year.cpp
+  src/core/inventory.cpp
   src/core/log.cpp
   src/core/manual.cpp
   src/core/path_value.cpp
@@ -74,6 +75,7 @@ add_library(cratchit_core
   src/core/sie_export.cpp
   src/core/sie_import.cpp
   src/core/sie_project.cpp
+  src/core/sha256.cpp
   src/core/sie_summary.cpp
   src/core/terminal_encoding.cpp
   src/core/version.cpp

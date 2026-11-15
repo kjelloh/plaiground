@@ -44,10 +44,8 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(std::filesystem
 // .cratchit/project.txt (`created`,
 // `uuid` (new), `name`, `orgnr`), the books (see books::write_books: books.txt,
 // accounts, dimensions, objects and the year's opening balances, vouchers and
-// postings), and then moves the SIE file into <folder>/importerade_sie_filer/
-// (created when missing), as an import does (see import_sie). A file that is
-// there already stays; a file of the same name there is never overwritten (error).
-// Error text when any
+// postings), and records the SIE file in the inventory of its fiscal year
+// (see record_sie_use). The SIE file is never moved or changed. Error text when any
 // step fails; what was created before stays.
 std::expected<Project, std::string> create_project_from_sie(SieProjectPlan const& plan, std::string_view today);
 

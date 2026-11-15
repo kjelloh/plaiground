@@ -1,5 +1,7 @@
 #include "core/sie_project.hpp"
 
+#include "core/inventory.hpp"
+
 #include "core/path_value.hpp"
 #include "core/sie_import.hpp"
 #include "core/sie/document.hpp"
@@ -26,22 +28,6 @@ std::string errors_text(std::vector<std::string> const& errors) {
   for (std::size_t i = 0; i < std::min(errors.size(), shown_errors); ++i) text += " " + errors[i] + ".";
   if (errors.size() > shown_errors) text += " ...";
   return text;
-}
-
-// Moves file to folder, also across file systems (copy, then remove)
-std::expected<void, std::string> move_into(fs::path const& file, fs::path const& folder) {
-  auto const target = folder / file.filename();
-  std::error_code ec;
-  if (fs::equivalent(file.parent_path(), folder, ec)) return {}; // there already
-  if (fs::exists(target, ec)) return std::unexpected(std::format("{} finns redan", target.string()));
-  fs::rename(file, target, ec);
-  if (!ec) return {};
-  fs::copy_file(file, target, ec);
-  if (ec) return std::unexpected(std::format("Kan inte flytta {} till {}: {}", file.string(), folder.string(), ec.message()));
-  fs::remove(file, ec);
-  if (ec) return std::unexpected(std::format("Kopierade {} till {} men kan inte ta bort originalet: {}", file.string(),
-                                             folder.string(), ec.message()));
-  return {};
 }
 
 } // namespace
@@ -150,10 +136,13 @@ std::expected<Project, std::string> create_project_from_sie(SieProjectPlan const
   if (!plan.orgnr.empty()) entries.push_back({"orgnr", plan.orgnr});
   if (auto written = write_path_values(project.file, entries); !written) return std::unexpected(written.error());
   if (auto written = books::write_books(plan.folder, plan.import.books); !written) return std::unexpected(written.error());
-  auto const imported = plan.folder / imported_sie_folder_name;
-  fs::create_directory(imported, ec); // may be there already in a working folder
-  if (ec) return std::unexpected(std::format("Kan inte skapa {}: {}", imported.string(), ec.message()));
-  if (auto moved = move_into(plan.sie_file, imported); !moved) return std::unexpected(moved.error());
+  // The SIE file stays where it is; the inventory tells where the books come from
+  auto const day = parse_iso_date(today);
+  if (!day) return std::unexpected(std::format("{} är inget datum", today));
+  if (auto recorded = record_sie_use(plan.folder, plan.sie_file, {"ny bokföring", plan.import.vouchers_added, 0}, *day);
+      !recorded) {
+    return std::unexpected(std::format("cratchit skapade bokföringen, men kunde inte skriva förteckningen: {}", recorded.error()));
+  }
   return project;
 }
 

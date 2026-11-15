@@ -1,5 +1,8 @@
 #include "core/sie_import.hpp"
 
+#include "core/inventory.hpp"
+#include "core/sha256.hpp"
+
 #include "core/fiscal_year.hpp"
 #include "core/path_value.hpp"
 #include "core/sie_project.hpp"
@@ -52,20 +55,26 @@ protected:
 
 } // namespace
 
-TEST_F(SieImportTest, NewYearIsPlannedThenImportedAndTheFileMoved) {
+TEST_F(SieImportTest, NewYearIsPlannedThenImportedAndTheFileRecordedNotMoved) {
   auto const file = write("next.se", sie_file(2026, "", sale(2026, 1, "0110")));
   auto const plan = cratchit::plan_sie_import(project, file);
   ASSERT_TRUE(plan) << plan.error();
   EXPECT_TRUE(plan->new_year);
   EXPECT_EQ(plan->import.vouchers_added, 1u);
   EXPECT_EQ(cratchit::list_fiscal_years(project)->size(), 1u); // nothing written by the plan
-  auto const imported = cratchit::import_sie(project, *plan);
+  auto const imported = cratchit::import_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09"));
   ASSERT_TRUE(imported) << imported.error();
   EXPECT_EQ(cratchit::list_fiscal_years(project),
             (std::vector<cratchit::FiscalYear>{{"2026-01-01", "2026-12-31"}, {"2025-01-01", "2025-12-31"}}));
-  EXPECT_EQ(imported->moved_to, project.folder / "importerade_sie_filer" / "next.se");
-  EXPECT_TRUE(fs::exists(imported->moved_to));
-  EXPECT_FALSE(fs::exists(file));
+  // The file stays where it is, recorded in the inventory of its year
+  EXPECT_TRUE(fs::exists(file));
+  EXPECT_FALSE(fs::exists(project.folder / "importerade_sie_filer"));
+  EXPECT_EQ(imported->entry.sha256, cratchit::sha256_of_file(file).value());
+  EXPECT_EQ(imported->entry.use, "import");
+  EXPECT_EQ(imported->entry.vouchers_added, "1");
+  auto const inventory = cratchit::read_inventory(project.folder, cratchit::parse_iso_date("2026-01-01"));
+  ASSERT_TRUE(inventory) << inventory.error();
+  EXPECT_EQ(*inventory, (std::vector<cratchit::InventoryEntry>{imported->entry}));
 }
 
 TEST_F(SieImportTest, NewVouchersAreAddedToAYearInTheBooks) {
@@ -75,20 +84,10 @@ TEST_F(SieImportTest, NewVouchersAreAddedToAYearInTheBooks) {
   EXPECT_FALSE(plan->new_year);
   EXPECT_EQ(plan->import.vouchers_added, 1u);
   EXPECT_EQ(plan->import.vouchers_known, 2u);
-  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  ASSERT_TRUE(cratchit::import_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09")));
   auto const books = cratchit::books::read_books(project.folder);
   ASSERT_TRUE(books) << books.error();
   EXPECT_EQ(books->years[0].vouchers.size(), 3u);
-}
-
-TEST_F(SieImportTest, ASecondFileOfTheSameNameGetsANumber) {
-  fs::create_directories(project.folder / "importerade_sie_filer");
-  std::ofstream(project.folder / "importerade_sie_filer" / "next.se") << "earlier\n";
-  auto const plan = cratchit::plan_sie_import(project, write("next.se", sie_file(2026, "", sale(2026, 1, "0110"))));
-  ASSERT_TRUE(plan) << plan.error();
-  auto const imported = cratchit::import_sie(project, *plan);
-  ASSERT_TRUE(imported) << imported.error();
-  EXPECT_EQ(imported->moved_to, project.folder / "importerade_sie_filer" / "next_2.se");
 }
 
 TEST_F(SieImportTest, NothingNewIsRefused) {
@@ -143,7 +142,7 @@ TEST_F(SieImportTest, StruckAndAddedRowsChangeAVoucher) {
   EXPECT_EQ(plan->import.vouchers_added, 0u);
   ASSERT_EQ(plan->changed.size(), 1u);
   EXPECT_EQ(cratchit::change_text(plan->changed[0]), "A 2  2025-03-01  Bank cost: 2 rader strukna, 2 rader tillagda");
-  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  ASSERT_TRUE(cratchit::import_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09")));
   auto const books = cratchit::books::read_books(project.folder);
   ASSERT_TRUE(books) << books.error();
   EXPECT_EQ(books->years[0].vouchers[1].postings.size(), 4u);
@@ -198,7 +197,7 @@ TEST_F(SieImportTest, TheYearBeforeTakesAnEarlierYear) {
                                               cratchit::FiscalYear{"2024-01-01", "2024-12-31"});
   ASSERT_TRUE(plan) << plan.error();
   EXPECT_FALSE(plan->expected);
-  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  ASSERT_TRUE(cratchit::import_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09")));
   EXPECT_EQ(listed_years(project, "2025-06-01"),
             (std::vector<cratchit::FiscalYear>{{"2025-01-01", "2025-12-31"}, {"2024-01-01", "2024-12-31"}, {"2023-01-01", "2023-12-31"}}));
 }
@@ -210,7 +209,7 @@ TEST_F(SieImportTest, TheYearBeforeTakesAFirstYearOfAnotherLength) {
   ASSERT_TRUE(plan) << plan.error();
   ASSERT_TRUE(plan->expected);
   EXPECT_EQ(*plan->expected, (cratchit::FiscalYear{"2024-01-01", "2024-12-31"}));
-  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  ASSERT_TRUE(cratchit::import_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09")));
   EXPECT_EQ(listed_years(project, "2025-06-01"),
             (std::vector<cratchit::FiscalYear>{{"2025-01-01", "2025-12-31"}, {"2023-07-01", "2024-12-31"}, {"2022-07-01", "2023-06-30"}}));
 }
@@ -221,7 +220,7 @@ TEST_F(SieImportTest, TheFirstYearAfterTakesAChangeOfFiscalYear) {
                                               cratchit::FiscalYear{"2026-01-01", "2026-12-31"});
   ASSERT_TRUE(plan) << plan.error();
   ASSERT_TRUE(plan->expected);
-  ASSERT_TRUE(cratchit::import_sie(project, *plan));
+  ASSERT_TRUE(cratchit::import_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09")));
   EXPECT_EQ(listed_years(project, "2026-11-09"), (std::vector<cratchit::FiscalYear>{{"2026-05-01", "2027-04-30"},
                                                                                    {"2026-01-01", "2026-04-30"},
                                                                                    {"2025-01-01", "2025-12-31"},

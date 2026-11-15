@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/books/import.hpp"
+#include "core/inventory.hpp"
 #include "core/fiscal_year.hpp"
 #include "core/project.hpp"
 
@@ -13,8 +14,6 @@
 
 namespace cratchit {
 
-// The folder in a project folder that imported SIE files are moved to
-inline constexpr std::string_view imported_sie_folder_name = "importerade_sie_filer";
 
 // A voucher already in the books that the import changes: under the SIE rules
 // for a registered voucher, only rows struck (#BTRANS) and rows added (#RTRANS)
@@ -65,15 +64,14 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
 
 // What import_sie did
 struct SieImported {
-  std::filesystem::path moved_to; // where the SIE file is now
+  InventoryEntry entry; // the SIE file's entry in the inventory of its fiscal year
 };
 
-// Imports as planned: writes the books (only the files that change, see
-// books::write_books), the organisation number (and name) in project.txt when
-// the import gives the project one, and moves the SIE file into
-// <project folder>/importerade_sie_filer/ (created when missing; a file of the
-// same name there is never overwritten: the name gets _2, _3, ...). Error text
-// when any step fails; what was written before stays.
-std::expected<SieImported, std::string> import_sie(Project const& project, SieImportPlan const& plan);
+// Imports as planned on day today: writes the books (only the files that
+// change, see books::write_books), the organisation number (and name) in
+// project.txt when the import gives the project one, and records the SIE file
+// in the inventory of its fiscal year (see record_sie_use). The SIE file is
+// never moved or changed. Error text when any step fails; what was written before stays.
+std::expected<SieImported, std::string> import_sie(Project const& project, SieImportPlan const& plan, Date today);
 
 } // namespace cratchit

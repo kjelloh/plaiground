@@ -29,9 +29,6 @@ using pyroceph::tui::View;
 
 std::string date_text(Date const& date) { return format_iso_date(date); }
 
-// J and N, in either case
-bool is_key(CodePoint key, CodePoint upper) { return key == upper || key == upper - U'A' + U'a'; }
-
 class ConfirmSieProjectState : public State {
 public:
   ConfirmSieProjectState(Workspace workspace, SieProjectPlan plan, State const* origin, State const* from_sie)
@@ -86,11 +83,11 @@ public:
   }
   OnKeyResult on_key(CodePoint key) override {
     if (created_) return nullptr;
-    if (is_key(key, U'N')) {
+    if (key == U'N') { // keys match exactly (beslut.md): J and N, not j and n
       declined_ = true;
       return nullptr;
     }
-    if (!is_key(key, U'J')) return nullptr;
+    if (key != U'J') return nullptr;
     auto project = create_project_from_sie(plan_, today_iso());
     if (!project) {
       LOG_BUSINESS("Kunde inte skapa bokföringen från {}: {}", plan_.sie_file.string(), project.error());

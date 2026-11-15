@@ -1,5 +1,7 @@
 #include "core/sie_import.hpp"
 
+#include "core/inventory.hpp"
+
 #include "core/date.hpp"
 #include "core/path_value.hpp"
 #include "core/sie/document.hpp"
@@ -22,16 +24,6 @@ std::string errors_text(std::vector<std::string> const& errors) {
   for (std::size_t i = 0; i < std::min(errors.size(), shown_errors); ++i) text += " " + errors[i] + ".";
   if (errors.size() > shown_errors) text += " ...";
   return text;
-}
-
-// The first free name for file in folder: its own, else with _2, _3, ... before the extension
-fs::path free_name_in(fs::path const& folder, fs::path const& file) {
-  std::error_code ec;
-  auto target = folder / file.filename();
-  for (int index = 2; fs::exists(target, ec); ++index) {
-    target = folder / std::format("{}_{}{}", file.stem().string(), index, file.extension().string());
-  }
-  return target;
 }
 
 // The vouchers of the year starting on start that the planned books hold otherwise than the books
@@ -144,7 +136,7 @@ std::expected<SieImportPlan, std::string> plan_sie_import(Project const& project
   return plan;
 }
 
-std::expected<SieImported, std::string> import_sie(Project const& project, SieImportPlan const& plan) {
+std::expected<SieImported, std::string> import_sie(Project const& project, SieImportPlan const& plan, Date today) {
   if (auto written = books::write_books(project.folder, plan.import.books); !written) return std::unexpected(written.error());
   if (plan.import.identity_changed) {
     auto entries = read_path_values(project.file);
@@ -153,24 +145,10 @@ std::expected<SieImported, std::string> import_sie(Project const& project, SieIm
     set_value(*entries, "name", plan.import.identity.name);
     if (auto written = write_path_values(project.file, *entries); !written) return std::unexpected(written.error());
   }
-  auto const folder = project.folder / imported_sie_folder_name;
-  std::error_code ec;
-  fs::create_directories(folder, ec);
-  if (ec) return std::unexpected(std::format("Kan inte skapa {}: {}", folder.string(), ec.message()));
-  auto const target = free_name_in(folder, plan.sie_file);
-  fs::rename(plan.sie_file, target, ec);
-  if (ec) {
-    // Across file systems: copy, then remove
-    ec.clear();
-    fs::copy_file(plan.sie_file, target, ec);
-    if (ec) return std::unexpected(std::format("Kan inte flytta {} till {}: {}", plan.sie_file.string(), folder.string(), ec.message()));
-    fs::remove(plan.sie_file, ec);
-    if (ec) {
-      return std::unexpected(std::format("Kopierade {} till {} men kan inte ta bort originalet: {}", plan.sie_file.string(),
-                                         folder.string(), ec.message()));
-    }
-  }
-  return SieImported{target};
+  // The SIE file stays where it is; the inventory tells where the books come from
+  auto entry = record_sie_use(project.folder, plan.sie_file, {"import", plan.import.vouchers_added, plan.changed.size()}, today);
+  if (!entry) return std::unexpected(std::format("cratchit importerade filen, men kunde inte skriva förteckningen: {}", entry.error()));
+  return SieImported{std::move(*entry)};
 }
 
 } // namespace cratchit
