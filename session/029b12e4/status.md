@@ -3,7 +3,7 @@
 ## Klart
 
 * 2026-11-15: `cratchit/` kopierad från 0a37da4b (155 git-spårade filer, utan `build/` och `_try/`). Debug byggt i `cratchit/build/Debug/`, 458 tester går igenom på macOS (clang).
-* 2026-11-15: Installationen provad på macOS, på samma sätt som i källan. Release byggt (458 tester går igenom), `cmake --install build/Release --prefix <tillfällig mapp>` installerar `bin/cratchit` och `bin/.cratchit/` (framework och manual), och programmet startar via `PATH` från en annan mapp med HOME i en tillfällig mapp. `install.py --try --no-tests` fungerar också, startat från en annan mapp. Inte installerat i `~/.local` på riktigt. Linux och Windows inte provade (ingen CI för den här sessionen).
+* 2026-11-15: Installationen provad på macOS, på samma sätt som i källan. Release byggt (458 tester går igenom), `cmake --install build/Release --prefix <tillfällig mapp>` installerar `bin/cratchit` och `bin/.cratchit/` (framework och manual), och programmet startar via `PATH` från en annan mapp med HOME i en tillfällig mapp. `install.py --try --no-tests` fungerar också, startat från en annan mapp. Inte installerat i `~/.local` på riktigt. Linux och Windows inte provade lokalt; se GitHub Actions under *Att känna till*.
 
 ## Bygg, kör och installera
 
@@ -11,7 +11,7 @@ Se [cratchit/README.md](cratchit/README.md).
 
 ## Att känna till
 
-* GitHub Actions-filen `.github/workflows/cratchit-0a37da4b.yml` bygger 0a37da4b, inte den här sessionen. Filen ligger utanför sandlådan. En workflow för 029b12e4 får användaren lägga till.
+* GitHub Actions: `.github/workflows/cratchit-029b12e4.yml` (användaren gav tillstånd att skapa den utanför sandlådan, 2026-11-15). Den är en kopia av 0a37da4b:s workflow med sessionens sökvägar. Den körs vid push som ändrar `session/029b12e4/cratchit/**` eller själva workflow-filen, och för hand (`workflow_dispatch`). Den bygger Debug, kör testerna, kör programmet och installerar det på Linux, macOS och Windows. Den är inte körd än. 0a37da4b:s workflow (`cratchit-0a37da4b.yml`) är borttagen på användarens begäran, så 0a37da4b byggs inte längre i CI. Dess `beslut.md` och `status.md` nämner den fortfarande.
 * Testdata (`The ITfied AB`, `_dev_home`) är inte kopierade. Läs dem i 0a37da4b eller kopiera dem hit vid behov.
 
 ## Källor
