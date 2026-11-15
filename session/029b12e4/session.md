@@ -37,3 +37,11 @@ I will mix Swedish and English in this markdown depending on what audience I ima
 * In english for Vibe coding and Claude related general experience and observations.
 * På svenska för appens faktiska funktioner och relaterat till svensk bokföring.
 
+I have now went 'full steam ahead' and vibe coded what I think is 'from SIE-File' functionality we need for now? 
+
+* A 'don't touch' rule for files in users book keeping folder
+* A 'create here' and 'from SIE' and 'From info' that creates in-place (no sub-folder)
+* Some enhanced checks and reports on SIE-file to import
+* Enhanced meta-data about SIE-files (covered year, status complete/ongoing,inconsistent)
+
+ALl in all 14 steps as recorded by Claude in [status.md](./status.md)
