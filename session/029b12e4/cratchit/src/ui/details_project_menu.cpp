@@ -90,7 +90,7 @@ public:
       : workspace_(std::move(workspace)), origin_(origin), here_(here.has_value()) {
     if (here) details_.folder = *here;
   }
-  std::string name() const override { return here_ ? "Ny bokföring här" : "Från uppgifter"; }
+  std::string name() const override { return "Från uppgifter"; }
   bool here() const { return here_; }
   View view() const override {
     if (created_) return {std::format("cratchit har skapat bokföringen i {}.", details_.folder.string())};
@@ -121,9 +121,7 @@ public:
     return nullptr;
   }
   State const* back_to() const override { return created_ ? origin_ : nullptr; }
-  std::string help_topic() const override {
-    return std::string(here_ ? help_topic::here : help_topic::from_details);
-  }
+  std::string help_topic() const override { return std::string(help_topic::from_details); }
 
   // The value a field shows, as typed
   std::string value_of(Field field) const {

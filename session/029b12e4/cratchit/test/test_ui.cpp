@@ -933,6 +933,10 @@ TEST_F(RootMenuTest, NewProjectHereIsCreatedInTheWorkingFolderAndRemembered) {
   Navigator navigator(cratchit::ui::make_root_menu(workspace, company));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Ny bokföring här");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'1', "Från SIE"}, {U'2', "Från uppgifter"}}));
+  EXPECT_EQ(navigator.current().view(), (View{std::format("Bokföringen hamnar i {}.", company.string())}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Från uppgifter");
   EXPECT_EQ(navigator.current().view().back(), std::format("Bokföringen hamnar i {}.", company.string()));
   EXPECT_FALSE(fill(navigator, U'1', U"   ")); // blank
   ASSERT_TRUE(fill(navigator, U'1', U"The ITfied AB"));
@@ -963,4 +967,61 @@ TEST_F(RootMenuTest, NewProjectHereIsRefusedWithTheReason) {
   EXPECT_EQ(navigator.current().view(),
             (View{"cratchit skapar ingen bokföring här. Arbetsmappen är samlingsmappen. Starta cratchit i bokföringens egen mapp."}));
   EXPECT_FALSE(fs::exists(workspace / ".cratchit" / "project.txt"));
+}
+
+TEST_F(RootMenuTest, NewProjectHereFromSieStartsInTheWorkingFolderAndCreatesTheProjectThere) {
+  auto const workspace = documents / "cratchit";
+  auto const seed = documents / "_seed";
+  fs::create_directories(seed / "older");
+  auto const sie = "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB: provet\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+                   "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n"
+                   "#VER A 1 20250201 \"Sale\"\r\n{\r\n#TRANS 1930 {} 500.00\r\n#TRANS 3010 {} -500.00\r\n}\r\n";
+  std::ofstream(seed / "older" / "test.se", std::ios::binary) << sie; // the user looks it up
+  Navigator navigator(cratchit::ui::make_root_menu(workspace, seed));
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Från SIE");
+  // The path starts in the working folder, not in the workspace, with nothing filled in
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(seed));
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed / "older") + U"test.se");
+  ASSERT_TRUE(result) << result.error(); // the name need not be a folder name here (':')
+  ASSERT_TRUE(result->next);
+  navigator.enter(std::move(result->next));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  EXPECT_EQ(navigator.current().view().back(),
+            std::format("cratchit skapar bokföringen i {} och flyttar SIE-filen till importerade_sie_filer där.", seed.string()));
+  EXPECT_FALSE(fs::exists(seed / ".cratchit")); // nothing created before 1
+  ASSERT_TRUE(navigator.press(U'1'));
+  // Created in the working folder itself, the file moved into its importerade_sie_filer
+  EXPECT_TRUE(fs::is_regular_file(seed / ".cratchit" / "project.txt"));
+  EXPECT_TRUE(fs::is_regular_file(seed / "importerade_sie_filer" / "test.se"));
+  EXPECT_FALSE(fs::exists(seed / "older" / "test.se"));
+  EXPECT_TRUE(fs::is_directory(seed / "older"));
+  EXPECT_EQ(navigator.current().name(), "Cratchit");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Arbetsmappen har bokföringen Test AB: provet. Du hittar den i samlingsmappen."}));
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(names_of(navigator.current().options()),
+            (OptionsList{{U'1', "Test AB: provet"}, {U'+', "Lägg till bokföring"}}));
+}
+
+TEST_F(RootMenuTest, NewProjectHereFromSieTakesAFileAlreadyInImportedSieFiles) {
+  // E.g. starting over: .cratchit removed, the file left in importerade_sie_filer
+  auto const workspace = documents / "cratchit";
+  auto const seed = documents / "_seed";
+  fs::create_directories(seed / "importerade_sie_filer");
+  std::ofstream(seed / "importerade_sie_filer" / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n";
+  Navigator navigator(cratchit::ui::make_root_menu(workspace, seed));
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed / "importerade_sie_filer") + U"test.se");
+  ASSERT_TRUE(result) << result.error();
+  navigator.enter(std::move(result->next));
+  EXPECT_EQ(navigator.current().view().back(),
+            std::format("cratchit skapar bokföringen i {}. SIE-filen ligger redan i importerade_sie_filer där.", seed.string()));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_TRUE(fs::is_regular_file(seed / ".cratchit" / "project.txt"));
+  EXPECT_TRUE(fs::is_regular_file(seed / "importerade_sie_filer" / "test.se"));
 }

@@ -43,8 +43,14 @@ public:
     lines.push_back(std::format("Räkenskapsår: {} – {}", date_text(plan_.import.year_start), date_text(plan_.import.year_end)));
     lines.push_back(std::format("Verifikationer: {}", plan_.import.vouchers_added));
     lines.push_back(std::format("Konton: {}", plan_.import.books.accounts.size()));
-    lines.push_back(std::format("cratchit skapar bokföringen i {} och flyttar SIE-filen till {} där.", plan_.folder.string(),
-                                imported_sie_folder_name));
+    std::error_code ec;
+    if (std::filesystem::equivalent(plan_.sie_file.parent_path(), plan_.folder / imported_sie_folder_name, ec)) {
+      lines.push_back(std::format("cratchit skapar bokföringen i {}. SIE-filen ligger redan i {} där.", plan_.folder.string(),
+                                  imported_sie_folder_name));
+    } else {
+      lines.push_back(std::format("cratchit skapar bokföringen i {} och flyttar SIE-filen till {} där.",
+                                  plan_.folder.string(), imported_sie_folder_name));
+    }
     return lines;
   }
   OptionsList options() const override {
@@ -81,8 +87,9 @@ private:
 
 class FromSieState : public State {
 public:
-  FromSieState(Workspace workspace, std::filesystem::path start_folder, State const* origin)
-      : workspace_(std::move(workspace)), start_folder_(std::move(start_folder)), origin_(origin) {}
+  FromSieState(Workspace workspace, std::filesystem::path start_folder, State const* origin,
+               std::optional<std::filesystem::path> here)
+      : workspace_(std::move(workspace)), start_folder_(std::move(start_folder)), origin_(origin), here_(std::move(here)) {}
   std::string name() const override { return "Från SIE"; }
   View view() const override {
     return {"Skriv sökvägen till SIE-filen och tryck Enter. Tab fyller i mappar och SIE-filer."};
@@ -95,7 +102,7 @@ public:
   }
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);
-    auto plan = plan_project_from_sie(file);
+    auto plan = plan_project_from_sie(file, here_);
     if (!plan) {
       LOG_BUSINESS("Kan inte skapa bokföring från {}: {}", file.string(), plan.error());
       return std::unexpected(std::format("cratchit kan inte skapa bokföringen: {}", plan.error()));
@@ -108,13 +115,14 @@ private:
   Workspace workspace_;
   std::filesystem::path start_folder_;
   State const* origin_;
+  std::optional<std::filesystem::path> here_; // the working folder to create the project in, else a new folder
 };
 
 } // namespace
 
 std::unique_ptr<State> make_project_from_sie(Workspace workspace, std::filesystem::path start_folder,
-                                             State const* origin) {
-  return std::make_unique<FromSieState>(std::move(workspace), std::move(start_folder), origin);
+                                             State const* origin, std::optional<std::filesystem::path> here) {
+  return std::make_unique<FromSieState>(std::move(workspace), std::move(start_folder), origin, std::move(here));
 }
 
 } // namespace cratchit::ui

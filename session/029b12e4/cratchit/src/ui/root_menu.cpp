@@ -6,7 +6,7 @@
 #include "core/details_project.hpp"
 #include "core/project.hpp"
 #include "pyroceph/tui/error_state.hpp"
-#include "ui/details_project_menu.hpp"
+#include "ui/add_project_menu.hpp"
 #include "ui/test_menu.hpp"
 #include "ui/workspace_menu.hpp"
 
@@ -89,7 +89,7 @@ private:
     if (!workspace_folder_) return cannot_open_workspace(workspace_folder_.error());
     auto workspace = open_workspace(*workspace_folder_, today_iso());
     if (!workspace) return cannot_open_workspace(workspace.error());
-    return make_project_here(std::move(*workspace), *working_folder_, this);
+    return make_new_project_here(std::move(*workspace), *working_folder_, this);
   }
 
   WorkspaceFolder workspace_folder_;

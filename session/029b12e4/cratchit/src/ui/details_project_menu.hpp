@@ -28,7 +28,7 @@ namespace cratchit::ui {
 std::unique_ptr<pyroceph::tui::State> make_project_from_details(Workspace workspace,
                                                                 pyroceph::tui::State const* origin = nullptr);
 
-// The same form, named "Ny bokföring här" in the path, for a project in folder
+// The same form, also named "Från uppgifter", for a project in folder
 // itself (the working folder, see check_project_here), not in a new folder in
 // the workspace: the name is any text that is not blank, and Enter creates the
 // project with create_project_here. The workspace remembers it, as above.

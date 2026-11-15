@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -16,7 +17,8 @@ namespace cratchit {
 // What creating a project from an SIE file will do. Read from the file; nothing written yet.
 struct SieProjectPlan {
   std::filesystem::path sie_file; // the SIE file, in full
-  std::filesystem::path folder;   // the new project folder: <the SIE file's folder>/<name>
+  std::filesystem::path folder;   // the new project folder: <the SIE file's folder>/<name>, or the working folder
+  bool here = false;              // folder is the working folder, which exists: only its .cratchit is made
   std::string name;               // #FNAMN
   std::string orgnr;              // #ORGNR, may be empty
   std::string alert;              // when the file was not read as CP437 (see sie::lex_file), else empty
@@ -29,13 +31,21 @@ struct SieProjectPlan {
 // file cannot be read, is no SIE file (#SIETYP), has no #FNAMN or no #RAR 0, has
 // errors (the first ones are given), when #FNAMN cannot be a folder name, or when
 // the folder already exists or the SIE file lies in a project folder (or below one). Writes nothing.
-std::expected<SieProjectPlan, std::string> plan_project_from_sie(std::filesystem::path const& sie_file);
+//
+// With here, the project is planned in that folder itself (the working folder,
+// see check_project_here) instead of a new folder next to the SIE file: then
+// #FNAMN need not be a folder name and here must have no .cratchit folder.
+std::expected<SieProjectPlan, std::string> plan_project_from_sie(std::filesystem::path const& sie_file,
+                                                                 std::optional<std::filesystem::path> const& here = std::nullopt);
 
-// Creates the planned project: the folder, .cratchit/project.txt (`created`,
+// Creates the planned project: the folder (not when planned here),
+// .cratchit/project.txt (`created`,
 // `uuid` (new), `name`, `orgnr`), the books (see books::write_books: books.txt,
 // accounts, dimensions, objects and the year's opening balances, vouchers and
-// postings), and then moves the SIE file into <folder>/importerade_sie_filer/,
-// as an import does (see import_sie). Error text when any
+// postings), and then moves the SIE file into <folder>/importerade_sie_filer/
+// (created when missing), as an import does (see import_sie). A file that is
+// there already stays; a file of the same name there is never overwritten (error).
+// Error text when any
 // step fails; what was created before stays.
 std::expected<Project, std::string> create_project_from_sie(SieProjectPlan const& plan, std::string_view today);
 

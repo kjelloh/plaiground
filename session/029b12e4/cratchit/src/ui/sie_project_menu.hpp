@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <optional>
 
 namespace cratchit::ui {
 
@@ -22,7 +23,12 @@ namespace cratchit::ui {
 // workspace that now lists the project. Without origin "Bekräfta" stays and says
 // that the project was created, offering nothing more. A failure leads to the
 // error state.
+//
+// With here (the working folder), the project is created in that folder
+// itself instead (see plan_project_from_sie), and the SIE file is moved into
+// its importerade_sie_filer.
 std::unique_ptr<pyroceph::tui::State> make_project_from_sie(Workspace workspace, std::filesystem::path start_folder,
-                                                            pyroceph::tui::State const* origin = nullptr);
+                                                            pyroceph::tui::State const* origin = nullptr,
+                                                            std::optional<std::filesystem::path> here = std::nullopt);
 
 } // namespace cratchit::ui

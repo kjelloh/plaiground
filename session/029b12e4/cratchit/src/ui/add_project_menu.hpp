@@ -25,6 +25,15 @@ inline constexpr pyroceph::tui::CodePoint add_key = U'+';
 std::unique_ptr<pyroceph::tui::State> make_add_project_menu(Workspace workspace, std::filesystem::path start_folder,
                                                             pyroceph::tui::State const* origin = nullptr);
 
+// Creates a new project in folder itself (the working folder, see
+// check_project_here), named "Ny bokföring här" in the path: as 2 "Ny" above,
+// 1 "Från SIE" with the path starting in folder and 2 "Från uppgifter", but
+// the project is made in folder's .cratchit instead of in a new folder (see
+// make_project_from_sie and make_project_here). The TUI goes back to origin
+// once it is created.
+std::unique_ptr<pyroceph::tui::State> make_new_project_here(Workspace workspace, std::filesystem::path folder,
+                                                           pyroceph::tui::State const* origin = nullptr);
+
 // Adds an existing project, named "Befintlig" in the path. The user types the
 // path of the project folder, starting from start_folder, and Tab completes
 // folder names. Enter checks the project there (see open_project), makes the

@@ -537,7 +537,7 @@ Ett nystartat företag kan ha ett första räkenskapsår som är kortare eller l
 ### Ny bokföring här
 
 <!-- hjälp: ny-bokforing-har -->
-Fyll i organisationens namn, organisationsnummer och räkenskapsår. Enter skapar då bokföringen i mappen du startade cratchit i, och samlingsmappen kommer ihåg den. Andra filer i mappen rör cratchit inte.
+Bokföringen skapas i mappen du startade cratchit i. Välj `1` för att skapa den från en SIE-fil, eller `2` från namn, organisationsnummer och räkenskapsår. Andra filer i mappen rör cratchit inte.
 <!-- /hjälp -->
 
 Vill du ha bokföringen i en mapp som redan finns, till exempel företagets mapp med avtal och fakturor, startar du cratchit i den mappen:
@@ -547,18 +547,19 @@ cd ~/Företaget
 cratchit
 ```
 
-Har mappen ingen bokföring finns valet `1 Ny bokföring här`:
+Har mappen ingen bokföring finns valet `1 Ny bokföring här`. Det har samma två val som [Ny bokföring](#ny-bokföring) i samlingsmappen:
 
 ```text
-  0 Samlingsmapp
-  1 Ny bokföring här
-  9 Testmeny
-Cratchit> 
+Bokföringen hamnar i /Users/anna/Företaget.
+  1 Från SIE
+  2 Från uppgifter
+Cratchit > Ny bokföring här> 
 ```
 
-Tryck `1` och fyll i formuläret som i [Ny bokföring från uppgifter](#ny-bokföring-från-uppgifter). Skillnaden är var bokföringen hamnar: i mappen du startade i, i en `.cratchit`-mapp, och inte i en ny mapp i samlingsmappen. Namnet blir bara organisationens namn, inget mappnamn.
+* `1 Från SIE` fungerar som [Ny bokföring från en SIE-fil](#ny-bokföring-från-en-sie-fil), men sökvägen börjar i mappen du startade i. Leta upp SIE-filen med Tab. cratchit flyttar SIE-filen till `importerade_sie_filer` i mappen, som när du skapar en bokföring från SIE i samlingsmappen. Ligger filen redan där får den ligga kvar.
+* `2 Från uppgifter` är formuläret i [Ny bokföring från uppgifter](#ny-bokföring-från-uppgifter). Namnet är bara organisationens namn, inget mappnamn.
 
-När bokföringen är skapad kommer du tillbaka till början, och samlingsmappen kommer ihåg bokföringen. Nästa gång du startar cratchit i mappen öppnas bokföringen direkt (se [Starta i en bokföring](#starta-i-en-bokföring)).
+Skillnaden mot samlingsmappens *Ny* är var bokföringen hamnar: i mappen du startade i, i en `.cratchit`-mapp, och inte i en ny mapp. När bokföringen är skapad kommer du tillbaka till början, och samlingsmappen kommer ihåg bokföringen. Nästa gång du startar cratchit i mappen öppnas bokföringen direkt (se [Starta i en bokföring](#starta-i-en-bokföring)).
 
 cratchit skapar ingen bokföring i en mapp som redan har en `.cratchit`-mapp, i din hemkatalog, i samlingsmappen eller i en mapp som ligger inuti en annan bokföring. Då leder `1` till *Fel*, som säger varför.
 

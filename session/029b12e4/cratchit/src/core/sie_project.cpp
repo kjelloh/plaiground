@@ -32,6 +32,8 @@ std::string errors_text(std::vector<std::string> const& errors) {
 std::expected<void, std::string> move_into(fs::path const& file, fs::path const& folder) {
   auto const target = folder / file.filename();
   std::error_code ec;
+  if (fs::equivalent(file.parent_path(), folder, ec)) return {}; // there already
+  if (fs::exists(target, ec)) return std::unexpected(std::format("{} finns redan", target.string()));
   fs::rename(file, target, ec);
   if (!ec) return {};
   fs::copy_file(file, target, ec);
@@ -86,7 +88,8 @@ bool is_sie_file_name(fs::path const& file) {
   return extension == ".se" || extension == ".si" || extension == ".sie";
 }
 
-std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const& sie_file) {
+std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const& sie_file,
+                                                                 std::optional<fs::path> const& here) {
   std::error_code ec;
   if (!sie_file.is_absolute()) return std::unexpected(std::format("{} är inte en hel sökväg", sie_file.string()));
   if (!fs::is_regular_file(sie_file, ec)) return std::unexpected(std::format("{} är ingen fil", sie_file.string()));
@@ -98,7 +101,7 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const&
   if (!parsed.errors.empty()) return std::unexpected(errors_text(parsed.errors));
   if (document.company_name.empty()) return std::unexpected("SIE-filen saknar företagets namn (#FNAMN)");
   if (!document.year(0)) return std::unexpected("SIE-filen saknar räkenskapsår (#RAR 0)");
-  if (!is_folder_name(document.company_name)) {
+  if (!here && !is_folder_name(document.company_name)) {
     return std::unexpected(std::format("Företagsnamnet \"{}\" går inte att använda som namn på en mapp", document.company_name));
   }
   auto const sie_folder = sie_file.parent_path();
@@ -111,8 +114,16 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const&
   }
   SieProjectPlan plan;
   plan.sie_file = sie_file;
-  plan.folder = sie_folder / fs::path(std::u8string(document.company_name.begin(), document.company_name.end()));
-  if (fs::exists(plan.folder, ec)) return std::unexpected(std::format("Mappen {} finns redan", plan.folder.string()));
+  if (here) {
+    plan.folder = *here;
+    plan.here = true;
+    if (fs::exists(plan.folder / ".cratchit", ec)) {
+      return std::unexpected(std::format("Mappen {} har redan en .cratchit-mapp", plan.folder.string()));
+    }
+  } else {
+    plan.folder = sie_folder / fs::path(std::u8string(document.company_name.begin(), document.company_name.end()));
+    if (fs::exists(plan.folder, ec)) return std::unexpected(std::format("Mappen {} finns redan", plan.folder.string()));
+  }
   plan.name = document.company_name;
   plan.orgnr = document.orgnr;
   plan.alert = lexed->alert;
@@ -123,12 +134,13 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const&
 
 std::expected<Project, std::string> create_project_from_sie(SieProjectPlan const& plan, std::string_view today) {
   std::error_code ec;
-  if (!fs::create_directory(plan.folder, ec)) {
+  if (!plan.here && !fs::create_directory(plan.folder, ec)) {
     return std::unexpected(std::format("Kan inte skapa {}: {}", plan.folder.string(),
                                        ec ? ec.message() : std::string("mappen finns redan")));
   }
   if (!fs::create_directory(plan.folder / ".cratchit", ec)) {
-    return std::unexpected(std::format("Kan inte skapa {}: {}", (plan.folder / ".cratchit").string(), ec.message()));
+    return std::unexpected(std::format("Kan inte skapa {}: {}", (plan.folder / ".cratchit").string(),
+                                       ec ? ec.message() : std::string("mappen finns redan")));
   }
   Project project{plan.folder, plan.folder / ".cratchit" / "project.txt", new_uuid(), plan.name};
   PathValues entries{{"created", std::string(today)}, {"uuid", project.uuid}, {"name", plan.name}};
@@ -136,9 +148,8 @@ std::expected<Project, std::string> create_project_from_sie(SieProjectPlan const
   if (auto written = write_path_values(project.file, entries); !written) return std::unexpected(written.error());
   if (auto written = books::write_books(plan.folder, plan.import.books); !written) return std::unexpected(written.error());
   auto const imported = plan.folder / imported_sie_folder_name;
-  if (!fs::create_directory(imported, ec)) {
-    return std::unexpected(std::format("Kan inte skapa {}: {}", imported.string(), ec.message()));
-  }
+  fs::create_directory(imported, ec); // may be there already in a working folder
+  if (ec) return std::unexpected(std::format("Kan inte skapa {}: {}", imported.string(), ec.message()));
   if (auto moved = move_into(plan.sie_file, imported); !moved) return std::unexpected(moved.error());
   return project;
 }

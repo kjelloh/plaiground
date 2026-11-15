@@ -19,7 +19,7 @@ using WorkspaceFolder = std::expected<std::filesystem::path, std::string>;
 // state when it cannot be opened. 9 leads to the test menu (see test_menu.hpp).
 //
 // working_folder is where cratchit was started. While it holds no project,
-// 1 "Ny bokföring här" creates one in it (see make_project_here), or leads to
+// 1 "Ny bokföring här" creates one in it (see make_new_project_here), or leads to
 // the error state saying why not (see check_project_here); afterwards the TUI
 // is back in the root. While it holds a project, the view names it.
 std::unique_ptr<pyroceph::tui::State> make_root_menu(WorkspaceFolder workspace_folder,
