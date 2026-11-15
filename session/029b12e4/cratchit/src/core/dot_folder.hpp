@@ -37,6 +37,10 @@ struct Workspace {
   std::vector<Initiated> initiated; // what open_workspace created
 };
 
+// The running program file, with links and `..` resolved. Error text when the
+// platform cannot tell it.
+std::expected<std::filesystem::path, std::string> program_path();
+
 // The folder that holds the running program, with links and `..` resolved.
 // Asks the platform (macOS _NSGetExecutablePath, Linux /proc/self/exe, Windows
 // GetModuleFileNameW), since argv[0] is only what the starter passed, e.g. the

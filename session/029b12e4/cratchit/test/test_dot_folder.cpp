@@ -189,6 +189,15 @@ TEST(ProgramFolder, HoldsTheRunningProgram) {
       << folder->string();
 }
 
+TEST(ProgramPath, IsTheRunningProgram) {
+  auto const file = cratchit::program_path();
+  ASSERT_TRUE(file.has_value()) << file.error();
+  EXPECT_TRUE(file->is_absolute());
+  EXPECT_TRUE(fs::is_regular_file(*file)) << file->string();
+  EXPECT_EQ(file->stem(), "cratchit_tests");
+  EXPECT_EQ(file->parent_path(), cratchit::program_folder().value());
+}
+
 // The user's home folder
 
 TEST_F(DotFolderTest, RootIsUserHome) {

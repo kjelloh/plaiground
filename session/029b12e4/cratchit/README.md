@@ -91,6 +91,8 @@ mkdir -p ../_dev_home   # once
 HOME="$PWD/../_dev_home" ./build/Debug/cratchit
 ```
 
+cratchit's first lines tell which build runs, one per line: build time (local) and build type, program file and version, e.g. `Byggd: 14:32:05 2026-11-15 (Debug)`, `Från: …/build/Debug/cratchit`, `Version: 0.1.0`. The target `cratchit_build_stamp` writes `build/<type>/generated/build_stamp.cpp` (from `cmake/build_stamp.cmake`) on every build, so every build relinks cratchit, even when nothing else changed.
+
 In Debug builds `LOG_DEVELOPMENT_TRACE` is compiled in; in Release builds it is left out (CMake option `CRATCHIT_DEVELOPMENT_TRACE`: `ON`, `OFF` or `DEBUG`, the default).
 
 ## Folder layout

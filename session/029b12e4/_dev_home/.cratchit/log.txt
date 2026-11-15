@@ -1,0 +1,33 @@
+2026-11-15T11:08:59 BUSINESS main.cpp:38 cratchit startade i /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit
+2026-11-15T11:08:59 BUSINESS main.cpp:81 Framework 0.1.0 från /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/.cratchit/framework.txt
+2026-11-15T11:08:59 BUSINESS main.cpp:84 Skapade .cratchit/runtime.txt i /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/../_dev_home
+2026-11-15T11:08:59 BUSINESS main.cpp:99 Promptloopen startade
+2026-11-15T11:08:59 BUSINESS main.cpp:103 cratchit avslutades
+2026-11-15T11:09:00 BUSINESS main.cpp:38 cratchit startade i /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit
+2026-11-15T11:09:00 BUSINESS main.cpp:81 Framework 0.1.0 från /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/.cratchit/framework.txt
+2026-11-15T11:09:00 BUSINESS main.cpp:99 Promptloopen startade
+2026-11-15T11:09:00 BUSINESS main.cpp:103 cratchit avslutades
+2026-11-15T11:09:12 BUSINESS main.cpp:38 cratchit startade i /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit
+2026-11-15T11:09:12 BUSINESS main.cpp:81 cratchit 0.1.0 (Debug), byggd 2026-11-15 11:09:08, från /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/cratchit
+2026-11-15T11:09:12 BUSINESS main.cpp:82 Framework 0.1.0 från /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/.cratchit/framework.txt
+2026-11-15T11:09:12 BUSINESS main.cpp:100 Promptloopen startade
+2026-11-15T11:09:12 BUSINESS main.cpp:104 cratchit avslutades
+2026-11-15T11:13:34 BUSINESS main.cpp:38 cratchit startade i /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4
+2026-11-15T11:13:34 BUSINESS main.cpp:81 cratchit 0.1.0 (Debug), byggd 2026-11-15 11:13:31, från /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/cratchit
+2026-11-15T11:13:34 BUSINESS main.cpp:82 Framework 0.1.0 från /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/.cratchit/framework.txt
+2026-11-15T11:13:34 BUSINESS main.cpp:100 Promptloopen startade
+2026-11-15T11:13:34 BUSINESS main.cpp:104 cratchit avslutades
+2026-11-15T11:19:26 BUSINESS main.cpp:38 cratchit startade i /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit
+2026-11-15T11:19:26 BUSINESS main.cpp:81 Byggd: 2026-11-15 11:19:20 (Debug)
+2026-11-15T11:19:26 BUSINESS main.cpp:81 Från: /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/cratchit
+2026-11-15T11:19:26 BUSINESS main.cpp:81 Version: 0.1.0
+2026-11-15T11:19:26 BUSINESS main.cpp:82 Framework 0.1.0 från /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/.cratchit/framework.txt
+2026-11-15T11:19:26 BUSINESS main.cpp:100 Promptloopen startade
+2026-11-15T11:19:26 BUSINESS main.cpp:104 cratchit avslutades
+2026-11-15T11:20:16 BUSINESS main.cpp:38 cratchit startade i /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4
+2026-11-15T11:20:16 BUSINESS main.cpp:81 Byggd: 11:20:11 2026-11-15 (Debug)
+2026-11-15T11:20:16 BUSINESS main.cpp:81 Från: /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/cratchit
+2026-11-15T11:20:16 BUSINESS main.cpp:81 Version: 0.1.0
+2026-11-15T11:20:16 BUSINESS main.cpp:82 Framework 0.1.0 från /Users/kjell-olovhogdahl/Documents/GitHub/plaiground/session/029b12e4/cratchit/build/Debug/.cratchit/framework.txt
+2026-11-15T11:20:16 BUSINESS main.cpp:100 Promptloopen startade
+2026-11-15T11:20:16 BUSINESS main.cpp:104 cratchit avslutades

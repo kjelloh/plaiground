@@ -4,6 +4,7 @@
 
 * 2026-11-15: `cratchit/` kopierad från 0a37da4b (155 git-spårade filer, utan `build/` och `_try/`). Debug byggt i `cratchit/build/Debug/`, 458 tester går igenom på macOS (clang).
 * 2026-11-15: Installationen provad på macOS, på samma sätt som i källan. Release byggt (458 tester går igenom), `cmake --install build/Release --prefix <tillfällig mapp>` installerar `bin/cratchit` och `bin/.cratchit/` (framework och manual), och programmet startar via `PATH` från en annan mapp med HOME i en tillfällig mapp. `install.py --try --no-tests` fungerar också, startat från en annan mapp. Inte installerat i `~/.local` på riktigt. Linux och Windows inte provade lokalt; se GitHub Actions under *Att känna till*.
+* Steg 1: cratchit skriver först vilket bygge som körs, en uppgift per rad: `Byggd: 11:19:20 2026-11-15 (Debug)`, `Från: …/build/Debug/cratchit` och `Version: 0.1.0` (användarens önskan att ha dem på var sin rad). Samma rader hamnar i `log.txt`. Målet `cratchit_build_stamp` kör `cmake/build_stamp.cmake` vid varje bygge och skriver `build/<typ>/generated/build_stamp.cpp` (`build_time()` och `build_type()` i `core/build_stamp.hpp`). Den filen länkas bara in i programmet. `startup_lines` ligger i `core/version`, och `program_path` i `core/dot_folder`. Manualen och README är uppdaterade. 462 tester. Provkört på macOS: Debug byggt två gånger utan andra ändringar (ny tid, bara stämpeln kompilerad och programmet omlänkat), och Release installerat i en tillfällig mapp (visar `Release` och installationens sökväg).
 
 ## Bygg, kör och installera
 

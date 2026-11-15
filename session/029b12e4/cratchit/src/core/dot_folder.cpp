@@ -124,13 +124,19 @@ std::expected<fs::path, std::string> program_file() {
 
 } // namespace
 
-std::expected<fs::path, std::string> program_folder() {
+std::expected<fs::path, std::string> program_path() {
   auto const file = program_file();
-  if (!file) return std::unexpected(std::format("Hittar inte programmets mapp: {}", file.error()));
+  if (!file) return std::unexpected(file.error());
   std::error_code ec;
-  auto const resolved = fs::canonical(*file, ec);
-  if (ec) return std::unexpected(std::format("Hittar inte programmets mapp: {}: {}", file->string(), ec.message()));
-  return resolved.parent_path();
+  auto resolved = fs::canonical(*file, ec);
+  if (ec) return std::unexpected(std::format("{}: {}", file->string(), ec.message()));
+  return resolved;
+}
+
+std::expected<fs::path, std::string> program_folder() {
+  auto const file = program_path();
+  if (!file) return std::unexpected(std::format("Hittar inte programmets mapp: {}", file.error()));
+  return file->parent_path();
 }
 
 std::expected<fs::path, std::string> choose_user_home(std::optional<fs::path> const& user_home) {

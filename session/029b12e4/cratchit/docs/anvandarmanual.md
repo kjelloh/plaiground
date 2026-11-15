@@ -22,11 +22,22 @@ Du står i början av cratchit. Tryck `0` för att öppna samlingsmappen med din
 Starta cratchit genom att skriva `cratchit` i en terminal och trycka Enter:
 
 ```text
+Byggd: 14:32:05 2026-11-15 (Release)
+Från: /Users/du/.local/bin/cratchit
+Version: 0.1.0
 Tryck ? för gemensamma val.
 
   0 Samlingsmapp
 Cratchit> 
 ```
+
+De tre första raderna visar vilket cratchit som körs:
+
+* `Byggd`: när programmet byggdes, och om det är byggt för utveckling (`Debug`) eller för användning (`Release`).
+* `Från`: var programfilen ligger.
+* `Version`: cratchits version.
+
+Kontrollera raderna när du har byggt eller installerat cratchit. Visar de en gammal tid eller en annan mapp, så kör du ett annat cratchit än du tror.
 
 Tryck `q` för att avsluta.
 

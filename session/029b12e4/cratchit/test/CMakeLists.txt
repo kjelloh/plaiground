@@ -38,6 +38,7 @@ add_executable(cratchit_tests
   test_year_view.cpp
   test_utf16.cpp
   test_utf8.cpp
+  test_version.cpp
 )
 # The manual in the source tree, so that the tests check the one that is edited
 target_compile_definitions(cratchit_tests PRIVATE CRATCHIT_MANUAL_FILE="${PROJECT_SOURCE_DIR}/docs/anvandarmanual.md")

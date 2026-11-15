@@ -1,8 +1,10 @@
+#include "core/build_stamp.hpp"
 #include "core/date.hpp"
 #include "core/dot_folder.hpp"
 #include "core/log.hpp"
 #include "core/manual.hpp"
 #include "core/terminal_encoding.hpp"
+#include "core/version.hpp"
 #include "pyroceph/tui/key_reader.hpp"
 #include "pyroceph/tui/prompt_loop.hpp"
 #include "pyroceph/tui/raw_mode.hpp"
@@ -27,6 +29,11 @@ charset::Encoding encoding_of(cratchit::Charset charset) {
 } // namespace
 
 int main() {
+  // First of all, which build runs: so that the user sees at once whether it is the one just built or installed
+  auto const program = cratchit::program_path();
+  auto const startup = cratchit::startup_lines(cratchit::version(), cratchit::build_type(), cratchit::build_time(),
+                                               program ? std::optional(*program) : std::nullopt);
+  for (auto const& line : startup) std::println("{}", line);
   auto const cwd = std::filesystem::current_path();
   LOG_BUSINESS("cratchit startade i {}", cwd.string());
   // CRATCHIT_TODAY=YYYY-MM-DD makes cratchit take that day as today, e.g. to try a new fiscal year
@@ -71,6 +78,7 @@ int main() {
   if (auto const opened = cratchit::log::open(log_file); !opened) {
     std::println(stderr, "Varning: {}. cratchit loggar ingenting.", opened.error());
   }
+  for (auto const& line : startup) LOG_BUSINESS("{}", line); // which build ran, shown before the log was open
   LOG_BUSINESS("Framework {} från {}", framework->version, framework->file.string());
   for (auto const& entry : runtime->initiated) {
     std::println("cratchit skapade {} i {}", entry.file.generic_string(), entry.folder.string());

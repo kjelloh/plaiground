@@ -118,9 +118,27 @@ add_library(cratchit_ui
 target_include_directories(cratchit_ui PUBLIC src)
 target_link_libraries(cratchit_ui PUBLIC pyroceph cratchit_core PRIVATE cratchit_warnings)
 
+# The time and type of the build, shown when cratchit starts. The target runs on
+# every build and writes build_stamp.cpp anew, so only that file is compiled and
+# cratchit relinked. The file is written once at configure time too, so that it
+# exists before the first build.
+set(build_stamp_file ${CMAKE_CURRENT_BINARY_DIR}/generated/build_stamp.cpp)
+if(NOT EXISTS ${build_stamp_file})
+  execute_process(COMMAND ${CMAKE_COMMAND} -DOUT=${build_stamp_file} -DCONFIG=unknown
+                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_stamp.cmake)
+endif()
+add_custom_target(cratchit_build_stamp
+  COMMAND ${CMAKE_COMMAND} -DOUT=${build_stamp_file} -DCONFIG=$<CONFIG>
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_stamp.cmake
+  BYPRODUCTS ${build_stamp_file}
+  COMMENT "Stamping the build time into cratchit"
+)
+
 add_executable(cratchit
   src/main.cpp
+  ${build_stamp_file}
 )
+add_dependencies(cratchit cratchit_build_stamp)
 target_link_libraries(cratchit PRIVATE cratchit_core cratchit_ui pyroceph cratchit_warnings)
 
 # The framework comes with the program: a .cratchit folder next to it, which
