@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <format>
 #include <optional>
 #include <string_view>
 #include <system_error>
@@ -48,11 +49,12 @@ struct Row {
 
 class WorkspaceState : public State {
 public:
-  WorkspaceState(Workspace workspace, std::vector<ListedProject> projects)
-      : workspace_(std::move(workspace)), projects_(std::move(projects)) {}
+  WorkspaceState(Workspace workspace, std::vector<ListedProject> projects, std::string note)
+      : workspace_(std::move(workspace)), projects_(std::move(projects)), note_(std::move(note)) {}
   std::string name() const override { return "Samlingsmapp"; }
   View view() const override {
     View lines;
+    if (!note_.empty()) lines.push_back(note_);
     if (!workspace_.initiated.empty()) lines.push_back("cratchit skapade en ny samlingsmapp.");
     lines.push_back(workspace_.folder.string());
     if (projects_.size() > max_listed_projects) lines.push_back("Samlingsmappen har fler bokföringar än cratchit visar här.");
@@ -80,6 +82,7 @@ public:
 
   // A project may have been added on the way back here: read the list again
   void on_return() override {
+    note_.clear(); // said once, when arriving
     auto projects = list_projects(workspace_);
     if (!projects) {
       LOG_BUSINESS("cratchit kunde inte läsa om samlingsmappen: {}", projects.error());
@@ -147,6 +150,7 @@ private:
 
   Workspace workspace_;
   std::vector<ListedProject> projects_; // only where the projects are; the rest is read from them when shown
+  std::string note_;                    // shown first until the user comes back from somewhere else
   std::optional<std::filesystem::path> home_ = [] -> std::optional<std::filesystem::path> {
     if (auto const home = user_home()) return *home;
     return std::nullopt;
@@ -155,8 +159,17 @@ private:
 
 } // namespace
 
-std::unique_ptr<State> make_workspace_menu(Workspace workspace, std::vector<ListedProject> projects) {
-  return std::make_unique<WorkspaceState>(std::move(workspace), std::move(projects));
+std::unique_ptr<State> make_workspace_after_created(Workspace workspace, std::string const& name) {
+  auto projects = list_projects(workspace);
+  if (!projects) {
+    LOG_BUSINESS("cratchit kunde inte läsa samlingsmappen: {}", projects.error());
+    return nullptr;
+  }
+  return make_workspace_menu(std::move(workspace), std::move(*projects), std::format("cratchit skapade bokföringen {}.", name));
+}
+
+std::unique_ptr<State> make_workspace_menu(Workspace workspace, std::vector<ListedProject> projects, std::string note) {
+  return std::make_unique<WorkspaceState>(std::move(workspace), std::move(projects), std::move(note));
 }
 
 } // namespace cratchit::ui

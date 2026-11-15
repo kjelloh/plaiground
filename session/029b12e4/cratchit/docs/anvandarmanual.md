@@ -597,7 +597,18 @@ Cratchit > Ny bokföring här>
 * `1 Från SIE` fungerar som [Ny bokföring från en SIE-fil](#ny-bokföring-från-en-sie-fil), men sökvägen börjar i mappen du startade i. Leta upp SIE-filen med Tab. SIE-filen ligger kvar där den låg.
 * `2 Från uppgifter` är formuläret i [Ny bokföring från uppgifter](#ny-bokföring-från-uppgifter). Namnet är bara organisationens namn, inget mappnamn.
 
-Skillnaden mot samlingsmappens *Ny* är var bokföringen hamnar: i mappen du startade i, i en `.cratchit`-mapp, och inte i en ny mapp. När bokföringen är skapad kommer du tillbaka till början, och samlingsmappen kommer ihåg bokföringen. Nästa gång du startar cratchit i mappen öppnas bokföringen direkt (se [Starta i en bokföring](#starta-i-en-bokföring)).
+Skillnaden mot samlingsmappens *Ny* är var bokföringen hamnar: i mappen du startade i, i en `.cratchit`-mapp, och inte i en ny mapp. När bokföringen är skapad hamnar du i samlingsmappen, som kommer ihåg bokföringen och listar den:
+
+```text
+cratchit skapade bokföringen The ITfied AB.
+/Users/anna/Documents/cratchit
+    Namn           Org.nr       Skapad      Mapp
+  1 The ITfied AB  556782-8172  2026-11-15  ~/Företaget
+  + Lägg till bokföring
+Cratchit > Samlingsmapp> 
+```
+
+Går du tillbaka utan att skapa något kommer du till början som vanligt. Nästa gång du startar cratchit i mappen öppnas bokföringen direkt (se [Starta i en bokföring](#starta-i-en-bokföring)).
 
 cratchit skapar ingen bokföring i en mapp som redan har en `.cratchit`-mapp, i din hemkatalog, i samlingsmappen eller i en mapp som ligger inuti en annan bokföring. Då leder `1` till *Fel*, som säger varför.
 

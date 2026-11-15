@@ -23,8 +23,10 @@ bool Navigator::follow_back_to() {
   if (target == nullptr || target == &current()) return false;
   auto const on_path = std::ranges::find_if(path_, [target](auto const& state) { return state.get() == target; });
   if (on_path == path_.end()) return false;
+  auto next = current().after_back();
   while (path_.back().get() != target) path_.pop_back();
   current().on_return();
+  if (next) enter(std::move(next));
   return true;
 }
 

@@ -149,10 +149,10 @@ TEST(State, CompletesNothingAndStartsNoInputByDefault) {
 
 namespace {
 
-// Goes back to target once it has acted on 1
+// Goes back to target once it has acted on 1, and then, when given, on to a state named next
 class Done : public pyroceph::tui::State {
 public:
-  explicit Done(State const* target) : target_(target) {}
+  explicit Done(State const* target, std::string next = {}) : target_(target), next_(std::move(next)) {}
   std::string name() const override { return "Klar"; }
   pyroceph::tui::View view() const override { return {}; }
   pyroceph::tui::OptionsList options() const override { return {}; }
@@ -161,9 +161,11 @@ public:
     return nullptr;
   }
   State const* back_to() const override { return done_ ? target_ : nullptr; }
+  std::unique_ptr<State> after_back() override { return next_.empty() ? nullptr : test::menu(next_); }
 
 private:
   State const* target_;
+  std::string next_;
   bool done_ = false;
 };
 
@@ -181,6 +183,19 @@ TEST(State, BackToGoesBackSeveralStatesAndCallsOnReturn) {
   EXPECT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.path().size(), 1u);
   EXPECT_EQ(navigator.current().name(), "Tillbaka hit");
+  EXPECT_EQ(returns, 1);
+}
+
+TEST(State, AfterBackIsEnteredOnceBack) {
+  int returns = 0;
+  Navigator navigator(std::make_unique<Returning>(&returns));
+  ASSERT_TRUE(navigator.press(U'1')); // Nästa
+  auto const* root = navigator.path().front().get();
+  navigator.enter(std::make_unique<Done>(root, "Vidare"));
+  EXPECT_TRUE(navigator.press(U'1'));
+  ASSERT_EQ(navigator.path().size(), 2u);
+  EXPECT_EQ(navigator.path()[0]->name(), "Tillbaka hit");
+  EXPECT_EQ(navigator.current().name(), "Vidare");
   EXPECT_EQ(returns, 1);
 }
 

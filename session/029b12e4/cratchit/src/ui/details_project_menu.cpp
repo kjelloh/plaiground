@@ -7,6 +7,7 @@
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/prompt_loop.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/workspace_menu.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -121,6 +122,11 @@ public:
     return nullptr;
   }
   State const* back_to() const override { return created_ ? origin_ : nullptr; }
+  // Made here (in the working folder): on to the workspace, which lists it
+  std::unique_ptr<State> after_back() override {
+    if (!created_ || !here_) return nullptr;
+    return make_workspace_after_created(workspace_, details_.name);
+  }
   std::string help_topic() const override { return std::string(help_topic::from_details); }
 
   // The value a field shows, as typed

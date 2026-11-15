@@ -948,19 +948,21 @@ TEST_F(RootMenuTest, NewProjectHereIsCreatedInTheWorkingFolderAndRemembered) {
   ASSERT_TRUE(fill(navigator, U'2', U"556782-8172"));
   ASSERT_TRUE(fill(navigator, U'3', U"2026-05"));
   EXPECT_FALSE(fs::exists(company / ".cratchit")); // nothing created before Enter
-  // Enter creates it here and goes back to the root, which no longer offers 1
+  // Enter creates it here and ends in the workspace, which lists it
   ASSERT_TRUE(navigator.press(U'\n'));
-  EXPECT_EQ(navigator.current().name(), "Cratchit");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Samlingsmapp"}, {U'9', "Testmeny"}}));
-  EXPECT_EQ(navigator.current().view(),
-            (View{"Arbetsmappen har bokföringen The ITfied AB. Du hittar den i samlingsmappen."}));
+  ASSERT_EQ(navigator.path().size(), 2u);
+  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
+  EXPECT_EQ(navigator.current().view().front(), "cratchit skapade bokföringen The ITfied AB.");
+  EXPECT_EQ(names_of(navigator.current().options()),
+            (OptionsList{{U'1', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
   EXPECT_TRUE(fs::is_regular_file(company / ".cratchit" / "project.txt"));
   EXPECT_TRUE(fs::is_directory(company / "Avtal"));
   EXPECT_FALSE(fs::exists(workspace / "The ITfied AB")); // no folder in the workspace
-  // The workspace remembers it
-  ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(names_of(navigator.current().options()),
-            (OptionsList{{U'1', "The ITfied AB"}, {U'+', "Lägg till bokföring"}}));
+  // Back in the root, which no longer offers 1
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Samlingsmapp"}, {U'9', "Testmeny"}}));
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Arbetsmappen har bokföringen The ITfied AB. Du hittar den i samlingsmappen."}));
 }
 
 TEST_F(RootMenuTest, NewProjectHereIsRefusedWithTheReason) {
@@ -1015,10 +1017,10 @@ TEST_F(RootMenuTest, NewProjectHereFromSieStartsInTheWorkingFolderAndCreatesTheP
   ASSERT_TRUE(inventory) << inventory.error();
   ASSERT_EQ(inventory->size(), 1u);
   EXPECT_EQ((*inventory)[0].path, "older/test.se");
-  EXPECT_EQ(navigator.current().name(), "Cratchit");
-  EXPECT_EQ(navigator.current().view(),
-            (View{"Arbetsmappen har bokföringen Test AB: provet. Du hittar den i samlingsmappen."}));
-  ASSERT_TRUE(navigator.press(U'0'));
+  // Ends in the workspace, which lists it
+  ASSERT_EQ(navigator.path().size(), 2u);
+  EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
+  EXPECT_EQ(navigator.current().view().front(), "cratchit skapade bokföringen Test AB: provet.");
   EXPECT_EQ(names_of(navigator.current().options()),
             (OptionsList{{U'1', "Test AB: provet"}, {U'+', "Lägg till bokföring"}}));
 }

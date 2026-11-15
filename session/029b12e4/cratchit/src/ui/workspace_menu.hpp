@@ -5,6 +5,7 @@
 #include "pyroceph/tui/state.hpp"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace cratchit::ui {
@@ -28,6 +29,15 @@ inline constexpr std::size_t max_listed_projects = 9;
 // it (see forget_project_menu.hpp). It reads its list again when the
 // user comes back to it, so that an added project shows. No input. Reached by
 // 0 from the root.
-std::unique_ptr<pyroceph::tui::State> make_workspace_menu(Workspace workspace, std::vector<ListedProject> projects);
+//
+// note, when given, is shown first in the view until the user comes back to it
+// from somewhere else, e.g. "cratchit skapade bokföringen …".
+std::unique_ptr<pyroceph::tui::State> make_workspace_menu(Workspace workspace, std::vector<ListedProject> projects,
+                                                          std::string note = {});
+
+// The workspace to arrive in once a project is created, listing it, with the
+// note "cratchit skapade bokföringen <name>." (see State::after_back). Without
+// the list (it cannot be read) nothing: the TUI stays where it went back to.
+std::unique_ptr<pyroceph::tui::State> make_workspace_after_created(Workspace workspace, std::string const& name);
 
 } // namespace cratchit::ui

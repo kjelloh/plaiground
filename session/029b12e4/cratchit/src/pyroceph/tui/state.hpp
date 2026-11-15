@@ -105,6 +105,11 @@ public:
   // started a task that is now done. nullptr by default: stay.
   virtual State const* back_to() const { return nullptr; }
 
+  // The state the TUI enters once it has gone back to back_to(), e.g. where a
+  // task that is done leads on from there. Asked once, as the TUI goes back.
+  // nullptr by default: stay at back_to().
+  virtual std::unique_ptr<State> after_back() { return nullptr; }
+
   // Called when the user comes back to the state from a state after it, before
   // it is shown again. Lets the state read again what may have changed there.
   virtual void on_return() {}
@@ -147,7 +152,8 @@ public:
   bool press(CodePoint key);
 
   // Goes back to the state the current state names (State::back_to), when it
-  // names one on the path before it. True when the state changed.
+  // names one on the path before it, and enters what the current state gives
+  // to enter from there (State::after_back), if anything. True when the state changed.
   bool follow_back_to();
 
   // Makes next, which must not be empty, the current state, e.g. the state

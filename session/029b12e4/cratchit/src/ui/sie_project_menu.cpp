@@ -8,6 +8,7 @@
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/workspace_menu.hpp"
 
 #include <format>
 #include <optional>
@@ -75,6 +76,11 @@ public:
   OptionsList options() const override {
     if (created_) return {};
     return {{U'J', "Ja"}, {U'N', "Nej"}};
+  }
+  // Made here (in the working folder): on to the workspace, which lists it
+  std::unique_ptr<State> after_back() override {
+    if (!created_ || !plan_.here) return nullptr;
+    return make_workspace_after_created(workspace_, plan_.name);
   }
   // N goes back to "Från SIE", to choose another file
   State const* back_to() const override {
