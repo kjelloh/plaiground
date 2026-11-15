@@ -13,6 +13,7 @@ add_executable(cratchit_tests
   test_sie_import.cpp
   test_sie_lexer.cpp
   test_sie_project.cpp
+  test_sie_summary.cpp
   test_cp437.cpp
   test_decoder.cpp
   test_design_insufficiency.cpp

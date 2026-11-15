@@ -835,10 +835,11 @@ TEST_F(RootMenuTest, AChangeOfFiscalYearFromSieShowsAndTheYearTakesItsDates) {
   ASSERT_TRUE(result) << result.error();
   navigator.enter(std::move(result->next));
   auto const view = navigator.current().view();
-  ASSERT_GE(view.size(), 3u);
+  ASSERT_GE(view.size(), 4u);
   EXPECT_EQ(view[0], "SIE-fil: " + (documents / "change.se").string());
-  EXPECT_EQ(view[1], "Räkenskapsår: 2026-01-01 – 2026-04-30 (cratchit räknade med 2026-01-01 – 2026-12-31)");
-  EXPECT_EQ(view[2], "cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att räkenskapsåret är korrekt.");
+  EXPECT_EQ(view[1], "Innehåll: 2026-01-01 – 2026-04-30  1 ver. t.o.m. 2026-02-01  A 1");
+  EXPECT_EQ(view[2], "Räkenskapsår: 2026-01-01 – 2026-04-30 (cratchit räknade med 2026-01-01 – 2026-12-31)");
+  EXPECT_EQ(view[3], "cratchit kontrollerar inte Skatteverkets godkännande av en omläggning. Du ansvarar för att räkenskapsåret är korrekt.");
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "2026");
   EXPECT_EQ(navigator.current().view()[0], "Räkenskapsår 2026-01-01 – 2026-04-30");

@@ -1,5 +1,6 @@
 #include "ui/sie_project_menu.hpp"
 
+#include "core/sie_summary.hpp"
 #include "core/log.hpp"
 #include "core/project.hpp"
 #include "core/sie_import.hpp"
@@ -31,12 +32,14 @@ std::string date_text(Date const& date) { return format_iso_date(date); }
 class ConfirmSieProjectState : public State {
 public:
   ConfirmSieProjectState(Workspace workspace, SieProjectPlan plan, State const* origin)
-      : workspace_(std::move(workspace)), plan_(std::move(plan)), origin_(origin) {}
+      : workspace_(std::move(workspace)), plan_(std::move(plan)), origin_(origin),
+        contents_(describe_sie_file(plan_.sie_file).front()) {}
   std::string name() const override { return "Bekräfta"; }
   View view() const override {
     if (created_) return {std::format("cratchit har skapat bokföringen i {}.", plan_.folder.string())};
     View lines;
     lines.push_back(std::format("SIE-fil: {}", plan_.sie_file.string()));
+    lines.push_back("Innehåll: " + contents_);
     if (!plan_.alert.empty()) lines.push_back(plan_.alert);
     lines.push_back(plan_.orgnr.empty() ? std::format("Företag: {}", plan_.name)
                                         : std::format("Företag: {} ({})", plan_.name, plan_.orgnr));
@@ -82,6 +85,7 @@ private:
   Workspace workspace_;
   SieProjectPlan plan_;
   State const* origin_; // where the user started, gone back to once created
+  std::string contents_; // the file's summary (see summary_line), read once
   bool created_ = false;
 };
 
@@ -98,7 +102,8 @@ public:
   OnKeyResult on_key(CodePoint) override { return nullptr; }
   std::u32string start_input() const override { return pyroceph::tui::path_input_of(start_folder_); }
   Completion complete(std::u32string_view text) const override {
-    return pyroceph::tui::complete_path(text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); });
+    return pyroceph::tui::complete_path(
+        text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); }, describe_sie_file);
   }
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);

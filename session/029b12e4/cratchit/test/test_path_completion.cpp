@@ -117,3 +117,42 @@ TEST_F(PathCompletionTest, OnlyAcceptedFilesCount) {
   auto const accept = [](fs::path const& file) { return file.extension() == ".se"; };
   EXPECT_EQ(complete_path(typed(U"ex"), true, accept).added, U"port.se");
 }
+
+// Describing files
+
+namespace {
+
+std::vector<std::string> size_of(fs::path const& file) {
+  return {std::to_string(fs::file_size(file)) + " bytes"};
+}
+
+} // namespace
+
+TEST_F(PathCompletionTest, CandidatesHaveTheirDescriptionIndentedUnderFilesOnly) {
+  fs::create_directories(root / "arkiv");
+  std::ofstream(root / "a.se") << "12";
+  std::ofstream(root / "b.se") << "123";
+  auto const completion = complete_path(typed(U""), true, {}, size_of);
+  EXPECT_TRUE(completion.added.empty());
+  EXPECT_EQ(completion.candidates,
+            (std::vector<std::string>{"a.se", "    2 bytes", "arkiv", "b.se", "    3 bytes"}));
+  EXPECT_TRUE(completion.notes.empty());
+}
+
+TEST_F(PathCompletionTest, TheOneMatchingFileIsDescribedInTheNotes) {
+  std::ofstream(root / "fil.se") << "1234";
+  auto const completed = complete_path(typed(U"f"), true, {}, size_of);
+  EXPECT_EQ(completed.added, U"il.se");
+  EXPECT_EQ(completed.notes, (std::vector<std::string>{"4 bytes"}));
+  // Also when the whole name is typed already
+  auto const typed_whole = complete_path(typed(U"fil.se"), true, {}, size_of);
+  EXPECT_TRUE(typed_whole.added.empty());
+  EXPECT_EQ(typed_whole.notes, (std::vector<std::string>{"4 bytes"}));
+}
+
+TEST_F(PathCompletionTest, FoldersAreNotDescribed) {
+  fs::create_directories(root / "arkiv");
+  auto const completed = complete_path(typed(U"a"), true, {}, size_of);
+  EXPECT_EQ(completed.added, U"rkiv" + separator());
+  EXPECT_TRUE(completed.notes.empty());
+}

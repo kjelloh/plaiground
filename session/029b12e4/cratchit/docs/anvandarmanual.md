@@ -127,6 +127,17 @@ Cratchit > Samlingsmapp > Lägg till: x
 När cratchit vill ha en mapp står en sökväg redan på raden, och du fortsätter skriva därifrån.
 
 * **Tab** fyller i resten av ett mappnamn. Passar flera mappar fyller cratchit i så långt deras namn är lika. Kan cratchit inte fylla i mer listar den mapparna och skriver raden igen under listan.
+* När du letar upp en **SIE-fil** fyller Tab också i filnamn, och under varje SIE-fil i listan står vad filen innehåller. När Tab fyller i en enda fil, eller när hela namnet redan står på raden, visar cratchit samma rad under sökvägen:
+
+  ```text
+  Cratchit > Ny bokföring här > Från SIE> : /Users/anna/Företaget/TheITfiedAB20261112_1
+    TheITfiedAB20261112_102636.se
+        2025-05-01 – 2026-04-30  skapad 2026-11-12  120 ver. t.o.m. 2026-04-30  A 59 · D 26 · M 5
+    TheITfiedAB20261112_111418.se
+        2024-05-01 – 2025-04-30  skapad 2026-11-12  115 ver. t.o.m. 2025-04-30  A 62 · D 21 · M 4
+  ```
+
+  Raden visar räkenskapsåret, när filen skapades, hur många verifikationer den har och datumet på den senaste, och det sista numret i varje serie. Går filen inte att läsa står orsaken där i stället. Uppgifter som filen saknar visas inte.
 * **`-`** går tillbaka så länge du inte har ändrat sökvägen som stod där. Har du ändrat den tömmer du först raden med Esc, och sedan går `-` tillbaka.
 * **Enter** lämnar sökvägen till cratchit. Går det inte att använda den visar cratchit varför, och sökvägen står kvar så att du kan rätta den.
 
@@ -309,6 +320,7 @@ I ett räkenskapsår tar du in en SIE-fil för samma år från ett annat bokför
 
 ```text
 SIE-fil: /Users/anna/Downloads/TheITfiedAB.se (Fortnox 3.62.17, skapad 2026-11-09)
+Innehåll: 2025-05-01 – 2026-04-30  skapad 2026-11-09  116 ver. t.o.m. 2026-04-30  A 82 · D 11 · M 23
 Räkenskapsår: 2025-05-01 – 2026-04-30
 Verifikationer: 12 nya, 0 ändrade, 104 finns redan
 Konton: 1 nya, 0 med ändrat namn eller ändrade uppgifter
@@ -466,6 +478,7 @@ En SIE-fil är en fil med bokföring som du har hämtat från ett annat bokföri
 
 ```text
 SIE-fil: /Users/anna/Documents/cratchit/TheITfiedAB.se
+Innehåll: 2026-05-01 – 2027-04-30  skapad 2026-10-19  42 ver. t.o.m. 2026-10-12  A 21 · D 11 · M 10
 Företag: The ITfied AB (556782-8172)
 Räkenskapsår: 2026-05-01 – 2027-04-30
 Verifikationer: 42

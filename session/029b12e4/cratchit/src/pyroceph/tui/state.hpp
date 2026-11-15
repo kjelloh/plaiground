@@ -44,6 +44,7 @@ using InputResult = std::expected<Accepted, std::string>;
 struct Completion {
   std::u32string added;                // appended to the input
   std::vector<std::string> candidates; // listed (UTF-8) when nothing can be added
+  std::vector<std::string> notes;      // shown (UTF-8) below the input, e.g. what a completed file holds
 };
 
 // One place in the UI. The client derives its concrete states from it.

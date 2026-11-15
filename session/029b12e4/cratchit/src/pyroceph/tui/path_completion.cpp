@@ -71,7 +71,8 @@ std::u32string path_input_of(fs::path const& folder) {
 fs::path path_of(std::u32string_view typed) { return fs::path(encoded(typed)); }
 
 Completion complete_path(std::u32string_view typed, bool files,
-                         std::function<bool(fs::path const&)> const& accept_file) {
+                         std::function<bool(fs::path const&)> const& accept_file,
+                         std::function<std::vector<std::string>(fs::path const&)> const& describe_file) {
   auto const cut = typed.find_last_of(separators);
   if (cut == std::u32string_view::npos) return {};
   auto const folder = path_of(typed.substr(0, cut + 1));
@@ -94,19 +95,26 @@ Completion complete_path(std::u32string_view typed, bool files,
   }
   if (names.empty()) return {};
   std::ranges::sort(names, {}, &Name::text);
+  auto const describe = [&](Name const& name) -> std::vector<std::string> {
+    if (name.is_folder || !describe_file) return {};
+    return describe_file(folder / path_of(name.text));
+  };
   if (names.size() == 1) {
     auto added = names.front().text.substr(prefix.size());
     if (names.front().is_folder) added.push_back(static_cast<CodePoint>(fs::path::preferred_separator));
-    return {std::move(added), {}};
+    return {std::move(added), {}, describe(names.front())};
   }
   auto agreed = names.front().text.size();
   for (auto const& name : names) {
     auto const differs = std::ranges::mismatch(names.front().text, name.text, same).in1;
     agreed = std::min(agreed, static_cast<std::size_t>(differs - names.front().text.begin()));
   }
-  if (agreed > prefix.size()) return {names.front().text.substr(prefix.size(), agreed - prefix.size()), {}};
+  if (agreed > prefix.size()) return {names.front().text.substr(prefix.size(), agreed - prefix.size()), {}, {}};
   Completion result;
-  for (auto const& name : names) result.candidates.push_back(utf8_of(name.text));
+  for (auto const& name : names) {
+    result.candidates.push_back(utf8_of(name.text));
+    for (auto const& line : describe(name)) result.candidates.push_back("    " + line);
+  }
   return result;
 }
 

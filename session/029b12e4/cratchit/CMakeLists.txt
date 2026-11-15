@@ -74,6 +74,7 @@ add_library(cratchit_core
   src/core/sie_export.cpp
   src/core/sie_import.cpp
   src/core/sie_project.cpp
+  src/core/sie_summary.cpp
   src/core/terminal_encoding.cpp
   src/core/version.cpp
 )

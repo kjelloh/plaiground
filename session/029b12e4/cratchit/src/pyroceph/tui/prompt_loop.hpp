@@ -101,7 +101,8 @@ void show(Navigator const& navigator, std::FILE* out);
 // and Delete erase one; when the input becomes empty, navigating starts
 // again. Esc and Ctrl-U empty the input and navigating starts again. Tab adds
 // what the state completes the input with, or lists the candidates and writes
-// the input again below them. Enter gives the input to the state's on_input:
+// the input again below them; notes of the completion are shown below the
+// input, which is then written again. Enter gives the input to the state's on_input:
 // when accepted, the reply is shown, the input is emptied, and the state it
 // leads to (if any) becomes current, else the state named by its back_to (if
 // any); then the current state is shown. When

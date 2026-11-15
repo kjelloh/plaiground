@@ -1,5 +1,6 @@
 #include "ui/fiscal_year_menu.hpp"
 
+#include "core/sie_summary.hpp"
 #include "core/date.hpp"
 #include "core/log.hpp"
 #include "core/sie_export.hpp"
@@ -110,7 +111,8 @@ public:
   OnKeyResult on_key(CodePoint) override { return nullptr; }
   std::u32string start_input() const override { return pyroceph::tui::path_input_of(project_.folder); }
   Completion complete(std::u32string_view text) const override {
-    return pyroceph::tui::complete_path(text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); });
+    return pyroceph::tui::complete_path(
+        text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); }, describe_sie_file);
   }
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);

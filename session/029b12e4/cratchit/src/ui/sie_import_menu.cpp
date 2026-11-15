@@ -1,5 +1,6 @@
 #include "ui/sie_import_menu.hpp"
 
+#include "core/sie_summary.hpp"
 #include "core/date.hpp"
 #include "core/log.hpp"
 #include "core/sie_import.hpp"
@@ -44,13 +45,15 @@ std::string new_vouchers_text(std::size_t count) {
 class ConfirmImportState : public State {
 public:
   ConfirmImportState(Project project, SieImportPlan plan, State const* origin, Report report)
-      : project_(std::move(project)), plan_(std::move(plan)), origin_(origin), report_(std::move(report)) {}
+      : project_(std::move(project)), plan_(std::move(plan)), origin_(origin), report_(std::move(report)),
+        contents_(describe_sie_file(plan_.sie_file).front()) {}
   std::string name() const override { return "Bekräfta"; }
   View view() const override {
     if (imported_) return {"cratchit har importerat SIE-filen."};
     auto const& import = plan_.import;
     View lines;
     lines.push_back(file_line(plan_));
+    lines.push_back("Innehåll: " + contents_);
     if (!plan_.alert.empty()) lines.push_back(plan_.alert);
     if (plan_.expected) {
       lines.push_back(std::format("Räkenskapsår: {} – {} (cratchit räknade med {} – {})", format_iso_date(import.year_start),
@@ -126,6 +129,7 @@ private:
   SieImportPlan plan_;
   State const* origin_;
   Report report_;
+  std::string contents_; // the file's summary (see summary_line), read once
   std::size_t pages_ = 1;
   bool imported_ = false;
 };
@@ -140,7 +144,8 @@ public:
   OnKeyResult on_key(CodePoint) override { return nullptr; }
   std::u32string start_input() const override { return pyroceph::tui::path_input_of(project_.folder); }
   Completion complete(std::u32string_view text) const override {
-    return pyroceph::tui::complete_path(text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); });
+    return pyroceph::tui::complete_path(
+        text, true, [](std::filesystem::path const& file) { return is_sie_file_name(file); }, describe_sie_file);
   }
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);

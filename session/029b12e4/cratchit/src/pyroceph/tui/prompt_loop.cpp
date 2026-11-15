@@ -209,19 +209,27 @@ private:
   }
 
   // Adds what the state completes the input with, or lists the candidates
-  // and writes the input again below them, or sounds the bell
+  // and writes the input again below them, or sounds the bell. Notes are
+  // shown below the input, which is then written again.
   void complete() {
     auto const completion = navigator_.current().complete(input_.text());
     if (!completion.added.empty()) {
       for (auto const code_point : completion.added) {
         if (input_.push(code_point)) echo(code_point);
       }
-    } else if (!completion.candidates.empty()) {
+    }
+    if (!completion.notes.empty()) {
       std::print(out_, "\n");
-      for (auto const& candidate : completion.candidates) std::print(out_, "  {}\n", candidate);
+      for (auto const& note : completion.notes) std::print(out_, "      {}\n", note);
       reprint();
-    } else {
-      std::print(out_, "\a");
+    } else if (completion.added.empty()) {
+      if (completion.candidates.empty()) {
+        std::print(out_, "\a");
+      } else {
+        std::print(out_, "\n");
+        for (auto const& candidate : completion.candidates) std::print(out_, "  {}\n", candidate);
+        reprint();
+      }
     }
   }
 

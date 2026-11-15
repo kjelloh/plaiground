@@ -4,7 +4,9 @@
 
 #include <filesystem>
 #include <functional>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace pyroceph::tui {
 
@@ -24,7 +26,11 @@ std::filesystem::path path_of(std::u32string_view typed);
 // * Nothing for a typed text without a separator, or a folder that cannot be read.
 // Names compare as typed on macOS and Linux, and ignoring case (A-Z) on Windows.
 // With accept_file, only the files it accepts count (folders always count).
+// With describe_file, a file gets lines that tell what it holds: listed
+// indented under its name among the candidates, and as notes when the file is
+// the one match (also when its whole name is typed already).
 Completion complete_path(std::u32string_view typed, bool files = false,
-                         std::function<bool(std::filesystem::path const&)> const& accept_file = {});
+                         std::function<bool(std::filesystem::path const&)> const& accept_file = {},
+                         std::function<std::vector<std::string>(std::filesystem::path const&)> const& describe_file = {});
 
 } // namespace pyroceph::tui

@@ -332,8 +332,10 @@ public:
   pyroceph::tui::OnKeyResult on_key(CodePoint) override { return nullptr; }
   std::u32string start_input() const override { return U"/"; }
   pyroceph::tui::Completion complete(std::u32string_view text) const override {
-    if (text == U"/a") return {U"pa/", {}};
-    if (text == U"/b") return {{}, {"bil", "buss"}};
+    if (text == U"/a") return {U"pa/", {}, {}};
+    if (text == U"/b") return {{}, {"bil", "buss"}, {}};
+    if (text == U"/f") return {U"il.se", {}, {"2025 · 3 ver."}};   // one file, described
+    if (text == U"/fil.se") return {{}, {}, {"2025 · 3 ver."}}; // its whole name typed
     return {};
   }
   pyroceph::tui::InputResult on_input(std::u32string_view text) override {
@@ -364,6 +366,13 @@ TEST(PromptLoop, TabListsTheCandidatesAndWritesTheInputAgain) {
   Navigator navigator(words());
   auto keys = keys_of({'1', 'b', '\t'});
   EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /b\n  bil\n  buss\nRot > Ord: /b\n");
+}
+
+TEST(PromptLoop, TabShowsTheNotesBelowTheCompletedInputAndWritesItAgain) {
+  Navigator navigator(words());
+  auto keys = keys_of({'1', 'f', '\t', '\t'});
+  EXPECT_EQ(run(keys, navigator), "\n  1 Ord\nRot> \nRot > Ord> \b\b: /fil.se\n      2025 · 3 ver.\nRot > Ord: /fil.se"
+                                  "\n      2025 · 3 ver.\nRot > Ord: /fil.se\n");
 }
 
 TEST(PromptLoop, TabWithoutCompletionSoundsTheBell) {
