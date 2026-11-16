@@ -167,6 +167,27 @@ TEST_F(ProjectTest, FolderWithoutProjectFileIsAnError) {
   EXPECT_FALSE(fs::exists(root / "x" / ".cratchit"));
 }
 
+TEST_F(ProjectTest, AFolderHasOneProjectSoRememberingForgetsAnotherUuidThere) {
+  // The folder now holds another project
+  add_project(workspace.folder / "b", "uuid = 2\nname = Beta AB\n");
+  add_project(root / "test", "uuid = 3\nname = Test AB\n");
+  remember("project.1 = " + (root / "test").string());
+  remember("project.2 = b");
+  remember("project.4 = " + (root / "test" / "").string()); // the same folder, written otherwise
+  remember("project.5 = " + (root / "other").string());
+  ASSERT_TRUE(cratchit::remember_project(workspace, {root / "test", root / "test" / ".cratchit" / "project.txt", "3", "Test AB"}));
+  auto const entries = cratchit::read_path_values(workspace.file);
+  ASSERT_TRUE(entries);
+  EXPECT_FALSE(cratchit::find_value(*entries, "project.1"));
+  EXPECT_FALSE(cratchit::find_value(*entries, "project.4"));
+  EXPECT_EQ(cratchit::find_value(*entries, "project.2"), "b");
+  EXPECT_EQ(cratchit::find_value(*entries, "project.3"), (root / "test").string());
+  EXPECT_EQ(cratchit::find_value(*entries, "project.5"), (root / "other").string());
+  // Remembering b again, relative in workspace.txt, forgets nothing else
+  ASSERT_TRUE(cratchit::remember_project(workspace, {workspace.folder / "b", workspace.folder / "b" / ".cratchit" / "project.txt", "2", "Beta AB"}));
+  EXPECT_EQ(cratchit::list_projects(workspace)->size(), 3u);
+}
+
 TEST_F(ProjectTest, ForgetRemovesOnlyTheProjectsEntryAndTouchesNoFiles) {
   add_project(workspace.folder / "b", "uuid = 2\nname = Beta AB\n");
   remember("project.1 = Borta");

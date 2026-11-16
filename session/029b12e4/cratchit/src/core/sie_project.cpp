@@ -1,5 +1,6 @@
 #include "core/sie_project.hpp"
 
+#include "core/details_project.hpp"
 #include "core/inventory.hpp"
 
 #include "core/path_value.hpp"
@@ -75,6 +76,8 @@ bool is_sie_file_name(fs::path const& file) {
 }
 
 std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const& sie_file,
+                                                                 std::optional<fs::path> const& workspace_folder,
+                                                                 std::optional<fs::path> const& home,
                                                                  std::optional<fs::path> const& here) {
   std::error_code ec;
   if (!sie_file.is_absolute()) return std::unexpected(std::format("{} är inte en hel sökväg", sie_file.string()));
@@ -87,29 +90,17 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const&
   if (!parsed.errors.empty()) return std::unexpected(errors_text(parsed.errors));
   if (document.company_name.empty()) return std::unexpected("SIE-filen saknar företagets namn (#FNAMN)");
   if (!document.year(0)) return std::unexpected("SIE-filen saknar räkenskapsår (#RAR 0)");
-  if (!here && !is_folder_name(document.company_name)) {
-    return std::unexpected(std::format("Företagsnamnet \"{}\" går inte att använda som namn på en mapp", document.company_name));
-  }
-  auto const sie_folder = sie_file.parent_path();
-  // A new project must not be made inside another, e.g. from a file in its importerade_sie_filer
-  for (auto folder = sie_folder; !folder.empty(); folder = folder.parent_path()) {
-    if (fs::exists(folder / ".cratchit" / "project.txt", ec)) {
-      return std::unexpected(std::format("SIE-filen ligger i mappen för en bokföring ({})", folder.string()));
-    }
-    if (folder == folder.root_path()) break;
+  // The books are made here, or else in the SIE file's own folder; never in a new folder (beslut.md)
+  auto const folder = here ? *here : sie_file.parent_path();
+  if (auto const allowed = here ? check_project_here(folder, workspace_folder, home)
+                                : check_project_folder(folder, workspace_folder, home, "SIE-filens mapp",
+                                                       "Lägg SIE-filen i bokföringens egen mapp.");
+      !allowed) {
+    return std::unexpected(allowed.error());
   }
   SieProjectPlan plan;
   plan.sie_file = sie_file;
-  if (here) {
-    plan.folder = *here;
-    plan.here = true;
-    if (fs::exists(plan.folder / ".cratchit", ec)) {
-      return std::unexpected(std::format("Mappen {} har redan en .cratchit-mapp", plan.folder.string()));
-    }
-  } else {
-    plan.folder = sie_folder / fs::path(std::u8string(document.company_name.begin(), document.company_name.end()));
-    if (fs::exists(plan.folder, ec)) return std::unexpected(std::format("Mappen {} finns redan", plan.folder.string()));
-  }
+  plan.folder = folder;
   plan.name = document.company_name;
   plan.orgnr = document.orgnr;
   plan.alert = lexed->alert;
@@ -125,10 +116,6 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const&
 
 std::expected<Project, std::string> create_project_from_sie(SieProjectPlan const& plan, std::string_view today) {
   std::error_code ec;
-  if (!plan.here && !fs::create_directory(plan.folder, ec)) {
-    return std::unexpected(std::format("Kan inte skapa {}: {}", plan.folder.string(),
-                                       ec ? ec.message() : std::string("mappen finns redan")));
-  }
   if (!fs::create_directory(plan.folder / ".cratchit", ec)) {
     return std::unexpected(std::format("Kan inte skapa {}: {}", (plan.folder / ".cratchit").string(),
                                        ec ? ec.message() : std::string("mappen finns redan")));

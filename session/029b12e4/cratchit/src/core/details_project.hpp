@@ -33,6 +33,17 @@ std::expected<int, std::string> parse_first_year_length(std::string_view text);
 // months, e.g. 2026-05 and 12 give 2026-05-01 – 2027-04-30
 FiscalYear first_fiscal_year(std::chrono::year_month first_month, int months);
 
+// Why cratchit makes no new project in folder itself. Refused: a folder that
+// already has a .cratchit folder (a project, the runtime in home, a workspace),
+// the home folder, the workspace folder, and a folder inside a project (a
+// folder above it has .cratchit/project.txt). The text starts with subject
+// (e.g. "Arbetsmappen") and, for home and the workspace, ends with remedy.
+// Nothing when cratchit may make a project there.
+std::expected<void, std::string> check_project_folder(std::filesystem::path const& folder,
+                                                      std::optional<std::filesystem::path> const& workspace_folder,
+                                                      std::optional<std::filesystem::path> const& home,
+                                                      std::string_view subject, std::string_view remedy);
+
 // Why cratchit makes no new project in folder itself (the folder cratchit was
 // started in, see create_project_here). Refused: a folder that already has a
 // .cratchit folder (a project, the runtime in home, a workspace), the home

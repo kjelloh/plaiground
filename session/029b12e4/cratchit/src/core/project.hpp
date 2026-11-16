@@ -68,7 +68,8 @@ std::expected<Project, std::string> open_project(std::filesystem::path const& fo
 
 // Makes the workspace remember the project: sets `project.<uuid> = <folder>`
 // in workspace.txt (added last, or replacing the folder it had), keeping the
-// other entries as they are. Error text when workspace.txt cannot be read or written.
+// other entries as they are. A folder has one project: another uuid remembered
+// for the same folder is forgotten, and logged. Error text when workspace.txt cannot be read or written.
 std::expected<void, std::string> remember_project(Workspace const& workspace, Project const& project);
 
 // Makes the workspace forget the project with uuid: removes its

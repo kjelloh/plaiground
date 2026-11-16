@@ -1,5 +1,6 @@
 #include "core/project.hpp"
 
+#include "core/log.hpp"
 #include "core/path_value.hpp"
 
 #include <algorithm>
@@ -122,6 +123,26 @@ std::expected<void, std::string> forget_project(Workspace const& workspace, std:
 std::expected<void, std::string> remember_project(Workspace const& workspace, Project const& project) {
   auto entries = read_path_values(workspace.file);
   if (!entries) return std::unexpected(entries.error());
+  // A folder has one project (beslut.md): forget another uuid remembered for the same folder
+  auto const key = std::string(project_prefix) + project.uuid;
+  auto const same_folder = [&](PathValue const& entry) {
+    if (!entry.path.starts_with(project_prefix) || entry.path == key) return false;
+    auto folder = fs::path(entry.value);
+    if (folder.is_relative()) folder = workspace.folder / folder;
+    auto const normal = [](fs::path p) {
+      p = p.lexically_normal();
+      return !p.has_filename() && p.has_relative_path() ? p.parent_path() : p;
+    };
+    std::error_code ec;
+    if (normal(folder) == normal(project.folder)) return true;
+    return fs::equivalent(folder, project.folder, ec) && !ec;
+  };
+  for (auto const& entry : *entries) {
+    if (same_folder(entry)) {
+      LOG_BUSINESS("Samlingsmappen glömmer {} i {}: mappen har nu bokföringen {}", entry.path, entry.value, project.uuid);
+    }
+  }
+  std::erase_if(*entries, same_folder);
   set_value(*entries, std::string(project_prefix) + project.uuid, project.folder.string());
   return write_path_values(workspace.file, *entries);
 }

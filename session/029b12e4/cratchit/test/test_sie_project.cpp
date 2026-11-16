@@ -48,21 +48,22 @@ TEST_F(SieProjectTest, PlanReadsTheFileAndWritesNothing) {
   ASSERT_TRUE(plan) << plan.error();
   EXPECT_EQ(plan->name, "Test AB");
   EXPECT_EQ(plan->orgnr, "556000-0001");
-  EXPECT_EQ(plan->folder, root / "Test AB");
+  EXPECT_EQ(plan->folder, root); // the SIE file's own folder
   EXPECT_EQ(plan->import.vouchers_added, 2u);
   EXPECT_EQ(cratchit::format_iso_date(plan->import.year_start), "2025-01-01");
-  EXPECT_FALSE(fs::exists(root / "Test AB"));
+  EXPECT_FALSE(fs::exists(root / ".cratchit"));
   EXPECT_TRUE(fs::exists(file));
 }
 
-TEST_F(SieProjectTest, CreateMakesTheProjectImportsTheFileAndMovesIt) {
+TEST_F(SieProjectTest, CreateMakesTheProjectInTheFilesFolderAndImportsTheFile) {
   auto const file = write("test.se", sie_file(2025, balanced_balances(), sale_and_cost(2025)));
   auto const plan = cratchit::plan_project_from_sie(file);
   ASSERT_TRUE(plan) << plan.error();
   auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
   ASSERT_TRUE(project) << project.error();
-  auto const folder = root / "Test AB";
+  auto const folder = root; // no new folder: only .cratchit is made
   EXPECT_EQ(project->folder, folder);
+  EXPECT_FALSE(fs::exists(root / "Test AB"));
   EXPECT_EQ(project->name, "Test AB");
   EXPECT_TRUE(cratchit::is_uuid_like(project->uuid));
   // project.txt
@@ -94,15 +95,26 @@ TEST_F(SieProjectTest, CreateMakesTheProjectImportsTheFileAndMovesIt) {
   ASSERT_EQ(inventory->size(), 1u);
   EXPECT_EQ((*inventory)[0].use, "ny bokföring");
   EXPECT_EQ((*inventory)[0].name, "test.se");
-  EXPECT_EQ((*inventory)[0].path, "../test.se"); // relative to the project folder, also outside it
+  EXPECT_EQ((*inventory)[0].path, "test.se"); // relative to the project folder
 }
 
-TEST_F(SieProjectTest, ExistingFolderIsAnError) {
+TEST_F(SieProjectTest, AFolderWithDotCratchitIsAnError) {
   auto const file = write("test.se", sie_file(2025, balanced_balances(), sale_and_cost(2025)));
-  fs::create_directories(root / "Test AB");
+  fs::create_directories(root / ".cratchit");
   auto const plan = cratchit::plan_project_from_sie(file);
   ASSERT_FALSE(plan);
-  EXPECT_TRUE(plan.error().starts_with("Mappen ")) << plan.error();
+  EXPECT_TRUE(plan.error().starts_with("SIE-filens mapp har redan en .cratchit-mapp")) << plan.error();
+}
+
+TEST_F(SieProjectTest, TheHomeFolderAndTheWorkspaceFolderAreErrors) {
+  auto const file = write("test.se", sie_file(2025, balanced_balances(), sale_and_cost(2025)));
+  auto const in_home = cratchit::plan_project_from_sie(file, std::nullopt, root);
+  ASSERT_FALSE(in_home);
+  EXPECT_EQ(in_home.error(), "SIE-filens mapp är din hemkatalog. Lägg SIE-filen i bokföringens egen mapp.");
+  auto const in_workspace = cratchit::plan_project_from_sie(file, root, std::nullopt);
+  ASSERT_FALSE(in_workspace);
+  EXPECT_EQ(in_workspace.error(), "SIE-filens mapp är samlingsmappen. Lägg SIE-filen i bokföringens egen mapp.");
+  EXPECT_TRUE(cratchit::plan_project_from_sie(file, root / "annan", root / "hem"));
 }
 
 TEST_F(SieProjectTest, FileInAProjectFolderIsAnError) {
@@ -111,7 +123,7 @@ TEST_F(SieProjectTest, FileInAProjectFolderIsAnError) {
   std::ofstream(root / ".cratchit" / "project.txt") << "uuid = 1\nname = Annat AB\n";
   auto const plan = cratchit::plan_project_from_sie(file);
   ASSERT_FALSE(plan);
-  EXPECT_TRUE(plan.error().starts_with("SIE-filen ligger i mappen för en bokföring")) << plan.error();
+  EXPECT_TRUE(plan.error().starts_with("SIE-filens mapp har redan en .cratchit-mapp")) << plan.error();
 }
 
 TEST_F(SieProjectTest, NoSieFileIsAnError) {
@@ -125,11 +137,11 @@ TEST_F(SieProjectTest, MissingFileIsAnError) {
   EXPECT_FALSE(cratchit::plan_project_from_sie(root / "gone.se"));
 }
 
-TEST_F(SieProjectTest, CompanyNameThatCannotBeAFolderIsAnError) {
+TEST_F(SieProjectTest, TheCompanyNameNeedNotBeAFolderName) {
   auto const file = write("test.se", sie_file(2025, balanced_balances(), sale_and_cost(2025), "\"A/B AB\""));
   auto const plan = cratchit::plan_project_from_sie(file);
-  ASSERT_FALSE(plan);
-  EXPECT_NE(plan.error().find("namn på en mapp"), std::string::npos) << plan.error();
+  ASSERT_TRUE(plan) << plan.error();
+  EXPECT_EQ(plan->name, "A/B AB");
 }
 
 TEST(SieProject, FolderNames) {
@@ -166,5 +178,5 @@ TEST_F(SieProjectTest, FileBelowAProjectFolderIsAnError) {
   std::ofstream(file, std::ios::binary) << sie_file(2025, balanced_balances(), sale_and_cost(2025));
   auto const plan = cratchit::plan_project_from_sie(file);
   ASSERT_FALSE(plan);
-  EXPECT_EQ(plan.error(), std::format("SIE-filen ligger i mappen för en bokföring ({})", root.string()));
+  EXPECT_EQ(plan.error(), std::format("SIE-filens mapp ligger inuti bokföringen i {}.", root.string()));
 }

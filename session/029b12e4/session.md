@@ -181,6 +181,125 @@ Ja, nu blev det infört i alla fall (Tänk att ALLT är så komplext och bara v�
 * HÅLL I DET HÄR NU!
 * Jag vill kunna lämna det här och ha ett bokföringsprogram som är good enough fram till nästa bokslut, ÅR, Stämma, rapport till Bolagsverket och inkomstdeklaration 2!
 
+Nu började jag skapa mall-företag för att kunna provköra bokföring från ett känst start-tillstånd.
+
+* Jag märker då att 'skapa här' och 'ny från SIE' beter sig olika!
+* Vi har gjort 'skapa här' så den faktiskt gör 'här' (inte i en undermapp)
+* Medan 'ny från SIE' fortfarande skapar en undermapp döpt som företaget
+* Jag tror detta är förvirrande?
+    * Jag blev förvånad i alla fall!
+    * Jag hade skapat mig bilden att 'ny frå SIE' nu alltid skapade i samma mapp som där SIE-filen låg?
+    * Men så är så klart inte fallet.
+    * Claude saknar förmågan att beakta den typen av meta-koncept (antar jag)?
+
+I now tested a prompt that Claude took totally the wrong way.
+
+```text
+❯ Jag prövade 'Cratchit > Samlingsmapp > Lägg till > Ny > Från SIE' och märker nu att de skapar företaget i en undermapp till SIE-filen. Detta skiljer sig från 'Skapa här > från SIE' som skapar bokföingen i samma mapp som SIE-filen. Jag vill att alla 'ny fron SIE' skapar bokföringen i den mapp där SIE-filen ligger. Så det blir upp till användaren att skapa sin egen mapp (eller återanvända en befintlig från ett annat program). Kan du göra så alla 'ny från SIE' skapar en ny bokföring i samma mapp som SIE-filen ligger i? Kolla också om det blir problem om vi gör så? För och nackdelar? Vad kan du föreslå?
+```
+
+* Claude took this to mean 'always create new books in the same folder as the SIE-file.
+* But this was NOT what I meant.
+* But I now see I actually expressed my intention the wrong way.
+    * What I wanted was 'never create sub-folder'"
+    * I wanted 'create here' to create 'here' (current folder)
+    * And 'new from SIE' in the same folder as the SIE-file
+
+I asked Claude to correct this.
+
+Nu har jag skapat tree varainetr av itifed i olika tillstånd så jag kan testa att återskapa bokföring med nya UI.
+
+```sh
+kjell-olovhogdahl@MacBook-Pro ~/Documents/cratchit % tree
+.
+├── __snapshot
+│   ├── SIE-filer
+│   │   ├── TheITfiedAB20261019_20250501_20260430.se
+│   │   ├── TheITfiedAB20261019_20260501_20270430.se
+│   │   ├── TheITfiedAB20261112_102636.se
+│   │   └── TheITfiedAB20261112_111418.se
+│   ├── itfied_20260430_efter_bokslut.cratchit
+│   │   ├── books
+│   │   │   ├── 2025-05-01
+│   │   │   │   ├── inventory.csv
+│   │   │   │   ├── opening.csv
+│   │   │   │   ├── postings.csv
+│   │   │   │   └── vouchers.csv
+│   │   │   ├── accounts.csv
+│   │   │   ├── books.txt
+│   │   │   ├── dimensions.csv
+│   │   │   ├── objects.csv
+│   │   │   └── series.csv
+│   │   └── project.txt
+│   ├── itfied_20260430_innan_bokslut.cratchit
+│   │   ├── books
+│   │   │   ├── 2025-05-01
+│   │   │   │   ├── inventory.csv
+│   │   │   │   ├── opening.csv
+│   │   │   │   ├── postings.csv
+│   │   │   │   └── vouchers.csv
+│   │   │   ├── accounts.csv
+│   │   │   ├── books.txt
+│   │   │   ├── dimensions.csv
+│   │   │   ├── objects.csv
+│   │   │   └── series.csv
+│   │   └── project.txt
+│   ├── itfied_2026_innan_M2.cratchit
+│   │   ├── books
+│   │   │   ├── 2025-05-01
+│   │   │   │   ├── inventory.csv
+│   │   │   │   ├── opening.csv
+│   │   │   │   ├── postings.csv
+│   │   │   │   └── vouchers.csv
+│   │   │   ├── 2026-05-01
+│   │   │   │   ├── inventory.csv
+│   │   │   │   ├── opening.csv
+│   │   │   │   ├── postings.csv
+│   │   │   │   └── vouchers.csv
+│   │   │   ├── accounts.csv
+│   │   │   ├── books.txt
+│   │   │   ├── dimensions.csv
+│   │   │   ├── objects.csv
+│   │   │   └── series.csv
+│   │   └── project.txt
+│   └── återställ.sh
+├── itfied_20260430_efter_bokslut
+├── itfied_20260430_innan_bokslut
+└── itfied_2026_innan_M2
+
+16 directories, 39 files
+kjell-olovhogdahl@MacBook-Pro ~/Documents/cratchit % 
+```
+
+* Där itfied_20260430_efter_bokslut är 20250501-20260430 avslutat
+* Där itfied_20260430_innan_bokslut är 20250501-20260430 innan bokslut
+* Där itfied_2026_innan_M2 är 20260501-20270430 inna M2 är gjord
+* I __snapshot ligger .cratchit-filer jag kan kopira tillbaka och återställa tillståndet
+    * itfied_20260430_efter_bokslut.cratchit
+    * itfied_20260430_innan_bokslut.cratchit
+    * itfied_2026_innan_M2.cratchit
+*  SIE-filerna i __snapshot/SIE-filer
+
+┌──────────────────────────────────────────┬─────────┬─────────────────────────────────┐
+│                   Fil                    │   År    │           Anmärkning            │
+├──────────────────────────────────────────┼─────────┼─────────────────────────────────┤
+│ TheITfiedAB20261019_20250501_20260430.se │ 2025/26 │ innan bokslut                   │
+├──────────────────────────────────────────┼─────────┼─────────────────────────────────┤
+│ TheITfiedAB20261112_102636.se            │ 2025/26 │ efter bokslut                   │
+├──────────────────────────────────────────┼─────────┼─────────────────────────────────┤
+│ TheITfiedAB20261112_111418.se            │ 2024/25 │ året innan, för att bygga bakåt │
+├──────────────────────────────────────────┼─────────┼─────────────────────────────────┤
+│ TheITfiedAB20261019_20260501_20270430.se │ 2026/27 │ –                               │
+└──────────────────────────────────────────┴─────────┴─────────────────────────────────┘
+
+Kommer jag ihåg detta nu?
+
+Claude got confused about my 'snapshot' making!
+
+* It started to litter the manual and rules with snapshot-stuff!!
+* GOD! It is so much BABY SITTING!
+* SURELY ' This vibe-coding way of doing things just Can't go anywhere can it?
+
 
 ## 20261115
 

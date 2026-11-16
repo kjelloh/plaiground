@@ -17,8 +17,7 @@ namespace cratchit {
 // What creating a project from an SIE file will do. Read from the file; nothing written yet.
 struct SieProjectPlan {
   std::filesystem::path sie_file; // the SIE file, in full
-  std::filesystem::path folder;   // the new project folder: <the SIE file's folder>/<name>, or the working folder
-  bool here = false;              // folder is the working folder, which exists: only its .cratchit is made
+  std::filesystem::path folder;   // the project folder, where only .cratchit is made: the SIE file's own folder, or here
   std::string name;               // #FNAMN
   std::string orgnr;              // #ORGNR, may be empty
   std::string alert;              // when the file was not read as CP437 (see sie::lex_file), else empty
@@ -27,21 +26,21 @@ struct SieProjectPlan {
   books::ImportPlan import;       // the books after importing the whole file into empty books
 };
 
-// Plans a new project from the SIE file: reads and parses it and plans importing
-// it into empty books (see books::plan_import, which imports the file's fiscal
-// year 0 with its accounts, dimensions, objects and vouchers). Error text when the
-// file cannot be read, is no SIE file (#SIETYP), has no #FNAMN or no #RAR 0, has
-// errors (the first ones are given), when #FNAMN cannot be a folder name, or when
-// the folder already exists or the SIE file lies in a project folder (or below one). Writes nothing.
-//
-// With here, the project is planned in that folder itself (the working folder,
-// see check_project_here) instead of a new folder next to the SIE file: then
-// #FNAMN need not be a folder name and here must have no .cratchit folder.
-std::expected<SieProjectPlan, std::string> plan_project_from_sie(std::filesystem::path const& sie_file,
-                                                                 std::optional<std::filesystem::path> const& here = std::nullopt);
+// Plans a new project from the SIE file, in the folder the file lies in, or,
+// with here, in that folder (the working folder, "Ny bokföring här"; the file
+// may lie anywhere). Only a .cratchit folder is made (see beslut.md). It reads and parses the file and
+// plans importing it into empty books (see books::plan_import, which imports the
+// file's fiscal year 0 with its accounts, dimensions, objects and vouchers).
+// Error text when the file cannot be read, is no SIE file (#SIETYP), has no
+// #FNAMN or no #RAR 0, has errors (the first ones are given), or when cratchit
+// makes no project in the folder (see check_project_folder and check_project_here:
+// a folder with .cratchit, inside a project, home or the workspace folder). Writes nothing.
+std::expected<SieProjectPlan, std::string> plan_project_from_sie(
+    std::filesystem::path const& sie_file, std::optional<std::filesystem::path> const& workspace_folder = std::nullopt,
+    std::optional<std::filesystem::path> const& home = std::nullopt,
+    std::optional<std::filesystem::path> const& here = std::nullopt);
 
-// Creates the planned project: the folder (not when planned here),
-// .cratchit/project.txt (`created`,
+// Creates the planned project in its folder: .cratchit/project.txt (`created`,
 // `uuid` (new), `name`, `orgnr`), the books (see books::write_books: books.txt,
 // accounts, dimensions, objects and the year's opening balances, vouchers and
 // postings), and records the SIE file in the inventory of its fiscal year

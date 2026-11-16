@@ -100,24 +100,28 @@ bool same_folder(fs::path const& a, fs::path const& b) {
 
 } // namespace
 
-std::expected<void, std::string> check_project_here(fs::path const& folder, std::optional<fs::path> const& workspace_folder,
-                                                    std::optional<fs::path> const& home) {
+std::expected<void, std::string> check_project_folder(fs::path const& folder, std::optional<fs::path> const& workspace_folder,
+                                                      std::optional<fs::path> const& home, std::string_view subject,
+                                                      std::string_view remedy) {
   std::error_code ec;
-  if (home && same_folder(folder, *home)) {
-    return std::unexpected(std::string("Arbetsmappen är din hemkatalog. Starta cratchit i bokföringens egen mapp."));
-  }
+  if (home && same_folder(folder, *home)) return std::unexpected(std::format("{} är din hemkatalog. {}", subject, remedy));
   if (workspace_folder && same_folder(folder, *workspace_folder)) {
-    return std::unexpected(std::string("Arbetsmappen är samlingsmappen. Starta cratchit i bokföringens egen mapp."));
+    return std::unexpected(std::format("{} är samlingsmappen. {}", subject, remedy));
   }
   if (fs::exists(folder / ".cratchit", ec)) {
-    return std::unexpected(std::format("Arbetsmappen har redan en .cratchit-mapp: {}", (folder / ".cratchit").string()));
+    return std::unexpected(std::format("{} har redan en .cratchit-mapp: {}", subject, (folder / ".cratchit").string()));
   }
   for (auto above = folder.parent_path(); !above.empty() && above != above.parent_path(); above = above.parent_path()) {
     if (fs::is_regular_file(above / ".cratchit" / "project.txt", ec)) {
-      return std::unexpected(std::format("Arbetsmappen ligger inuti bokföringen i {}.", above.string()));
+      return std::unexpected(std::format("{} ligger inuti bokföringen i {}.", subject, above.string()));
     }
   }
   return {};
+}
+
+std::expected<void, std::string> check_project_here(fs::path const& folder, std::optional<fs::path> const& workspace_folder,
+                                                    std::optional<fs::path> const& home) {
+  return check_project_folder(folder, workspace_folder, home, "Arbetsmappen", "Starta cratchit i bokföringens egen mapp.");
 }
 
 std::expected<Project, std::string> create_project_from_details(fs::path const& folder, std::string_view name,

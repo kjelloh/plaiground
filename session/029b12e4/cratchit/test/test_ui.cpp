@@ -516,7 +516,9 @@ TEST(WorkspaceMenu, OpenExistingStartsInTheWorkspace) {
 TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
   auto const folder = documents / "cratchit";
   ASSERT_TRUE(cratchit::open_workspace(folder, "2026-11-09"));
-  std::ofstream(folder / "test.se", std::ios::binary)
+  auto const company = documents / "Bolaget"; // the user's own folder, holding the SIE file
+  fs::create_directories(company);
+  std::ofstream(company / "test.se", std::ios::binary)
       << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
          "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n"
          "#VER A 1 20250201 \"Sale\"\r\n{\r\n#TRANS 1930 {} 500.00\r\n#TRANS 3010 {} -500.00\r\n}\r\n";
@@ -526,21 +528,23 @@ TEST_F(RootMenuTest, FromSieCreatesTheProjectAndTheWorkspaceRemembersIt) {
   ASSERT_TRUE(navigator.press(U'2'));
   ASSERT_TRUE(navigator.press(U'1'));
   // Tab completes the SIE file
-  auto const typed = navigator.current().start_input() + U"te";
+  auto const typed = pyroceph::tui::path_input_of(company) + U"te";
   EXPECT_EQ(navigator.current().complete(typed).added, U"st.se");
-  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(folder) + U"test.se");
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(company) + U"test.se");
   ASSERT_TRUE(result) << result.error();
   ASSERT_TRUE(result->next);
   navigator.enter(std::move(result->next));
   EXPECT_EQ(navigator.current().name(), "Bekräfta");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}}));
   EXPECT_FALSE(navigator.press(U'\n')); // Enter only shows the options again
-  EXPECT_FALSE(fs::exists(folder / "Test AB")); // nothing created before J
-  // J creates the project and goes back to where the user started, the workspace, which lists it
+  EXPECT_EQ(navigator.current().view()[1], "  Mapp:           " + company.string());
+  EXPECT_FALSE(fs::exists(company / ".cratchit")); // nothing created before J
+  // J creates the project in the SIE file's folder, no new folder, and goes back to the workspace, which lists it
   ASSERT_TRUE(navigator.press(U'J'));
-  EXPECT_TRUE(fs::exists(folder / "Test AB" / ".cratchit" / "project.txt"));
-  EXPECT_TRUE(fs::exists(folder / "test.se")); // the SIE file stays where it is
-  EXPECT_FALSE(fs::exists(folder / "Test AB" / "importerade_sie_filer"));
+  EXPECT_TRUE(fs::exists(company / ".cratchit" / "project.txt"));
+  EXPECT_FALSE(fs::exists(company / "Test AB"));
+  EXPECT_TRUE(fs::exists(company / "test.se")); // the SIE file stays where it is
+  EXPECT_FALSE(fs::exists(company / "importerade_sie_filer"));
   EXPECT_EQ(navigator.path().size(), 2u);
   EXPECT_EQ(navigator.current().name(), "Samlingsmapp");
   EXPECT_EQ(names_of(navigator.current().options()), (OptionsList{{U'1', "Test AB"}, {U'+', "Lägg till bokföring"}}));
@@ -650,8 +654,9 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
     return std::format("#VER A {} {} \"Sale\"\r\n{{\r\n#TRANS 1930 {{}} {}.00\r\n#TRANS 3010 {{}} -{}.00\r\n}}\r\n",
                        number, date, 100 * number, 100 * number);
   };
-  std::ofstream(folder / "full.se", std::ios::binary) << sie(sale(1, "20250201") + sale(2, "20250301"));
-  auto plan = cratchit::plan_project_from_sie(folder / "full.se");
+  fs::create_directories(documents / "Bolaget");
+  std::ofstream(documents / "Bolaget" / "full.se", std::ios::binary) << sie(sale(1, "20250201") + sale(2, "20250301"));
+  auto plan = cratchit::plan_project_from_sie(documents / "Bolaget" / "full.se");
   ASSERT_TRUE(plan) << plan.error();
   auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
   ASSERT_TRUE(project) << project.error();
@@ -706,7 +711,7 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   // Against a file with every voucher: nothing to write
   ASSERT_TRUE(navigator.press(U'1'));
   ASSERT_TRUE(navigator.press(U'2'));
-  auto same = navigator.current().on_input(pyroceph::tui::path_input_of(folder) + U"full.se"); // where it stayed
+  auto same = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "Bolaget") + U"full.se"); // where it stayed
   ASSERT_TRUE(same) << same.error();
   navigator.enter(std::move(same->next));
   EXPECT_TRUE(navigator.current().options().empty());
@@ -730,8 +735,9 @@ TEST_F(RootMenuTest, ImportListsTheChangedVouchersAPageAtATime) {
     }
     return text;
   };
-  std::ofstream(folder / "start.se", std::ios::binary) << sie(false);
-  auto plan = cratchit::plan_project_from_sie(folder / "start.se");
+  fs::create_directories(documents / "Bolaget");
+  std::ofstream(documents / "Bolaget" / "start.se", std::ios::binary) << sie(false);
+  auto plan = cratchit::plan_project_from_sie(documents / "Bolaget" / "start.se");
   ASSERT_TRUE(plan) << plan.error();
   auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
   ASSERT_TRUE(project) << project.error();
@@ -784,9 +790,10 @@ TEST_F(RootMenuTest, AYearNotBookedYetCanBeImportedIntoAndExported) {
                        "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n{1}",
                        year, vouchers);
   };
-  std::ofstream(folder / "start.se", std::ios::binary)
+  fs::create_directories(documents / "Bolaget");
+  std::ofstream(documents / "Bolaget" / "start.se", std::ios::binary)
       << sie(2025, "#VER A 1 20250201 \"Sale\"\r\n{\r\n#TRANS 1930 {} 100\r\n#TRANS 3010 {} -100\r\n}\r\n");
-  auto plan = cratchit::plan_project_from_sie(folder / "start.se");
+  auto plan = cratchit::plan_project_from_sie(documents / "Bolaget" / "start.se");
   ASSERT_TRUE(plan) << plan.error();
   auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
   ASSERT_TRUE(project) << project.error();
@@ -835,8 +842,9 @@ TEST_F(RootMenuTest, AChangeOfFiscalYearFromSieShowsAndTheYearTakesItsDates) {
                        "#VER A 1 {} \"Sale\"\r\n{{\r\n#TRANS 1930 {{}} 100\r\n#TRANS 3010 {{}} -100\r\n}}\r\n",
                        start, end, day);
   };
-  std::ofstream(folder / "start.se", std::ios::binary) << sie("20250101", "20251231", "20250201");
-  auto plan = cratchit::plan_project_from_sie(folder / "start.se");
+  fs::create_directories(documents / "Bolaget");
+  std::ofstream(documents / "Bolaget" / "start.se", std::ios::binary) << sie("20250101", "20251231", "20250201");
+  auto plan = cratchit::plan_project_from_sie(documents / "Bolaget" / "start.se");
   ASSERT_TRUE(plan) << plan.error();
   auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
   ASSERT_TRUE(project) << project.error();
@@ -999,12 +1007,13 @@ TEST_F(RootMenuTest, NewProjectHereFromSieStartsInTheWorkingFolderAndCreatesTheP
   // The path starts in the working folder, not in the workspace, with nothing filled in
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(seed));
   auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed / "older") + U"test.se");
-  ASSERT_TRUE(result) << result.error(); // the name need not be a folder name here (':')
+  ASSERT_TRUE(result) << result.error(); // the name need not be a folder name (':'), and the file may lie below
   ASSERT_TRUE(result->next);
   navigator.enter(std::move(result->next));
   EXPECT_EQ(navigator.current().name(), "Bekräfta");
   EXPECT_EQ(navigator.current().view(),
             (View{"SIE-fil: " + (seed / "older" / "test.se").string(),
+                  "  Mapp:           " + seed.string(),
                   "  Företag:        Test AB: provet (556000-0001)",
                   "  Räkenskapsår:   2025-01-01 – 2025-12-31, ofullbordat",
                   "  Verifikationer: 1 t.o.m. 2025-02-01  A1",
@@ -1047,30 +1056,32 @@ TEST_F(RootMenuTest, NewProjectHereFromSieTakesAFileAlreadyInImportedSieFiles) {
   auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed / "importerade_sie_filer") + U"test.se");
   ASSERT_TRUE(result) << result.error();
   navigator.enter(std::move(result->next));
+  EXPECT_EQ(navigator.current().view()[1], "  Mapp:           " + seed.string()); // here, not the file's folder
   ASSERT_TRUE(navigator.press(U'J'));
   EXPECT_TRUE(fs::is_regular_file(seed / ".cratchit" / "project.txt"));
+  EXPECT_FALSE(fs::exists(seed / "importerade_sie_filer" / ".cratchit"));
   EXPECT_TRUE(fs::is_regular_file(seed / "importerade_sie_filer" / "test.se"));
 }
 
 TEST_F(RootMenuTest, NoInConfirmGoesBackToChooseAnotherFileInTheSameFolder) {
   auto const workspace = documents / "cratchit";
   auto const seed = documents / "_seed";
-  fs::create_directories(seed / "older");
-  std::ofstream(seed / "older" / "test.se", std::ios::binary)
+  fs::create_directories(seed);
+  std::ofstream(seed / "test.se", std::ios::binary)
       << "#FLAGGA 0\r\n#SIETYP 4\r\n#PROGRAM \"Fortnox\" 3.62\r\n#GEN 20261019\r\n#FNAMN \"Test AB\"\r\n"
          "#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n#KONTO 1930 \"Bank\"\r\n";
   Navigator navigator(cratchit::ui::make_root_menu(workspace, seed));
   ASSERT_TRUE(navigator.press(U'1'));
   ASSERT_TRUE(navigator.press(U'1'));
-  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed / "older") + U"test.se");
+  auto result = navigator.current().on_input(pyroceph::tui::path_input_of(seed) + U"test.se");
   ASSERT_TRUE(result) << result.error();
   navigator.enter(std::move(result->next));
-  EXPECT_EQ(navigator.current().view()[3], "  Skapad:         2026-10-19 (Fortnox 3.62)");
+  EXPECT_EQ(navigator.current().view()[4], "  Skapad:         2026-10-19 (Fortnox 3.62)");
   ASSERT_TRUE(navigator.press(U'N'));
   EXPECT_EQ(navigator.current().name(), "Från SIE");
-  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(seed / "older"));
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(seed));
   EXPECT_FALSE(fs::exists(seed / ".cratchit"));
-  EXPECT_TRUE(fs::exists(seed / "older" / "test.se"));
+  EXPECT_TRUE(fs::exists(seed / "test.se"));
 }
 
 TEST_F(RootMenuTest, ConfirmWarnsForAnIncompleteYearOlderThanLastYearAndForAMismatch) {
@@ -1095,11 +1106,11 @@ TEST_F(RootMenuTest, ConfirmWarnsForAnIncompleteYearOlderThanLastYearAndForAMism
     return navigator.current().view();
   };
   auto const old = confirm(U"old.se");
-  EXPECT_EQ(old[2], "  Räkenskapsår:   2024-01-01 – 2024-12-31, ofullbordat");
-  EXPECT_EQ(old[3], "  Varning:        Ett räkenskapsår före förra året ska vara fullbordat. Kontrollera SIE-filen.");
+  EXPECT_EQ(old[3], "  Räkenskapsår:   2024-01-01 – 2024-12-31, ofullbordat");
+  EXPECT_EQ(old[4], "  Varning:        Ett räkenskapsår före förra året ska vara fullbordat. Kontrollera SIE-filen.");
   auto const wrong = confirm(U"wrong.se");
-  EXPECT_EQ(wrong[2], "  Räkenskapsår:   2024-01-01 – 2024-12-31, misstämmer");
-  EXPECT_EQ(wrong[3], "  Varning:        Ett resultat är bokfört på 8999, men balansräkningen balanserar inte (skillnad 100.00).");
+  EXPECT_EQ(wrong[3], "  Räkenskapsår:   2024-01-01 – 2024-12-31, misstämmer");
+  EXPECT_EQ(wrong[4], "  Varning:        Ett resultat är bokfört på 8999, men balansräkningen balanserar inte (skillnad 100.00).");
 }
 
 TEST_F(RootMenuTest, ImportInTheWayOffersToReplaceTheYearWhichBurnsTheBridges) {

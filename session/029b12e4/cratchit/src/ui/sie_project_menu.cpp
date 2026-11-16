@@ -33,8 +33,8 @@ std::string date_text(Date const& date) { return format_iso_date(date); }
 
 class ConfirmSieProjectState : public State {
 public:
-  ConfirmSieProjectState(Workspace workspace, SieProjectPlan plan, State const* origin, State const* from_sie)
-      : workspace_(std::move(workspace)), plan_(std::move(plan)), origin_(origin), from_sie_(from_sie),
+  ConfirmSieProjectState(Workspace workspace, SieProjectPlan plan, State const* origin, State const* from_sie, bool here)
+      : workspace_(std::move(workspace)), plan_(std::move(plan)), origin_(origin), from_sie_(from_sie), here_(here),
         summary_(summarize_sie_file(plan_.sie_file)) {}
   std::string name() const override { return "Bekräfta"; }
   View view() const override {
@@ -45,6 +45,7 @@ public:
     auto const row = [&lines](std::string_view label, std::string const& value) {
       lines.push_back(std::format("  {:<16}{}", std::string(label) + ":", value));
     };
+    row("Mapp", plan_.folder.string());
     row("Företag", plan_.orgnr.empty() ? plan_.name : std::format("{} ({})", plan_.name, plan_.orgnr));
     auto const status = summary_ ? status_of(*summary_, today_date()) : std::nullopt;
     auto year = std::format("{} – {}", date_text(plan_.import.year_start), date_text(plan_.import.year_end));
@@ -85,7 +86,7 @@ public:
   }
   // Made here (in the working folder): on to the workspace, which lists it
   std::unique_ptr<State> after_back() override {
-    if (!created_ || !plan_.here) return nullptr;
+    if (!created_ || !here_) return nullptr;
     return make_workspace_after_created(workspace_, plan_.name);
   }
   // N goes back to "Från SIE", to choose another file
@@ -123,6 +124,7 @@ private:
   SieProjectPlan plan_;
   State const* origin_;   // where the user started, gone back to once created
   State const* from_sie_; // where the file was chosen, gone back to on N
+  bool here_;             // chosen under "Ny bokföring här"
   std::expected<SieSummary, std::string> summary_; // the file's last date and series, read once
   bool created_ = false;
   bool declined_ = false;
@@ -149,12 +151,13 @@ public:
   InputResult on_input(std::u32string_view text) override {
     auto const file = pyroceph::tui::path_of(text);
     chosen_folder_ = file.parent_path();
-    auto plan = plan_project_from_sie(file, here_);
+    auto const home = user_home();
+    auto plan = plan_project_from_sie(file, workspace_.folder, home ? std::optional(*home) : std::nullopt, here_);
     if (!plan) {
       LOG_BUSINESS("Kan inte skapa bokföring från {}: {}", file.string(), plan.error());
       return std::unexpected(std::format("cratchit kan inte skapa bokföringen: {}", plan.error()));
     }
-    return Accepted(std::make_unique<ConfirmSieProjectState>(workspace_, std::move(*plan), origin_, this));
+    return Accepted(std::make_unique<ConfirmSieProjectState>(workspace_, std::move(*plan), origin_, this, here_.has_value()));
   }
   std::string help_topic() const override { return std::string(help_topic::from_sie); }
 
@@ -162,7 +165,7 @@ private:
   Workspace workspace_;
   std::filesystem::path start_folder_;
   State const* origin_;
-  std::optional<std::filesystem::path> here_; // the working folder to create the project in, else a new folder
+  std::optional<std::filesystem::path> here_; // the working folder, under "Ny bokföring här"
   std::optional<std::filesystem::path> chosen_folder_;
 };
 
