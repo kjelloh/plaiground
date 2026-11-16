@@ -21,6 +21,7 @@
 * Steg 15: Manualens recept för att bygga om hela bokföringen från SIE-filer går från det senaste året bakåt (användarens rättelse), inte från det äldsta framåt.
 * Steg 16: Begränsningen till det aktuella räkenskapsåret och högst 9 äldre (beslut 2026-11-15): `max_older_fiscal_years` och `years_before_current` i `core/fiscal_year`; `max_listed_fiscal_years` räknas från den. Listan säger `cratchit visar bara det aktuella räkenskapsåret och 9 äldre. Bokföringen har fler.`; `Bekräfta` i *Från SIE* varnar för ett för gammalt år; *Från uppgifter* vägrar ett för gammalt första år (fälten räkenskapsår och längd). Manualen uppdaterad (*Räkenskapsår*, receptet, *Från uppgifter*, *Ny bokföring från en SIE-fil*). 509 tester.
 * Steg 17: Manualen har ett gemensamt avsnitt, *Bygga upp bokföringen från SIE-filer* (under *Bokföringar*), för att flytta in, hålla i takt och laga: förbered filerna, steg 1 (ny bokföring här från det senaste årets fil, bara när den inte finns), steg 2 (ett år i taget från det senaste bakåt: importera, eller ersätt vid konflikt), gränser, och en tabell för de tre fallen. *Om bokföringen har blivit fel* hänvisar dit; receptet att bygga om i en ny mapp och glömma den gamla är borttaget, eftersom *Ersätt* lagar på plats. Bara manualen ändrad.
+* Steg 18: Windows-testet `InventoryTest.AnSieUseIsRecordedInTheInventoryOfItsYearLeavingTheFileAlone` rättat: testet byggde filnamnet `årets.se` av en vanlig `char`-sträng, som Windows läser i ANSI-teckentabellen (filen fick namnet `Ã¥rets.se` på disken). Nu `fs::path(u8"årets.se")`, som i `test_path_completion.cpp`. cratchits egen kod var rätt. 509 tester med clang; Windows inte provat lokalt.
 
 ## Bygg, kör och installera
 
@@ -73,6 +74,14 @@ Det som går att återanvända. Ta in en sak i taget och notera det under *Klart
 `sie`, `charset`, `amount`, `date`, `bas`, `csv`, `log` och `terminal_encoding` finns i flera sessioner, i olika versioner. 0a37da4b:s version gäller tills något annat beslutas.
 
 ## Nästa steg
+
+* **Filnamn och teckenkodning** (användarens önskan, väntar): cratchit bör tillämpa sin kunskap om systemets kodning också för filnamn, inte bara för konsolen (`terminal_encoding`). Vad som gäller:
+  * Windows lagrar filnamn som UTF-16. `path.string()` och `fs::path(std::string)` går via ANSI-teckentabellen (Windows-1252), inte UTF-8; det var orsaken till steg 18. Rätt väg är `u8string` och `fs::path(std::u8string)`.
+  * macOS lagrar UTF-8, men ofta sönderdelat (NFD: `ö` som `o` + U+0308), t.ex. mappar som Finder eller Dropbox skapat. Tab-kompletteringen jämför med det användaren skriver (NFC) och kan då missa, t.ex. för användarens `bokföring`.
+  * Linux: byte, i praktiken UTF-8.
+  * I dag: 11 ställen använder `u8string` (Tab-komplettering, förteckningen, SIE-listan, mappar för nya bokföringar). 132 ställen använder `.string()` på sökvägar, mest i visade texter och loggar, men också `remember_project`, som skriver bokföringarnas mappar till `workspace.txt` (på Windows då inte UTF-8).
+  * Förslag: (1) regel att all text i cratchit är UTF-8 och att sökväg ⇄ text bara går via gemensamma funktioner över `u8string`; (2) byt de 132 ställena, först det som skrivs till filer (`workspace.txt`); (3) jämför filnamn i samma Unicode-form på macOS vid Tab, till att börja med svenska bokstäver (å ä ö é ü).
+* **Filnamn bara med ASCII** (väntar): allt cratchit själv namnger är ASCII utom mappen för en ny bokföring, som får företagets namn (*Lägg till > Ny > Från SIE* och *Från uppgifter*). Förslaget var att översätta till ASCII (å, ä → a, ö → o, övrigt → `_`) och behålla det riktiga namnet i `project.txt`; testerna med å, ä och ö behålls, eftersom de prövar användarens egna namn.
 
 * Hindret att bygga bakåt mer än tio år är nu en beskriven begränsning (steg 16).
 

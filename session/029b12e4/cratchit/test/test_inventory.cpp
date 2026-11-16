@@ -81,7 +81,8 @@ TEST_F(InventoryTest, ARowWithAnotherNumberOfFieldsIsAnError) {
 
 TEST_F(InventoryTest, AnSieUseIsRecordedInTheInventoryOfItsYearLeavingTheFileAlone) {
   fs::create_directories(project / "SIE-filer");
-  auto const sie = project / "SIE-filer" / "årets.se";
+  // A u8 literal: a narrow one is read in the ANSI code page on Windows, which would make another name on disk
+  auto const sie = project / "SIE-filer" / fs::path(u8"årets.se");
   std::ofstream(sie, std::ios::binary)
       << "#FLAGGA 0\r\n#PROGRAM \"Fortnox\" 3.62\r\n#SIETYP 4\r\n#GEN 20260115\r\n#FNAMN \"Test AB\"\r\n"
          "#RAR 0 20250101 20251231\r\n";
