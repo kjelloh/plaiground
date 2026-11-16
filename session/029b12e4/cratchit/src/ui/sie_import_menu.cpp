@@ -40,15 +40,15 @@ std::string series_text(SeriesComparison const& s, std::size_t width) {
   auto const name = s.series + std::string(width > s.series.size() ? width - s.series.size() : 0, ' ');
   std::string text;
   if (s.books_last.empty()) {
-    text = std::format("bara i filen, t.o.m. {} {}", s.series, s.file_last);
+    text = std::format("bara i filen, t.o.m. {}{}", s.series, s.file_last);
   } else if (s.file_last.empty()) {
-    text = std::format("bara i bokföringen, t.o.m. {} {}", s.series, s.books_last);
+    text = std::format("bara i bokföringen, t.o.m. {}{}", s.series, s.books_last);
   } else if (s.books_last == s.file_last && s.new_numbers.empty()) {
-    text = std::format("lika, t.o.m. {} {}", s.series, s.file_last);
+    text = std::format("lika, t.o.m. {}{}", s.series, s.file_last);
   } else {
-    text = std::format("bokföringen t.o.m. {} {}, filen t.o.m. {} {}", s.series, s.books_last, s.series, s.file_last);
+    text = std::format("bokföringen t.o.m. {}{}, filen t.o.m. {}{}", s.series, s.books_last, s.series, s.file_last);
   }
-  if (!s.new_numbers.empty()) text += std::format(", nya: {} {}", s.series, s.new_numbers);
+  if (!s.new_numbers.empty()) text += std::format(", nya: {}{}", s.series, s.new_numbers);
   return "  " + name + "  " + text;
 }
 
@@ -101,7 +101,7 @@ public:
       lines.push_back(series_text(s, width));
       for (auto const& v : plan_.in_the_way) {
         if (v.series != s.series) continue;
-        lines.push_back(std::format("      {} {}  {}  {}  {}  {}", v.series, v.number, v.date, v.heading,
+        lines.push_back(std::format("      {}{}  {}  {}  {}  {}", v.series, v.number, v.date, v.heading,
                                     format_amount(v.amount), v.why));
       }
     }
@@ -209,7 +209,7 @@ private:
 std::vector<std::string> gone_lines(std::vector<VoucherInTheWay> const& gone, std::string_view indent) {
   std::vector<std::string> lines;
   for (auto const& v : gone) {
-    lines.push_back(std::format("{}{} {}  {}  {}  {}  {}", indent, v.series, v.number, v.date, v.heading,
+    lines.push_back(std::format("{}{}{}  {}  {}  {}  {}", indent, v.series, v.number, v.date, v.heading,
                                 format_amount(v.amount), v.why));
   }
   return lines;
@@ -229,7 +229,7 @@ public:
     lines.insert(lines.end(), gone.begin(), gone.end());
     std::vector<std::string> coming;
     for (auto const& s : plan_.series) {
-      if (!s.new_numbers.empty()) coming.push_back(std::format("{} {}", s.series, s.new_numbers));
+      if (!s.new_numbers.empty()) coming.push_back(std::format("{}{}", s.series, s.new_numbers));
     }
     if (!coming.empty()) {
       std::string text;

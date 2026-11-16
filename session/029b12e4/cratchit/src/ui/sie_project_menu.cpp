@@ -71,7 +71,7 @@ public:
     if (summary_ && summary_->last_date) vouchers += " t.o.m. " + date_text(*summary_->last_date);
     if (summary_ && !summary_->series.empty()) {
       std::string series;
-      for (auto const& [name, number] : summary_->series) series += (series.empty() ? "" : " · ") + name + " " + number;
+      for (auto const& [name, number] : summary_->series) series += (series.empty() ? "" : " · ") + name + number;
       vouchers += "  " + series;
     }
     row("Verifikationer", vouchers);

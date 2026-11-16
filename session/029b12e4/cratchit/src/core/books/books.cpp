@@ -10,6 +10,21 @@
 
 namespace cratchit::books {
 
+std::string voucher_id(std::string_view series, std::string_view number) {
+  return std::string(series) + std::string(number);
+}
+
+std::optional<std::pair<std::string, std::string>> parse_voucher_id(std::string_view text) {
+  auto const digits = text.find_first_of("0123456789");
+  if (digits == 0 || digits == std::string_view::npos) return std::nullopt;
+  auto const series = text.substr(0, digits);
+  auto const number = text.substr(digits);
+  if (series.find_first_of(" \t0123456789") != std::string_view::npos) return std::nullopt;
+  if (number.find_first_not_of("0123456789") != std::string_view::npos) return std::nullopt;
+  return std::pair{std::string(series), std::string(number)};
+}
+
+
 namespace fs = std::filesystem;
 
 namespace {

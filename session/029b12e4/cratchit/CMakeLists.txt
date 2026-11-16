@@ -115,6 +115,7 @@ add_library(cratchit_ui
   src/ui/root_menu.cpp
   src/ui/sie_import_menu.cpp
   src/ui/sie_project_menu.cpp
+  src/ui/voucher_menu.cpp
   src/ui/start.cpp
   src/ui/test_menu.cpp
   src/ui/workspace_menu.cpp

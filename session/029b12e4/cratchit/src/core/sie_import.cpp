@@ -43,7 +43,7 @@ std::expected<std::vector<ChangedVoucher>, std::string> changed_vouchers(books::
     });
     if (found == new_year->vouchers.end() || *found == old_voucher) continue;
     if (found->event.date != old_voucher.event.date || found->event.heading != old_voucher.event.heading) {
-      return std::unexpected(std::format("Verifikationen {} {} har ett annat datum eller en annan text i filen. cratchit tar "
+      return std::unexpected(std::format("Verifikationen {}{} har ett annat datum eller en annan text i filen. cratchit tar "
                                          "bara emot strukna och tillagda rader i befintliga verifikationer",
                                          old_voucher.series, old_voucher.number));
     }
@@ -84,7 +84,7 @@ std::string change_text(ChangedVoucher const& changed) {
   if (changed.struck > 0) what = rows(changed.struck, "rad struken", "rader strukna");
   if (changed.added > 0) what += (what.empty() ? "" : ", ") + rows(changed.added, "rad tillagd", "rader tillagda");
   if (what.empty()) what = "ändrad";
-  return std::format("{} {}  {}  {}: {}", changed.series, changed.number, changed.date, changed.heading, what);
+  return std::format("{}{}  {}  {}: {}", changed.series, changed.number, changed.date, changed.heading, what);
 }
 
 namespace {
@@ -148,7 +148,7 @@ void compare_series(books::FiscalYear const* year, sie::Document const& document
       for (auto n = all[i - 1] + 1; n < all[i]; ++n) missing.push_back(n);
     }
     if (!missing.empty()) {
-      plan.blockers.push_back(std::format("Serie {} i filen har en lucka: {} {} saknas.", name, name, ranges_text(missing)));
+      plan.blockers.push_back(std::format("Serie {} i filen har en lucka: {}{} saknas.", name, name, ranges_text(missing)));
     }
   }
   for (auto& [name, compared] : series) {
@@ -330,7 +330,7 @@ std::expected<SieReplaced, std::string> replace_year_with_sie(Project const& pro
     auto const found = std::ranges::find_if(before.vouchers, [&](books::Voucher const& v) {
       return v.series == gone.series && v.number == gone.number;
     });
-    LOG_BUSINESS("Ersätt: {} {} {} \"{}\" {} försvinner ({})", gone.series, gone.number, gone.date, gone.heading,
+    LOG_BUSINESS("Ersätt: {}{} {} \"{}\" {} försvinner ({})", gone.series, gone.number, gone.date, gone.heading,
                  format_amount(gone.amount), gone.why);
     if (found == before.vouchers.end()) continue;
     for (auto const& row : found->postings) {

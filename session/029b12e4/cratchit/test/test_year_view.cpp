@@ -56,9 +56,9 @@ TEST(YearView, RowsAreNewestFirst) {
   auto const year = year_with({voucher("1", date(2026, 6, 1), "Första", 10000),
                                voucher("3", date(2026, 9, 3), "Kontorsmaterial", 41250),
                                voucher("2", date(2026, 6, 1), "Andra", 20000)});
-  EXPECT_EQ(year_view(&year).rows, (Rows{"  A 3         2026-09-03        412.50  Kontorsmaterial",
-                                         "  A 2         2026-06-01        200.00  Andra",
-                                         "  A 1         2026-06-01        100.00  Första"}));
+  EXPECT_EQ(year_view(&year).rows, (Rows{"  A3          2026-09-03        412.50  Kontorsmaterial",
+                                         "  A2          2026-06-01        200.00  Andra",
+                                         "  A1          2026-06-01        100.00  Första"}));
 }
 
 TEST(YearView, DraftsShowTheirStageAndComeBeforeVouchersOfTheSameDate) {
@@ -69,7 +69,7 @@ TEST(YearView, DraftsShowTheirStageAndComeBeforeVouchersOfTheSameDate) {
                     {row("6540", 130875), row("1930", -130875)}});
   EXPECT_EQ(year_view(&year).rows, (Rows{"  kontoutdrag 2026-10-21       1118.00  ",
                                          "  händelse    2026-10-20       1118.00  Telia oktober",
-                                         "  A 1         2026-10-20        100.00  Sale",
+                                         "  A1          2026-10-20        100.00  Sale",
                                          "  klart       2026-09-28       1308.75  Loopia"}));
 }
 
@@ -81,8 +81,8 @@ TEST(YearView, AtMostMaxRowsAreShownThenHowManyOlder) {
   auto const year = year_with(std::move(vouchers));
   auto const rows = year_view(&year).rows;
   ASSERT_EQ(rows.size(), 11u);
-  EXPECT_TRUE(rows[0].starts_with("  A 12 ")) << rows[0];
-  EXPECT_TRUE(rows[9].starts_with("  A 3 ")) << rows[9];
+  EXPECT_TRUE(rows[0].starts_with("  A12 ")) << rows[0];
+  EXPECT_TRUE(rows[9].starts_with("  A3 ")) << rows[9];
   EXPECT_EQ(rows[10], "  … 2 äldre");
   EXPECT_EQ(year_view(&year, 12).rows.size(), 12u); // all shown: no row about older ones
 }

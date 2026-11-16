@@ -88,6 +88,14 @@ struct Event {
   bool operator==(Event const&) const = default;
 };
 
+// A voucher's id as the user sees and types it: series and number as one word, e.g. "A12", "D1"
+std::string voucher_id(std::string_view series, std::string_view number);
+
+// The series and number of an id typed as one word: the letters first, then
+// digits only, e.g. "A12" gives {"A", "12"}. Nothing for anything else (a
+// space, no series, no number, or letters after the digits).
+std::optional<std::pair<std::string, std::string>> parse_voucher_id(std::string_view text);
+
 // A financial event in the books: the event and its postings, numbered in a
 // series. Once in the books it is never changed.
 struct Voucher {

@@ -383,3 +383,20 @@ TEST_F(BooksFiles, BooksOfOnlyAYearAreRead) {
   ASSERT_EQ(books->years.size(), 1u);
   EXPECT_TRUE(books->years[0].vouchers.empty());
 }
+
+TEST(VoucherId, IsSeriesAndNumberAsOneWord) {
+  EXPECT_EQ(cratchit::books::voucher_id("A", "12"), "A12");
+  EXPECT_EQ(cratchit::books::voucher_id("D", "1"), "D1");
+}
+
+TEST(VoucherId, IsParsedFromOneWordOnly) {
+  using Id = std::pair<std::string, std::string>;
+  EXPECT_EQ(cratchit::books::parse_voucher_id("A12"), (Id{"A", "12"}));
+  EXPECT_EQ(cratchit::books::parse_voucher_id("D1"), (Id{"D", "1"}));
+  EXPECT_EQ(cratchit::books::parse_voucher_id("AB7"), (Id{"AB", "7"}));
+  EXPECT_FALSE(cratchit::books::parse_voucher_id("A 12"));
+  EXPECT_FALSE(cratchit::books::parse_voucher_id("12"));
+  EXPECT_FALSE(cratchit::books::parse_voucher_id("A"));
+  EXPECT_FALSE(cratchit::books::parse_voucher_id("A12B"));
+  EXPECT_FALSE(cratchit::books::parse_voucher_id(""));
+}

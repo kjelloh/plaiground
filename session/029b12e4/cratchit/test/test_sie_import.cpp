@@ -149,7 +149,7 @@ TEST_F(SieImportTest, AGapInASeriesOfTheFileIsNotPossible) {
       project, write("gap.se", sie_file(2025, balanced_balances(), sale_and_cost(2025) + sale(2025, 4, "0401"))));
   ASSERT_TRUE(plan) << plan.error();
   EXPECT_FALSE(plan->possible());
-  EXPECT_EQ(plan->blockers, (std::vector<std::string>{"Serie A i filen har en lucka: A 3 saknas."}));
+  EXPECT_EQ(plan->blockers, (std::vector<std::string>{"Serie A i filen har en lucka: A3 saknas."}));
 }
 
 TEST_F(SieImportTest, ANewYearThatLeavesAGapInTheBooksIsRefused) {
@@ -191,7 +191,7 @@ TEST_F(SieImportTest, StruckAndAddedRowsChangeAVoucher) {
   ASSERT_TRUE(plan) << plan.error();
   EXPECT_EQ(plan->import.vouchers_added, 0u);
   ASSERT_EQ(plan->changed.size(), 1u);
-  EXPECT_EQ(cratchit::change_text(plan->changed[0]), "A 2  2025-03-01  Bank cost: 2 rader strukna, 2 rader tillagda");
+  EXPECT_EQ(cratchit::change_text(plan->changed[0]), "A2  2025-03-01  Bank cost: 2 rader strukna, 2 rader tillagda");
   ASSERT_TRUE(cratchit::import_sie(project, *plan, *cratchit::parse_iso_date("2026-11-09")));
   auto const books = cratchit::books::read_books(project.folder);
   ASSERT_TRUE(books) << books.error();
@@ -203,14 +203,14 @@ TEST_F(SieImportTest, AnotherTextOfAVoucherIsRefused) {
   file.replace(file.find("\"Bank cost\""), 11, "\"Bank fee\"");
   auto const plan = cratchit::plan_sie_import(project, write("text.se", file));
   ASSERT_TRUE(plan) << plan.error();
-  EXPECT_EQ(plan->blockers, (std::vector<std::string>{"Verifikationen A 2 har ett annat datum eller en annan text i "
+  EXPECT_EQ(plan->blockers, (std::vector<std::string>{"Verifikationen A2 har ett annat datum eller en annan text i "
                                                       "filen. cratchit tar bara emot strukna och tillagda rader i "
                                                       "befintliga verifikationer."}));
 }
 
 TEST(ChangeText, SaysWhatChanged) {
-  EXPECT_EQ(cratchit::change_text({"A", "12", "2025-06-03", "Loopia", 1, 1}), "A 12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd");
-  EXPECT_EQ(cratchit::change_text({"A", "12", "2025-06-03", "Loopia", 0, 3}), "A 12  2025-06-03  Loopia: 3 rader tillagda");
+  EXPECT_EQ(cratchit::change_text({"A", "12", "2025-06-03", "Loopia", 1, 1}), "A12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd");
+  EXPECT_EQ(cratchit::change_text({"A", "12", "2025-06-03", "Loopia", 0, 3}), "A12  2025-06-03  Loopia: 3 rader tillagda");
 }
 
 TEST_F(SieImportTest, WithAYearTheFileMustBeForThatYear) {

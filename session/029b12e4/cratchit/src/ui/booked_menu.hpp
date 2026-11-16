@@ -16,8 +16,11 @@ inline constexpr std::size_t booked_page_rows = 20;
 // voucher_rows and pyroceph::tui::Pager): a heading "Bokfört <year>:
 // verifikationer 21–40 av 120", and "…" above and below the page when there
 // are more. "<" turns a page back and ">" a page forward, in place. Both are
-// always offered; at either end the key does nothing. The vouchers are read again when the user comes
-// back. Opened with 1 in Årsflöde. No input.
+// always offered; at either end the key does nothing. Typing a voucher's id
+// as one word, e.g. A12, and Enter opens it (make_voucher_menu); an id typed
+// otherwise, or one the year has not, is refused with the reason, and the text
+// is kept. The vouchers are read again when the user comes back. Opened with 1
+// in Årsflöde.
 std::unique_ptr<pyroceph::tui::State> make_booked_menu(Project project, FiscalYear year);
 
 } // namespace cratchit::ui

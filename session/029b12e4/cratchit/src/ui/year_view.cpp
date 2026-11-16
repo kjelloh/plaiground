@@ -60,7 +60,7 @@ std::vector<std::string> voucher_rows(books::FiscalYear const* year) {
   if (year == nullptr) return lines;
   std::vector<Row> rows;
   for (auto const& voucher : year->vouchers) {
-    rows.push_back({voucher.event.date, row_text(std::format("{} {}", voucher.series, voucher.number),
+    rows.push_back({voucher.event.date, row_text(books::voucher_id(voucher.series, voucher.number),
                                                  voucher.event.date, voucher.event.amount, voucher.event.heading)});
   }
   std::ranges::stable_sort(rows, {}, &Row::date);
@@ -75,7 +75,7 @@ YearView year_view(books::FiscalYear const* year, std::size_t max_rows) {
   // Oldest first: by date, vouchers in the order of the books, then the drafts of the same date
   std::vector<Row> rows;
   for (auto const& voucher : year->vouchers) {
-    rows.push_back({voucher.event.date, row_text(std::format("{} {}", voucher.series, voucher.number),
+    rows.push_back({voucher.event.date, row_text(books::voucher_id(voucher.series, voucher.number),
                                                  voucher.event.date, voucher.event.amount, voucher.event.heading)});
   }
   for (auto const& draft : year->drafts) {

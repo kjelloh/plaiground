@@ -668,8 +668,8 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   EXPECT_EQ(navigator.current().view()[1], "Hela året: 2 verifikationer");
   EXPECT_TRUE(navigator.current().view()[2].starts_with("cratchit skrev sie_2025_allt.se i ")) << navigator.current().view()[2];
   // Then the year's vouchers, newest first
-  EXPECT_EQ(navigator.current().view()[3], "  A 2         2025-03-01        200.00  Sale");
-  EXPECT_EQ(navigator.current().view()[4], "  A 1         2025-02-01        100.00  Sale");
+  EXPECT_EQ(navigator.current().view()[3], "  A2          2025-03-01        200.00  Sale");
+  EXPECT_EQ(navigator.current().view()[4], "  A1          2025-02-01        100.00  Sale");
   // Again: never overwritten
   ASSERT_TRUE(navigator.press(U'1'));
   ASSERT_TRUE(navigator.press(U'1'));
@@ -754,15 +754,15 @@ TEST_F(RootMenuTest, ImportListsTheChangedVouchersAPageAtATime) {
     for (auto const& line : navigator.current().view()) count += line.starts_with(start) ? 1 : 0;
     return count;
   };
-  EXPECT_EQ(lines("  A  lika, t.o.m. A 12"), 1u);
+  EXPECT_EQ(lines("  A  lika, t.o.m. A12"), 1u);
   EXPECT_EQ(lines("Importen går att göra: 0 nya verifikationer, 12 ändrade."), 1u);
-  EXPECT_EQ(lines("    A "), 10u);
+  EXPECT_EQ(lines("    A"), 10u);
   EXPECT_EQ(lines("    … och 2 till. Tryck 2 för fler."), 1u);
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}, {U'2', "Mer…"}}));
   // Mer… shows the rest, in place
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Bekräfta");
-  EXPECT_EQ(lines("    A "), 12u);
+  EXPECT_EQ(lines("    A"), 12u);
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}}));
   EXPECT_FALSE(navigator.press(U'2'));
   // Importing takes the changes and goes back to the fiscal year, which says so
@@ -1007,7 +1007,7 @@ TEST_F(RootMenuTest, NewProjectHereFromSieStartsInTheWorkingFolderAndCreatesTheP
             (View{"SIE-fil: " + (seed / "older" / "test.se").string(),
                   "  Företag:        Test AB: provet (556000-0001)",
                   "  Räkenskapsår:   2025-01-01 – 2025-12-31, ofullbordat",
-                  "  Verifikationer: 1 t.o.m. 2025-02-01  A 1",
+                  "  Verifikationer: 1 t.o.m. 2025-02-01  A1",
                   "  Konton:         2",
                   "Skapa bokföringen från SIE-filen?"}));
   EXPECT_FALSE(fs::exists(seed / ".cratchit")); // nothing created before J
@@ -1135,8 +1135,8 @@ TEST_F(RootMenuTest, ImportInTheWayOffersToReplaceTheYearWhichBurnsTheBridges) {
   auto const view = navigator.current().view();
   auto const has = [&view](std::string const& line) { return std::ranges::find(view, line) != view.end(); };
   EXPECT_TRUE(has("Jämfört med bokföringen (2025):"));
-  EXPECT_TRUE(has("  A  bokföringen t.o.m. A 2, filen t.o.m. A 1"));
-  EXPECT_TRUE(has("      A 2  2025-03-01  Sale  200.00  finns inte i filen"));
+  EXPECT_TRUE(has("  A  bokföringen t.o.m. A2, filen t.o.m. A1"));
+  EXPECT_TRUE(has("      A2  2025-03-01  Sale  200.00  finns inte i filen"));
   EXPECT_TRUE(has("Importen går inte att göra. Bokföringen har 1 verifikation som filen skulle ta bort eller byta ut."));
   EXPECT_EQ(view.back(), "Ersätt året med SIE-filens innehåll?");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}}));
@@ -1145,7 +1145,7 @@ TEST_F(RootMenuTest, ImportInTheWayOffersToReplaceTheYearWhichBurnsTheBridges) {
   EXPECT_EQ(navigator.current().name(), "Ersätt");
   EXPECT_EQ(navigator.current().view(),
             (View{"Räkenskapsåret 2025 blir exakt som SIE-filen.", "Det här försvinner ur bokföringen:",
-                  "  A 2  2025-03-01  Sale  200.00  finns inte i filen", "Ersätt räkenskapsåret med SIE-filen?"}));
+                  "  A2  2025-03-01  Sale  200.00  finns inte i filen", "Ersätt räkenskapsåret med SIE-filen?"}));
   EXPECT_EQ(cratchit::books::read_books(project->folder)->years[0].vouchers.size(), 2u);
   // - goes back a step, N back to choose another file
   ASSERT_TRUE(navigator.back());
@@ -1163,7 +1163,7 @@ TEST_F(RootMenuTest, ImportInTheWayOffersToReplaceTheYearWhichBurnsTheBridges) {
   auto const after = navigator.current().view();
   EXPECT_EQ(after[2], "cratchit ersatte räkenskapsåret med less.se: 1 verifikationer, alla från filen.");
   EXPECT_EQ(after[3], "Det här försvann. Bokför det igen från underlag eller kontoutdrag om det behövs:");
-  EXPECT_EQ(after[4], "  A 2  2025-03-01  Sale  200.00  finns inte i filen");
+  EXPECT_EQ(after[4], "  A2  2025-03-01  Sale  200.00  finns inte i filen");
   auto const books = cratchit::books::read_books(project->folder);
   ASSERT_TRUE(books) << books.error();
   ASSERT_EQ(books->years[0].vouchers.size(), 1u);
@@ -1257,8 +1257,8 @@ TEST_F(RootMenuTest, BookedShowsTheVouchersNewestFirstAPageAtATime) {
   auto view = booked.view();
   ASSERT_EQ(view.size(), 22u); // heading, 20 vouchers, "…"
   EXPECT_EQ(view[0], "Bokfört 2025: verifikationer 1–20 av 45");
-  EXPECT_TRUE(view[1].starts_with("  A 45 ")) << view[1];
-  EXPECT_TRUE(view[20].starts_with("  A 26 ")) << view[20];
+  EXPECT_TRUE(view[1].starts_with("  A45 ")) << view[1];
+  EXPECT_TRUE(view[20].starts_with("  A26 ")) << view[20];
   EXPECT_EQ(view[21], "  …");
   EXPECT_EQ(booked.options(), (OptionsList{{U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
   EXPECT_FALSE(navigator.press(U'<')); // at the first page: nothing
@@ -1268,13 +1268,13 @@ TEST_F(RootMenuTest, BookedShowsTheVouchersNewestFirstAPageAtATime) {
   view = navigator.current().view();
   EXPECT_EQ(view[0], "Bokfört 2025: verifikationer 21–40 av 45");
   EXPECT_EQ(view[1], "  …");
-  EXPECT_TRUE(view[2].starts_with("  A 25 ")) << view[2];
+  EXPECT_TRUE(view[2].starts_with("  A25 ")) << view[2];
   EXPECT_EQ(view.back(), "  …");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
   ASSERT_TRUE(navigator.press(U'>'));
   view = navigator.current().view();
   EXPECT_EQ(view[0], "Bokfört 2025: verifikationer 41–45 av 45");
-  EXPECT_TRUE(view.back().starts_with("  A 1 ")) << view.back();
+  EXPECT_TRUE(view.back().starts_with("  A1 ")) << view.back();
   EXPECT_FALSE(navigator.press(U'>')); // at the last page: nothing
   ASSERT_TRUE(navigator.press(U'<'));
   EXPECT_EQ(navigator.current().view()[0], "Bokfört 2025: verifikationer 21–40 av 45");
@@ -1288,4 +1288,54 @@ TEST_F(RootMenuTest, BookedSaysWhenNothingIsBooked) {
   ASSERT_TRUE(project) << project.error();
   auto const booked = cratchit::ui::make_booked_menu(*project, {"2025-01-01", "2025-12-31"});
   EXPECT_EQ(booked->view(), (View{"Bokfört 2025: inget bokfört i räkenskapsåret."}));
+}
+
+TEST_F(RootMenuTest, BookedOpensAVoucherByItsIdAsOneWord) {
+  auto const folder = documents / "cratchit";
+  fs::create_directories(folder);
+  auto const ver = [](char const* number, char const* rows) {
+    return std::format("#VER D {} 20250201 \"Faktura {}\" 20250205\r\n{{\r\n{}}}\r\n", number, number, rows);
+  };
+  std::string const plain = "#TRANS 2440 {} -125.00\r\n#TRANS 6210 {} 100.00\r\n#TRANS 2641 {} 25.00\r\n";
+  std::string const changed = "#TRANS 2440 {} -125.00\r\n#BTRANS 6210 {} 100.00 \"\" \"\" \"\" \"Kjell\"\r\n"
+                              "#RTRANS 6230 {} 100.00 \"\" \"Rättat konto\" \"\" \"Kjell\"\r\n#TRANS 6230 {} 100.00 \"\" \"Rättat konto\"\r\n"
+                              "#TRANS 2641 {} 25.00\r\n";
+  std::ofstream(documents / "d.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 2440 \"Leverantörsskulder\"\r\n#KONTO 6210 \"Telekommunikation\"\r\n#KONTO 6230 \"Datakommunikation\"\r\n"
+         "#KONTO 2641 \"Debiterad ingående moms\"\r\n"
+      << ver("1", plain.c_str()) << ver("11", changed.c_str());
+  auto plan = cratchit::plan_project_from_sie(documents / "d.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_booked_menu(*project, {"2025-01-01", "2025-12-31"}));
+  // Typed otherwise, or not in the year: refused with the reason
+  auto spaced = navigator.current().on_input(U"D 1");
+  ASSERT_FALSE(spaced);
+  EXPECT_EQ(spaced.error(), "Skriv verifikationens id som ett ord, till exempel A12.");
+  auto missing = navigator.current().on_input(U"D2");
+  ASSERT_FALSE(missing);
+  EXPECT_EQ(missing.error(), "Det finns ingen verifikation D2 i 2025.");
+  EXPECT_FALSE(navigator.current().on_input(U"d1")); // the series as written
+  // D1 is never D11
+  auto one = navigator.current().on_input(U"D1");
+  ASSERT_TRUE(one) << one.error();
+  navigator.enter(std::move(one->next));
+  EXPECT_EQ(navigator.current().name(), "D1");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Verifikation D1", "  Datum:          2025-02-01", "  Rubrik:         Faktura 1", "  Belopp:         125.00",
+                  "  Registrerad:    2025-02-05", "Konteringar:",
+                  "  2440  Leverantörsskulder            -125.00", "  6210  Telekommunikation              100.00",
+                  "  2641  Debiterad ingående moms         25.00"}));
+  EXPECT_TRUE(navigator.current().options().empty());
+  ASSERT_TRUE(navigator.back());
+  auto eleven = navigator.current().on_input(U"D11");
+  ASSERT_TRUE(eleven) << eleven.error();
+  navigator.enter(std::move(eleven->next));
+  EXPECT_EQ(navigator.current().name(), "D11");
+  auto const view = navigator.current().view();
+  auto const has = [&view](std::string const& line) { return std::ranges::find(view, line) != view.end(); };
+  EXPECT_TRUE(has("  6210  Telekommunikation              100.00  (struken)"));
+  EXPECT_TRUE(has("  6230  Datakommunikation              100.00  Rättat konto  (tillagd)"));
 }

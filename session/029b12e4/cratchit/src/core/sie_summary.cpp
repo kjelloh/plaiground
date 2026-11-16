@@ -108,7 +108,7 @@ std::string summary_line(SieSummary const& summary, Date today) {
     std::string series;
     for (auto const& [name, number] : summary.series) {
       if (!series.empty()) series += " · ";
-      series += std::format("{} {}", name, number);
+      series += std::format("{}{}", name, number);
     }
     parts.push_back(std::move(series));
   }
@@ -136,7 +136,7 @@ std::string series_text(SieSummary const& summary) {
   std::string series;
   for (auto const& [name, number] : summary.series) {
     if (!series.empty()) series += " · ";
-    series += std::format("{} {}", name, number);
+    series += std::format("{}{}", name, number);
   }
   return series;
 }

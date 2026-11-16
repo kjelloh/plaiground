@@ -36,7 +36,7 @@ TEST(SieSummary, GivesYearGeneratedVouchersLastDateAndHighestNumberPerSeries) {
   ASSERT_TRUE(summary) << summary.error();
   EXPECT_EQ(summary->vouchers, 4u);
   EXPECT_EQ(cratchit::summary_line(*summary, *cratchit::parse_iso_date("2026-11-09")),
-            "2025-05-01 – 2026-04-30  ofullbordat  skapad 2026-11-12  4 ver. t.o.m. 2026-04-30  A 10 · D 1 · M 3");
+            "2025-05-01 – 2026-04-30  ofullbordat  skapad 2026-11-12  4 ver. t.o.m. 2026-04-30  A10 · D1 · M3");
   // The tests' today is 2026-11-09 (test_today.cpp)
   EXPECT_EQ(cratchit::describe_sie_file(file.path),
             (std::vector<std::string>{cratchit::summary_line(*summary, *cratchit::parse_iso_date("2026-11-09"))}));
@@ -98,8 +98,8 @@ TEST(SieList, GroupsByFiscalYearLatestFirstAndTheLatestCreatedFirstInColumns) {
                        "2026-01-01 – 2026-12-31",
                        "  c.se   pågående                        0 ver.",
                        "2025-01-01 – 2025-12-31",
-                       "  bb.se  ofullbordat  skapad 2026-01-15  2 ver.  t.o.m. 2025-12-31  A 2",
-                       "  a.se   ofullbordat  skapad 2025-10-01  1 ver.  t.o.m. 2025-03-01  A 1",
+                       "  bb.se  ofullbordat  skapad 2026-01-15  2 ver.  t.o.m. 2025-12-31  A2",
+                       "  a.se   ofullbordat  skapad 2025-10-01  1 ver.  t.o.m. 2025-03-01  A1",
                        "Utan räkenskapsår",
                        "  d.se                skapad 2026-01-01  0 ver.",
                        "Går inte att läsa",

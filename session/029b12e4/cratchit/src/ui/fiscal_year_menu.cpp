@@ -44,7 +44,7 @@ std::string written_text(Project const& project, Exported const& exported, bool 
 }
 
 std::string voucher_line(books::Voucher const& voucher) {
-  return std::format("    {} {:<4}  {}  {:>12}  {}", voucher.series, voucher.number, format_iso_date(voucher.event.date),
+  return std::format("    {:<6}  {}  {:>12}  {}", books::voucher_id(voucher.series, voucher.number), format_iso_date(voucher.event.date),
                      format_amount(voucher.event.amount), voucher.event.heading);
 }
 

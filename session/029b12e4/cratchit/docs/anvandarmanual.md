@@ -138,12 +138,12 @@ När cratchit vill ha en mapp står en sökväg redan på raden, och du fortsät
   ```text
   Cratchit > Ny bokföring här > Från SIE: /Users/anna/Företaget/SIE-filer/
     2026-05-01 – 2027-04-30
-      TheITfiedAB20261019_105108.se  pågående       skapad 2026-10-19   17 ver.  t.o.m. 2026-06-30  A 10 · D 3 · M 1
+      TheITfiedAB20261019_105108.se  pågående       skapad 2026-10-19   17 ver.  t.o.m. 2026-06-30  A10 · D3 · M1
     2025-05-01 – 2026-04-30
-      TheITfiedAB20261112_102636.se  fullbordat     skapad 2026-11-12  120 ver.  t.o.m. 2026-04-30  A 59 · D 26 · M 5
-      TheITfiedAB20261019_105220.se  ofullbordat    skapad 2026-10-19  116 ver.  t.o.m. 2026-04-30  A 59 · D 26 · M 5
+      TheITfiedAB20261112_102636.se  fullbordat     skapad 2026-11-12  120 ver.  t.o.m. 2026-04-30  A59 · D26 · M5
+      TheITfiedAB20261019_105220.se  ofullbordat    skapad 2026-10-19  116 ver.  t.o.m. 2026-04-30  A59 · D26 · M5
     2015-05-01 – 2016-04-30
-      2326 ITFied 1505-1604.se       ofullbordat !  skapad 2016-06-17  247 ver.  t.o.m. 2016-04-30  A 113 · D 63
+      2326 ITFied 1505-1604.se       ofullbordat !  skapad 2016-06-17  247 ver.  t.o.m. 2016-04-30  A113 · D63
     Går inte att läsa
       Sie4 fil tom mars -10.se       Unknown encoding: …
     Mappar
@@ -281,11 +281,11 @@ Tryck räkenskapsårets siffra i bokföringen. Prompten får då årets namn:
 ```text
 Räkenskapsår 2025-05-01 – 2026-04-30
 Hela året: 116 verifikationer
-  M 5         2026-04-30         89.98  Momsrapport_2026-04-01-2026-04-30
-  A 59        2026-04-22       2020.00  Skatt
-  E 25        2026-04-20        361.25  LOOPIA AB
+  M5          2026-04-30         89.98  Momsrapport_2026-04-01-2026-04-30
+  A59         2026-04-22       2020.00  Skatt
+  E25         2026-04-20        361.25  LOOPIA AB
   …
-  E 21        2026-03-30       1233.75  LOOPIA AB
+  E21         2026-03-30       1233.75  LOOPIA AB
   … 106 äldre
   0 Årsflöde
   1 Exportera till SIE
@@ -332,7 +332,7 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Bokfört
 
 <!-- hjälp: bokfort -->
-Räkenskapsårets bokförda verifikationer, den senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets bokförda verifikationer, den senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv en verifikations id som ett ord, till exempel `A12`, och tryck Enter för att öppna den. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `1` i Årsflöde för att se räkenskapsårets bokförda verifikationer. De visas en sida i taget, den senaste överst:
@@ -340,10 +340,10 @@ Tryck `1` i Årsflöde för att se räkenskapsårets bokförda verifikationer. D
 ```text
 Bokfört 2025/26: verifikationer 21–40 av 120
   …
-  A 49        2026-04-10        449.90  Utlägg Privat - Kjell&Co
-  A 50        2026-04-07          7.40  Account:NORDEA Text:AVGIFTER NORDEA
+  A49         2026-04-10        449.90  Utlägg Privat - Kjell&Co
+  A50         2026-04-07          7.40  Account:NORDEA Text:AVGIFTER NORDEA
   …
-  A 30        2026-01-12       1250.00  Telia
+  A30         2026-01-12       1250.00  Telia
   …
   < Föregående sida
   > Nästa sida
@@ -353,7 +353,38 @@ Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört>
 * En sida har högst 20 verifikationer.
 * `…` överst betyder att det finns nyare verifikationer före sidan, och `…` nederst att det finns äldre efter den.
 * `>` visar nästa sida, med äldre verifikationer, och `<` föregående sida. Båda valen finns alltid; på första sidan gör `<` ingenting, och på sista sidan gör `>` ingenting.
-* Raderna är inga val än. Att öppna och rätta en verifikation kommer senare.
+* Skriv en verifikations id och tryck Enter för att öppna den (se nedan).
+
+#### Öppna en verifikation
+
+En verifikation har ett id: serien och numret som ett ord, till exempel `A12` eller `D1`. Skriv id:t i *Bokfört* och tryck Enter:
+
+```text
+Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört: D19
+```
+
+* Skriv id:t utan mellanslag. Serien skrivs exakt, med versal: `a12` hittar inte `A12`.
+* Numret jämförs som ett tal, så `D1` är aldrig `D11`.
+* Finns verifikationen inte i räkenskapsåret, eller är id:t skrivet på annat sätt, säger cratchit det under prompten, och texten står kvar så att du kan rätta den.
+
+<!-- hjälp: verifikation -->
+Verifikationen med datum, rubrik, belopp, när den registrerades, och dess konteringar: konto, kontots namn och belopp, och radens egen text och datum när den har dem. En struken rad är märkt `(struken)` och en tillagd rad `(tillagd)`. Än så länge kan du bara se verifikationen. Tryck `-` för att gå tillbaka till Bokfört.
+<!-- /hjälp -->
+
+```text
+Verifikation D19
+  Datum:          2026-02-27
+  Rubrik:         Faktura Websupport - webbhotell
+  Belopp:         1233.75
+  Registrerad:    2026-04-17
+Konteringar:
+  2440  Leverantörsskulder           -1233.75
+  6210  Telekommunikation              987.00
+  2641  Debiterad ingående moms        246.75
+Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört > D19> 
+```
+
+Än så länge visar cratchit bara verifikationen. Att rätta den, med strukna och tillagda rader, kommer senare.
 
 #### Bokslut
 
@@ -380,9 +411,9 @@ SIE-fil: /Users/anna/Företaget/SIE-filer/TheITfiedAB20261112_102636.se
   Skapad:         2026-11-12 (Fortnox 3.62.17)
   Verifikationer: 120 t.o.m. 2026-04-30
 Jämfört med bokföringen (2025/26):
-  A  lika, t.o.m. A 59
-  D  lika, t.o.m. D 26
-  I  bokföringen t.o.m. I 1, filen t.o.m. I 5, nya: I 2–5
+  A  lika, t.o.m. A59
+  D  lika, t.o.m. D26
+  I  bokföringen t.o.m. I1, filen t.o.m. I5, nya: I2–5
   Konton: 0 nya, 0 med ändrat namn eller ändrade uppgifter
 Importen går att göra: 4 nya verifikationer.
 Importera SIE-filen?
@@ -395,9 +426,9 @@ Går importen inte att göra står det varför, och verifikationerna i bokförin
 
 ```text
 Jämfört med bokföringen (2025/26):
-  D  bokföringen t.o.m. D 28, filen t.o.m. D 26
-      D 27  2026-04-12  Loopia Faktura  311.25  finns inte i filen
-      D 28  2026-04-30  Telia  1250.00  finns inte i filen
+  D  bokföringen t.o.m. D28, filen t.o.m. D26
+      D27  2026-04-12  Loopia Faktura  311.25  finns inte i filen
+      D28  2026-04-30  Telia  1250.00  finns inte i filen
 Importen går inte att göra. Bokföringen har 2 verifikationer som filen skulle ta bort eller byta ut.
 Ersätt året med SIE-filens innehåll?
   J Ja
@@ -421,7 +452,7 @@ cratchit säger direkt under prompten att filen inte går att använda, och visa
 *Bekräfta* visar jämförelsen, men säger att importen inte går att göra, om:
 
 * filen gäller ett annat organisationsnummer än bokföringen,
-* en serie i filen har en lucka, till exempel `Serie A i filen har en lucka: A 12 saknas.` Filen ska ansluta till bokföringen utan luckor,
+* en serie i filen har en lucka, till exempel `Serie A i filen har en lucka: A12 saknas.` Filen ska ansluta till bokföringen utan luckor,
 * allt i filen redan finns i bokföringen,
 * importen skulle ta bort eller byta ut verifikationer som redan finns i bokföringen,
 * en verifikation som redan finns har ett annat datum eller en annan text i filen.
@@ -440,7 +471,7 @@ cratchit säger direkt under prompten att filen inte går att använda, och visa
 
 Efter importen har året filens datum, och de följande åren räknas från det, tolv månader i taget. I alla andra år måste filen ha exakt samma datum som året.
 
-**Ändrade verifikationer.** En verifikation som redan är bokförd får enligt SIE bara ändras genom att rader stryks (`#BTRANS`) och nya rader läggs till (`#RTRANS`). Det som redan står får inte ändras. Sådana ändringar tar cratchit emot. *Bekräfta* listar då varje ändrad verifikation, till exempel `A 12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd`, tio i taget, och `2` (*Mer…*) visar fler. Ändringarna skrivs också i loggen.
+**Ändrade verifikationer.** En verifikation som redan är bokförd får enligt SIE bara ändras genom att rader stryks (`#BTRANS`) och nya rader läggs till (`#RTRANS`). Det som redan står får inte ändras. Sådana ändringar tar cratchit emot. *Bekräfta* listar då varje ändrad verifikation, till exempel `A12  2025-06-03  Loopia: 1 rad struken, 1 rad tillagd`, tio i taget, och `2` (*Mer…*) visar fler. Ändringarna skrivs också i loggen.
 
 ### Ersätta ett räkenskapsår med en SIE-fil
 
@@ -449,10 +480,10 @@ När en import inte går att göra, därför att bokföringen har verifikationer
 ```text
 Räkenskapsåret 2025/26 blir exakt som SIE-filen.
 Det här försvinner ur bokföringen:
-  D 27  2026-04-12  Loopia Faktura  311.25  finns inte i filen
-  D 28  2026-04-30  Telia  1250.00  finns inte i filen
+  D27         2026-04-12  Loopia Faktura  311.25  finns inte i filen
+  D28         2026-04-30  Telia  1250.00  finns inte i filen
 Det här kommer in från filen:
-  I 2–5
+  I2–5
 Ingående balanser i följande räkenskapsår räknas om.
 Ersätt räkenskapsåret med SIE-filen?
   J Ja
@@ -543,8 +574,8 @@ Nästa gång börjar du om från steg 1. Den gamla exporten saknar ju det du jus
 Jämfört med TheITfiedAB.se (Fortnox 3.0, skapad 2026-10-19):
 Filen skapades 2026-10-19. Är det den senaste exporten från programmet?
   I räkenskapsåret, inte i filen (2):
-    A 116   2026-04-28       1250.00  Loopia
-    A 117   2026-04-30        310.00  Bankavgift
+    A116    2026-04-28       1250.00  Loopia
+    A117    2026-04-30        310.00  Bankavgift
   I filen, inte i räkenskapsåret (0):
   1 Skriv skillnaden till en SIE-fil
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Exportera till SIE > Skillnad > TheITfiedAB.se> 
@@ -626,7 +657,7 @@ SIE-fil: /Users/anna/Documents/cratchit/TheITfiedAB.se
   Företag:        The ITfied AB (556782-8172)
   Räkenskapsår:   2026-05-01 – 2027-04-30, pågående
   Skapad:         2026-10-19 (Fortnox 3.62.17)
-  Verifikationer: 42 t.o.m. 2026-10-12  A 21 · D 11 · M 10
+  Verifikationer: 42 t.o.m. 2026-10-12  A21 · D11 · M10
   Konton:         501
 Skapa bokföringen från SIE-filen?
   J Ja
@@ -781,5 +812,5 @@ Börja alltid med att hämta en färsk SIE-fil för hela året från programmet 
 | kontoplan | Listan över bokföringens konton, till exempel BAS-kontoplanen |
 | SIE-fil | En fil med bokföring i ett standardformat, som bokföringsprogram använder för att lämna över bokföring till varandra |
 | räkenskapsår | Den period, oftast tolv månader, som bokföringen räknas och avslutas för |
-| verifikation | En bokförd affärshändelse, med serie och nummer, till exempel `A 12` |
+| verifikation | En bokförd affärshändelse, med serie och nummer, till exempel `A12` |
 | utkast | En affärshändelse som ännu inte är bokförd. Allt i den kan ändras |

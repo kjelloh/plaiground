@@ -1,12 +1,16 @@
 #include "ui/booked_menu.hpp"
 
+#include "charset/utf8.hpp"
 #include "core/books/books.hpp"
 #include "core/date.hpp"
 #include "core/log.hpp"
 #include "pyroceph/tui/pager.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/voucher_menu.hpp"
 #include "ui/year_view.hpp"
 
+#include <algorithm>
+#include <expected>
 #include <format>
 #include <string>
 #include <utility>
@@ -15,13 +19,24 @@ namespace cratchit::ui {
 
 namespace {
 
+using pyroceph::tui::Accepted;
 using pyroceph::tui::CodePoint;
+using pyroceph::tui::InputResult;
 using pyroceph::tui::OnKeyResult;
 using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
 using pyroceph::tui::View;
 
 constexpr CodePoint back_key = U'<';
+
+// Voucher numbers compare as numbers, so that D1 is never D11 (nor D01 another than D1)
+bool same_number(std::string const& a, std::string const& b) {
+  auto const strip = [](std::string const& n) {
+    auto const first = n.find_first_not_of('0');
+    return first == std::string::npos ? std::string("0") : n.substr(first);
+  };
+  return strip(a) == strip(b);
+}
 constexpr CodePoint forward_key = U'>';
 
 class BookedState : public State {
@@ -46,6 +61,28 @@ public:
     return false;
   }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
+  // The id of a voucher as one word, e.g. A12, opens it
+  InputResult on_input(std::u32string_view text) override {
+    std::string typed;
+    charset::utf8::Encoder encoder;
+    for (auto const code_point : text) {
+      for (auto const byte : encoder.push(code_point)) typed.push_back(static_cast<char>(byte));
+    }
+    auto const id = books::parse_voucher_id(typed);
+    if (!id) return std::unexpected(std::string("Skriv verifikationens id som ett ord, till exempel A12."));
+    auto const books = books::read_books(project_.folder);
+    if (!books) return std::unexpected(std::format("cratchit kunde inte läsa bokföringen: {}", books.error()));
+    auto const start = parse_iso_date(year_.start);
+    auto const* year = start ? books->year_starting(*start) : nullptr;
+    if (year != nullptr) {
+      auto const& [series, number] = *id;
+      auto const found = std::ranges::find_if(year->vouchers, [&](books::Voucher const& v) {
+        return v.series == series && same_number(v.number, number);
+      });
+      if (found != year->vouchers.end()) return Accepted(make_voucher_menu(*found, books->accounts));
+    }
+    return std::unexpected(std::format("Det finns ingen verifikation {} i {}.", typed, label_of(year_)));
+  }
   void on_return() override { read(); }
   std::string help_topic() const override { return std::string(help_topic::booked); }
 
