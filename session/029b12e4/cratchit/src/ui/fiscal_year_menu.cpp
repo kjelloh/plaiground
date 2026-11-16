@@ -167,7 +167,7 @@ public:
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'0') {
       report_.clear();
-      return make_year_flow_menu();
+      return make_year_flow_menu(project_, year_);
     }
     if (key == U'1') {
       report_.clear();

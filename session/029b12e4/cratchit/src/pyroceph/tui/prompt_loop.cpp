@@ -75,6 +75,11 @@ public:
 
   bool typing() const { return field_ || !input_.empty(); }
 
+  // True when key is one of the current state's options
+  bool is_option(CodePoint key) const {
+    return std::ranges::any_of(navigator_.current().options(), [key](auto const& option) { return option.first == key; });
+  }
+
   // Shows the current state, and starts its input when it has a start text
   void present() {
     show(navigator_, out_);
@@ -82,8 +87,9 @@ public:
   }
 
   // Handles a key while navigating: the current state first, then the common
-  // keys. Starts the input with the key when it is no action. False when the
-  // key ends the loop.
+  // keys. An option of the state that does nothing now (e.g. turning past the
+  // last page) does nothing. Starts the input with the key when it is no
+  // action. False when the key ends the loop.
   bool navigate(CodePoint key) {
     if (key != help_key) help_next_ = false;
     if (navigator_.press(key)) {
@@ -97,6 +103,8 @@ public:
       present();
     } else if (key == quit_key) {
       return false;
+    } else if (is_option(key)) {
+      // An option that does nothing now: nothing happens, and no input starts
     } else if (input_.push(key)) {
       to_edit_prompt(out_);
       echo(key);

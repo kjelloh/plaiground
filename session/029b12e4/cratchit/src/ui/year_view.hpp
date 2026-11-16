@@ -29,6 +29,10 @@ struct YearView {
 // The view of year; nullptr is a year with nothing in the books yet
 YearView year_view(books::FiscalYear const* year, std::size_t max_rows = year_view_rows);
 
+// The year's vouchers, one line each as in year_view, newest first (by date;
+// on the same date later ones in the books before earlier ones). None for nullptr.
+std::vector<std::string> voucher_rows(books::FiscalYear const* year);
+
 // The stage of a draft for the user: "händelse", "kontoutdrag", "obalanserat" or "klart"
 std::string_view stage_text(books::DraftStage stage);
 

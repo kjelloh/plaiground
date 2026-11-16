@@ -41,6 +41,7 @@ add_library(pyroceph
   src/pyroceph/tui/input_buffer.cpp
   src/pyroceph/tui/key_parser.cpp
   src/pyroceph/tui/key_reader.cpp
+  src/pyroceph/tui/pager.cpp
   src/pyroceph/tui/path_completion.cpp
   src/pyroceph/tui/prompt_loop.cpp
   src/pyroceph/tui/raw_mode.cpp
@@ -105,6 +106,7 @@ target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${dev
 # so that the tests can reach the states.
 add_library(cratchit_ui
   src/ui/add_project_menu.cpp
+  src/ui/booked_menu.cpp
   src/ui/design_insufficiency.cpp
   src/ui/details_project_menu.cpp
   src/ui/fiscal_year_menu.cpp

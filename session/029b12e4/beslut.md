@@ -35,3 +35,9 @@ Beslut som gäller i den här sessionen. Beslut från tidigare sessioner gäller
   * Året blir exakt filens. Det som skilde sig är borta: ingen kopia, inga utkast av det som försvann, ingen påminnelse om export. Årets utkast ligger kvar utom de filen bokför. Ett stängt år ersätts ändå och förblir stängt, med en varning.
   * Spårbarhet: det som försvann loggas med alla rader, och filen förs in i förteckningen som `ersätt`. Räkenskapsåret visar efteråt vad som försvann, med uppmaningen att bokföra det igen från underlag eller kontoutdrag.
 * **cratchit hanterar för närvarande det aktuella räkenskapsåret och högst 9 äldre** (användarens beslut, en begränsning tills vidare; `max_older_fiscal_years` i `core/fiscal_year`). Listan visar tio år, `0`–`9`, med det tomma året före det äldsta inräknat. *Från uppgifter* vägrar ett äldre första år; *Från SIE* varnar i `Bekräfta` att året inte kommer att synas, men skapar bokföringen med `J`. Att bygga om en bokföring från SIE-filer görs från det senaste året bakåt.
+
+## 2026-11-16
+
+* **Editorn för verifikationer och utkast** byggs nu (användarens beslut). Första steget är en bläddringsbar lista över de bokförda verifikationerna i *Årsflöde > 1 Bokfört*.
+* **Bläddringsbar lista** (användarens val): en sida med fast längd, 20 rader till att börja med; `…` överst när listan inte är i början och nederst när den inte är i slutet (bara `…`, utan antal); `<` och `>` bläddrar en hel sida, som `more`, och syns bara när det går; nyast överst. Sidindelningen är allmän, `pyroceph::tui::Pager`.
+* **Ett val som inte kan göra något just då gör ingenting** och börjar ingen text (användarens förenkling). `<` och `>` i en bläddringsbar lista visas därför alltid.

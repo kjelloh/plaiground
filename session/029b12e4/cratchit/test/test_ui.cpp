@@ -1,4 +1,5 @@
 #include "core/books/books.hpp"
+#include "core/details_project.hpp"
 #include "core/dot_folder.hpp"
 #include "core/fiscal_year.hpp"
 #include "core/inventory.hpp"
@@ -10,6 +11,7 @@
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/add_project_menu.hpp"
+#include "ui/booked_menu.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/project_menu.hpp"
@@ -311,14 +313,18 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
                          {U'5', "Årsstämma"},
                          {U'6', "Rapport till Bolagsverket"},
                          {U'7', "Deklaration till SKV"}}));
-  // Every step but Bokslut is not there yet
+  // Every step but Bokfört and Bokslut is not there yet
   for (auto const& [key, caption] : navigator.current().options()) {
-    if (key == U'3') continue;
+    if (key == U'1' || key == U'3') continue;
     ASSERT_TRUE(navigator.press(key));
     EXPECT_EQ(navigator.current().name(), "Inte än (" + caption + ")");
     ASSERT_TRUE(navigator.back());
   }
   EXPECT_FALSE(navigator.press(U'8'));
+  // Bokfört lists the year's vouchers
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Bokfört");
+  ASSERT_TRUE(navigator.back());
   // Bokslut has Avstämning, not there yet
   ASSERT_TRUE(navigator.press(U'3'));
   EXPECT_EQ(navigator.current().name(), "Bokslut");
@@ -1223,4 +1229,63 @@ TEST_F(RootMenuTest, FromSieWarnsWhenTheYearWillNotShow) {
   auto const view = navigator.current().view();
   EXPECT_NE(std::ranges::find(view, "  Varning:        cratchit visar bara det aktuella räkenskapsåret och 9 äldre. 2016 kommer inte att synas."),
             view.end());
+}
+
+TEST_F(RootMenuTest, BookedShowsTheVouchersNewestFirstAPageAtATime) {
+  // 45 vouchers in 2025, A 1 on January 1st up to A 45
+  auto const folder = documents / "cratchit";
+  fs::create_directories(folder);
+  std::string vouchers;
+  for (int i = 1; i <= 45; ++i) {
+    auto const date = *cratchit::parse_iso_date("2025-01-01") ;
+    auto const day = std::chrono::sys_days(date) + std::chrono::days(i - 1);
+    auto const text = cratchit::format_iso_date(std::chrono::year_month_day(day));
+    vouchers += std::format("#VER A {} {}{}{} \"Sale {}\"\r\n{{\r\n#TRANS 1930 {{}} 100\r\n#TRANS 3010 {{}} -100\r\n}}\r\n", i,
+                            text.substr(0, 4), text.substr(5, 2), text.substr(8, 2), i);
+  }
+  std::ofstream(documents / "many.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n"
+      << vouchers;
+  auto plan = cratchit::plan_project_from_sie(documents / "many.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_booked_menu(*project, {"2025-01-01", "2025-12-31"}));
+  auto const& booked = navigator.current();
+  EXPECT_EQ(booked.name(), "Bokfört");
+  auto view = booked.view();
+  ASSERT_EQ(view.size(), 22u); // heading, 20 vouchers, "…"
+  EXPECT_EQ(view[0], "Bokfört 2025: verifikationer 1–20 av 45");
+  EXPECT_TRUE(view[1].starts_with("  A 45 ")) << view[1];
+  EXPECT_TRUE(view[20].starts_with("  A 26 ")) << view[20];
+  EXPECT_EQ(view[21], "  …");
+  EXPECT_EQ(booked.options(), (OptionsList{{U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
+  EXPECT_FALSE(navigator.press(U'<')); // at the first page: nothing
+  // > turns a page in place
+  ASSERT_TRUE(navigator.press(U'>'));
+  EXPECT_EQ(navigator.path().size(), 1u);
+  view = navigator.current().view();
+  EXPECT_EQ(view[0], "Bokfört 2025: verifikationer 21–40 av 45");
+  EXPECT_EQ(view[1], "  …");
+  EXPECT_TRUE(view[2].starts_with("  A 25 ")) << view[2];
+  EXPECT_EQ(view.back(), "  …");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
+  ASSERT_TRUE(navigator.press(U'>'));
+  view = navigator.current().view();
+  EXPECT_EQ(view[0], "Bokfört 2025: verifikationer 41–45 av 45");
+  EXPECT_TRUE(view.back().starts_with("  A 1 ")) << view.back();
+  EXPECT_FALSE(navigator.press(U'>')); // at the last page: nothing
+  ASSERT_TRUE(navigator.press(U'<'));
+  EXPECT_EQ(navigator.current().view()[0], "Bokfört 2025: verifikationer 21–40 av 45");
+}
+
+TEST_F(RootMenuTest, BookedSaysWhenNothingIsBooked) {
+  auto const folder = documents / "Exempel AB";
+  ASSERT_TRUE(cratchit::create_project_here(fs::create_directories(folder) ? folder : folder, "Exempel AB", "556677-8899",
+                                            {"2025-01-01", "2025-12-31"}, "2026-11-09"));
+  auto const project = cratchit::open_project(folder);
+  ASSERT_TRUE(project) << project.error();
+  auto const booked = cratchit::ui::make_booked_menu(*project, {"2025-01-01", "2025-12-31"});
+  EXPECT_EQ(booked->view(), (View{"Bokfört 2025: inget bokfört i räkenskapsåret."}));
 }

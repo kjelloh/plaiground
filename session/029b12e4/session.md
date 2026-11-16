@@ -145,6 +145,16 @@ Jag tror det nog är dags ändå att faktiskt göra ett UI för att editera en b
 * Vi borde kunna använda 'samma' editor?
 * Bara med mindre begränsningar för utkast?
 
+Jag har nu börjat chatta med Claude och tror jag kan guida den fram till ett UI och beteende som är gott nog?
+
+* Jag får se till att behålla fokus!
+    * Målet är att kunna bläddra, välja och editera!
+
+Vilka egna tester (användarfall) kan jag tänka mig att verifiera mot?
+
+
+
+
 ## 20261115
 
 Nu vill jag försöka skapa en prouktionsredo Cratychit från tidigare sessioner.

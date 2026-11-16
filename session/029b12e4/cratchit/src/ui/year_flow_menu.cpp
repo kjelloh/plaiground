@@ -1,9 +1,11 @@
 #include "ui/year_flow_menu.hpp"
 
+#include "ui/booked_menu.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
 
 #include <string>
+#include <utility>
 
 namespace cratchit::ui {
 
@@ -29,6 +31,7 @@ public:
 
 class YearFlowState : public State {
 public:
+  YearFlowState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) {}
   std::string name() const override { return "Årsflöde"; }
   View view() const override { return {"Arbetet med räkenskapsåret, i den ordning det brukar göras."}; }
   OptionsList options() const override {
@@ -39,7 +42,7 @@ public:
   OnKeyResult on_key(CodePoint key) override {
     switch (key) {
     case U'0': return make_design_insufficiency_state("Utkast", "att skapa, ändra och bokföra utkast");
-    case U'1': return make_design_insufficiency_state("Bokfört", "att arbeta med årets verifikationer");
+    case U'1': return make_booked_menu(project_, year_);
     case U'2': return make_design_insufficiency_state("Momsrapport", "momsrapporten");
     case U'3': return make_closing_menu();
     case U'4': return make_design_insufficiency_state("Årsredovisning", "årsredovisningen");
@@ -50,11 +53,17 @@ public:
     }
   }
   std::string help_topic() const override { return std::string(help_topic::year_flow); }
+
+private:
+  Project project_;
+  FiscalYear year_;
 };
 
 } // namespace
 
-std::unique_ptr<State> make_year_flow_menu() { return std::make_unique<YearFlowState>(); }
+std::unique_ptr<State> make_year_flow_menu(Project project, FiscalYear year) {
+  return std::make_unique<YearFlowState>(std::move(project), std::move(year));
+}
 
 std::unique_ptr<State> make_closing_menu() { return std::make_unique<ClosingState>(); }
 

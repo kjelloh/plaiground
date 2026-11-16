@@ -88,6 +88,8 @@ Här tar `1` dig till *Befintlig* och `2` till *Ny*. Menyvalen är korta. Trycke
 
 Tryck exakt den tangent som står framför valet. Står det `J Ja` är det versalt `J` som gäller; `j` gör ingenting.
 
+Ett val som inte kan göra något just då, till exempel `>` på den sista sidan av en lista, gör ingenting. Tangenten hamnar inte heller på raden som text.
+
 ### Hjälp
 
 Tryck `?` var du än står, så visar cratchit de gemensamma valen. Har platsen en hjälptext säger cratchit det, och trycker du `?` en gång till visar cratchit hjälptexten ur den här manualen. Trycker du `?` ännu en gång visas de gemensamma valen igen.
@@ -307,7 +309,7 @@ Du kan ännu inte skapa utkast i cratchit.
 ### Årsflöde
 
 <!-- hjälp: arsflode -->
-Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. Bara `3 Bokslut` leder vidare än så länge, de andra valen säger vad som saknas. Tryck `-` för att gå tillbaka till räkenskapsåret.
+Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `1 Bokfört` och `3 Bokslut` leder vidare, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
 <!-- /hjälp -->
 
 Tryck `0` i räkenskapsåret:
@@ -325,7 +327,33 @@ Arbetet med räkenskapsåret, i den ordning det brukar göras.
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde> 
 ```
 
-Valen finns i menyn, men cratchit kan inte utföra dem än (se [Inte än](#inte-än) och [Kommer senare](#kommer-senare)).
+Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](#inte-än) och [Kommer senare](#kommer-senare)).
+
+#### Bokfört
+
+<!-- hjälp: bokfort -->
+Räkenskapsårets bokförda verifikationer, den senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Tryck `-` för att gå tillbaka till Årsflöde.
+<!-- /hjälp -->
+
+Tryck `1` i Årsflöde för att se räkenskapsårets bokförda verifikationer. De visas en sida i taget, den senaste överst:
+
+```text
+Bokfört 2025/26: verifikationer 21–40 av 120
+  …
+  A 49        2026-04-10        449.90  Utlägg Privat - Kjell&Co
+  A 50        2026-04-07          7.40  Account:NORDEA Text:AVGIFTER NORDEA
+  …
+  A 30        2026-01-12       1250.00  Telia
+  …
+  < Föregående sida
+  > Nästa sida
+Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört> 
+```
+
+* En sida har högst 20 verifikationer.
+* `…` överst betyder att det finns nyare verifikationer före sidan, och `…` nederst att det finns äldre efter den.
+* `>` visar nästa sida, med äldre verifikationer, och `<` föregående sida. Båda valen finns alltid; på första sidan gör `<` ingenting, och på sista sidan gör `>` ingenting.
+* Raderna är inga val än. Att öppna och rätta en verifikation kommer senare.
 
 #### Bokslut
 

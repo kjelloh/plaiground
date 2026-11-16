@@ -532,3 +532,10 @@ TEST(PromptLoop, EnterInATextFieldGivesTheInputToTheState) {
                                   "\nSkriv något.\nRot > Fält: "
                                   "x\nRot > Fält > Klart> \n");
 }
+
+TEST(PromptLoop, AnOptionThatDoesNothingNowStartsNoInput) {
+  // ">" leads nowhere now (its next is nothing), e.g. at the last page: pressing it shows nothing new and types nothing
+  Navigator navigator(menu("Rot", {{U'>', "Nästa", [] { return std::unique_ptr<pyroceph::tui::State>(); }}}));
+  auto keys = keys_of({'>', '>'});
+  EXPECT_EQ(run(keys, navigator), "\n  > Nästa\nRot> \n");
+}

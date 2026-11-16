@@ -55,6 +55,19 @@ std::string_view stage_text(books::DraftStage stage) {
   return "";
 }
 
+std::vector<std::string> voucher_rows(books::FiscalYear const* year) {
+  std::vector<std::string> lines;
+  if (year == nullptr) return lines;
+  std::vector<Row> rows;
+  for (auto const& voucher : year->vouchers) {
+    rows.push_back({voucher.event.date, row_text(std::format("{} {}", voucher.series, voucher.number),
+                                                 voucher.event.date, voucher.event.amount, voucher.event.heading)});
+  }
+  std::ranges::stable_sort(rows, {}, &Row::date);
+  for (auto const& row : rows | std::views::reverse) lines.push_back(row.text);
+  return lines;
+}
+
 YearView year_view(books::FiscalYear const* year, std::size_t max_rows) {
   YearView view{summary_of(year), {}};
   if (year == nullptr) return view;

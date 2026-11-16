@@ -30,6 +30,7 @@ add_executable(cratchit_tests
   test_log.cpp
   test_manual.cpp
   test_path_completion.cpp
+  test_pager.cpp
   test_path_value.cpp
   test_project.cpp
   test_prompt_loop.cpp

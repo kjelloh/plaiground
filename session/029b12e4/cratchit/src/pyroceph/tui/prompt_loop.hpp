@@ -97,6 +97,9 @@ void show(Navigator const& navigator, std::FILE* out);
 // text field (State::is_text_field) starts the input even with no start text,
 // and the input stays open when emptied.
 //
+// An option of the current state that does nothing when pressed (e.g. turning
+// past the last page) does nothing: it starts no input.
+//
 // Typing input: printable keys go into the input and are echoed. Backspace
 // and Delete erase one; when the input becomes empty, navigating starts
 // again. Esc and Ctrl-U empty the input and navigating starts again. Tab adds
