@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -114,7 +116,7 @@ TEST_F(BooksFiles, WriteThenReadGivesTheSameBooks) {
   auto const books = sample();
   auto const written = cratchit::books::write_books(root, books);
   ASSERT_TRUE(written.has_value()) << written.error();
-  EXPECT_EQ(written->size(), 10u);
+  EXPECT_EQ(written->size(), 11u); // with series.csv
   EXPECT_TRUE(written->front().created);
   EXPECT_EQ(written->front().file, fs::path(".cratchit") / "books" / "books.txt");
   auto const back = cratchit::books::read_books(root);
@@ -125,6 +127,12 @@ TEST_F(BooksFiles, WriteThenReadGivesTheSameBooks) {
   EXPECT_EQ(back->accounts, books.accounts);
   EXPECT_EQ(back->dimensions, books.dimensions);
   EXPECT_EQ(back->objects, books.objects);
+  // The sample names no series: each one its vouchers use is listed, unnamed
+  for (auto const& year : books.years) {
+    for (auto const& voucher : year.vouchers) {
+      EXPECT_NE(std::ranges::find(back->series, voucher.series, &cratchit::books::Series::series), back->series.end());
+    }
+  }
   ASSERT_EQ(back->years.size(), 2u);
   for (std::size_t i = 0; i < 2; ++i) {
     EXPECT_EQ(back->years[i].start, books.years[i].start);
@@ -399,4 +407,25 @@ TEST(VoucherId, IsParsedFromOneWordOnly) {
   EXPECT_FALSE(cratchit::books::parse_voucher_id("A"));
   EXPECT_FALSE(cratchit::books::parse_voucher_id("A12B"));
   EXPECT_FALSE(cratchit::books::parse_voucher_id(""));
+}
+
+TEST_F(BooksFiles, BooksWithoutAListOfSeriesHaveFortnoxsSeries) {
+  ASSERT_TRUE(cratchit::books::write_books(root, sample()));
+  fs::remove(root / ".cratchit" / "books" / "series.csv");
+  auto const books = cratchit::books::read_books(root);
+  ASSERT_TRUE(books) << books.error();
+  EXPECT_EQ(books->series_name("A"), "Redovisning");
+  EXPECT_EQ(books->series_name("D"), "Leverantörsfakturor");
+  EXPECT_EQ(books->series_name("N"), "Lager");
+  EXPECT_EQ(books->series_name("Z"), "");
+}
+
+TEST_F(BooksFiles, SeriesAreReadAndWrittenWithTheirNames) {
+  auto books = sample();
+  books.series = {{"A", "Bank"}, {"X", "Egen serie"}};
+  ASSERT_TRUE(cratchit::books::write_books(root, books));
+  auto const back = cratchit::books::read_books(root);
+  ASSERT_TRUE(back) << back.error();
+  EXPECT_EQ(back->series_name("A"), "Bank");
+  EXPECT_EQ(back->series_name("X"), "Egen serie");
 }

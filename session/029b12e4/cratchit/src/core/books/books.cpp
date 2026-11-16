@@ -38,9 +38,11 @@ constexpr std::string_view vouchers_file = "vouchers.csv";
 constexpr std::string_view postings_file = "postings.csv";
 constexpr std::string_view old_postings_file = "transactions.csv"; // the name of postings.csv before 2026-10-24
 constexpr std::string_view events_file = "events.csv";
+constexpr std::string_view series_file = "series.csv";
 constexpr std::string_view event_postings_file = "event_postings.csv";
 
 CsvRow const accounts_header{"account", "name", "type", "sru", "unit"};
+CsvRow const series_header{"series", "name"};
 CsvRow const dimensions_header{"dimension", "name", "super"};
 CsvRow const objects_header{"dimension", "object", "name"};
 CsvRow const opening_header{"account", "amount"};
@@ -50,6 +52,18 @@ CsvRow const events_header{"date", "text", "amount", "noted"};
 CsvRow const event_postings_header{"event", "account", "amount", "date", "text", "source"};
 CsvRow const postings_header{"series", "number", "kind",     "account",  "objects",
                              "amount", "date",   "text",     "quantity", "signature"};
+
+// Each series the vouchers use is in the list (unnamed when new), and the list is by series
+void list_used_series(Books& books) {
+  for (auto const& year : books.years) {
+    for (auto const& voucher : year.vouchers) {
+      if (std::ranges::find(books.series, voucher.series, &Series::series) == books.series.end()) {
+        books.series.push_back({voucher.series, {}});
+      }
+    }
+  }
+  std::ranges::sort(books.series, {}, &Series::series);
+}
 
 bool all_digits(std::string_view text) {
   return !text.empty() && std::ranges::all_of(text, [](char c) { return c >= '0' && c <= '9'; });
@@ -392,6 +406,22 @@ std::size_t FiscalYear::place_draft(Draft draft) {
   return index;
 }
 
+std::vector<Series> const& default_series() {
+  static std::vector<Series> const series{
+      {"A", "Redovisning"},       {"B", "Kundfakturor"},  {"C", "Inbetalningar från kunder"},
+      {"D", "Leverantörsfakturor"}, {"E", "Utbetalningar till leverantörer"}, {"F", "Kassa"},
+      {"G", "Avskrivning"},       {"H", "Periodisering"}, {"I", "Bokslut"},
+      {"J", "Kontantfaktura"},    {"K", "Kvitto"},        {"L", "Lön"},
+      {"M", "Momsrapport"},       {"N", "Lager"},
+  };
+  return series;
+}
+
+std::string Books::series_name(std::string_view name) const {
+  auto const found = std::ranges::find(series, name, &Series::series);
+  return found != series.end() ? found->name : std::string();
+}
+
 FiscalYear const* Books::year_starting(Date start) const {
   auto const it = std::ranges::find(years, start, &FiscalYear::start);
   return it == years.end() ? nullptr : &*it;
@@ -506,6 +536,14 @@ std::expected<Books, std::string> read_books(fs::path const& project_folder) {
   for (auto const& row : *objects) {
     books.objects.push_back({row[0], row[1], row[2]});
   }
+  std::error_code series_ec;
+  if (fs::exists(folder / series_file, series_ec)) {
+    auto const series = read_optional_table(folder / series_file, series_header);
+    if (!series) return std::unexpected(series.error());
+    for (auto const& row : *series) books.series.push_back({row[0], row[1]});
+  } else {
+    books.series = default_series();
+  }
   std::ranges::sort(years);
   for (auto const& [start, end] : years) {
     auto year = read_year(folder, start, end);
@@ -515,6 +553,7 @@ std::expected<Books, std::string> read_books(fs::path const& project_folder) {
     year->closed = std::ranges::contains(closed, start);
     books.years.push_back(std::move(*year));
   }
+  list_used_series(books);
   return books;
 }
 
@@ -558,6 +597,11 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
     rows.push_back({object.dimension, object.number, object.name});
   }
   files.emplace_back(objects_file, csv_text(objects_header, rows));
+  rows.clear();
+  auto listed = books;
+  list_used_series(listed);
+  for (auto const& series : listed.series) rows.push_back({series.series, series.name});
+  files.emplace_back(series_file, csv_text(series_header, rows));
 
   for (auto const& year : years) {
     auto const year_folder = fs::path(year_folder_name(year.start));

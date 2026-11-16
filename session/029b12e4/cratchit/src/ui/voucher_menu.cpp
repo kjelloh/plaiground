@@ -31,14 +31,15 @@ std::string padded(std::string const& text, std::size_t width) {
 
 class VoucherState : public State {
 public:
-  VoucherState(books::Voucher voucher, std::vector<books::Account> accounts)
-      : voucher_(std::move(voucher)), accounts_(std::move(accounts)) {}
+  VoucherState(books::Voucher voucher, std::vector<books::Account> accounts, std::string series_name)
+      : voucher_(std::move(voucher)), accounts_(std::move(accounts)), series_name_(std::move(series_name)) {}
   std::string name() const override { return books::voucher_id(voucher_.series, voucher_.number); }
   View view() const override {
     View lines{"Verifikation " + name()};
     auto const row = [&lines](std::string_view label, std::string const& value) {
       lines.push_back(std::format("  {:<16}{}", std::string(label) + ":", value));
     };
+    row("Serie", series_name_.empty() ? voucher_.series : std::format("{}  {}", voucher_.series, series_name_));
     row("Datum", format_iso_date(voucher_.event.date));
     row("Rubrik", voucher_.event.heading);
     row("Belopp", format_amount(voucher_.event.amount));
@@ -73,12 +74,14 @@ private:
 
   books::Voucher voucher_;
   std::vector<books::Account> accounts_;
+  std::string series_name_;
 };
 
 } // namespace
 
-std::unique_ptr<State> make_voucher_menu(books::Voucher voucher, std::vector<books::Account> accounts) {
-  return std::make_unique<VoucherState>(std::move(voucher), std::move(accounts));
+std::unique_ptr<State> make_voucher_menu(books::Voucher voucher, std::vector<books::Account> accounts,
+                                         std::string series_name) {
+  return std::make_unique<VoucherState>(std::move(voucher), std::move(accounts), std::move(series_name));
 }
 
 } // namespace cratchit::ui

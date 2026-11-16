@@ -1324,7 +1324,7 @@ TEST_F(RootMenuTest, BookedOpensAVoucherByItsIdAsOneWord) {
   navigator.enter(std::move(one->next));
   EXPECT_EQ(navigator.current().name(), "D1");
   EXPECT_EQ(navigator.current().view(),
-            (View{"Verifikation D1", "  Datum:          2025-02-01", "  Rubrik:         Faktura 1", "  Belopp:         125.00",
+            (View{"Verifikation D1", "  Serie:          D  Leverantörsfakturor", "  Datum:          2025-02-01", "  Rubrik:         Faktura 1", "  Belopp:         125.00",
                   "  Registrerad:    2025-02-05", "Konteringar:",
                   "  2440  Leverantörsskulder            -125.00", "  6210  Telekommunikation              100.00",
                   "  2641  Debiterad ingående moms         25.00"}));

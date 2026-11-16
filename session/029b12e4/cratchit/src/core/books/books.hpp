@@ -160,6 +160,18 @@ struct Address {
   bool operator==(Address const&) const = default;
 };
 
+// A voucher series and its name, e.g. D "Leverantörsfakturor". SIE gives no
+// names to series, so the books name their own (books/series.csv).
+struct Series {
+  std::string series;
+  std::string name; // empty when not named
+  bool operator==(Series const&) const = default;
+};
+
+// Fortnox's voucher series A to N with Fortnox's names: the series of books
+// that have no list of their own yet
+std::vector<Series> const& default_series();
+
 struct Books {
   std::string chart_type; // e.g. EUBAS97
   std::string company_id; // the source program's id of the company
@@ -168,9 +180,14 @@ struct Books {
   std::vector<Dimension> dimensions; // by number
   std::vector<Object> objects;
   std::vector<FiscalYear> years; // by start date
+  // The series and their names, by series: books/series.csv, else
+  // default_series(); each series a voucher uses is in it (unnamed when new)
+  std::vector<Series> series;
 
   FiscalYear const* year_starting(Date start) const;
   Account const* account(std::string_view number) const;
+  // The name of the series, empty when it has none
+  std::string series_name(std::string_view series) const;
 };
 
 // The kind of an account in the books (by its type, else its BAS class)

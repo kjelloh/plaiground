@@ -119,6 +119,7 @@ The workspace (*samlingsmapp*) and each project (*bokföring*, the books of one 
 | --- | --- |
 | `<Documents>/cratchit/.cratchit/workspace.txt` | `created`, and one `project.<uuid> = <folder>` per project the workspace remembers. A project folder may be anywhere. |
 | `<project folder>/.cratchit/project.txt` | `created`, `uuid`, `name` and `orgnr`, in the format of take 3 (which may add more). |
+| `<project folder>/.cratchit/books/series.csv` | The voucher series and their names (`series, name`), by series. SIE gives no names to series. Books without the file have Fortnox's series A–N (`default_series` in `core/books`); a new project gets them written, and each series its vouchers use is listed, unnamed when new. |
 | `<project folder>/.cratchit/inventory.csv` | The inventory (*förteckning*) of the project: one row per use of a file, known by the SHA-256 of its content (`core/inventory`). Nothing writes here yet. |
 | `<project folder>/.cratchit/books/<year start>/inventory.csv` | The fiscal year's inventory, overriding the project's for the same file. Each SIE file read into the books gets a row: `sha256, kind, name, path, size, read, use, generated, program, year_start, year_end, status, vouchers_added, vouchers_changed`, with `path` relative to the project folder (generic `/`), so the folder can move. |
 | `<project folder>/.cratchit/books/books.txt` | `chart_type`, `company_id`, `address.*` and one `year.<start> = <end>` per fiscal year |

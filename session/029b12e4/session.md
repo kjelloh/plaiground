@@ -152,7 +152,34 @@ Jag har nu börjat chatta med Claude och tror jag kan guida den fram till ett UI
 
 Vilka egna tester (användarfall) kan jag tänka mig att verifiera mot?
 
+Nu uppkom behovet av att skriva ut namn på serier. Jag kopierade namnen från Fortnox (lista under Export SEI-fil)
 
+```sh
+ 	A - Redovisning	
+ 	B - Kundfakturor	
+ 	C - Inbetalningar från kunder	
+ 	D - Leverantörsfakturor	
+ 	E - Utbetalningar till leverantörer	
+ 	F - Kassa	
+ 	G - Avskrivning	
+ 	H - Periodisering	
+ 	I - Bokslut	
+ 	J - Kontantfaktura	
+ 	K - Kvitto	
+ 	L - Lön	
+ 	M - Momsrapport	
+ 	N - Lager	
+```
+
+Frågan är om jag ändå blev lockad in på ett sidospår nu?
+
+* Vi behöver ju inte seriernas namn för att editera en verifikation?
+* Eller är det kanske en förutsättning (så man väljer rätt serie)?
+
+Ja, nu blev det infört i alla fall (Tänk att ALLT är så komplext och bara växer och växer hela tiden?)
+
+* HÅLL I DET HÄR NU!
+* Jag vill kunna lämna det här och ha ett bokföringsprogram som är good enough fram till nästa bokslut, ÅR, Stämma, rapport till Bolagsverket och inkomstdeklaration 2!
 
 
 ## 20261115

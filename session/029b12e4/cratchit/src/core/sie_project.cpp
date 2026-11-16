@@ -116,7 +116,9 @@ std::expected<SieProjectPlan, std::string> plan_project_from_sie(fs::path const&
   plan.program = document.program_version.empty() ? document.program
                                                   : std::format("{} {}", document.program, document.program_version);
   plan.generated = document.generated;
-  plan.import = books::plan_import({}, {plan.name, {}}, document);
+  books::Books empty;
+  empty.series = books::default_series(); // a new project starts with Fortnox's series
+  plan.import = books::plan_import(empty, {plan.name, {}}, document);
   if (!plan.import.errors.empty()) return std::unexpected(errors_text(plan.import.errors));
   return plan;
 }

@@ -368,11 +368,12 @@ Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört: D19
 * Finns verifikationen inte i räkenskapsåret, eller är id:t skrivet på annat sätt, säger cratchit det under prompten, och texten står kvar så att du kan rätta den.
 
 <!-- hjälp: verifikation -->
-Verifikationen med datum, rubrik, belopp, när den registrerades, och dess konteringar: konto, kontots namn och belopp, och radens egen text och datum när den har dem. En struken rad är märkt `(struken)` och en tillagd rad `(tillagd)`. Än så länge kan du bara se verifikationen. Tryck `-` för att gå tillbaka till Bokfört.
+Verifikationen med serie och seriens namn, datum, rubrik, belopp, när den registrerades, och dess konteringar: konto, kontots namn och belopp, och radens egen text och datum när den har dem. En struken rad är märkt `(struken)` och en tillagd rad `(tillagd)`. Än så länge kan du bara se verifikationen. Tryck `-` för att gå tillbaka till Bokfört.
 <!-- /hjälp -->
 
 ```text
 Verifikation D19
+  Serie:          D  Leverantörsfakturor
   Datum:          2026-02-27
   Rubrik:         Faktura Websupport - webbhotell
   Belopp:         1233.75
@@ -385,6 +386,8 @@ Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört > D19>
 ```
 
 Än så länge visar cratchit bara verifikationen. Att rätta den, med strukna och tillagda rader, kommer senare.
+
+**Serier.** Varje verifikation hör till en serie, en bokstav. En SIE-fil har inga namn på serierna, så bokföringen har sina egna. Från början har den Fortnox serier: A Redovisning, B Kundfakturor, C Inbetalningar från kunder, D Leverantörsfakturor, E Utbetalningar till leverantörer, F Kassa, G Avskrivning, H Periodisering, I Bokslut, J Kontantfaktura, K Kvitto, L Lön, M Momsrapport och N Lager. En serie som en SIE-fil använder men som inte finns där läggs till utan namn, och visas då bara med sin bokstav. Att byta namn på en serie eller lägga till en kommer senare.
 
 #### Bokslut
 

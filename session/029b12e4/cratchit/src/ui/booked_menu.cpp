@@ -79,7 +79,9 @@ public:
       auto const found = std::ranges::find_if(year->vouchers, [&](books::Voucher const& v) {
         return v.series == series && same_number(v.number, number);
       });
-      if (found != year->vouchers.end()) return Accepted(make_voucher_menu(*found, books->accounts));
+      if (found != year->vouchers.end()) {
+        return Accepted(make_voucher_menu(*found, books->accounts, books->series_name(found->series)));
+      }
     }
     return std::unexpected(std::format("Det finns ingen verifikation {} i {}.", typed, label_of(year_)));
   }
