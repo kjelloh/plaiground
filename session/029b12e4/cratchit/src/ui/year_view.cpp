@@ -49,6 +49,60 @@ std::string summary_of(books::FiscalYear const* year) {
   return text;
 }
 
+// Code points of UTF-8 text (as wide as they show, for the texts cratchit meets)
+std::size_t code_points(std::string_view text) {
+  return static_cast<std::size_t>(
+      std::ranges::count_if(text, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
+}
+
+// text cut to at most max code points: the first max - 2, spaces at the end dropped, then ".."
+std::string cut_to(std::string_view text, std::size_t max) {
+  if (code_points(text) <= max) return std::string(text);
+  std::string cut;
+  std::size_t count = 0;
+  for (char const c : text) {
+    bool const starts = (static_cast<unsigned char>(c) & 0xC0) != 0x80;
+    if (starts && ++count > (max > 2 ? max - 2 : 0)) break;
+    cut += c;
+  }
+  while (!cut.empty() && cut.back() == ' ') cut.pop_back();
+  return cut + "..";
+}
+
+// The parts joined by " : " in at most width code points (beslut 2026-11-18): a part
+// shorter than its share stays whole, what is left is shared equally by the longer ones
+std::string joined_within(std::vector<std::string> const& parts, std::size_t width) {
+  constexpr std::string_view separator = " : ";
+  auto const separators = parts.empty() ? 0 : separator.size() * (parts.size() - 1);
+  auto room = width > separators ? width - separators : 0;
+  std::vector<std::size_t> share(parts.size(), 0);
+  std::vector<std::size_t> left(parts.size());
+  for (std::size_t i = 0; i < parts.size(); ++i) left[i] = i;
+  while (!left.empty()) {
+    auto const each = room / left.size();
+    std::vector<std::size_t> longer;
+    for (auto const i : left) {
+      if (code_points(parts[i]) <= each) {
+        share[i] = code_points(parts[i]);
+        room -= share[i];
+      } else {
+        longer.push_back(i);
+      }
+    }
+    if (longer.size() == left.size()) {
+      for (auto const i : longer) share[i] = each;
+      break;
+    }
+    left = std::move(longer);
+  }
+  std::string text;
+  for (std::size_t i = 0; i < parts.size(); ++i) {
+    if (i > 0) text += separator;
+    text += cut_to(parts[i], share[i]);
+  }
+  return text;
+}
+
 } // namespace
 
 std::string_view stage_text(books::DraftStage stage) {
@@ -73,10 +127,13 @@ std::string draft_text(books::Draft const& draft) {
   // The same event from several parts: their raw texts, in the best case the text of the
   // voucher to come (beslut 2026-11-18); worked out each time, never stored
   if (stage == books::DraftStage::same) {
+    std::vector<std::string> parts;
+    if (!text.empty()) parts.push_back(text);
     for (auto const& posting : draft.postings) {
       if (posting.kind == books::Posting::Kind::removed || posting.text.empty()) continue;
-      text += text.empty() ? posting.text : " | " + posting.text;
+      parts.push_back(posting.text);
     }
+    text = joined_within(parts, same_text_width);
   }
   if (text.empty()) {
     auto const posting = std::ranges::find_if(draft.postings, [](books::Posting const& p) {

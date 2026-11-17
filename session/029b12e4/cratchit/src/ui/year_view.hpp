@@ -9,6 +9,9 @@
 
 namespace cratchit::ui {
 
+// The width of the text of a draft of stage samma, in code points (see draft_text)
+inline constexpr std::size_t same_text_width = 40;
+
 // The rows a fiscal year shows at most, for now
 inline constexpr std::size_t year_view_rows = 10;
 
@@ -41,8 +44,10 @@ std::string draft_id(std::size_t index);
 // What a draft's row tells about it: its heading, else its first posting's
 // account and text (e.g. a statement entry), then its stage in parentheses,
 // e.g. "1920  AVGIFTER NORDEA (kontohändelse)". A draft of stage samma shows
-// the raw texts of its parts instead, the heading first, joined by " | " and
-// without accounts, e.g. "Anthropic Claude | Kortköp 260910 ANTHROPIC* (samma)".
+// the raw texts of its parts instead, the heading first, joined by " : " and
+// without accounts, in at most same_text_width code points: a part shorter than
+// its share stays whole, the longer ones share what is left and end in "..",
+// e.g. "Anthropic Claude : Kortköp 260910 ANTH.. (samma)".
 std::string draft_text(books::Draft const& draft);
 
 // The year's drafts, one line each as voucher_rows, newest first (the drafts

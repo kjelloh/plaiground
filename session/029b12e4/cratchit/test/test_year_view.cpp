@@ -129,9 +129,27 @@ TEST(DraftRows, TheSameEventShowsTheRawTextsOfItsParts) {
   year.place_draft({{"Anthropic Claude", 20468, date(2026, 9, 10)}, date(2026, 11, 18), {paid}});
   auto const rows = cratchit::ui::draft_rows(&year);
   ASSERT_EQ(rows.size(), 2u);
-  EXPECT_EQ(rows[1], "  #1            2026-07-21       2292.00  Utbetalning | Skatt | 5050-1030 SK5567828172 (samma)");
-  EXPECT_EQ(rows[0], "  #2            2026-09-10        204.68  Anthropic Claude | Kortköp 260910 ANTHROPIC* CLAUDE SU (samma)");
+  EXPECT_EQ(rows[1], "  #1            2026-07-21       2292.00  Utbetalning : Skatt | 5050-1030 SK5567.. (samma)");
+  EXPECT_EQ(rows[0], "  #2            2026-09-10        204.68  Anthropic Claude : Kortköp 260910 ANTH.. (samma)");
   // Other stages as before: the heading alone
   Draft unbalanced{{"Anthropic Claude", 20468, date(2026, 9, 10)}, date(2026, 11, 18), {paid, silent, row("6540", 100)}};
   EXPECT_EQ(cratchit::ui::draft_text(unbalanced), "Anthropic Claude (obalanserat)");
+}
+
+TEST(DraftRows, TheSameEventTextIsAtMost40ShortPartsWhole) {
+  auto year = year_with({});
+  auto out = row("1920", -500000);
+  out.text = "Till sparkonto";
+  auto in = row("1940", 500000);
+  in.text = "Från PlusGiro";
+  // Three parts: the short heading whole, the two others share what is left (12 each)
+  year.place_draft({{"Överföring", 0, date(2026, 9, 3)}, date(2026, 11, 18), {out, in}});
+  // Short enough: nothing cut
+  auto fee = row("1930", -1000);
+  fee.text = "AVGIFTER";
+  year.place_draft({{"Bankavgift", 1000, date(2026, 9, 4)}, date(2026, 11, 18), {fee}});
+  auto const rows = cratchit::ui::draft_rows(&year);
+  ASSERT_EQ(rows.size(), 2u);
+  EXPECT_TRUE(rows[1].ends_with("  Överföring : Till spark.. : Från PlusG.. (samma)")) << rows[1];
+  EXPECT_TRUE(rows[0].ends_with("  Bankavgift : AVGIFTER (samma)")) << rows[0];
 }
