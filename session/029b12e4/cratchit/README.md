@@ -167,8 +167,9 @@ With a command as its first argument cratchit runs it and ends, without the user
 |---|---|---|---|
 | `cratchit --walk-pdf <file> [<path>] [--depth N]`, `--text <file>` | walk_pdf (session 9fe36d28) | `src/walk_pdf/cli.cpp` | [docs/walk_pdf.md](docs/walk_pdf.md) |
 | `cratchit --sie-to-ar [--trace] [--bas-year <year>] <file.se>` | cratchit_ar (session 5b35b2b9) | `src/core/ar/cli.cpp` | [docs/sie_to_ar.md](docs/sie_to_ar.md) |
+| `cratchit --sie-to-ink2 [--trace] <file.se> <last year's BLANKETTER.SRU or folder>`, or `--previous-deficit <kronor>` | cratchit_ink2 (session 7d4475fb) | `src/core/ink2/cli.cpp` | [docs/sie_to_ink2.md](docs/sie_to_ink2.md) |
 
-`--sie-to-ar` writes the folder `<orgnr>_<start>_<end>` in the working directory. Its BAS to ÅR mappings are `resources/ar/bas_to_ar_<year>.csv`, built into the program. It reads the SIE file with cratchit's own SIE parser (`core/sie`), which is the one cratchit_ar had, under the charset names of today.
+`--sie-to-ar` and `--sie-to-ink2` write the folder `<orgnr>_<start>_<end>` in the working directory. Their mappings are `resources/ar/bas_to_ar_<year>.csv`, `resources/ink2/bas_2023_to_ink2_2026.csv` and `resources/ink2/skv_ink2_2026P4.csv`, built into the program. Both read the SIE file with cratchit's own SIE parser (`core/sie`), which is the one cratchit_ar and cratchit_ink2 had, under the charset names of today. INFO.SRU names the program as `cratchit <version>`.
 
 ## Trying another day
 

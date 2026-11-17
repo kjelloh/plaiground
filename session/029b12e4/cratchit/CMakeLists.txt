@@ -116,8 +116,45 @@ foreach(year IN LISTS BAS_TO_AR_YEARS)
 endforeach()
 configure_file(src/core/ar/layouts.cpp.in generated/layouts.cpp @ONLY)
 
+# cratchit_ink2 (session 7d4475fb): the inkomstdeklaration 2 of an SIE file, run
+# as cratchit --sie-to-ink2. Its manual, docs/sie_to_ink2.md, the BAS to INK2
+# mapping and SKV's fields of INK2, INK2R and INK2S are built into the program as bytes.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS docs/sie_to_ink2.md)
+file(READ docs/sie_to_ink2.md ink2_manual_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," ink2_manual_bytes "${ink2_manual_hex}")
+configure_file(src/core/ink2/manual_text.cpp.in generated/ink2_manual_text.cpp @ONLY)
+set(INK2_MAPPING_FILE resources/ink2/bas_2023_to_ink2_2026.csv)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${INK2_MAPPING_FILE})
+file(READ ${INK2_MAPPING_FILE} mapping_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," mapping_bytes "${mapping_hex}")
+configure_file(src/core/ink2/mapping_text.cpp.in generated/mapping_text.cpp @ONLY)
+set(SKV_FIELDS_FILE resources/ink2/skv_ink2_2026P4.csv)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${SKV_FIELDS_FILE})
+file(READ ${SKV_FIELDS_FILE} skv_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," skv_bytes "${skv_hex}")
+configure_file(src/core/ink2/skv_text.cpp.in generated/skv_text.cpp @ONLY)
+
 add_library(cratchit_core
   src/core/amount.cpp
+  src/core/balances.cpp
+  src/core/closing.cpp
+  src/core/ink2/accounts.cpp
+  src/core/ink2/arguments.cpp
+  src/core/ink2/check.cpp
+  src/core/ink2/cli.cpp
+  src/core/ink2/form.cpp
+  src/core/ink2/mapping.cpp
+  src/core/ink2/output.cpp
+  src/core/ink2/previous.cpp
+  src/core/ink2/report.cpp
+  src/core/ink2/skv.cpp
+  src/core/ink2/sru_output.cpp
+  src/core/ink2/tax.cpp
+  src/core/ink2/trace.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/ink2_manual_text.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/mapping_text.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/skv_text.cpp
+  src/core/sru.cpp
   src/core/ar/arguments.cpp
   src/core/ar/cli.cpp
   src/core/ar/closing.cpp

@@ -1,6 +1,20 @@
 find_package(GTest REQUIRED)
 
 add_executable(cratchit_tests
+  ink2/test_closing.cpp
+  ink2/test_ink2_accounts.cpp
+  ink2/test_ink2_arguments.cpp
+  ink2/test_ink2_check.cpp
+  ink2/test_ink2_filed.cpp
+  ink2/test_ink2_form.cpp
+  ink2/test_ink2_mapping.cpp
+  ink2/test_ink2_output.cpp
+  ink2/test_ink2_previous.cpp
+  ink2/test_ink2_skv.cpp
+  ink2/test_ink2_sru_output.cpp
+  ink2/test_ink2_tax.cpp
+  ink2/test_ink2_trace.cpp
+  ink2/test_sru.cpp
   ar/test_ar_arguments.cpp
   ar/test_ar_closing.cpp
   ar/test_ar_equity.cpp
@@ -68,6 +82,11 @@ target_include_directories(cratchit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(cratchit_tests PRIVATE
   CRATCHIT_AR_SIE_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}/ar/no_sie_files_in_the_repository"
   CRATCHIT_AR_EXPECTED_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}/ar/expected_ar")
+# Likewise cratchit_ink2's tests (session 7d4475fb) that read the SIE files and filed
+# returns (SRU) skip: the folders below do not exist
+target_compile_definitions(cratchit_tests PRIVATE
+  CRATCHIT_INK2_SIE_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}/ink2/no_sie_files_in_the_repository"
+  CRATCHIT_INK2_SRU_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}/ink2/no_sru_files_in_the_repository")
 
 include(GoogleTest)
 gtest_discover_tests(cratchit_tests)

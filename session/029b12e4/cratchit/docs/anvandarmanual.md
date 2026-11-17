@@ -73,7 +73,9 @@ cratchit kan också köra ett kommando utan att starta gränssnittet. Med ett ko
 | `cratchit --walk-pdf faktura.pdf` | Visar pdf:ens uppbyggnad (walk_pdf) |
 | `cratchit --sie-to-ar bokföring.se` | Gör årsredovisningen av en SIE-fil, i en ny mapp `<orgnr>_<start>_<slut>` i mappen du står i, med årsredovisningen, en rapport och en kopia av SIE-filen (cratchit_ar) |
 | `cratchit --sie-to-ar --trace bokföring.se` | Visar konton och verifikationer bakom varje belopp i årsredovisningen, utan att skriva filer |
-| `cratchit --walk-pdf --help`, `cratchit --sie-to-ar --help` | Kommandots manual |
+| `cratchit --sie-to-ink2 bokföring.se "deklaration 2025"` | Gör inkomstdeklaration 2 (INK2R, INK2S och INK2 sidan 1) av en SIE-fil, med förra årets deklaration (dess `BLANKETTER.SRU` eller mapp) för underskottet, i en ny mapp `<orgnr>_<start>_<slut>`: deklarationen som text, en rapport, en kopia av SIE-filen och, när inget saknas, SRU-filerna till Skatteverkets filöverföring (cratchit_ink2) |
+| `cratchit --sie-to-ink2 bokföring.se --previous-deficit 0` | Samma, med förra årets underskott angivet i kronor i stället för förra årets deklaration |
+| `cratchit --walk-pdf --help`, `cratchit --sie-to-ar --help`, `cratchit --sie-to-ink2 --help` | Kommandots manual |
 
 Texten går till standard output, så du kan spara den, till exempel med `> faktura.txt`. Andra argument känner cratchit inte igen; då säger cratchit det och startar inte.
 

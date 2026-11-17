@@ -1,5 +1,6 @@
 #include "core/ar/cli.hpp"
 #include "core/build_stamp.hpp"
+#include "core/ink2/cli.hpp"
 #include "core/date.hpp"
 #include "core/dot_folder.hpp"
 #include "core/log.hpp"
@@ -45,8 +46,11 @@ int main(int argc, char* argv[]) {
     if (arguments.front() == "--sie-to-ar") {
       return cratchit::ar::run_cli(std::span(arguments).subspan(1), stdout, stderr, cratchit::version());
     }
+    if (arguments.front() == "--sie-to-ink2") {
+      return cratchit::ink2::run_cli(std::span(arguments).subspan(1), stdout, stderr, cratchit::version());
+    }
     std::println(stderr,
-                 "Fel: okänt argument '{}'. cratchit tar emot --walk-pdf och --sie-to-ar (se till exempel cratchit "
+                 "Fel: okänt argument '{}'. cratchit tar emot --walk-pdf, --sie-to-ar och --sie-to-ink2 (se till exempel cratchit "
                  "--sie-to-ar --help).",
                  arguments.front());
     return 2;
