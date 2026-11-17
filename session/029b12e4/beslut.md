@@ -52,3 +52,9 @@ Beslut som gäller i den här sessionen. Beslut från tidigare sessioner gäller
 * **En mapp har en bokföring** (användarens beslut). När samlingsmappen kommer ihåg en bokföring glömmer den andra uuid som den har för samma mapp, och loggar det (`remember_project` i `core/project`).
 * **En verifikation har två delar: *Händelse* och *Konteringar*** (användarens val, ersätter *Sammanfattning*). *Händelse* är vad som hände, när och för hur mycket (serie, datum, rubrik, belopp); *Konteringar* är hur händelsen bokförs. Verifikationens val blir `0 Händelse` och `1 Konteringar`.
 * **Händelsen i en bokförd verifikation är låst** (användarens beslut): datum, rubrik och belopp går inte att ändra. Valen leder till *Låst (<val>)*, som säger det och tipsar: den sista verifikationen i en serie (högst nummer i räkenskapsåret) ska gå att göra om till ett utkast och ändras fritt där; annars rättas en felaktig händelse med en ny verifikation. Beloppet låst betyder att en rättelse av konteringarna måste behålla debet lika med beloppet.
+
+## 2026-11-17
+
+* **Bokföringen byggs om från riktiga uppgifter** (användarens strategi): bokföringen och momsrapporten för M2, sedan bokslut, årsredovisning, stämma och INK2 för 2025-05-01 – 2026-04-30. Varje uppgift visar vad som saknas, och då tas koden in från tidigare sessioner. Målet för M2 är samma balans och resultat; samma löpnummer är inget krav.
+* **Utkast börjar med kontoutdrag** (användarens val). *Årsflöde > Utkast* har valet `0 Läs kontoutdrag`. Användaren skriver sökvägen från bokföringens mapp med Tab, som vid andra filval. cratchit filtrerar inte vilka filer som går att välja; en fil som inte går att läsa ger ett fel när inläsningen finns. Först görs bara valet och navigeringen, inläsningen är *Inte än*.
+* Utkast som skrivs in för hand kommer efter kontoutdragen. Att tolka PDF:er till händelser väntar tills UI:t behöver det.

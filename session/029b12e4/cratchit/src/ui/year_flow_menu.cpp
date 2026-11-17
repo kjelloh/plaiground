@@ -1,6 +1,7 @@
 #include "ui/year_flow_menu.hpp"
 
 #include "ui/booked_menu.hpp"
+#include "ui/draft_menu.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
 
@@ -41,7 +42,7 @@ public:
   }
   OnKeyResult on_key(CodePoint key) override {
     switch (key) {
-    case U'0': return make_design_insufficiency_state("Utkast", "att skapa, ändra och bokföra utkast");
+    case U'0': return make_draft_menu(project_, year_);
     case U'1': return make_booked_menu(project_, year_);
     case U'2': return make_design_insufficiency_state("Momsrapport", "momsrapporten");
     case U'3': return make_closing_menu();

@@ -109,6 +109,7 @@ add_library(cratchit_ui
   src/ui/booked_menu.cpp
   src/ui/design_insufficiency.cpp
   src/ui/details_project_menu.cpp
+  src/ui/draft_menu.cpp
   src/ui/fiscal_year_menu.cpp
   src/ui/forget_project_menu.cpp
   src/ui/project_menu.cpp

@@ -191,7 +191,7 @@ Utvecklaren av cratchit har inte infört att … ännu.
 Cratchit > … > Inte än (<valet>)> 
 ```
 
-Tryck `-` för att gå tillbaka. Just nu gäller det valen i [Årsflöde](#årsflöde) och i dess *Bokslut*.
+Tryck `-` för att gå tillbaka. Just nu gäller det valen i [Årsflöde](#årsflöde), i dess *Bokslut* och att läsa in ett kontoutdrag i *Utkast*.
 
 ## Samlingsmappen
 
@@ -305,12 +305,12 @@ Listan visar de tio nyaste raderna. Finns det fler står det sist hur många äl
 | `obalanserat` | Utkastet har text och konteringar, men konteringarna balanserar inte eller stämmer inte med beloppet |
 | `klart` | Utkastet kan bokföras |
 
-Du kan ännu inte skapa utkast i cratchit.
+Utkast skapar du i [Utkast](#utkast) under Årsflöde. Där går det än så länge bara att välja ett kontoutdrag; att läsa in det kommer senare.
 
 ### Årsflöde
 
 <!-- hjälp: arsflode -->
-Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `1 Bokfört` och `3 Bokslut` leder vidare, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
+Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `0 Utkast`, `1 Bokfört` och `3 Bokslut` leder vidare, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
 <!-- /hjälp -->
 
 Tryck `0` i räkenskapsåret:
@@ -329,6 +329,35 @@ Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde>
 ```
 
 Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](#inte-än) och [Kommer senare](#kommer-senare)).
+
+#### Utkast
+
+<!-- hjälp: utkast -->
+Räkenskapsårets utkast, händelser som ännu inte är bokförda. Än så länge står det bara hur många utkast året har. Tryck `0` för att läsa ett kontoutdrag. Tryck `-` för att gå tillbaka till Årsflöde.
+<!-- /hjälp -->
+
+Tryck `0` i Årsflöde:
+
+```text
+Utkast 2026/27: inga utkast.
+  0 Läs kontoutdrag
+Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast> 
+```
+
+##### Läs kontoutdrag
+
+<!-- hjälp: las-kontoutdrag -->
+Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och filer. cratchit begränsar inte vilka filer du kan välja. Väljer du en mapp, eller en fil som inte finns, säger cratchit det och sökvägen står kvar. Att läsa in kontoutdraget finns inte än, så en fil leder till *Inte än*. Tryck `-` för att gå tillbaka till Utkast.
+<!-- /hjälp -->
+
+Tryck `0` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka börjar sökvägen i mappen där du valde fil senast.
+
+```text
+Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och filer.
+Cratchit > … > Årsflöde > Utkast > Läs kontoutdrag> /Users/me/Documents/The ITfied AB/
+```
+
+Att läsa in kontoutdraget kommer senare. Då kommer cratchit att säga vad som är fel om filen inte går att läsa.
 
 #### Bokfört
 

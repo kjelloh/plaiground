@@ -12,6 +12,7 @@
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/add_project_menu.hpp"
 #include "ui/booked_menu.hpp"
+#include "ui/draft_menu.hpp"
 #include "ui/voucher_menu.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
@@ -314,14 +315,19 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
                          {U'5', "Årsstämma"},
                          {U'6', "Rapport till Bolagsverket"},
                          {U'7', "Deklaration till SKV"}}));
-  // Every step but Bokfört and Bokslut is not there yet
+  // Every step but Utkast, Bokfört and Bokslut is not there yet
   for (auto const& [key, caption] : navigator.current().options()) {
-    if (key == U'1' || key == U'3') continue;
+    if (key == U'0' || key == U'1' || key == U'3') continue;
     ASSERT_TRUE(navigator.press(key));
     EXPECT_EQ(navigator.current().name(), "Inte än (" + caption + ")");
     ASSERT_TRUE(navigator.back());
   }
   EXPECT_FALSE(navigator.press(U'8'));
+  // Utkast has Läs kontoutdrag
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Läs kontoutdrag"}}));
+  ASSERT_TRUE(navigator.back());
   // Bokfört lists the year's vouchers
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Bokfört");
@@ -1478,4 +1484,52 @@ TEST(VoucherMenu, KonteringarAreTurnedTenAtATime) {
   EXPECT_FALSE(navigator.press(U'2')); // no such row on this page
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "11");
+}
+
+TEST_F(RootMenuTest, DraftsSayHowManyTheYearHas) {
+  auto const folder = documents / "Exempel AB";
+  fs::create_directories(folder);
+  ASSERT_TRUE(cratchit::create_project_here(folder, "Exempel AB", "556677-8899", {"2025-01-01", "2025-12-31"},
+                                            "2026-11-09"));
+  auto const project = cratchit::open_project(folder);
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  EXPECT_EQ(navigator.current().view(), (View{"Utkast 2025: inga utkast."}));
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::drafts);
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Läs kontoutdrag");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::read_statement);
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(folder));
+}
+
+TEST_F(RootMenuTest, ReadStatementCompletesAnyFileAndLeadsToNotYet) {
+  auto const folder = documents / "Exempel AB";
+  fs::create_directories(folder / "bank");
+  ASSERT_TRUE(cratchit::create_project_here(folder, "Exempel AB", "556677-8899", {"2025-01-01", "2025-12-31"},
+                                            "2026-11-09"));
+  auto const project = cratchit::open_project(folder);
+  ASSERT_TRUE(project) << project.error();
+  std::ofstream(folder / "bank" / "nordea_2025.csv") << "Bokföringsdag;Belopp\n";
+  Navigator navigator(cratchit::ui::make_read_statement_menu(*project, {"2025-01-01", "2025-12-31"}));
+  auto const bank = pyroceph::tui::path_input_of(folder / "bank");
+  // Tab completes the folder, then any file in it (no filter on the kind of file)
+  auto const separator = bank.back();
+  EXPECT_EQ(navigator.current().complete(pyroceph::tui::path_input_of(folder) + U"ba").added,
+            U"nk" + std::u32string(1, separator));
+  EXPECT_EQ(navigator.current().complete(bank + U"n").added, U"ordea_2025.csv");
+  // Nothing typed, a folder or a missing file is refused
+  EXPECT_FALSE(navigator.current().on_input(U""));
+  auto refused = navigator.current().on_input(bank);
+  ASSERT_FALSE(refused);
+  EXPECT_TRUE(refused.error().ends_with("är en mapp. Välj en fil i den med Tab.")) << refused.error();
+  refused = navigator.current().on_input(bank + U"saknas.csv");
+  ASSERT_FALSE(refused);
+  EXPECT_TRUE(refused.error().starts_with("Det finns ingen fil ")) << refused.error();
+  // A file leads to Inte än, and coming back the path starts in its folder
+  auto accepted = navigator.current().on_input(bank + U"nordea_2025.csv");
+  ASSERT_TRUE(accepted);
+  ASSERT_TRUE(accepted->next);
+  EXPECT_EQ(accepted->next->name(), "Inte än (Läs kontoutdrag)");
+  EXPECT_EQ(navigator.current().start_input(), bank);
 }
