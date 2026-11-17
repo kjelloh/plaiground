@@ -7,6 +7,50 @@
 * Bygg med: cmake --build cratchit/build/Debug -j
 * Installera med: sudo cmake --install cratchit/build/Debug
 
+## 20261117
+
+Så har jag till slut preppat så jag kan testa att återskapa bokföring från några kända tillstånd.
+
+* Jag har itfied_test som mitt bas-project
+
+    * Och jag har skapat bokföringar för senast kända tillstånd
+    * För varje tillstånd har jag kopierat .cratchit-mappen till __snapshot
+
+    ```sh
+    kjell-olovhogdahl@MacBook-Pro ~/Documents/cratchit % tree -a -L 2
+    .
+    ├── .DS_Store
+    ├── .cratchit
+    │   └── workspace.txt
+    ├── __snapshot
+    │   ├── .cratchit_20260430_innan_bokslut
+    │   ├── .cratchit_20260630_efter_M1
+    │   ├── .cratchit_20261012_efter_M2
+    │   └── .cratchit_20261012_efter_bokslut
+    └── itfied_test
+        └── .cratchit
+
+    9 directories, 2 files
+    kjell-olovhogdahl@MacBook-Pro ~/Documents/cratchit % 
+    ```
+
+    * Så för att återställa ett tillstånd ersätter jag .cratchit med lämplig .cratchit-mapp i __snapshot
+
+Kvar från igår har jag också ett första utkast till att editera en verifikation.
+
+* Jag vet inte om det kommer att fungera.
+* Det blir ganska rörigt?
+* Men OK, jag köper det för nu så får vi se om vi kan få det att funka?
+
+Jag har bestämt nu att bygga upp cratchit från 'andra hållet'
+
+* Göra om bokföring för M2
+* Göra om momsrapporten M2
+* Göra om bokslutet 20250501-202060430
+* Göra om Årsredovisning 20250501-202060430
+* Göra om Stämman för 20250501-202060430
+* Göra om INK2 för 20250501-202060430
+
 ## 20261116
 
 Nu är det väl ändå dags att till slut få till ett sätt att redigera och skapa verifikationer till bokföringen?

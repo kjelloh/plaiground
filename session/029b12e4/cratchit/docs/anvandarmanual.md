@@ -369,21 +369,79 @@ Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört: D19
 * Finns verifikationen inte i räkenskapsåret, eller är id:t skrivet på annat sätt, säger cratchit det under prompten, och texten står kvar så att du kan rätta den.
 
 <!-- hjälp: verifikation -->
-Verifikationen med serie och seriens namn, datum, rubrik, belopp, när den registrerades, och dess konteringar: konto, kontots namn och belopp, och radens egen text och datum när den har dem. En struken rad är märkt `(struken)` och en tillagd rad `(tillagd)`. Än så länge kan du bara se verifikationen. Tryck `-` för att gå tillbaka till Bokfört.
+Verifikationen i tre delar. Överst hur den är bokförd: serien med seriens namn, när den registrerades och signaturen när den finns. Sedan *Händelse*: datum, rubrik och belopp. Sist *Konteringar*: konto, kontots namn och belopp, och radens egen text och datum när den har dem. En struken rad är märkt `(struken)` och en tillagd rad `(tillagd)`. Tryck `0` för händelsen och `1` för konteringarna. Än så länge kan du bara se verifikationen. Tryck `-` för att gå tillbaka till Bokfört.
 <!-- /hjälp -->
 
 ```text
 Verifikation D19
   Serie:          D  Leverantörsfakturor
+  Registrerad:    2026-04-17
+Händelse:
   Datum:          2026-02-27
   Rubrik:         Faktura Websupport - webbhotell
   Belopp:         1233.75
-  Registrerad:    2026-04-17
 Konteringar:
   2440  Leverantörsskulder           -1233.75
   6210  Telekommunikation              987.00
   2641  Debiterad ingående moms        246.75
+  0 Händelse
+  1 Konteringar
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört > D19> 
+```
+
+En verifikation har två delar (beslut 2026-11-16):
+
+* **Händelse** är vad som hände, när och för hur mycket: datum, rubrik och belopp.
+* **Konteringar** är hur händelsen bokförs: raderna med konto och belopp.
+
+Serien, registreringsdagen och signaturen står för sig, överst. De säger hur verifikationen är bokförd, inte vad som hände.
+
+<!-- hjälp: handelse -->
+Händelsen i verifikationen: datum, rubrik och belopp. I en bokförd verifikation är händelsen låst: valen leder till *Låst*, som säger vad du kan göra i stället. Tryck `-` för att gå tillbaka till verifikationen.
+<!-- /hjälp -->
+
+```text
+Händelsen i D19
+  0 Datum: 2026-02-27
+  1 Rubrik: Faktura Websupport - webbhotell
+  2 Belopp: 1233.75
+Cratchit > … > Bokfört > D19 > Händelse> 
+```
+
+Händelsen i en bokförd verifikation går inte att ändra (beslut 2026-11-16): datum, rubrik och belopp är låsta. Väljer du något av dem kommer du till *Låst*:
+
+```text
+Det går inte att ändra datumet i en bokförd verifikation.
+Bara den sista verifikationen i en serie går att göra om till ett utkast och ändra fritt. I serie D är det D23. Är händelsen i D19 fel rättar du den med en ny verifikation.
+Cratchit > … > Bokfört > D19 > Händelse > Låst (Datum)> 
+```
+
+<!-- hjälp: last -->
+Det du valde går inte att ändra i en bokförd verifikation. Är verifikationen den sista i sin serie kommer den att gå att göra om till ett utkast, där du kan ändra händelsen fritt och bokföra den igen; det har utvecklaren av cratchit inte infört ännu. Annars rättar du en felaktig händelse med en ny verifikation. Tryck `-` för att gå tillbaka.
+<!-- /hjälp -->
+
+<!-- hjälp: konteringar -->
+Verifikationens konteringar, numrerade `0`–`9`. Tryck en rads siffra för att öppna den. Har verifikationen fler än tio rader bläddrar `<` och `>` en sida. Strukna rader är med, märkta `(struken)`. Tryck `-` för att gå tillbaka till verifikationen.
+<!-- /hjälp -->
+
+```text
+Konteringar i D19
+  0 2440  Leverantörsskulder           -1233.75
+  1 6210  Telekommunikation              987.00
+  2 2641  Debiterad ingående moms        246.75
+Cratchit > … > Bokfört > D19 > Konteringar> 
+```
+
+<!-- hjälp: kontering -->
+En kontering: konto med kontots namn, beskrivning och belopp, och radens datum när det skiljer sig från händelsens. Står det att raden är struken eller tillagd är den en del av en rättelse. Än så länge kan du bara se raden: valen leder till *Inte än*. Tryck `-` för att gå tillbaka till konteringarna.
+<!-- /hjälp -->
+
+```text
+Kontering 1 i D19
+  0 Konto: 6210  Telekommunikation
+  1 Beskrivning:
+  2 Belopp: 987.00
+Cratchit > … > Bokfört > D19 > Konteringar > 1> 
 ```
 
 Än så länge visar cratchit bara verifikationen. Att rätta den, med strukna och tillagda rader, kommer senare.

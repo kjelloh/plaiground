@@ -32,6 +32,10 @@ inline constexpr std::string_view year_flow = "arsflode";
 inline constexpr std::string_view closing = "bokslut";
 inline constexpr std::string_view booked = "bokfort";
 inline constexpr std::string_view voucher = "verifikation";
+inline constexpr std::string_view event = "handelse";
+inline constexpr std::string_view postings = "konteringar";
+inline constexpr std::string_view posting = "kontering";
+inline constexpr std::string_view locked = "last";
 inline constexpr std::string_view import_sie = "importera-sie";
 inline constexpr std::string_view confirm_import = "bekrafta-import";
 inline constexpr std::string_view replace_sie = "ersatt-sie";
@@ -46,7 +50,7 @@ inline constexpr std::string_view error = pyroceph::tui::error_help_topic;
 inline constexpr std::array all_help_topics{
     help_topic::root,    help_topic::workspace,           help_topic::add_project, help_topic::open_existing,
     help_topic::new_project, help_topic::from_sie, help_topic::confirm_sie_project, help_topic::from_details,
-    help_topic::details_name, help_topic::details_orgnr, help_topic::details_year, help_topic::details_months, help_topic::here, help_topic::here_name, help_topic::project, help_topic::forget_project, help_topic::fiscal_year, help_topic::year_flow, help_topic::booked, help_topic::voucher, help_topic::closing, help_topic::import_sie, help_topic::confirm_import, help_topic::replace_sie, help_topic::export_sie,
+    help_topic::details_name, help_topic::details_orgnr, help_topic::details_year, help_topic::details_months, help_topic::here, help_topic::here_name, help_topic::project, help_topic::forget_project, help_topic::fiscal_year, help_topic::year_flow, help_topic::booked, help_topic::voucher, help_topic::event, help_topic::postings, help_topic::posting, help_topic::locked, help_topic::closing, help_topic::import_sie, help_topic::confirm_import, help_topic::replace_sie, help_topic::export_sie,
     help_topic::sie_difference, help_topic::sie_comparison, help_topic::design_insufficiency,
     help_topic::error,
 };

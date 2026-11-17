@@ -12,6 +12,7 @@
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/add_project_menu.hpp"
 #include "ui/booked_menu.hpp"
+#include "ui/voucher_menu.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/project_menu.hpp"
@@ -1335,11 +1336,18 @@ TEST_F(RootMenuTest, BookedOpensAVoucherByItsIdAsOneWord) {
   navigator.enter(std::move(one->next));
   EXPECT_EQ(navigator.current().name(), "D1");
   EXPECT_EQ(navigator.current().view(),
-            (View{"Verifikation D1", "  Serie:          D  Leverantörsfakturor", "  Datum:          2025-02-01", "  Rubrik:         Faktura 1", "  Belopp:         125.00",
-                  "  Registrerad:    2025-02-05", "Konteringar:",
+            (View{"Verifikation D1", "  Serie:          D  Leverantörsfakturor", "  Registrerad:    2025-02-05",
+                  "Händelse:", "  Datum:          2025-02-01", "  Rubrik:         Faktura 1", "  Belopp:         125.00",
+                  "Konteringar:",
                   "  2440  Leverantörsskulder            -125.00", "  6210  Telekommunikation              100.00",
                   "  2641  Debiterad ingående moms         25.00"}));
-  EXPECT_TRUE(navigator.current().options().empty());
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}}));
+  // The last in D is D11, the highest number (not the last in the file, nor by text)
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_NE(navigator.current().view()[1].find("I serie D är det D11."), std::string::npos) << navigator.current().view()[1];
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());
   auto eleven = navigator.current().on_input(U"D11");
   ASSERT_TRUE(eleven) << eleven.error();
@@ -1349,4 +1357,125 @@ TEST_F(RootMenuTest, BookedOpensAVoucherByItsIdAsOneWord) {
   auto const has = [&view](std::string const& line) { return std::ranges::find(view, line) != view.end(); };
   EXPECT_TRUE(has("  6210  Telekommunikation              100.00  (struken)"));
   EXPECT_TRUE(has("  6230  Datakommunikation              100.00  Rättat konto  (tillagd)"));
+  EXPECT_FALSE(has("  Signatur:       Kjell")); // the signature of a row is not the voucher's
+}
+
+TEST(VoucherMenu, HändelseAndKonteringarShowTheVoucherInParts) {
+  using cratchit::books::Posting;
+  cratchit::books::Voucher voucher;
+  voucher.series = "D";
+  voucher.number = "19";
+  voucher.event = {"Faktura Websupport", 123375, *cratchit::parse_iso_date("2026-02-27")};
+  voucher.registered = cratchit::parse_iso_date("2026-04-17");
+  voucher.signature = "KO";
+  auto const posting = [](char const* account, cratchit::Amount amount, Posting::Kind kind = Posting::Kind::normal) {
+    Posting p;
+    p.kind = kind;
+    p.account = account;
+    p.amount = amount;
+    return p;
+  };
+  voucher.postings = {posting("2440", -123375), posting("6210", 98700, Posting::Kind::removed), posting("2641", 24675),
+                      posting("6230", 98700, Posting::Kind::added)};
+  voucher.postings.back().text = "Rättat konto";
+  voucher.postings.back().date = cratchit::parse_iso_date("2026-05-02");
+  std::vector<cratchit::books::Account> accounts;
+  for (auto const& [number, name] : {std::pair{"2440", "Leverantörsskulder"}, std::pair{"6210", "Telekommunikation"},
+                                     std::pair{"2641", "Debiterad ingående moms"}, std::pair{"6230", "Datakommunikation"}}) {
+    cratchit::books::Account account;
+    account.number = number;
+    account.name = name;
+    accounts.push_back(account);
+  }
+  Navigator navigator(cratchit::ui::make_voucher_menu(voucher, accounts, "Leverantörsfakturor", "D23"));
+  auto const view = navigator.current().view();
+  ASSERT_GE(view.size(), 4u);
+  EXPECT_EQ(view[1], "  Serie:          D  Leverantörsfakturor");
+  EXPECT_EQ(view[2], "  Registrerad:    2026-04-17");
+  EXPECT_EQ(view[3], "  Signatur:       KO");
+  EXPECT_EQ(view[4], "Händelse:");
+  // 0 Händelse: date, heading and amount, which cannot be changed yet
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Händelse");
+  EXPECT_EQ(navigator.current().view(), (View{"Händelsen i D19"}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Datum: 2026-02-27"}, {U'1', "Rubrik: Faktura Websupport"}, {U'2', "Belopp: 1233.75"}}));
+  // The event of a booked voucher is locked; D19 is not the last in D, D23 is
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Låst (Datum)");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Det går inte att ändra datumet i en bokförd verifikation.",
+                  "Bara den sista verifikationen i en serie går att göra om till ett utkast och ändra fritt. I serie D är "
+                  "det D23. Är händelsen i D19 fel rättar du den med en ny verifikation."}));
+  EXPECT_TRUE(navigator.current().options().empty());
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Låst (Belopp)");
+  EXPECT_EQ(navigator.current().view()[0], "Det går inte att ändra beloppet i en bokförd verifikation.");
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
+  // 1 Konteringar: the postings numbered, the struck one too
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Konteringar");
+  EXPECT_EQ(navigator.current().view(), (View{"Konteringar i D19"}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "2440  Leverantörsskulder          -1233.75"},
+                         {U'1', "6210  Telekommunikation              987.00  (struken)"},
+                         {U'2', "2641  Debiterad ingående moms        246.75"},
+                         {U'3', "6230  Datakommunikation              987.00  Rättat konto  2026-05-02  (tillagd)"}}));
+  EXPECT_FALSE(navigator.press(U'4')); // no such row
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "1");
+  EXPECT_EQ(navigator.current().view(), (View{"Kontering 1 i D19", "  Raden är struken."}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Konto: 6210  Telekommunikation"}, {U'1', "Beskrivning:"}, {U'2', "Belopp: 987.00"}}));
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'3'));
+  EXPECT_EQ(navigator.current().view(), (View{"Kontering 3 i D19", "  Datum:          2026-05-02", "  Raden är tillagd."}));
+  EXPECT_EQ(navigator.current().options()[1], (pyroceph::tui::Option{U'1', "Beskrivning: Rättat konto"}));
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Inte än (Konto)");
+  EXPECT_EQ(navigator.current().view(), (View{"Utvecklaren av cratchit har inte infört att ändra kontot i en kontering ännu."}));
+}
+
+TEST(VoucherMenu, KonteringarAreTurnedTenAtATime) {
+  cratchit::books::Voucher voucher;
+  voucher.series = "A";
+  voucher.number = "1";
+  voucher.event = {"Lön", 0, *cratchit::parse_iso_date("2026-02-27")};
+  for (int i = 0; i < 12; ++i) {
+    cratchit::books::Posting p;
+    p.account = std::to_string(7000 + i);
+    p.amount = i % 2 == 0 ? 100 : -100;
+    voucher.postings.push_back(p);
+  }
+  Navigator navigator(cratchit::ui::make_voucher_menu(voucher, {}, "", "A1"));
+  EXPECT_EQ(navigator.current().view()[1], "  Serie:          A"); // a series without name
+  // A1 is the last in A: it may become a draft, once cratchit can
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Låst (Rubrik)");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Det går inte att ändra rubriken i en bokförd verifikation.",
+                  "A1 är den sista verifikationen i serie A. Den sista i en serie går att göra om till ett utkast, där du "
+                  "kan ändra händelsen fritt och sedan bokföra den igen. Det har utvecklaren av cratchit inte infört ännu."}));
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().view(), (View{"Konteringar i A1: 1–10 av 12"}));
+  auto options = navigator.current().options();
+  ASSERT_EQ(options.size(), 12u);
+  EXPECT_EQ(options[9].first, U'9');
+  EXPECT_EQ(options[10], (pyroceph::tui::Option{U'<', "Föregående sida"}));
+  EXPECT_EQ(options[11], (pyroceph::tui::Option{U'>', "Nästa sida"}));
+  EXPECT_FALSE(navigator.press(U'<')); // already at the start: nothing happens
+  ASSERT_TRUE(navigator.press(U'>'));
+  EXPECT_EQ(navigator.current().view(), (View{"Konteringar i A1: 11–12 av 12"}));
+  options = navigator.current().options();
+  ASSERT_EQ(options.size(), 4u);
+  EXPECT_EQ(options[0].second.substr(0, 4), "7010");
+  EXPECT_FALSE(navigator.press(U'>')); // at the last page: nothing happens
+  EXPECT_FALSE(navigator.press(U'2')); // no such row on this page
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "11");
 }

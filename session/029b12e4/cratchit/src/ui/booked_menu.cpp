@@ -39,6 +39,25 @@ bool same_number(std::string const& a, std::string const& b) {
 }
 constexpr CodePoint forward_key = U'>';
 
+// Voucher numbers as numbers, for comparing (an empty or odd number counts as 0)
+unsigned long number_of(std::string const& number) {
+  unsigned long value = 0;
+  for (auto const c : number) {
+    if (c < '0' || c > '9') return 0;
+    value = value * 10 + static_cast<unsigned long>(c - '0');
+  }
+  return value;
+}
+
+// The id of the last voucher in series among vouchers (the highest number)
+std::string last_in_series(std::vector<books::Voucher> const& vouchers, std::string const& series) {
+  books::Voucher const* last = nullptr;
+  for (auto const& voucher : vouchers) {
+    if (voucher.series == series && (last == nullptr || number_of(voucher.number) > number_of(last->number))) last = &voucher;
+  }
+  return last != nullptr ? books::voucher_id(last->series, last->number) : std::string();
+}
+
 class BookedState : public State {
 public:
   BookedState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) { read(); }
@@ -80,7 +99,8 @@ public:
         return v.series == series && same_number(v.number, number);
       });
       if (found != year->vouchers.end()) {
-        return Accepted(make_voucher_menu(*found, books->accounts, books->series_name(found->series)));
+        return Accepted(make_voucher_menu(*found, books->accounts, books->series_name(found->series),
+                                          last_in_series(year->vouchers, found->series)));
       }
     }
     return std::unexpected(std::format("Det finns ingen verifikation {} i {}.", typed, label_of(year_)));
