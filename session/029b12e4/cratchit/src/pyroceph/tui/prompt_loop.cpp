@@ -3,6 +3,7 @@
 #include "charset/utf8.hpp"
 #include "pyroceph/tui/input_buffer.hpp"
 #include "pyroceph/tui/key_parser.hpp"
+#include "pyroceph/tui/quit_state.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -102,7 +103,10 @@ public:
     } else if (is_enter(key)) {
       present();
     } else if (key == quit_key) {
-      return false;
+      // The safety net: quit_key leads to the quit state, and there it quits
+      if (is_quit_state(navigator_.current())) return false;
+      navigator_.enter(make_quit_state(&navigator_.current()));
+      present();
     } else if (is_option(key)) {
       // An option that does nothing now: nothing happens, and no input starts
     } else if (input_.push(key)) {

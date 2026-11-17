@@ -18,7 +18,7 @@ Manualen beskriver det som finns i cratchit i dag och växer i takt med programm
 ## Starta och avsluta
 
 <!-- hjälp: start -->
-Du står i början av cratchit. Tryck `0` för att öppna samlingsmappen med dina bokföringar. Har mappen du startade cratchit i ingen bokföring, skapar `1` en ny bokföring i den. Tryck `q` för att avsluta.
+Du står i början av cratchit. Tryck `0` för att öppna samlingsmappen med dina bokföringar. Har mappen du startade cratchit i ingen bokföring, skapar `1` en ny bokföring i den. Tryck `q` två gånger för att avsluta.
 <!-- /hjälp -->
 
 Starta cratchit genom att skriva `cratchit` i en terminal och trycka Enter:
@@ -61,7 +61,7 @@ Cratchit > Samlingsmapp > The ITfied AB>
 * En mapp har en bokföring. Har mappen fått en annan bokföring glömmer samlingsmappen den gamla och kommer ihåg den nya.
 * Går bokföringen inte att öppna börjar cratchit i början och säger varför.
 
-Tryck `q` för att avsluta.
+Tryck `q` två gånger för att avsluta.
 
 ## Att använda cratchit
 
@@ -105,7 +105,7 @@ Några tangenter fungerar överallt. De står inte bland valen. Tryck `?` så vi
 | `?` | Visa de gemensamma valen. Tryck igen för hjälp om platsen du står på. |
 | Enter | Visa valen igen |
 | Esc | Töm raden du skriver på (även Ctrl-U) |
-| `q` | Avsluta |
+| `q` | Avsluta: cratchit frågar först, och `q` en gång till avslutar (se [Avsluta](#avsluta)) |
 | Ctrl-D | Avsluta (även Ctrl-C och Ctrl-Z) |
 
 ### Skriva text
@@ -169,6 +169,23 @@ Ett `!` efter *ofullbordat* betyder att räkenskapsåret är äldre än förra �
 *Fullbordat* säger bara att bokföringen i filen hänger ihop och att resultatet är bokfört. Det säger inte att årsredovisningen är inlämnad, eller att året är låst i programmet som skapade filen. cratchit hindrar inte att du väljer en fil med någon status; du avgör om filen passar.
 * **`-`** går tillbaka så länge du inte har ändrat sökvägen som stod där. Har du ändrat den tömmer du först raden med Esc, och sedan går `-` tillbaka.
 * **Enter** lämnar sökvägen till cratchit. Går det inte att använda den visar cratchit varför, och sökvägen står kvar så att du kan rätta den.
+
+### Avsluta
+
+<!-- hjälp: avsluta -->
+Du tryckte `q`. Tryck `q` igen för att avsluta cratchit, eller `N` eller `-` för att gå tillbaka dit du var.
+<!-- /hjälp -->
+
+`q` avslutar inte direkt. Det leder först till platsen *Avsluta*, så att ett `q` av misstag inte stänger programmet:
+
+```text
+Vill du avsluta programmet?
+  q Avsluta
+  N Nej
+Cratchit > Samlingsmapp > Avsluta> 
+```
+
+Två `q` i rad avslutar alltså. Bara litet `q` gör det; stort `Q` är vanlig text. Medan du skriver text är `q` text som alla andra tecken. Ctrl-D, Ctrl-C och Ctrl-Z avslutar direkt, utan att fråga.
 
 ### Fel
 
@@ -305,7 +322,7 @@ Listan visar de tio nyaste raderna. Finns det fler står det sist hur många äl
 | `obalanserat` | Utkastet har text och konteringar, men konteringarna balanserar inte eller stämmer inte med beloppet |
 | `klart` | Utkastet kan bokföras |
 
-Utkast skapar du i [Utkast](#utkast) under Årsflöde. Än så länge skapar cratchit utkast från kontoutdrag.
+Utkast skapar du i [Utkast](#utkast) under Årsflöde, från ett kontoutdrag eller genom att beskriva en händelse.
 
 ### Årsflöde
 
@@ -333,7 +350,7 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Under listan står vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Under listan står vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader, eller `1` för att beskriva en händelse och skapa ett utkast av den. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
@@ -346,6 +363,7 @@ Utkast 2026/27: utkast 1–12 av 12
   …
   #1          2026-07-03          3.70  1920  AVGIFTER NORDEA (kontoutdrag)
   0 Läs kontoutdrag
+  1 Beskriv händelse
   < Föregående sida
   > Nästa sida
 Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast> 
@@ -432,6 +450,65 @@ Skapa 6 utkast?
 Du kan alltså läsa samma fil flera gånger, och filer som överlappar varandra går bra: bara det nya blir utkast.
 
 `J` skapar utkasten och går tillbaka till Utkast, som säger hur många det blev. Varje utkast har radens datum, och en kontering på kontot med radens belopp (in på kontot är debet), datum och text. Konteringen minns vilken fil och rad den kom från. Filen förs in i räkenskapsårets förteckning (se [Dina filer](#dina-filer)).
+
+##### Beskriv händelse
+
+<!-- hjälp: beskriv-handelse -->
+Skriv händelsen på en rad: rubrik, belopp och datum, i vilken ordning som helst, till exempel `Telia faktura oktober 1118,00 2026-10-22`, och tryck Enter. Datumet måste finnas och ligga i räkenskapsåret. Skriv beloppet utan minustecken. Är något fel säger cratchit vad, och raden står kvar så att du kan rätta den. Tryck `-` innan du skrivit något för att gå tillbaka till Utkast.
+<!-- /hjälp -->
+
+En händelse är det som hände, när och för hur mycket, till exempel en faktura eller ett kvitto. Tryck `1` i Utkast och skriv den på en rad:
+
+```text
+Skriv händelsen: rubrik, belopp och datum, i vilken ordning som helst, och tryck Enter.
+Till exempel: Telia faktura oktober 1118,00 2026-10-22
+I dag är 2026-11-17. Räkenskapsåret är 2026-05-01 – 2027-04-30.
+Cratchit > … > Utkast > Beskriv händelse: Telia faktura oktober 1118,00 2026-10-22
+```
+
+Så läser cratchit raden:
+
+* **Datumet** är det sista ordet som är ett datum, skrivet `2026-10-22` eller `20261022`. Det måste finnas; cratchit tar inte dagens datum av sig själv.
+* **Beloppet** är det sista andra talet: siffror, och decimalkomma eller decimalpunkt med högst två decimaler (`1118`, `1118,5`, `1118.00`). Ett hårt mellanslag inne i talet, som en bank kan skriva, räknas inte. Minustecken går inte än.
+* **Rubriken** är resten, i den ordning du skrev den. Tal i rubriken står kvar så länge de inte står sist: i `Faktura 87 Payex 500 2026-10-22` är rubriken `Faktura 87 Payex`.
+
+Raden börjar som all annan text: med en tangent som inte är ett val eller en gemensam tangent. Börjar rubriken med litet `q` leder det till [Avsluta](#avsluta); tryck `N` och skriv `Q` i stället, eller börja med något annat ord.
+
+###### Belopp?
+
+<!-- hjälp: belopp-otydligt -->
+Beloppet kan läsas på flera sätt, eftersom ett mellanslag kan skilja tusental. Tryck siffran för det du menar. Tryck `-` för att gå tillbaka och ändra raden.
+<!-- /hjälp -->
+
+När tal står före beloppet kan ett mellanslag skilja tusental (`1 118,00`) eller ett tal i rubriken från beloppet (`Faktura 87 500`). cratchit gissar inte utan visar varje läsning:
+
+```text
+Beloppet är otydligt: mellanslag kan skilja tusental. Vilket menar du?
+  1       118.00  Telia faktura oktober 1
+  2      1118.00  Telia faktura oktober
+Cratchit > … > Beskriv händelse > Belopp?> 
+```
+
+Ett ord räknas bara som en grupp tusental när det har exakt tre siffror och inget tecken, och ordet före har högst tre siffror och inga decimaler. Så `Faktura 8700 500` och `Faktura 87 50,00` är tydliga. Skriv beloppet utan mellanslag så slipper du frågan.
+
+###### Bekräfta händelse
+
+<!-- hjälp: bekrafta-handelse -->
+Ovanför prompten står händelsen som cratchit läste den. Tryck `J` för att skapa utkastet, eller `N` för att gå tillbaka och ändra raden.
+<!-- /hjälp -->
+
+```text
+Händelse
+  Rubrik   Telia faktura oktober
+  Belopp   1118.00
+  Datum    2026-10-22
+Skapa utkastet?
+  J Ja
+  N Nej
+Cratchit > … > Beskriv händelse > Bekräfta> 
+```
+
+`J` skapar utkastet och går tillbaka till Utkast. Där står det nya utkastet i listan, med stadiet `händelse` eftersom det inte har några konteringar än, och under listan till exempel `cratchit skapade utkast #13: Telia faktura oktober.` `N` går tillbaka till raden, som står kvar så att du kan ändra den.
 
 #### Bokfört
 

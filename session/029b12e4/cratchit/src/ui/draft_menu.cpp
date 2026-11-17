@@ -3,6 +3,7 @@
 #include "charset/utf8.hpp"
 #include "core/books/books.hpp"
 #include "core/date.hpp"
+#include "core/event_draft.hpp"
 #include "core/log.hpp"
 #include "core/sie_summary.hpp"
 #include "core/statement_drafts.hpp"
@@ -16,6 +17,7 @@
 #include <algorithm>
 #include <expected>
 #include <filesystem>
+#include <functional>
 #include <format>
 #include <optional>
 #include <string>
@@ -263,6 +265,145 @@ private:
   std::optional<fs::path> chosen_folder_;
 };
 
+// Reports what was done to the state the TUI goes back to
+using EventReport = std::function<void(View)>;
+
+// "  Rubrik   Telia faktura oktober" and so on
+View event_lines(books::Event const& event) {
+  return {std::format("  {:<9}{}", "Rubrik", event.heading), std::format("  {:<9}{}", "Belopp", format_amount(event.amount)),
+          std::format("  {:<9}{}", "Datum", format_iso_date(event.date))};
+}
+
+class ConfirmEventState : public State {
+public:
+  ConfirmEventState(Project project, FiscalYear year, books::Event event, State const* origin, State const* chooser,
+                    EventReport report)
+      : project_(std::move(project)), year_(std::move(year)), event_(std::move(event)), origin_(origin),
+        chooser_(chooser), report_(std::move(report)) {}
+  std::string name() const override { return "Bekräfta"; }
+  View view() const override {
+    View lines{"Händelse"};
+    auto const event = event_lines(event_);
+    lines.insert(lines.end(), event.begin(), event.end());
+    lines.push_back("Skapa utkastet?");
+    return lines;
+  }
+  OptionsList options() const override {
+    if (done_) return {};
+    return {{U'J', "Ja"}, {U'N', "Nej"}};
+  }
+  OnKeyResult on_key(CodePoint key) override {
+    if (done_) return nullptr;
+    if (key == U'N') { // keys match exactly (beslut.md)
+      declined_ = true;
+      return nullptr;
+    }
+    if (key != U'J') return nullptr;
+    auto const start = parse_iso_date(year_.start);
+    if (!start) return pyroceph::tui::make_error_state(std::format("Felaktigt räkenskapsår {}", year_.start));
+    auto const added = add_event_draft(project_.folder, *start, event_, today_date());
+    if (!added) {
+      LOG_BUSINESS("Kunde inte skapa utkast av händelsen {} i {}: {}", event_.heading, project_.folder.string(),
+                   added.error());
+      return pyroceph::tui::make_error_state(std::format("cratchit kunde inte skapa utkastet: {}", added.error()));
+    }
+    LOG_BUSINESS("Utkast {} skapat i {} ({}): {} {} {}", draft_id(*added), label_of(year_), project_.folder.string(),
+                 format_iso_date(event_.date), format_amount(event_.amount), event_.heading);
+    done_ = true;
+    if (report_) report_({std::format("cratchit skapade utkast {}: {}.", draft_id(*added), event_.heading)});
+    return nullptr; // back to Utkast (back_to)
+  }
+  // Done: back to Utkast. N: back to the line, to change it.
+  State const* back_to() const override {
+    if (done_) return origin_;
+    return declined_ ? chooser_ : nullptr;
+  }
+  std::string help_topic() const override { return std::string(help_topic::confirm_event); }
+
+private:
+  Project project_;
+  FiscalYear year_;
+  books::Event event_;
+  State const* origin_;
+  State const* chooser_;
+  EventReport report_;
+  bool done_ = false;
+  bool declined_ = false;
+};
+
+class AmountChoiceState : public State {
+public:
+  AmountChoiceState(Project project, FiscalYear year, std::vector<books::Event> readings, State const* origin,
+                    State const* chooser, EventReport report)
+      : project_(std::move(project)), year_(std::move(year)), readings_(std::move(readings)), origin_(origin),
+        chooser_(chooser), report_(std::move(report)) {}
+  std::string name() const override { return "Belopp?"; }
+  View view() const override { return {"Beloppet är otydligt: mellanslag kan skilja tusental. Vilket menar du?"}; }
+  OptionsList options() const override {
+    OptionsList result;
+    for (std::size_t i = 0; i < readings_.size() && i < 9; ++i) {
+      result.push_back({static_cast<CodePoint>(U'1' + i),
+                        std::format("{:>12}  {}", format_amount(readings_[i].amount), readings_[i].heading)});
+    }
+    return result;
+  }
+  OnKeyResult on_key(CodePoint key) override {
+    if (key < U'1' || key > U'9') return nullptr;
+    auto const i = static_cast<std::size_t>(key - U'1');
+    if (i >= readings_.size()) return nullptr;
+    return std::make_unique<ConfirmEventState>(project_, year_, readings_[i], origin_, chooser_, report_);
+  }
+  std::string help_topic() const override { return std::string(help_topic::amount_choice); }
+
+private:
+  Project project_;
+  FiscalYear year_;
+  std::vector<books::Event> readings_;
+  State const* origin_;
+  State const* chooser_;
+  EventReport report_;
+};
+
+class DescribeEventState : public State {
+public:
+  DescribeEventState(Project project, FiscalYear year, State const* origin, EventReport report)
+      : project_(std::move(project)), year_(std::move(year)), origin_(origin), report_(std::move(report)) {}
+  std::string name() const override { return "Beskriv händelse"; }
+  View view() const override {
+    return {"Skriv händelsen: rubrik, belopp och datum, i vilken ordning som helst, och tryck Enter.",
+            "Till exempel: Telia faktura oktober 1118,00 2026-10-22",
+            std::format("I dag är {}. Räkenskapsåret är {} – {}.", format_iso_date(today_date()), year_.start, year_.end)};
+  }
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  // The line typed last, so that it can be changed when the user comes back to it
+  std::u32string start_input() const override { return line_; }
+  InputResult on_input(std::u32string_view text) override {
+    line_ = text;
+    auto readings = parse_event(utf8_of(text));
+    if (!readings) return std::unexpected(readings.error());
+    auto const start = parse_iso_date(year_.start);
+    auto const end = parse_iso_date(year_.end);
+    auto const date = readings->front().date;
+    if (start && end && (date < *start || date > *end)) {
+      return std::unexpected(std::format("{} ligger utanför räkenskapsåret {} – {}.", format_iso_date(date),
+                                         year_.start, year_.end));
+    }
+    if (readings->size() == 1) {
+      return Accepted(std::make_unique<ConfirmEventState>(project_, year_, readings->front(), origin_, this, report_));
+    }
+    return Accepted(std::make_unique<AmountChoiceState>(project_, year_, std::move(*readings), origin_, this, report_));
+  }
+  std::string help_topic() const override { return std::string(help_topic::describe_event); }
+
+private:
+  Project project_;
+  FiscalYear year_;
+  State const* origin_;
+  EventReport report_;
+  std::u32string line_;
+};
+
 class DraftState : public State {
 public:
   DraftState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) { read(); }
@@ -283,7 +424,10 @@ public:
   }
   // < and > always, so that turning past either end does nothing (and starts no input)
   OptionsList options() const override {
-    return {{U'0', "Läs kontoutdrag"}, {back_key, "Föregående sida"}, {forward_key, "Nästa sida"}};
+    return {{U'0', "Läs kontoutdrag"},
+            {U'1', "Beskriv händelse"},
+            {back_key, "Föregående sida"},
+            {forward_key, "Nästa sida"}};
   }
   // < and > turn the page in place (keys match exactly, beslut.md)
   bool on_key_in_place(CodePoint key) override {
@@ -292,6 +436,10 @@ public:
     return false;
   }
   OnKeyResult on_key(CodePoint key) override {
+    if (key == U'1') {
+      report_.clear();
+      return std::make_unique<DescribeEventState>(project_, year_, this, [this](View text) { report_ = std::move(text); });
+    }
     if (key != U'0') return nullptr;
     report_.clear();
     return make_read_statement_menu(

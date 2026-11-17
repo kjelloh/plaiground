@@ -18,6 +18,7 @@ add_executable(cratchit_tests
   test_sie_summary.cpp
   test_statement.cpp
   test_statement_drafts.cpp
+  test_event_draft.cpp
   test_cp437.cpp
   test_decoder.cpp
   test_design_insufficiency.cpp

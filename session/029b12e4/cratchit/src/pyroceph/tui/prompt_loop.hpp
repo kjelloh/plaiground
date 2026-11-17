@@ -16,8 +16,9 @@ namespace pyroceph::tui {
 // and Ctrl-Z (U+001A), since RawMode makes them come as characters
 bool is_quit(CodePoint code_point);
 
-// The key that ends the prompt loop while navigating, unless the current
-// state maps it itself. While typing input it is text.
+// The key that quits while navigating, unless the current state maps it
+// itself: it leads to the quit state (make_quit_state), where it ends the
+// prompt loop, so pressed twice it quits. While typing input it is text.
 inline constexpr CodePoint quit_key = U'q';
 
 // The key that shows the common keys, and pressed again right after, the
@@ -88,7 +89,8 @@ void show(Navigator const& navigator, std::FILE* out);
 // goes back (nothing at the root), help_key shows the common keys, and
 // pressed again right after, the state's user instruction from help (then
 // the common keys again, and so on; any other key starts over), Enter
-// shows the state again and quit_key ends the loop. Any other printable key
+// shows the state again and quit_key leads to the quit state, where
+// quit_key ends the loop (the safety net: quit_key twice quits). Any other printable key
 // starts the input with that key.
 //
 // Whenever a state with a start text (State::start_input) is shown, its input

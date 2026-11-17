@@ -20,7 +20,13 @@ namespace cratchit::ui {
 // user comes back. Below the list, what was just done (e.g. the drafts a
 // statement gave), until the user goes on. Läs kontoutdrag starts in the folder of the
 // statement read last from here. 0 Läs kontoutdrag leads to make_read_statement_menu.
-// Opened with 0 in Årsflöde. No input.
+// 1 Beskriv händelse: the user types the event on one line (see parse_event):
+// an error is shown below the line, which is kept to correct. When the amount
+// can be read in more than one way, "Belopp?" lists the readings to choose
+// with 1, 2, ...; then "Bekräfta" shows heading, amount and date with J Ja and
+// N Nej. J adds the draft (add_event_draft) and goes back to Utkast, which
+// tells "cratchit skapade utkast #13: <heading>."; N goes back to the line,
+// kept to change. Opened with 0 in Årsflöde. No input.
 std::unique_ptr<pyroceph::tui::State> make_draft_menu(Project project, FiscalYear year);
 
 // Tells the state the TUI goes back to what was done, as lines for its view,

@@ -300,11 +300,28 @@ TEST(PromptLoop, DeleteErasesLikeBackspace) {
   EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \b\b: xy\b \b\n");
 }
 
-TEST(PromptLoop, QuitKeyEndsTheLoopWhileNavigating) {
+TEST(PromptLoop, QuitKeyAsksFirstAndQuitsWhenPressedAgain) {
   Navigator navigator(tree());
-  auto keys = keys_of({'1', 'q', '-'});
-  EXPECT_EQ(run(keys, navigator), "\n  1 Bokslut\nHuvudmeny> \n  \u00E5 År\nHuvudmeny > Bokslut> \n");
-  EXPECT_EQ(navigator.current().name(), "Bokslut");
+  auto keys = keys_of({'1', 'q', 'q', '-'});
+  EXPECT_EQ(run(keys, navigator),
+            "\n  1 Bokslut\nHuvudmeny> \n  \u00E5 År\nHuvudmeny > Bokslut> "
+            "\nVill du avsluta programmet?\n  q Avsluta\n  N Nej\nHuvudmeny > Bokslut > Avsluta> \n");
+  EXPECT_EQ(navigator.current().name(), "Avsluta");
+}
+
+TEST(PromptLoop, NoOrBackInTheQuitStateGoesBack) {
+  for (std::uint8_t stay : {std::uint8_t{'N'}, std::uint8_t{'-'}}) {
+    Navigator navigator(tree());
+    auto keys = keys_of({'1', 'q', stay});
+    run(keys, navigator);
+    EXPECT_EQ(navigator.current().name(), "Bokslut") << int{stay};
+    EXPECT_EQ(navigator.path().size(), 2u);
+  }
+  // Q is not the quit key
+  Navigator navigator(tree());
+  auto keys = keys_of({'Q'});
+  run(keys, navigator);
+  EXPECT_EQ(navigator.current().name(), "Huvudmeny");
 }
 
 TEST(PromptLoop, QuitKeyIsTextWhileTyping) {
@@ -315,9 +332,9 @@ TEST(PromptLoop, QuitKeyIsTextWhileTyping) {
 
 TEST(PromptLoop, StateIsAskedBeforeTheQuitKey) {
   Navigator navigator(menu("Rot", {{U'q', "Kvar", [] { return menu("Kvar"); }}}));
-  auto keys = keys_of({'q', 'q', '-'}); // the root maps q, Kvar does not, so the second q ends the loop
+  auto keys = keys_of({'q', 'q', 'q', '-'}); // the root maps q, Kvar does not: the second q asks, the third quits
   run(keys, navigator);
-  EXPECT_EQ(navigator.current().name(), "Kvar");
+  EXPECT_EQ(navigator.current().name(), "Avsluta");
 }
 
 namespace {

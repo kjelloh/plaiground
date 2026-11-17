@@ -326,8 +326,10 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
   // Utkast has Läs kontoutdrag
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Utkast");
-  EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "Läs kontoutdrag"}, {U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Läs kontoutdrag"},
+                                                        {U'1', "Beskriv händelse"},
+                                                        {U'<', "Föregående sida"},
+                                                        {U'>', "Nästa sida"}}));
   ASSERT_TRUE(navigator.back());
   // Bokfört lists the year's vouchers
   ASSERT_TRUE(navigator.press(U'1'));
@@ -1579,4 +1581,50 @@ TEST_F(RootMenuTest, ReadStatementMakesDraftsOnTheAccountTyped) {
   // The next statement starts in the folder of this one
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(documents / "bank"));
+}
+
+TEST_F(RootMenuTest, DescribeEventMakesADraftOfTheEvent) {
+  auto const folder = documents / "Exempel AB";
+  fs::create_directories(folder);
+  ASSERT_TRUE(cratchit::create_project_here(folder, "Exempel AB", "556677-8899", {"2025-01-01", "2025-12-31"},
+                                            "2026-11-09"));
+  auto const project = cratchit::open_project(folder);
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Beskriv händelse");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::describe_event);
+  EXPECT_EQ(navigator.current().start_input(), U"");
+  // Errors keep the line
+  auto refused = navigator.current().on_input(U"Telia 1118");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Inget datum. Skriv datumet, till exempel 2026-10-22.");
+  refused = navigator.current().on_input(U"Telia 1118 2026-01-02");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "2026-01-02 ligger utanför räkenskapsåret 2025-01-01 – 2025-12-31.");
+  // An unclear amount: choose the reading
+  auto accepted = navigator.current().on_input(U"Telia faktura 1 118,00 2025-10-22");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().name(), "Belopp?");
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'1', "      118.00  Telia faktura 1"}, {U'2', "     1118.00  Telia faktura"}}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  EXPECT_EQ(navigator.current().view(), (View{"Händelse", "  Rubrik   Telia faktura", "  Belopp   1118.00",
+                                              "  Datum    2025-10-22", "Skapa utkastet?"}));
+  // N goes back to the line, kept
+  ASSERT_TRUE(navigator.press(U'N'));
+  EXPECT_EQ(navigator.current().name(), "Beskriv händelse");
+  EXPECT_EQ(navigator.current().start_input(), U"Telia faktura 1 118,00 2025-10-22");
+  accepted = navigator.current().on_input(U"Telia faktura 1118,00 2025-10-22");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  // J makes the draft and goes back to Utkast, which lists it and tells what was done
+  ASSERT_TRUE(navigator.press(U'J'));
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  EXPECT_EQ(navigator.current().view(), (View{"Utkast 2025: utkast 1–1 av 1",
+                                              "  #1          2025-10-22       1118.00  Telia faktura (händelse)",
+                                              "cratchit skapade utkast #1: Telia faktura."}));
 }

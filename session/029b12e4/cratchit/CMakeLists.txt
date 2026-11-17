@@ -44,6 +44,7 @@ add_library(pyroceph
   src/pyroceph/tui/pager.cpp
   src/pyroceph/tui/path_completion.cpp
   src/pyroceph/tui/prompt_loop.cpp
+  src/pyroceph/tui/quit_state.cpp
   src/pyroceph/tui/raw_mode.cpp
   src/pyroceph/tui/state.cpp
   src/pyroceph/tui/terminal_width.cpp
@@ -62,6 +63,7 @@ add_library(cratchit_core
   src/core/date.cpp
   src/core/details_project.cpp
   src/core/dot_folder.cpp
+  src/core/event_draft.cpp
   src/core/fiscal_year.cpp
   src/core/inventory.cpp
   src/core/log.cpp
