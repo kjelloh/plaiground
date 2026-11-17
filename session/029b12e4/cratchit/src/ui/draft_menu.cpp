@@ -835,7 +835,10 @@ public:
       } else if (pair_.fits && !draft.postings.empty() && !other.postings.empty()) {
         lines.push_back("Konteringarna balanserar tillsammans.");
       } else if (pair_.fits) {
-        lines.push_back("Det ena har händelsen och det andra konteringar.");
+        auto const& postings = draft.postings.empty() ? other : draft;
+        lines.push_back(books::stage(postings) == books::DraftStage::account_event
+                            ? "Det ena är en händelse och det andra en kontohändelse."
+                            : "Det ena är en händelse och det andra har bara konteringar.");
       }
       return lines;
     }
@@ -1112,7 +1115,23 @@ public:
       report_ = {std::format("cratchit glömde utkast {}: {}.", id, draft_text(draft))};
       return {};
     };
-    return Accepted(make_draft_view(draft, id, label_of(year_), books->accounts, summary, this, std::move(forget)));
+    auto split = [this, index, draft, id]() -> std::expected<void, std::string> {
+      auto const year_start = parse_iso_date(year_.start);
+      if (!year_start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year_.start));
+      auto const count = split_draft(project_.folder, *year_start, index, draft);
+      if (!count) {
+        LOG_BUSINESS("Kunde inte dela utkast {} i {} ({}): {}", id, label_of(year_), project_.folder.string(),
+                     count.error());
+        return std::unexpected(count.error());
+      }
+      LOG_BUSINESS("Utkast {} delat i {} ({}): {} {} \"{}\", {} konteringar, blev {} utkast", id, label_of(year_),
+                   project_.folder.string(), format_iso_date(draft.event.date), format_amount(draft.event.amount),
+                   draft.event.heading, draft.postings.size(), *count);
+      report_ = {std::format("cratchit delade {} i {} utkast.", id, *count)};
+      return {};
+    };
+    return Accepted(make_draft_view(draft, id, label_of(year_), books->accounts, summary, this, std::move(forget),
+                                    std::move(split)));
   }
   void on_return() override { read(); }
   std::string help_topic() const override { return std::string(help_topic::drafts); }

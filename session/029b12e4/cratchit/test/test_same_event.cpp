@@ -151,3 +151,69 @@ TEST(SameEvent, MergeDraftsWritesTheOneDraftOnlyForTheDraftsSeen) {
   EXPECT_EQ(after->years.front().drafts[1].event.heading, "Loopia");
   fs::remove_all(folder);
 }
+
+TEST(DraftParts, LoneSameOrMore) {
+  EXPECT_EQ(parts_of(event_draft("Telia", 111800, on(20, 10))), DraftParts::lone);
+  EXPECT_EQ(parts_of(statement_draft("1920", -111800, on(22, 10), "TELIA", "a.csv:2")), DraftParts::lone);
+  // An event and its payment, a transfer: the same amount without sign
+  auto paid = event_draft("Telia", 111800, on(20, 10));
+  paid.postings = {posting("1920", -111800, "TELIA", "a.csv:2")};
+  EXPECT_EQ(parts_of(paid), DraftParts::same);
+  books::Draft transfer{{"", 0, on(3)}, on(17, 11), {posting("1920", -500000), posting("1940", 500000)}};
+  EXPECT_EQ(parts_of(transfer), DraftParts::same);
+  // A credit note keeps its sign, still the same
+  auto credit = event_draft("Kreditfaktura", -124500, on(20, 10));
+  credit.postings = {posting("1920", 124500)};
+  EXPECT_EQ(parts_of(credit), DraftParts::same);
+  // Postings of different amounts: more than the same
+  paid.postings = {posting("2440", 111800), posting("6212", -89440), posting("2641", -22360)};
+  EXPECT_EQ(parts_of(paid), DraftParts::more);
+}
+
+TEST(DraftParts, SplitGivesTheEventAndEachAccountEventNotedAsTheDraft) {
+  auto draft = event_draft("Loopia webhotell", 130875, on(26));
+  draft.noted = on(10, 11);
+  draft.postings = {posting("1920", -130875, "LOOPIA", "nordea.csv:7")};
+  draft.postings[0].date = on(28);
+  auto const parts = split(draft);
+  ASSERT_EQ(parts.size(), 2u);
+  EXPECT_EQ(parts[0], (books::Draft{draft.event, on(10, 11), {}}));
+  EXPECT_EQ(parts[1], (books::Draft{{"", 0, on(28)}, on(10, 11), draft.postings}));
+  EXPECT_EQ(books::stage(parts[0]), books::DraftStage::event);
+  EXPECT_EQ(books::stage(parts[1]), books::DraftStage::account_event);
+  // A merged draft split gives the drafts it was made of (the event chosen, the entries)
+  auto const event = event_draft("Loopia webhotell", 130875, on(26));
+  auto entry = statement_draft("1920", -130875, on(28), "LOOPIA", "nordea.csv:7");
+  entry.postings[0].date = on(28); // as a statement entry's
+  EXPECT_EQ(split(merged(event, entry, event.event)), (std::vector<books::Draft>{event, entry}));
+}
+
+TEST(DraftParts, SplitDraftWritesTheLoneDraftsOnlyForTheSame) {
+  auto const folder = fs::temp_directory_path() / "cratchit_split_draft_test";
+  fs::remove_all(folder);
+  fs::create_directories(folder);
+  std::ofstream(folder / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20260101 20261231\r\n";
+  auto plan = plan_project_from_sie(folder / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(create_project_from_sie(*plan, "2026-11-09"));
+  Date const start{2026y, January, 1d};
+  ASSERT_TRUE(add_event_draft(folder, start, {"Telia", 111800, on(20, 10)}, on(17, 11)));
+  ASSERT_TRUE(add_event_draft(folder, start, {"Telia betald", 111800, on(22, 10)}, on(17, 11)));
+  auto books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  auto const drafts = books->years.front().drafts;
+  // A lone draft is not split
+  auto refused = split_draft(folder, start, 0, drafts[0]);
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Utkastet är inte gjort av delar med samma belopp och kan inte delas.");
+  ASSERT_TRUE(merge_drafts(folder, start, 0, drafts[0], 1, drafts[1], drafts[0].event));
+  books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  auto const one = books->years.front().drafts[0];
+  // Merging two events keeps one event: split gives that one alone
+  EXPECT_EQ(parts_of(one), DraftParts::lone);
+  // Not the draft seen: refused
+  EXPECT_FALSE(split_draft(folder, start, 0, drafts[1]));
+  fs::remove_all(folder);
+}

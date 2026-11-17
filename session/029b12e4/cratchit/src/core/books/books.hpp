@@ -126,9 +126,9 @@ struct Draft {
 
 // How far a draft has come, worked out from what it holds
 enum class DraftStage {
-  event,      // no postings: just the event (also when its heading is empty)
-  statement,  // postings but no heading, e.g. from statement entries
-  unbalanced, // heading and postings, but not ready (see ready)
+  event,         // no postings: just the event (also when its heading is empty)
+  account_event, // just one posting, no heading and no amount: e.g. an entry of a statement
+  unbalanced,    // more than one part (the event and postings, or several postings), but not ready
   ready,      // can be booked: a heading, an amount, postings each on an account,
               // that balance and whose debit adds up to the amount (without its sign)
 };

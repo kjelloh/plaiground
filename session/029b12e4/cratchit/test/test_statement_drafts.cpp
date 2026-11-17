@@ -108,7 +108,7 @@ TEST_F(StatementDraftsTest, AddsDraftsWithSourceAndRecordsTheFile) {
   EXPECT_EQ(draft.event.amount, 0);
   EXPECT_EQ(draft.event.date, (Date{2025y, March, 10d}));
   EXPECT_EQ(draft.noted, (Date{2026y, November, 17d}));
-  EXPECT_EQ(books::stage(draft), books::DraftStage::statement);
+  EXPECT_EQ(books::stage(draft), books::DraftStage::account_event);
   ASSERT_EQ(draft.postings.size(), 1u);
   EXPECT_EQ(draft.postings.front().account, "1930");
   EXPECT_EQ(draft.postings.front().amount, -1000);

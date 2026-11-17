@@ -4,6 +4,7 @@
 #include <chrono>
 #include <format>
 #include <map>
+#include <ranges>
 #include <set>
 #include <tuple>
 #include <utility>
@@ -165,6 +166,54 @@ books::Draft merged(books::Draft const& a, books::Draft const& b, books::Event e
     if (!same_entry) result.postings.push_back(posting);
   }
   return result;
+}
+
+DraftParts parts_of(books::Draft const& draft) {
+  std::vector<Amount> amounts;
+  auto const without_sign = [](Amount amount) { return amount < 0 ? -amount : amount; };
+  auto const has_event = !draft.event.heading.empty() || draft.event.amount != 0;
+  if (has_event) amounts.push_back(without_sign(draft.event.amount));
+  for (auto const& posting : draft.postings) {
+    if (counted(posting)) amounts.push_back(without_sign(posting.amount));
+  }
+  if (amounts.size() <= 1) return DraftParts::lone;
+  // An event without amount (a heading alone) says nothing about the amount
+  auto const first = has_event && draft.event.amount == 0 ? 1u : 0u;
+  auto const same = std::ranges::all_of(amounts | std::views::drop(first),
+                                        [&](Amount amount) { return amount == amounts[first]; });
+  return same ? DraftParts::same : DraftParts::more;
+}
+
+std::vector<books::Draft> split(books::Draft const& draft) {
+  std::vector<books::Draft> drafts;
+  if (!draft.event.heading.empty() || draft.event.amount != 0) drafts.push_back({draft.event, draft.noted, {}});
+  for (auto const& posting : draft.postings) {
+    if (!counted(posting)) continue;
+    drafts.push_back({{"", 0, posting.date.value_or(draft.event.date)}, draft.noted, {posting}});
+  }
+  return drafts;
+}
+
+std::expected<std::size_t, std::string> split_draft(std::filesystem::path const& project_folder, Date year_start,
+                                                    std::size_t index, books::Draft const& expected) {
+  auto books = books::read_books(project_folder);
+  if (!books) return std::unexpected(books.error());
+  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
+  if (year == books->years.end()) {
+    return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
+  }
+  if (index >= year->drafts.size() || year->drafts[index] != expected) {
+    return std::unexpected("Utkastet finns inte längre på sin plats i bokföringen. Öppna det igen från Utkast.");
+  }
+  if (parts_of(expected) != DraftParts::same) {
+    return std::unexpected("Utkastet är inte gjort av delar med samma belopp och kan inte delas.");
+  }
+  auto parts = split(expected);
+  auto const count = parts.size();
+  year->drafts.erase(year->drafts.begin() + static_cast<std::ptrdiff_t>(index));
+  for (auto& part : parts) year->place_draft(std::move(part));
+  if (auto written = books::write_books(project_folder, *books); !written) return std::unexpected(written.error());
+  return count;
 }
 
 std::expected<std::size_t, std::string> merge_drafts(std::filesystem::path const& project_folder, Date year_start,

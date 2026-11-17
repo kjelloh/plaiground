@@ -41,16 +41,20 @@ std::unique_ptr<pyroceph::tui::State> make_voucher_menu(books::Voucher voucher, 
 // <n>"). Options as for a voucher; the event's and a posting's options lead to
 // Inte än for now (in a draft everything is to be changeable).
 //
-// 9 Glöm leads to "Glöm" (beslut 2026-11-17: 9 is the option that removes,
-// kept apart from the others): it shows summary, says the draft cannot be had
-// back, and offers 9 Glöm and N Nej. 9 again calls forget; done, the TUI goes
-// back to origin (State::back_to, Utkast); N goes back to the draft. A failure
-// of forget leads to the error state with its text.
+// 9 depends on what the draft is made of (parts_of, beslut 2026-11-17: 9 is
+// the option that removes, kept apart from the others):
+// * lone: 9 Glöm leads to "Glöm": it shows summary, says the draft cannot be
+//   had back, and offers 9 Glöm and N Nej. 9 again calls forget; done, the TUI
+//   goes back to origin (State::back_to, Utkast); N goes back to the draft.
+// * same: 9 Inte samma calls split at once (it can be undone in Samma?); done,
+//   back to origin.
+// * more than the same: no 9.
+// A failure of forget or split leads to the error state with its text.
 using ForgetDraft = std::function<std::expected<void, std::string>()>;
 std::unique_ptr<pyroceph::tui::State> make_draft_view(books::Draft const& draft, std::string id,
                                                       std::string year_label, std::vector<books::Account> accounts,
                                                       std::string summary, pyroceph::tui::State const* origin,
-                                                      ForgetDraft forget);
+                                                      ForgetDraft forget, ForgetDraft split);
 
 // "Glöm" for the draft id (e.g. "#3"), as from a draft's view: it shows summary
 // (one line about the draft), says the draft cannot be had back, and offers

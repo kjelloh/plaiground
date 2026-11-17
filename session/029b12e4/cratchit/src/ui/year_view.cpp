@@ -17,7 +17,7 @@ struct Row {
 };
 
 std::string row_text(std::string_view first, Date date, Amount amount, std::string_view heading) {
-  return std::format("  {:<11} {}  {:>12}  {}", first, format_iso_date(date), format_amount(amount), heading);
+  return std::format("  {:<13} {}  {:>12}  {}", first, format_iso_date(date), format_amount(amount), heading);
 }
 
 // The amount a draft shows: its event's, with its sign (minus for an event the other way,
@@ -55,8 +55,8 @@ std::string_view stage_text(books::DraftStage stage) {
   switch (stage) {
   case books::DraftStage::event:
     return "händelse";
-  case books::DraftStage::statement:
-    return "kontoutdrag";
+  case books::DraftStage::account_event:
+    return "kontohändelse";
   case books::DraftStage::unbalanced:
     return "obalanserat";
   case books::DraftStage::ready:

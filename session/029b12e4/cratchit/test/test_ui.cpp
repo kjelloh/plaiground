@@ -699,8 +699,8 @@ TEST_F(RootMenuTest, FiscalYearExportsAllAndTheDifference) {
   EXPECT_EQ(navigator.current().view()[1], "Hela året: 2 verifikationer");
   EXPECT_TRUE(navigator.current().view()[2].starts_with("cratchit skrev sie_2025_allt.se i ")) << navigator.current().view()[2];
   // Then the year's vouchers, newest first
-  EXPECT_EQ(navigator.current().view()[3], "  A2          2025-03-01        200.00  Sale");
-  EXPECT_EQ(navigator.current().view()[4], "  A1          2025-02-01        100.00  Sale");
+  EXPECT_EQ(navigator.current().view()[3], "  A2            2025-03-01        200.00  Sale");
+  EXPECT_EQ(navigator.current().view()[4], "  A1            2025-02-01        100.00  Sale");
   // Again: never overwritten
   ASSERT_TRUE(navigator.press(U'1'));
   ASSERT_TRUE(navigator.press(U'1'));
@@ -1591,7 +1591,7 @@ TEST_F(RootMenuTest, ReadStatementMakesDraftsOnTheAccountTyped) {
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(),
             (View{"Utkast 2025: utkast 1–1 av 1",
-                  "  #1          2025-03-05        -10.00  1930  AVGIFTER (kontoutdrag)",
+                  "  #1            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
                   "cratchit skapade 1 utkast från nordea.csv på konto 1930 Bank."}));
   EXPECT_FALSE(navigator.press(U'>')); // one page: nothing
   // The next statement starts in the folder of this one
@@ -1654,8 +1654,8 @@ TEST_F(RootMenuTest, DescribeEventsMakesADraftOfEachEvent) {
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(), (View{"Utkast 2025: utkast 1–2 av 2",
-                                              "  #2          2025-10-22       1118.00  Telia faktura (händelse)",
-                                              "  #1          2025-09-28       1308.75  Loopia (händelse)",
+                                              "  #2            2025-10-22       1118.00  Telia faktura (händelse)",
+                                              "  #1            2025-09-28       1308.75  Loopia (händelse)",
                                               "cratchit skapade 2 utkast."}));
 }
 
@@ -1898,7 +1898,7 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   EXPECT_EQ(navigator.current().name(), "#2");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::draft);
   EXPECT_EQ(navigator.current().view(),
-            (View{"Utkast #2 i 2025 (kontoutdrag)", "  Noterad:        " + cratchit::today_iso(), "Händelse:",
+            (View{"Utkast #2 i 2025 (kontohändelse)", "  Noterad:        " + cratchit::today_iso(), "Händelse:",
                   "  Datum:          2025-03-05", "  Rubrik:         ", "  Belopp:         ", "Konteringar:",
                   "  1930  Bank        -10.00  AVGIFTER"}));
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
@@ -1987,11 +1987,11 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::same);
   EXPECT_EQ(navigator.current().view(),
             (View{"Möjliga par i 2025 (samma belopp, högst 4 dagar emellan):",
-                  "  1  utkast   #2          2025-03-04         10.00  Bankavgift (händelse)",
-                  "              #3          2025-03-05        -10.00  1930  AVGIFTER (kontoutdrag)",
+                  "  1  utkast   #2            2025-03-04         10.00  Bankavgift (händelse)",
+                  "              #3            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
                   "              passar, 1 dag emellan",
-                  "  2  bokfört  #1          2025-03-02        500.00  Kund betalar (händelse)",
-                  "              A1          2025-03-01        500.00  Kundinbetalning",
+                  "  2  bokfört  #1            2025-03-02        500.00  Kund betalar (händelse)",
+                  "              A1            2025-03-01        500.00  Kundinbetalning",
                   "              1 dag emellan"}));
   auto refused = navigator.current().on_input(U"3");
   ASSERT_FALSE(refused);
@@ -2008,14 +2008,14 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Slå ihop"}}));
   auto view = navigator.current().view();
   EXPECT_EQ(view.front(), "Samma händelse? passar, 1 dag emellan.");
-  EXPECT_EQ(view.back(), "Det ena har händelsen och det andra konteringar.");
+  EXPECT_EQ(view.back(), "Det ena är en händelse och det andra en kontohändelse.");
   EXPECT_NE(std::ranges::find(view, "    1930  Bank        -10.00  AVGIFTER"), view.end());
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Samma?");
   EXPECT_EQ(navigator.current().view(),
             (View{"Möjliga par i 2025 (samma belopp, högst 4 dagar emellan):",
-                  "  1  bokfört  #1          2025-03-02        500.00  Kund betalar (händelse)",
-                  "              A1          2025-03-01        500.00  Kundinbetalning",
+                  "  1  bokfört  #1            2025-03-02        500.00  Kund betalar (händelse)",
+                  "              A1            2025-03-01        500.00  Kundinbetalning",
                   "              1 dag emellan",
                   "cratchit slog ihop #2 och #3 till #2: Bankavgift (obalanserat)."}));
   // A draft already booked: 9 and 9 again forget it
@@ -2039,7 +2039,25 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().view(),
             (View{"Utkast 2025: utkast 1–1 av 1",
-                  "  #1          2025-03-04         10.00  Bankavgift (obalanserat)",
+                  "  #1            2025-03-04         10.00  Bankavgift (obalanserat)",
                   "cratchit slog ihop #2 och #3 till #2: Bankavgift (obalanserat).",
                   "cratchit glömde utkast #1, redan bokfört som A1: Kund betalar (händelse)."}));
+  // The one draft is made of the same amount: 9 is Inte samma, and splits it at once
+  auto opened = navigator.current().on_input(U"#1");
+  ASSERT_TRUE(opened) << opened.error();
+  navigator.enter(std::move(opened->next));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Inte samma"}}));
+  ASSERT_TRUE(navigator.press(U'9'));
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Utkast 2025: utkast 1–2 av 2",
+                  "  #2            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
+                  "  #1            2025-03-04         10.00  Bankavgift (händelse)",
+                  "cratchit delade #1 i 2 utkast."}));
+  // Each is lone again: 9 is Glöm
+  opened = navigator.current().on_input(U"#2");
+  ASSERT_TRUE(opened) << opened.error();
+  navigator.enter(std::move(opened->next));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
 }

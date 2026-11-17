@@ -72,4 +72,30 @@ std::expected<std::size_t, std::string> merge_drafts(std::filesystem::path const
                                                      std::size_t a, books::Draft const& expected_a, std::size_t b,
                                                      books::Draft const& expected_b, books::Event const& event);
 
+// What a draft is made of (beslut 2026-11-17). Its parts are its event (when
+// it has a heading or an amount) and each posting (not removed).
+enum class DraftParts {
+  lone, // one part: just the event, or just one posting (an account event); can be forgotten
+  same, // more than one part, all with the same amount without sign (the event's
+        // amount, when it has one, and each posting's); can be split (Inte samma)
+  more, // more than one part with different amounts: more than the same event; neither
+};
+
+DraftParts parts_of(books::Draft const& draft);
+
+// The lone drafts a draft is made of: its event, without postings (when it has
+// a heading or an amount), then each posting (not removed) as a draft of its
+// own, dated as the posting (else the event), with no heading and no amount.
+// Each is noted when the draft was.
+std::vector<books::Draft> split(books::Draft const& draft);
+
+// Splits the draft at index of the fiscal year starting on year_start into its
+// lone drafts (see split) and writes the books. Only for a draft of parts same,
+// and only when the draft there is still the expected one (the one the user
+// saw). Gives how many drafts it became. Error text when the books cannot be
+// read or written, the year is not in them, the draft is not there any more or
+// is not made of the same. Does not log.
+std::expected<std::size_t, std::string> split_draft(std::filesystem::path const& project_folder, Date year_start,
+                                                    std::size_t index, books::Draft const& expected);
+
 } // namespace cratchit

@@ -40,7 +40,7 @@ std::string draft_id(std::size_t index);
 
 // What a draft's row tells about it: its heading, else its first posting's
 // account and text (e.g. a statement entry), then its stage in parentheses,
-// e.g. "1920  AVGIFTER NORDEA (kontoutdrag)"
+// e.g. "1920  AVGIFTER NORDEA (kontohändelse)"
 std::string draft_text(books::Draft const& draft);
 
 // The year's drafts, one line each as voucher_rows, newest first (the drafts
@@ -56,7 +56,7 @@ std::string draft_row(std::size_t index, books::Draft const& draft);
 // One row of voucher_rows
 std::string voucher_row(books::Voucher const& voucher);
 
-// The stage of a draft for the user: "händelse", "kontoutdrag", "obalanserat" or "klart"
+// The stage of a draft for the user: "händelse", "kontohändelse", "obalanserat" or "klart"
 std::string_view stage_text(books::DraftStage stage);
 
 } // namespace cratchit::ui

@@ -317,11 +317,11 @@ Tryck räkenskapsårets siffra i bokföringen. Prompten får då årets namn:
 ```text
 Räkenskapsår 2025-05-01 – 2026-04-30
 Hela året: 116 verifikationer
-  M5          2026-04-30         89.98  Momsrapport_2026-04-01-2026-04-30
-  A59         2026-04-22       2020.00  Skatt
-  E25         2026-04-20        361.25  LOOPIA AB
+  M5            2026-04-30         89.98  Momsrapport_2026-04-01-2026-04-30
+  A59           2026-04-22       2020.00  Skatt
+  E25           2026-04-20        361.25  LOOPIA AB
   …
-  E21         2026-03-30       1233.75  LOOPIA AB
+  E21           2026-03-30       1233.75  LOOPIA AB
   … 106 äldre
   0 Årsflöde
   1 Exportera till SIE
@@ -335,9 +335,9 @@ Listan visar de tio nyaste raderna. Finns det fler står det sist hur många äl
 
 | Står det | Betyder |
 |---|---|
-| `händelse` | Utkastet har datum och kanske text och belopp, men inga konteringar |
-| `kontoutdrag` | Utkastet har konteringar, till exempel från ett kontoutdrag, men ingen text |
-| `obalanserat` | Utkastet har text och konteringar, men konteringarna balanserar inte eller stämmer inte med beloppet |
+| `händelse` | Utkastet är en händelse, till exempel en faktura eller ett kvitto: datum och kanske text och belopp, men inga konteringar |
+| `kontohändelse` | Utkastet är en kontohändelse, ett belopp in på eller ut från ett konto, till exempel en rad i ett kontoutdrag: en enda kontering, ingen text och inget belopp |
+| `obalanserat` | Utkastet har flera delar, en händelse och konteringar eller flera konteringar, men det kan inte bokföras än: det saknar text eller belopp, eller konteringarna balanserar inte eller stämmer inte med beloppet |
 | `klart` | Utkastet kan bokföras |
 
 Utkast skapar du i [Utkast](#utkast) under Årsflöde, från ett kontoutdrag eller genom att beskriva händelser.
@@ -375,11 +375,11 @@ Tryck `0` i Årsflöde:
 
 ```text
 Utkast 2026/27: utkast 1–12 av 12
-  #12         2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1 (kontoutdrag)
-  #11         2026-09-10       -204.68  1920  Kortköp 260910 ANTHROPIC* CLAUDE SU | ANTHROPIC* CLAU 2656 (kontoutdrag)
-  #10         2026-09-05          1.00  1630  Intäktsränta (kontoutdrag)
+  #12           2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1 (kontohändelse)
+  #11           2026-09-10       -204.68  1920  Kortköp 260910 ANTHROPIC* CLAUDE SU | ANTHROPIC* CLAU 2656 (kontohändelse)
+  #10           2026-09-05          1.00  1630  Intäktsränta (kontohändelse)
   …
-  #1          2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontoutdrag)
+  #1            2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontohändelse)
   0 Beskriv händelser
   1 Samma?
   2 Läs kontoutdrag
@@ -398,13 +398,13 @@ Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat frå
 ##### Utkastet
 
 <!-- hjälp: utkastet -->
-Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för händelsen och `1` för konteringarna, eller `9` för att glömma utkastet. Än så länge kan du inte ändra utkastet. Tryck `-` för att gå tillbaka till Utkast.
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för händelsen och `1` för konteringarna. `9` är *Glöm* för ett ensamt utkast, en händelse eller en kontohändelse, och *Inte samma* för ett utkast av flera delar med samma belopp, som delar det direkt. Ett utkast vars konteringar har olika belopp har inget `9`. Än så länge kan du inte ändra utkastet. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
 
 ```text
-Utkast #1 i 2026/27 (kontoutdrag)
+Utkast #1 i 2026/27 (kontohändelse)
   Noterad:        2026-11-17
 Händelse:
   Datum:          2026-07-03
@@ -442,6 +442,23 @@ Cratchit > … > Utkast > #14 > Glöm>
 Tryck `9` igen för att glömma utkastet. cratchit går då tillbaka till Utkast och skriver under listan till exempel `cratchit glömde utkast #14: Loopia webhotell (händelse).` De utkast som kom efter det glömda får nya nummer. Loggen får det glömda utkastet med alla dess konteringar.
 
 Glömmer du ett utkast från ett kontoutdrag och läser kontoutdraget igen blir raden ett nytt utkast, eftersom den varken är bokförd eller ett utkast längre.
+
+###### Inte samma
+
+Ett utkast kan bestå av flera delar: en händelse och konteringar, eller flera konteringar. Har alla delarna samma belopp, utan tecken, är det samma händelse sett från olika håll, till exempel en faktura och betalningen på kontoutdraget, eller en överföring med en rad på vart kontoutdrag. Ett sådant utkast kommer oftast från [Samma?](#samma). Där har `9` texten *Inte samma*:
+
+```text
+Utkast #14 i 2026/27 (obalanserat)
+  …
+  0 Händelse
+  1 Konteringar
+  9 Inte samma
+Cratchit > … > Utkast > #14>
+```
+
+`9` delar utkastet direkt i en händelse och en kontohändelse för varje kontering, och du kommer tillbaka till Utkast, som säger till exempel `cratchit delade #14 i 2 utkast.` Varje kontohändelse får konteringens datum och minns sin fil och rad, och alla får utkastets noteringsdag. cratchit frågar inte först, eftersom du kan slå ihop dem igen i Samma?. Det som valdes bort när utkasten slogs ihop kommer dock inte tillbaka: hade båda en rubrik är det bara den valda händelsen som finns kvar.
+
+Ett utkast med flera delar kan inte glömmas direkt. Dela det först och glöm sedan delarna. Har konteringarna olika belopp, som i en färdig kontering av en faktura med moms, är utkastet mer än samma händelse och har inget `9`.
 
 ###### Utkastets händelse
 
@@ -591,11 +608,11 @@ Samma händelse kan bli två utkast: kvittot du beskrev och kortköpet på konto
 
 ```text
 Möjliga par i 2026/27 (samma belopp, högst 4 dagar emellan):
-  1  utkast   #12         2026-09-26       1308.75  Loopia webhotell (händelse)
-              #13         2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontoutdrag)
+  1  utkast   #12           2026-09-26       1308.75  Loopia webhotell (händelse)
+              #13           2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontohändelse)
               passar, 2 dagar emellan, delar orden: loopia, webhotell
-  2  bokfört  #4          2026-09-01       -311.25  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontoutdrag)
-              D6          2026-08-31        311.25  Loopia Faktura
+  2  bokfört  #4            2026-09-01       -311.25  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontohändelse)
+              D6            2026-08-31        311.25  Loopia Faktura
               1 dag emellan, delar orden: loopia
   < Föregående sida
   > Nästa sida
@@ -606,7 +623,7 @@ Varje par har tre rader: det äldre utkastet, det andra utkastet eller verifikat
 
 Belopp och datum gör bara paret möjligt. Med fakturametoden har en faktura och dess betalning samma belopp inom några dagar, men de är två händelser. Därför avgör du. Först står paren som *passar*, sedan de vars texter delar flest ord (stora och små bokstäver räknas lika; tal och ord på en bokstav räknas inte), sedan de med minst dagar emellan. Ett utkast utan rubrik jämförs med konteringarnas texter. Ett par passar när
 
-* två utkast kompletterar varandra: det ena har bara händelsen och det andra bara konteringar, eller båda har konteringar, på olika konton, som balanserar tillsammans;
+* två utkast kompletterar varandra: det ena är en händelse och det andra en kontohändelse (eller har bara konteringar), eller båda har konteringar, på olika konton, som balanserar tillsammans;
 * verifikationen har alla utkastets konteringar (samma konto, datum och belopp).
 
 Fyra dagar är en helg och en bankdag på var sida; helgdagar räknas inte. Ett par du lämnar kommer cratchit inte ihåg: det står med nästa gång.
@@ -624,13 +641,13 @@ Utkast #12 (händelse), noterat 2026-11-17
   Rubrik:         Loopia webhotell
   Belopp:         1308.75
   Konteringar:    inga
-Utkast #13 (kontoutdrag), noterat 2026-11-17
+Utkast #13 (kontohändelse), noterat 2026-11-17
   Datum:          2026-09-28
   Rubrik:         
   Belopp:         
   Konteringar:
     1920  Plusgiro     -1308.75  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1
-Det ena har händelsen och det andra konteringar.
+Det ena är en händelse och det andra en kontohändelse.
   0 Slå ihop
 Cratchit > … > Utkast > Samma? > 1>
 ```
@@ -643,7 +660,7 @@ När båda utkasten har konteringar säger raden sist om de balanserar tillsamma
 * **konteringarna** från båda, men en kontering från samma kontoutdragsrad bara en gång;
 * **noteringsdagen** som är tidigast.
 
-Du kan ännu inte dela upp ett utkast igen, men du kan glömma det.
+Utkastet går att dela igen med `9`, *Inte samma*, när du öppnar det från Utkast (se [Inte samma](#inte-samma)).
 
 För ett utkast och en verifikation visar cratchit utkastets konteringar som inte finns i verifikationen. De glöms med utkastet. `9` leder till [Glöm](#glöm), som för ett utkast du öppnat. Verifikationen ändras inte.
 
@@ -767,10 +784,10 @@ Tryck `1` i Årsflöde för att se räkenskapsårets bokförda verifikationer. D
 ```text
 Bokfört 2025/26: verifikationer 21–40 av 120
   …
-  A49         2026-04-10        449.90  Utlägg Privat - Kjell&Co
-  A50         2026-04-07          7.40  Account:NORDEA Text:AVGIFTER NORDEA
+  A49           2026-04-10        449.90  Utlägg Privat - Kjell&Co
+  A50           2026-04-07          7.40  Account:NORDEA Text:AVGIFTER NORDEA
   …
-  A30         2026-01-12       1250.00  Telia
+  A30           2026-01-12       1250.00  Telia
   …
   < Föregående sida
   > Nästa sida
@@ -1029,8 +1046,8 @@ När en import inte går att göra, därför att bokföringen har verifikationer
 ```text
 Räkenskapsåret 2025/26 blir exakt som SIE-filen.
 Det här försvinner ur bokföringen:
-  D27         2026-04-12  Loopia Faktura  311.25  finns inte i filen
-  D28         2026-04-30  Telia  1250.00  finns inte i filen
+  D27           2026-04-12  Loopia Faktura  311.25  finns inte i filen
+  D28           2026-04-30  Telia  1250.00  finns inte i filen
 Det här kommer in från filen:
   I2–5
 Ingående balanser i följande räkenskapsår räknas om.

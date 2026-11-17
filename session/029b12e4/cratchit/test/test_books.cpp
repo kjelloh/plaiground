@@ -254,11 +254,16 @@ TEST(DraftStage, AnEventWithoutPostingsIsAnEvent) {
   EXPECT_EQ(stage(Draft{{"", 0, date(2026, 10, 20)}, date(2026, 10, 23)}), DraftStage::event);
 }
 
-TEST(DraftStage, PostingsWithoutAHeadingAreAStatement) {
+TEST(DraftStage, OnePostingAloneIsAnAccountEvent) {
   Draft draft{{"", 0, date(2026, 10, 20)}, date(2026, 10, 23), {row("1930", -111800)}};
-  EXPECT_EQ(stage(draft), DraftStage::statement);
-  draft.postings.push_back(row("6212", 111800)); // balanced, but still no heading
-  EXPECT_EQ(stage(draft), DraftStage::statement);
+  EXPECT_EQ(stage(draft), DraftStage::account_event);
+  // More than one part: balanced, but no heading
+  draft.postings.push_back(row("6212", 111800));
+  EXPECT_EQ(stage(draft), DraftStage::unbalanced);
+  // One posting with an event: more than one part
+  draft.postings.pop_back();
+  draft.event.heading = "Telia";
+  EXPECT_EQ(stage(draft), DraftStage::unbalanced);
 }
 
 TEST(DraftStage, AHeadingWithPostingsThatDoNotBalanceIsUnbalanced) {
