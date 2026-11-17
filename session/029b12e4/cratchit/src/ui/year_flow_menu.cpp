@@ -45,7 +45,7 @@ public:
     switch (key) {
     case U'0': return make_draft_menu(project_, year_);
     case U'1': return make_booked_menu(project_, year_);
-    case U'2': return make_design_insufficiency_state("Momsrapport", "momsrapporten");
+    case U'2': return make_vat_return_menu(project_, year_);
     case U'3': return make_closing_menu();
     case U'4': return make_annual_report_menu(project_, year_);
     case U'5': return make_design_insufficiency_state("Årsstämma", "årsstämman");

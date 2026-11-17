@@ -1,6 +1,9 @@
 find_package(GTest REQUIRED)
 
 add_executable(cratchit_tests
+  vat/test_eskd.cpp
+  vat/test_vat_cli.cpp
+  vat/test_vat_return.cpp
   test_closing.cpp
   ink2/test_ink2_accounts.cpp
   ink2/test_ink2_arguments.cpp

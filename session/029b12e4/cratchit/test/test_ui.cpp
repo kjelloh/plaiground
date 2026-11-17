@@ -325,9 +325,13 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
   EXPECT_EQ(navigator.current().name(), "Deklaration till SKV");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::tax_return);
   ASSERT_TRUE(navigator.back());
-  // Momsrapport, Årsstämma and Rapport till Bolagsverket are not there yet
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Momsrapport");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::vat_return);
+  ASSERT_TRUE(navigator.back());
+  // Årsstämma and Rapport till Bolagsverket are not there yet
   for (auto const& [key, caption] : navigator.current().options()) {
-    if (key == U'0' || key == U'1' || key == U'3' || key == U'4' || key == U'7') continue;
+    if (key == U'0' || key == U'1' || key == U'2' || key == U'3' || key == U'4' || key == U'7') continue;
     ASSERT_TRUE(navigator.press(key));
     EXPECT_EQ(navigator.current().name(), "Inte än (" + caption + ")");
     ASSERT_TRUE(navigator.back());
@@ -1722,4 +1726,25 @@ TEST_F(RootMenuTest, CommandHintsUseTheProjectsExportAndLastYearsReturn) {
   lines = cratchit::ui::tax_return_hint(facts);
   EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-ink2 sie_2025_allt_2.se 556000-0001_2024-01-01_2024-12-31"),
             lines.end());
+}
+
+TEST_F(RootMenuTest, VatHintNeedsLastYearForAQuarterThatStartsInIt) {
+  // A broken fiscal year: 2025-05-01 - 2026-04-30, so April-June 2025 starts in the year before
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250501 20260430\r\n"
+         "#KONTO 1930 \"Bank\"\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  std::ofstream(project->folder / "sie_2025-26_allt.se") << "x";
+  auto const facts = cratchit::ui::command_hint_facts(*project, {"2025-05-01", "2026-04-30"});
+  // Early in the year only the first quarter has ended: it needs last year's file
+  auto lines = cratchit::ui::vat_return_hint(facts, *cratchit::parse_iso_date("2025-07-10"));
+  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-vat sie_2025-26_allt.se <förra årets SIE-fil> --period 2025Q2"),
+            lines.end());
+  // Later the latest ended quarter is within the year
+  lines = cratchit::ui::vat_return_hint(facts, *cratchit::parse_iso_date("2026-05-10"));
+  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-vat sie_2025-26_allt.se --period 2026Q1"), lines.end());
+  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-vat sie_2025-26_allt.se <förra årets SIE-fil>"), lines.end());
 }

@@ -75,7 +75,9 @@ cratchit kan också köra ett kommando utan att starta gränssnittet. Med ett ko
 | `cratchit --sie-to-ar --trace bokföring.se` | Visar konton och verifikationer bakom varje belopp i årsredovisningen, utan att skriva filer |
 | `cratchit --sie-to-ink2 bokföring.se "deklaration 2025"` | Gör inkomstdeklaration 2 (INK2R, INK2S och INK2 sidan 1) av en SIE-fil, med förra årets deklaration (dess `BLANKETTER.SRU` eller mapp) för underskottet, i en ny mapp `<orgnr>_<start>_<slut>`: deklarationen som text, en rapport, en kopia av SIE-filen och, när inget saknas, SRU-filerna till Skatteverkets filöverföring (cratchit_ink2) |
 | `cratchit --sie-to-ink2 bokföring.se --previous-deficit 0` | Samma, med förra årets underskott angivet i kronor i stället för förra årets deklaration |
-| `cratchit --walk-pdf --help`, `cratchit --sie-to-ar --help`, `cratchit --sie-to-ink2 --help` | Kommandots manual |
+| `cratchit --sie-to-vat bokföring.se` | Listar räkenskapsårets momskvartal med periodens moms, avräknat och debiterat (momsrapporten från take 3) |
+| `cratchit --sie-to-vat bokföring.se förra_året.se --period 2026Q2` | Gör momsdeklarationen för kvartalet i en ny mapp `<orgnr>_moms_<första dag>_<sista dag>`: momsrapporten med kontroller, förslaget till momsverifikation (bokför den själv), eSKD-filen till Skatteverkets e-tjänst *Lämna momsdeklaration* och en kopia av SIE-filen. Förra årets SIE-fil behövs när kvartalet börjar i förra räkenskapsåret |
+| `cratchit --walk-pdf --help`, `cratchit --sie-to-ar --help`, `cratchit --sie-to-ink2 --help`, `cratchit --sie-to-vat --help` | Kommandots manual |
 
 Texten går till standard output, så du kan spara den, till exempel med `> faktura.txt`. Andra argument känner cratchit inte igen; då säger cratchit det och startar inte.
 
@@ -343,7 +345,7 @@ Utkast skapar du i [Utkast](#utkast) under Årsflöde, från ett kontoutdrag ell
 ### Årsflöde
 
 <!-- hjälp: arsflode -->
-Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `0 Utkast`, `1 Bokfört` och `3 Bokslut` leder vidare, `4 Årsredovisning` och `7 Deklaration till SKV` visar hur du gör dem från kommandoraden, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
+Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `0 Utkast`, `1 Bokfört` och `3 Bokslut` leder vidare, `2 Momsrapport`, `4 Årsredovisning` och `7 Deklaration till SKV` visar hur du gör dem från kommandoraden, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
 <!-- /hjälp -->
 
 Tryck `0` i räkenskapsåret:
@@ -683,6 +685,22 @@ Cratchit > … > Bokfört > D19 > Konteringar > 1>
 <!-- hjälp: bokslut -->
 Bokslutet avslutar räkenskapsåret. Tryck `0` för avstämning mot kontoutdrag. Den finns inte än. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
+
+#### Momsrapport
+
+<!-- hjälp: momsrapport -->
+Momsdeklarationen gör cratchit från kommandoraden, med `cratchit --sie-to-vat`, ett kvartal i taget. Ovanför prompten står stegen med kommandona för den här bokföringen och det här räkenskapsåret: exportera året till en SIE-fil (och förra året, när ett kvartal börjar i det), läs hjälpen, avsluta cratchit och kör kommandot i bokföringens mapp. Tryck `-` för att gå tillbaka till Årsflöde.
+<!-- /hjälp -->
+
+Tryck `2` i Årsflöde. Stegen är desamma som för [årsredovisningen](#årsredovisning). Kommandot för kvartalet gäller det senaste kvartalet i räkenskapsåret som har tagit slut; ange ett annat med `--period`, till exempel `--period 2026Q3`.
+
+Med brutet räkenskapsår börjar ett kvartal i förra räkenskapsåret, till exempel april – juni för ett år som börjar 1 maj. En SIE-fil har bara sitt eget års verifikationer, så då behövs förra årets SIE-fil också. cratchit föreslår den senaste exporten av förra året, när den finns:
+
+```text
+     cratchit --sie-to-vat sie_2026-27_allt.se sie_2025-26_allt.se --period 2026Q2
+```
+
+cratchit skapar mappen `<orgnr>_moms_<första dag>_<sista dag>` med momsrapporten och kontrollerna, förslaget till momsverifikation (som du bokför själv), eSKD-filen till Skatteverkets e-tjänst *Lämna momsdeklaration* och en kopia av SIE-filen.
 
 #### Årsredovisning
 

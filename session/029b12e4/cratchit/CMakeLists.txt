@@ -134,6 +134,26 @@ file(READ ${SKV_FIELDS_FILE} skv_hex HEX)
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," skv_bytes "${skv_hex}")
 configure_file(src/core/ink2/skv_text.cpp.in generated/skv_text.cpp @ONLY)
 
+# The VAT return of take 3 (session 60cae9fe), run as cratchit --sie-to-vat: its
+# manual, docs/sie_to_vat.md, and SKV's tables (resources/momsrapport) built into
+# the program as bytes
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS docs/sie_to_vat.md)
+file(READ docs/sie_to_vat.md vat_manual_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," vat_manual_bytes "${vat_manual_hex}")
+configure_file(src/core/skv/vat_return/manual_text.cpp.in generated/vat_manual_text.cpp @ONLY)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS resources/momsrapport/bas_to_momsrapport.csv)
+file(READ resources/momsrapport/bas_to_momsrapport.csv account_boxes_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," account_boxes_bytes "${account_boxes_hex}")
+configure_file(src/core/skv/vat_return/account_boxes.cpp.in generated/vat_account_boxes.cpp @ONLY)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS resources/momsrapport/momsrapport_box_to_eskd.csv)
+file(READ resources/momsrapport/momsrapport_box_to_eskd.csv box_tags_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," box_tags_bytes "${box_tags_hex}")
+configure_file(src/core/skv/vat_return/box_tags.cpp.in generated/vat_box_tags.cpp @ONLY)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS resources/momsrapport/momsrapport.csv)
+file(READ resources/momsrapport/momsrapport.csv box_texts_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," box_texts_bytes "${box_texts_hex}")
+configure_file(src/core/skv/vat_return/box_texts.cpp.in generated/vat_box_texts.cpp @ONLY)
+
 add_library(cratchit_core
   src/core/amount.cpp
   src/core/balances.cpp
@@ -155,6 +175,20 @@ add_library(cratchit_core
   ${CMAKE_CURRENT_BINARY_DIR}/generated/mapping_text.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generated/skv_text.cpp
   src/core/sru.cpp
+  src/core/skv/vat_return/box.cpp
+  src/core/skv/vat_return/box_texts.cpp
+  src/core/skv/vat_return/checks.cpp
+  src/core/skv/vat_return/clearing.cpp
+  src/core/skv/vat_return/cli.cpp
+  src/core/skv/vat_return/document.cpp
+  src/core/skv/vat_return/eskd.cpp
+  src/core/skv/vat_return/report.cpp
+  src/core/skv/vat_return/review.cpp
+  src/core/skv/vat_return/steps.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/vat_manual_text.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/vat_account_boxes.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/vat_box_tags.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/vat_box_texts.cpp
   src/core/ar/arguments.cpp
   src/core/ar/cli.cpp
   src/core/ar/disposition.cpp
