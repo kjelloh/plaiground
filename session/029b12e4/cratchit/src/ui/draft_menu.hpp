@@ -37,9 +37,9 @@ inline constexpr std::size_t same_page_pairs = 6;
 // drafts that may be the same event, or a draft already in the books as a
 // voucher (find_same_events), numbered, the likely ones first, same_page_pairs
 // at a time. A number and Enter opens the pair, named by its number: both in
-// full and what holds them together. Two drafts: 0 Slå ihop makes them one at
-// once (merge_drafts; the pair shown in full is the confirmation); when both
-// have a heading, 0 and 1 choose whose event the one draft gets. A draft and a
+// full and what holds them together. Two drafts: 0 Samma! makes them one at
+// once (merge_drafts; the pair shown in full is the confirmation), with the
+// event of the one that has it (at most one has). A draft and a
 // voucher: 9 Glöm forgets the draft (9 again confirms). Done, back to Samma?,
 // which finds the pairs again and lists what was done; Utkast tells it too.
 // 3 Läs pdf-underlag: the user types the path of a folder, starting in the

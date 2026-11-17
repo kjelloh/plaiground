@@ -4,6 +4,7 @@
 #include "core/path_value.hpp"
 
 #include <algorithm>
+#include <ranges>
 #include <format>
 #include <fstream>
 #include <sstream>
@@ -376,6 +377,22 @@ Amount sum(Postings const& postings) {
   return debit(postings) - credit(postings);
 }
 
+DraftParts parts_of(Draft const& draft) {
+  std::vector<Amount> amounts;
+  auto const without_sign = [](Amount amount) { return amount < 0 ? -amount : amount; };
+  auto const has_event = !draft.event.heading.empty() || draft.event.amount != 0;
+  if (has_event) amounts.push_back(without_sign(draft.event.amount));
+  for (auto const& posting : draft.postings) {
+    if (posting.kind != Posting::Kind::removed) amounts.push_back(without_sign(posting.amount));
+  }
+  if (amounts.size() <= 1) return DraftParts::lone;
+  // An event without amount (a heading alone) says nothing about the amount
+  auto const first = has_event && draft.event.amount == 0 ? 1u : 0u;
+  auto const same = std::ranges::all_of(amounts | std::views::drop(first),
+                                        [&](Amount amount) { return amount == amounts[first]; });
+  return same ? DraftParts::same : DraftParts::more;
+}
+
 DraftStage stage(Draft const& draft) {
   auto const counted = [](Posting const& posting) { return posting.kind != Posting::Kind::removed; };
   if (std::ranges::none_of(draft.postings, counted)) {
@@ -390,7 +407,8 @@ DraftStage stage(Draft const& draft) {
   // The amount has its sign in a draft (minus for an event the other way); debit adds up to it without sign
   auto const amount = draft.event.amount < 0 ? -draft.event.amount : draft.event.amount;
   auto const ready = on_accounts && !draft.event.heading.empty() && amount != 0 && sum(draft.postings) == 0 && debit(draft.postings) == amount;
-  return ready ? DraftStage::ready : DraftStage::unbalanced;
+  if (ready) return DraftStage::ready;
+  return parts_of(draft) == DraftParts::same ? DraftStage::same : DraftStage::unbalanced;
 }
 
 bool FiscalYear::holds(Date date) const {

@@ -795,8 +795,8 @@ struct PairBooks {
 };
 
 // <n>: a pair from Samma?, both in full and what holds them together.
-// Two drafts: 0 Slå ihop makes them one (see merge_drafts); when both have a
-// heading, 0 takes the event of the first and 1 that of the second. A draft and
+// Two drafts: 0 Samma! makes them one (see merge_drafts), with the event of the
+// one that has it (at most one has, see find_same_events). A draft and
 // a voucher: 9 Glöm forgets the draft as already in the books (make_forget_draft_state).
 // Done, back to Samma? (list), which finds the pairs again.
 class PairState : public State {
@@ -843,11 +843,7 @@ public:
   OptionsList options() const override {
     if (done_) return {};
     if (pair_.kind == SameEvent::Kind::booked) return {{U'9', "Glöm"}};
-    if (both_headings()) {
-      return {{U'0', std::format("Slå ihop med händelsen från {}", draft_id(pair_.draft))},
-              {U'1', std::format("Slå ihop med händelsen från {}", draft_id(pair_.other))}};
-    }
-    return {{U'0', "Slå ihop"}};
+    return {{U'0', "Samma!"}};
   }
   OnKeyResult on_key(CodePoint key) override {
     if (done_) return nullptr;
@@ -871,14 +867,10 @@ public:
       return make_forget_draft_state(id, summary, std::move(forget), list_, this);
     }
     auto const& other = books_->drafts[pair_.other];
-    books::Event event;
-    if (key == U'0') {
-      event = both_headings() || !draft.event.heading.empty() || other.event.heading.empty() ? draft.event : other.event;
-    } else if (key == U'1' && both_headings()) {
-      event = other.event;
-    } else {
-      return nullptr;
-    }
+    if (key != U'0') return nullptr;
+    // At most one has an event (find_same_events): the one draft gets it
+    auto const has_event = [](books::Draft const& d) { return !d.event.heading.empty() || d.event.amount != 0; };
+    auto const event = has_event(other) ? other.event : draft.event;
     auto const year_start = parse_iso_date(year_.start);
     if (!year_start) return pyroceph::tui::make_error_state(std::format("Felaktigt räkenskapsår {}", year_.start));
     auto const a = draft_id(pair_.draft);
@@ -901,10 +893,6 @@ public:
   std::string help_topic() const override { return std::string(help_topic::same_pair); }
 
 private:
-  bool both_headings() const {
-    return !books_->drafts[pair_.draft].event.heading.empty() && !books_->drafts[pair_.other].event.heading.empty();
-  }
-
   std::string number_;
   Project project_;
   FiscalYear year_;

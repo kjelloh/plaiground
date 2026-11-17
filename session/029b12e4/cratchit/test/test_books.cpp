@@ -257,17 +257,22 @@ TEST(DraftStage, AnEventWithoutPostingsIsAnEvent) {
 TEST(DraftStage, OnePostingAloneIsAnAccountEvent) {
   Draft draft{{"", 0, date(2026, 10, 20)}, date(2026, 10, 23), {row("1930", -111800)}};
   EXPECT_EQ(stage(draft), DraftStage::account_event);
-  // More than one part: balanced, but no heading
+  // More than one part of the same amount: balanced, but no heading
   draft.postings.push_back(row("6212", 111800));
-  EXPECT_EQ(stage(draft), DraftStage::unbalanced);
-  // One posting with an event: more than one part
+  EXPECT_EQ(stage(draft), DraftStage::same);
+  // One posting with an event of its amount: the same
   draft.postings.pop_back();
-  draft.event.heading = "Telia";
+  draft.event = {"Telia", 111800, date(2026, 10, 20)};
+  EXPECT_EQ(stage(draft), DraftStage::same);
+  // Parts of different amounts, not ready
+  draft.event.amount = 100000;
   EXPECT_EQ(stage(draft), DraftStage::unbalanced);
 }
 
-TEST(DraftStage, AHeadingWithPostingsThatDoNotBalanceIsUnbalanced) {
+TEST(DraftStage, AHeadingWithPostingsThatDoNotBalanceIsNotReady) {
   Draft draft{{"Telia, oktober", 111800, date(2026, 10, 20)}, date(2026, 10, 23), {row("1930", -111800)}};
+  EXPECT_EQ(stage(draft), DraftStage::same);
+  draft.postings.push_back(row("6212", 89440));
   EXPECT_EQ(stage(draft), DraftStage::unbalanced);
 }
 
@@ -283,13 +288,13 @@ TEST(DraftStage, BalancedPostingsThatDoNotAddUpToTheAmountAreUnbalanced) {
   EXPECT_EQ(stage(draft), DraftStage::unbalanced);
   draft.event.amount = 0;
   draft.postings = {row("6212", 0), row("1930", 0)};
-  EXPECT_EQ(stage(draft), DraftStage::unbalanced); // nothing to book
+  EXPECT_EQ(stage(draft), DraftStage::same); // nothing to book
 }
 
 TEST(DraftStage, APostingWithoutAnAccountIsNotReady) {
   Draft draft{{"Telia, oktober", 111800, date(2026, 10, 20)}, date(2026, 10, 23),
               {row("", 111800), row("1930", -111800)}};
-  EXPECT_EQ(stage(draft), DraftStage::unbalanced);
+  EXPECT_EQ(stage(draft), DraftStage::same);
 }
 
 TEST(DraftStage, RemovedPostingsDoNotCount) {

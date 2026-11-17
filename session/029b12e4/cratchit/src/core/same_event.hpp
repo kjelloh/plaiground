@@ -74,16 +74,9 @@ std::expected<std::size_t, std::string> merge_drafts(std::filesystem::path const
                                                      std::size_t a, books::Draft const& expected_a, std::size_t b,
                                                      books::Draft const& expected_b, books::Event const& event);
 
-// What a draft is made of (beslut 2026-11-17). Its parts are its event (when
-// it has a heading or an amount) and each posting (not removed).
-enum class DraftParts {
-  lone, // one part: just the event, or just one posting (an account event); can be forgotten
-  same, // more than one part, all with the same amount without sign (the event's
-        // amount, when it has one, and each posting's); can be split (Inte samma)
-  more, // more than one part with different amounts: more than the same event; neither
-};
-
-DraftParts parts_of(books::Draft const& draft);
+// What a draft is made of: see books::parts_of
+using books::DraftParts;
+using books::parts_of;
 
 // The lone drafts a draft is made of: its event, without postings (when it has
 // a heading or an amount), then each posting (not removed) as a draft of its

@@ -113,3 +113,25 @@ TEST(DraftRows, OnlyAPostingAloneShowsItsSign) {
   EXPECT_TRUE(rows[1].starts_with("  #1            2026-07-21      -2292.00  1630")) << rows[1];
   EXPECT_TRUE(rows[0].starts_with("  #2            2026-07-22          5.00  1930")) << rows[0];
 }
+
+TEST(DraftRows, TheSameEventShowsTheRawTextsOfItsParts) {
+  auto year = year_with({});
+  // A transfer: two account events, no heading, no accounts in the text
+  auto out = row("1630", -229200);
+  out.text = "Utbetalning";
+  auto in = row("1920", 229200);
+  in.text = "Skatt | 5050-1030 SK5567828172";
+  year.place_draft({{"", 0, date(2026, 7, 21)}, date(2026, 11, 18), {out, in}});
+  // An event and its payment: the heading first; a part without text adds nothing
+  auto paid = row("1920", -20468);
+  paid.text = "Kortköp 260910 ANTHROPIC* CLAUDE SU";
+  auto silent = row("1930", 20468);
+  year.place_draft({{"Anthropic Claude", 20468, date(2026, 9, 10)}, date(2026, 11, 18), {paid}});
+  auto const rows = cratchit::ui::draft_rows(&year);
+  ASSERT_EQ(rows.size(), 2u);
+  EXPECT_EQ(rows[1], "  #1            2026-07-21       2292.00  Utbetalning | Skatt | 5050-1030 SK5567828172 (samma)");
+  EXPECT_EQ(rows[0], "  #2            2026-09-10        204.68  Anthropic Claude | Kortköp 260910 ANTHROPIC* CLAUDE SU (samma)");
+  // Other stages as before: the heading alone
+  Draft unbalanced{{"Anthropic Claude", 20468, date(2026, 9, 10)}, date(2026, 11, 18), {paid, silent, row("6540", 100)}};
+  EXPECT_EQ(cratchit::ui::draft_text(unbalanced), "Anthropic Claude (obalanserat)");
+}

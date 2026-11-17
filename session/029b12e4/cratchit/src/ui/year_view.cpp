@@ -57,6 +57,8 @@ std::string_view stage_text(books::DraftStage stage) {
     return "händelse";
   case books::DraftStage::account_event:
     return "kontohändelse";
+  case books::DraftStage::same:
+    return "samma";
   case books::DraftStage::unbalanced:
     return "obalanserat";
   case books::DraftStage::ready:
@@ -66,7 +68,16 @@ std::string_view stage_text(books::DraftStage stage) {
 }
 
 std::string draft_text(books::Draft const& draft) {
+  auto const stage = books::stage(draft);
   std::string text = draft.event.heading;
+  // The same event from several parts: their raw texts, in the best case the text of the
+  // voucher to come (beslut 2026-11-18); worked out each time, never stored
+  if (stage == books::DraftStage::same) {
+    for (auto const& posting : draft.postings) {
+      if (posting.kind == books::Posting::Kind::removed || posting.text.empty()) continue;
+      text += text.empty() ? posting.text : " | " + posting.text;
+    }
+  }
   if (text.empty()) {
     auto const posting = std::ranges::find_if(draft.postings, [](books::Posting const& p) {
       return p.kind != books::Posting::Kind::removed;
@@ -75,8 +86,8 @@ std::string draft_text(books::Draft const& draft) {
       text = posting->text.empty() ? posting->account : std::format("{}  {}", posting->account, posting->text);
     }
   }
-  auto const stage = std::format("({})", stage_text(books::stage(draft)));
-  return text.empty() ? stage : std::format("{} {}", text, stage);
+  auto const shown_stage = std::format("({})", stage_text(stage));
+  return text.empty() ? shown_stage : std::format("{} {}", text, shown_stage);
 }
 
 std::string draft_id(std::size_t index) { return std::format("#{}", index + 1); }

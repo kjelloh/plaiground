@@ -124,11 +124,23 @@ struct Draft {
   bool operator==(Draft const&) const = default;
 };
 
+// What a draft is made of (beslut 2026-11-17). Its parts are its event (when
+// it has a heading or an amount) and each posting (not removed).
+enum class DraftParts {
+  lone, // one part: just the event, or just one posting (an account event); can be forgotten
+  same, // more than one part, all with the same amount without sign (the event's
+        // amount, when it has one, and each posting's); can be split (Inte samma)
+  more, // more than one part with different amounts: more than the same event; neither
+};
+
+DraftParts parts_of(Draft const& draft);
+
 // How far a draft has come, worked out from what it holds
 enum class DraftStage {
   event,         // no postings: just the event (also when its heading is empty)
   account_event, // just one posting, no heading and no amount: e.g. an entry of a statement
-  unbalanced,    // more than one part (the event and postings, or several postings), but not ready
+  same,          // more than one part, all of the same amount (parts_of same), but not ready
+  unbalanced,    // more than one part of different amounts, not ready
   ready,      // can be booked: a heading, an amount, postings each on an account,
               // that balance and whose debit adds up to the amount (without its sign)
 };

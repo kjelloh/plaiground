@@ -172,22 +172,6 @@ books::Draft merged(books::Draft const& a, books::Draft const& b, books::Event e
   return result;
 }
 
-DraftParts parts_of(books::Draft const& draft) {
-  std::vector<Amount> amounts;
-  auto const without_sign = [](Amount amount) { return amount < 0 ? -amount : amount; };
-  auto const has_event = !draft.event.heading.empty() || draft.event.amount != 0;
-  if (has_event) amounts.push_back(without_sign(draft.event.amount));
-  for (auto const& posting : draft.postings) {
-    if (counted(posting)) amounts.push_back(without_sign(posting.amount));
-  }
-  if (amounts.size() <= 1) return DraftParts::lone;
-  // An event without amount (a heading alone) says nothing about the amount
-  auto const first = has_event && draft.event.amount == 0 ? 1u : 0u;
-  auto const same = std::ranges::all_of(amounts | std::views::drop(first),
-                                        [&](Amount amount) { return amount == amounts[first]; });
-  return same ? DraftParts::same : DraftParts::more;
-}
-
 std::vector<books::Draft> split(books::Draft const& draft) {
   std::vector<books::Draft> drafts;
   if (!draft.event.heading.empty() || draft.event.amount != 0) drafts.push_back({draft.event, draft.noted, {}});

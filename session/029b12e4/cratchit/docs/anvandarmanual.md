@@ -337,7 +337,8 @@ Listan visar de tio nyaste raderna. Finns det fler står det sist hur många äl
 |---|---|
 | `händelse` | Utkastet är en händelse, till exempel en faktura eller ett kvitto: datum och kanske text och belopp, men inga konteringar |
 | `kontohändelse` | Utkastet är en kontohändelse, ett belopp in på eller ut från ett konto, till exempel en rad i ett kontoutdrag: en enda kontering, ingen text och inget belopp |
-| `obalanserat` | Utkastet har flera delar, en händelse och konteringar eller flera konteringar, men det kan inte bokföras än: det saknar text eller belopp, eller konteringarna balanserar inte eller stämmer inte med beloppet |
+| `samma` | Utkastet har flera delar med samma belopp (utan tecken), en händelse och kontohändelser eller kontohändelser som balanserar, till exempel efter [Samma?](#samma), men kan inte bokföras än. Det kan delas igen med *Inte samma* |
+| `obalanserat` | Utkastet har flera delar med olika belopp, men det kan inte bokföras än: det saknar text eller belopp, eller konteringarna balanserar inte eller stämmer inte med beloppet |
 | `klart` | Utkastet kan bokföras |
 
 Utkast skapar du i [Utkast](#utkast) under Årsflöde, från ett kontoutdrag eller genom att beskriva händelser.
@@ -391,7 +392,7 @@ Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast>
 
 Saknar året utkast står det `Utkast 2026/27: inga utkast.`
 
-Varje rad visar utkastets nummer, datum, belopp och text, och sist hur långt utkastet har kommit inom parentes (se tabellen i [Räkenskapsår](#räkenskapsår)). Har utkastet ingen rubrik, som ett utkast från ett kontoutdrag, visar raden kontot och konteringens text i stället. Beloppet är händelsens, med tecken (se [Beskriv händelser](#beskriv-händelser)). Saknar händelsen belopp och utkastet har en enda kontering, som ett utkast från ett kontoutdrag, är det konteringens belopp med tecken: minus är ut från kontot. Har utkastet flera konteringar är det vad de flyttar, utan tecken.
+Varje rad visar utkastets nummer, datum, belopp och text, och sist hur långt utkastet har kommit inom parentes (se tabellen i [Räkenskapsår](#räkenskapsår)). Har utkastet ingen rubrik, som ett utkast från ett kontoutdrag, visar raden kontot och konteringens text i stället. Ett utkast med stadiet `samma` visar delarnas texter som de är, rubriken först, med ` | ` emellan och utan kontonummer, till exempel `Anthropic Claude | Kortköp 260910 ANTHROPIC* CLAUDE SU (samma)` eller för en överföring `Utbetalning | Skatt | 5050-1030 SK5567828172 (samma)`. I bästa fall är det redan texten för verifikationen. cratchit räknar fram den av delarna varje gång och sparar den inte; utkastets vy visar rubriken och konteringarnas texter var för sig. Beloppet är händelsens, med tecken (se [Beskriv händelser](#beskriv-händelser)). Saknar händelsen belopp och utkastet har en enda kontering, som ett utkast från ett kontoutdrag, är det konteringens belopp med tecken: minus är ut från kontot. Har utkastet flera konteringar är det vad de flyttar, utan tecken.
 
 Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat från det äldsta. Det är inget fast id: numren ändras när ett utkast med tidigare datum tillkommer eller när ett utkast försvinner ur listan, till exempel när det bokförs.
 
@@ -448,7 +449,7 @@ Glömmer du ett utkast från ett kontoutdrag och läser kontoutdraget igen blir 
 Ett utkast kan bestå av flera delar: en händelse och konteringar, eller flera konteringar. Har alla delarna samma belopp, utan tecken, är det samma händelse sett från olika håll, till exempel en faktura och betalningen på kontoutdraget, eller en överföring med en rad på vart kontoutdrag. Ett sådant utkast kommer oftast från [Samma?](#samma). Där har `9` texten *Inte samma*:
 
 ```text
-Utkast #14 i 2026/27 (obalanserat)
+Utkast #14 i 2026/27 (samma)
   …
   0 Händelse
   1 Konteringar
@@ -456,7 +457,7 @@ Utkast #14 i 2026/27 (obalanserat)
 Cratchit > … > Utkast > #14>
 ```
 
-`9` delar utkastet direkt i en händelse och en kontohändelse för varje kontering, och du kommer tillbaka till Utkast, som säger till exempel `cratchit delade #14 i 2 utkast.` Varje kontohändelse får konteringens datum och minns sin fil och rad, och alla får utkastets noteringsdag. cratchit frågar inte först, eftersom du kan slå ihop dem igen i Samma?. Det som valdes bort när utkasten slogs ihop kommer dock inte tillbaka: hade båda en rubrik är det bara den valda händelsen som finns kvar.
+`9` delar utkastet direkt i en händelse och en kontohändelse för varje kontering, och du kommer tillbaka till Utkast, som säger till exempel `cratchit delade #14 i 2 utkast.` Varje kontohändelse får konteringens datum och minns sin fil och rad, och alla får utkastets noteringsdag. cratchit frågar inte först, eftersom du kan slå ihop dem igen i Samma?.
 
 Ett utkast med flera delar kan inte glömmas direkt. Dela det först och glöm sedan delarna. Har konteringarna olika belopp, som i en färdig kontering av en faktura med moms, är utkastet mer än samma händelse och har inget `9`.
 
@@ -634,7 +635,7 @@ Fyra dagar är en helg och en bankdag på var sida; helgdagar räknas inte. Ett 
 ###### Paret
 
 <!-- hjälp: samma-par -->
-Paret i sin helhet och vad som talar för det. Två utkast: tryck `0` för att slå ihop dem till ett. Har båda en rubrik väljer du med `0` eller `1` vems händelse det ena utkastet får. Ett utkast och en verifikation: tryck `9` för att glömma utkastet, eftersom det redan är bokfört, och `9` igen för att bekräfta. Tryck `-` för att gå tillbaka till Samma?.
+Paret i sin helhet och vad som talar för det. Två utkast: tryck `0`, *Samma!*, för att slå ihop dem till ett. Ett utkast och en verifikation: tryck `9` för att glömma utkastet, eftersom det redan är bokfört, och `9` igen för att bekräfta. Tryck `-` för att gå tillbaka till Samma?.
 <!-- /hjälp -->
 
 ```text
@@ -651,15 +652,15 @@ Utkast #13 (kontohändelse), noterat 2026-11-17
   Konteringar:
     1920  Plusgiro     -1308.75  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1
 Det ena är en händelse och det andra en kontohändelse.
-  0 Slå ihop
+  0 Samma!
 Cratchit > … > Utkast > Samma? > 1>
 ```
 
 När båda utkasten har konteringar säger raden sist att de balanserar tillsammans: ut från ett konto och in på ett annat.
 
-`0` slår ihop utkasten direkt. Paret du ser i sin helhet är bekräftelsen; cratchit frågar inte en gång till. Det ena utkastet får
+`0`, *Samma!*, slår ihop utkasten direkt. Paret du ser i sin helhet är bekräftelsen; cratchit frågar inte en gång till. Det ena utkastet får
 
-* **händelsen** från utkastet med rubrik; har båda en rubrik väljer du med `0` eller `1`, och har inget en rubrik får det det äldres händelse;
+* **händelsen** från det av dem som har en (högst det ena har det);
 * **konteringarna** från båda, men en kontering från samma kontoutdragsrad bara en gång;
 * **noteringsdagen** som är tidigast.
 
@@ -667,7 +668,7 @@ Utkastet går att dela igen med `9`, *Inte samma*, när du öppnar det från Utk
 
 För ett utkast och en verifikation visar cratchit utkastets konteringar som inte finns i verifikationen. De glöms med utkastet. `9` leder till [Glöm](#glöm), som för ett utkast du öppnat. Verifikationen ändras inte.
 
-Efteråt är du tillbaka i Samma?. cratchit söker paren igen, och under listan står vad du gjorde, till exempel `cratchit slog ihop #12 och #13 till #12: Loopia webhotell (obalanserat).` Numren kan ha ändrats, eftersom ett utkast har försvunnit. Utkast säger samma sak när du går tillbaka dit.
+Efteråt är du tillbaka i Samma?. cratchit söker paren igen, och under listan står vad du gjorde, till exempel `cratchit slog ihop #12 och #13 till #12: Loopia webhotell | 5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1 (samma).` Numren kan ha ändrats, eftersom ett utkast har försvunnit. Utkast säger samma sak när du går tillbaka dit.
 
 ##### Läs pdf-underlag
 

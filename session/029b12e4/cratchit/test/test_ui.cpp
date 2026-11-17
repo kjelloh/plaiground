@@ -2005,7 +2005,7 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   navigator.enter(std::move(accepted->next));
   EXPECT_EQ(navigator.current().name(), "1");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::same_pair);
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Slå ihop"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Samma!"}}));
   auto view = navigator.current().view();
   EXPECT_EQ(view.front(), "Samma händelse? 1 dag emellan.");
   EXPECT_EQ(view.back(), "Det ena är en händelse och det andra en kontohändelse.");
@@ -2017,7 +2017,7 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
                   "  1  bokfört  #1            2025-03-02        500.00  Kund betalar (händelse)",
                   "              A1            2025-03-01        500.00  Kundinbetalning",
                   "              1 dag emellan",
-                  "cratchit slog ihop #2 och #3 till #2: Bankavgift (obalanserat)."}));
+                  "cratchit slog ihop #2 och #3 till #2: Bankavgift | AVGIFTER (samma)."}));
   // A draft already booked: 9 and 9 again forget it
   accepted = navigator.current().on_input(U"1");
   ASSERT_TRUE(accepted) << accepted.error();
@@ -2033,14 +2033,14 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   EXPECT_EQ(navigator.current().name(), "Samma?");
   EXPECT_EQ(navigator.current().view(),
             (View{"Inga möjliga par i 2025 (samma belopp, högst 4 dagar emellan).",
-                  "cratchit slog ihop #2 och #3 till #2: Bankavgift (obalanserat).",
+                  "cratchit slog ihop #2 och #3 till #2: Bankavgift | AVGIFTER (samma).",
                   "cratchit glömde utkast #1, redan bokfört som A1: Kund betalar (händelse)."}));
   // Utkast tells what was done
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().view(),
             (View{"Utkast 2025: utkast 1–1 av 1",
-                  "  #1            2025-03-04         10.00  Bankavgift (obalanserat)",
-                  "cratchit slog ihop #2 och #3 till #2: Bankavgift (obalanserat).",
+                  "  #1            2025-03-04         10.00  Bankavgift | AVGIFTER (samma)",
+                  "cratchit slog ihop #2 och #3 till #2: Bankavgift | AVGIFTER (samma).",
                   "cratchit glömde utkast #1, redan bokfört som A1: Kund betalar (händelse)."}));
   // The one draft is made of the same amount: 9 is Inte samma, and splits it at once
   auto opened = navigator.current().on_input(U"#1");
