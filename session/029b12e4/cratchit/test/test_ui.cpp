@@ -1812,11 +1812,24 @@ TEST_F(RootMenuTest, InterpretGoesThroughThePdfFilesOneAtATime) {
   ASSERT_TRUE(navigator.press(U'>'));
   EXPECT_EQ(navigator.current().view(), (View{"Underlag 3 av 3: c_trasig.pdf (inte en pdf)", "Ingen text att visa."}));
   EXPECT_FALSE(navigator.press(U'>')); // the last: nothing
-  // Glöm and Tolka are not there yet; back to the same file
+  // Tolka shows the whole text, without options; back to the same file
   ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().name(), "Inte än (Tolka)");
+  EXPECT_EQ(navigator.current().name(), "Tolka");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Tolka c_trasig.pdf (inte en pdf)", "Ingen text att tolka.", "Att göra en händelse av underlaget finns inte än."}));
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Underlag 3");
+  ASSERT_TRUE(navigator.press(U'<'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::interpret);
+  EXPECT_TRUE(navigator.current().options().empty());
+  auto const whole = navigator.current().view();
+  ASSERT_EQ(whole.size(), 28u); // the heading, the page line, 25 lines and the last line
+  EXPECT_EQ(whole[0], "Tolka b_lang.pdf (text, 1 sida, 26 rader)");
+  EXPECT_EQ(whole[26], "Rad 25");
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'>'));
+  // Glöm is not there yet
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Inte än (Glöm)");
 }

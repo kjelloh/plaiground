@@ -565,7 +565,7 @@ cratchit läser texten med koden från walk_pdf.
 ###### Underlag
 
 <!-- hjälp: underlag -->
-Ett underlag i taget, med dess text. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. `0 Glöm` och `1 Tolka` finns inte än. Tryck `-` för att gå tillbaka till listan.
+Ett underlag i taget, med dess text. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Tryck `1` för att se hela texten och tolka underlaget. `0 Glöm` finns inte än. Tryck `-` för att gå tillbaka till listan.
 <!-- /hjälp -->
 
 Tryck `0 Tolka som händelser` i Pdf-underlag. cratchit visar den första filen:
@@ -588,7 +588,29 @@ Cratchit > … > Pdf-underlag > Underlag 5>
 * Överst står filens nummer i listan, namnet och vad cratchit hittade i den.
 * Texten visas sida för sida, högst 20 rader. Finns det fler står det hur många.
 * En fil utan text visas med sin status och `Ingen text att visa.`, så att du kan gå vidare till nästa.
-* `1 Tolka` ska göra underlaget till ett utkast av en händelse, och `0 Glöm` ska ta bort det ur listan, till exempel när filen inte är ett underlag. Det finns inte än.
+* `0 Glöm` ska ta bort underlaget ur listan, till exempel när filen inte är ett underlag. Det finns inte än.
+
+###### Tolka
+
+<!-- hjälp: tolka -->
+Hela texten i underlaget. Att göra en händelse av underlaget finns inte än. Tryck `-` för att gå tillbaka till underlaget.
+<!-- /hjälp -->
+
+Tryck `1` i Underlag. cratchit visar hela texten, alla sidor, utan val:
+
+```text
+Tolka Faktura50555657.pdf (text, 2 sidor, 117 rader)
+--- sida 1 ---
+Faktura
+Fakturadatum: 2026-08-07
+…
+--- sida 2 ---
+…
+Att göra en händelse av underlaget finns inte än.
+Cratchit > … > Pdf-underlag > Underlag 5 > Tolka> 
+```
+
+Tryck `-` för att gå tillbaka till samma underlag och fortsätta med `<` och `>`. Att skapa ett utkast av underlaget härifrån kommer senare.
 
 #### Bokfört
 

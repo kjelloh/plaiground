@@ -419,17 +419,63 @@ std::vector<std::string> pdf_rows(std::vector<fs::path> const& files, std::vecto
 // The lines a document shows at most, for now (invoices are short)
 constexpr std::size_t document_lines = 20;
 
+// The text of a pdf file as lines with a line before each page; none without text
+std::vector<std::string> document_text(fs::path const& file, PdfStatus const& status) {
+  std::vector<std::string> lines;
+  if (status.kind != PdfStatus::Kind::text) return lines;
+  if (auto const pages = pdf_pages(file)) {
+    for (std::size_t page = 0; page < pages->size(); ++page) {
+      lines.push_back(std::format("--- sida {} ---", page + 1));
+      lines.insert(lines.end(), (*pages)[page].begin(), (*pages)[page].end());
+    }
+  }
+  return lines;
+}
+
+std::string file_name_of(fs::path const& file) {
+  auto const name = file.filename().u8string();
+  return {name.begin(), name.end()};
+}
+
+// Tolka: the whole text of a document, to make an event of it later. No options
+// for now: - goes back to the document.
+class InterpretState : public State {
+public:
+  InterpretState(fs::path file, PdfStatus status, std::vector<std::string> text)
+      : file_(std::move(file)), status_(status), text_(std::move(text)) {}
+  std::string name() const override { return "Tolka"; }
+  View view() const override {
+    View lines{std::format("Tolka {} ({}{})", file_name_of(file_), status_text(status_),
+                           text_.empty() ? std::string() : std::format(", {} rader", text_.size()))};
+    if (text_.empty()) {
+      lines.push_back("Ingen text att tolka.");
+    } else {
+      lines.insert(lines.end(), text_.begin(), text_.end());
+    }
+    lines.push_back("Att göra en händelse av underlaget finns inte än.");
+    return lines;
+  }
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::interpret); }
+
+private:
+  fs::path file_;
+  PdfStatus status_;
+  std::vector<std::string> text_;
+};
+
 // Underlag <n>: the pdf files of a folder one at a time, from the first: its
 // text, page by page, at most document_lines lines. < and > go to the one
-// before and after (in place; at either end they do nothing). 0 Glöm and
-// 1 Tolka lead to Inte än for now.
+// before and after (in place; at either end they do nothing). 1 Tolka shows
+// its whole text (InterpretState); 0 Glöm leads to Inte än for now.
 class DocumentState : public State {
 public:
   DocumentState(std::vector<fs::path> files, std::vector<PdfStatus> statuses)
       : files_(std::move(files)), statuses_(std::move(statuses)), texts_(files_.size()) {}
   std::string name() const override { return std::format("Underlag {}", index_ + 1); }
   View view() const override {
-    View lines{std::format("Underlag {} av {}: {} ({})", index_ + 1, files_.size(), name_of(files_[index_]),
+    View lines{std::format("Underlag {} av {}: {} ({})", index_ + 1, files_.size(), file_name_of(files_[index_]),
                            status_text(statuses_[index_]))};
     auto const& text = text_of(index_);
     if (text.empty()) {
@@ -457,30 +503,15 @@ public:
   }
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'0') return make_design_insufficiency_state("Glöm", "att glömma ett underlag");
-    if (key == U'1') return make_design_insufficiency_state("Tolka", "att tolka ett underlag som en händelse");
+    if (key == U'1') return std::make_unique<InterpretState>(files_[index_], statuses_[index_], text_of(index_));
     return nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::document); }
 
 private:
-  static std::string name_of(fs::path const& file) {
-    auto const name = file.filename().u8string();
-    return {name.begin(), name.end()};
-  }
-  // The text of file i as lines with a line before each page, read once when first shown
+  // The text of file i, read once when first shown
   std::vector<std::string> const& text_of(std::size_t i) const {
-    if (!texts_[i]) {
-      std::vector<std::string> lines;
-      if (statuses_[i].kind == PdfStatus::Kind::text) {
-        if (auto const pages = pdf_pages(files_[i])) {
-          for (std::size_t page = 0; page < pages->size(); ++page) {
-            lines.push_back(std::format("--- sida {} ---", page + 1));
-            lines.insert(lines.end(), (*pages)[page].begin(), (*pages)[page].end());
-          }
-        }
-      }
-      texts_[i] = std::move(lines);
-    }
+    if (!texts_[i]) texts_[i] = document_text(files_[i], statuses_[i]);
     return *texts_[i];
   }
 
