@@ -67,7 +67,7 @@ TEST(YearView, DraftsShowTheirStageAndComeBeforeVouchersOfTheSameDate) {
   year.place_draft({{"", 0, date(2026, 10, 21)}, date(2026, 10, 23), {row("1930", -111800)}});
   year.place_draft({{"Loopia", 130875, date(2026, 9, 28)}, date(2026, 10, 23),
                     {row("6540", 130875), row("1930", -130875)}});
-  EXPECT_EQ(year_view(&year).rows, (Rows{"  kontoutdrag 2026-10-21       1118.00  ",
+  EXPECT_EQ(year_view(&year).rows, (Rows{"  kontoutdrag 2026-10-21      -1118.00  ",
                                          "  händelse    2026-10-20       1118.00  Telia oktober",
                                          "  A1          2026-10-20        100.00  Sale",
                                          "  klart       2026-09-28       1308.75  Loopia"}));
@@ -95,9 +95,21 @@ TEST(DraftRows, NewestFirstWithIdFromOldestAndTextOrPosting) {
   year.place_draft({{"", 0, date(2026, 10, 21)}, date(2026, 10, 23), {fee}});
   year.place_draft({{"", 0, date(2026, 9, 3)}, date(2026, 10, 23), {row("1630", 100)}});
   EXPECT_EQ(cratchit::ui::draft_rows(&year),
-            (Rows{"  #3          2026-10-21          1.85  1920  AVGIFTER NORDEA (kontoutdrag)",
+            (Rows{"  #3          2026-10-21         -1.85  1920  AVGIFTER NORDEA (kontoutdrag)",
                   "  #2          2026-10-20       1118.00  Telia oktober (händelse)",
                   "  #1          2026-09-03          1.00  1630 (kontoutdrag)"}));
   EXPECT_TRUE(cratchit::ui::draft_rows(nullptr).empty());
   EXPECT_EQ(cratchit::ui::draft_id(0), "#1");
+}
+
+TEST(DraftRows, OnlyAPostingAloneShowsItsSign) {
+  auto year = year_with({});
+  // One posting out of the account: its sign shows
+  year.place_draft({{"", 0, date(2026, 7, 21)}, date(2026, 11, 17), {row("1630", -229200)}});
+  // Two postings and no amount of its own: what they move, without sign
+  year.place_draft({{"", 0, date(2026, 7, 22)}, date(2026, 11, 17), {row("1930", -500), row("6570", 300)}});
+  auto const rows = cratchit::ui::draft_rows(&year);
+  ASSERT_EQ(rows.size(), 2u);
+  EXPECT_TRUE(rows[1].starts_with("  #1          2026-07-21      -2292.00  1630")) << rows[1];
+  EXPECT_TRUE(rows[0].starts_with("  #2          2026-07-22          5.00  1930")) << rows[0];
 }

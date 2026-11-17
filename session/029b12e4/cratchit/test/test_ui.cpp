@@ -1590,7 +1590,7 @@ TEST_F(RootMenuTest, ReadStatementMakesDraftsOnTheAccountTyped) {
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(),
             (View{"Utkast 2025: utkast 1–1 av 1",
-                  "  #1          2025-03-05         10.00  1930  AVGIFTER (kontoutdrag)",
+                  "  #1          2025-03-05        -10.00  1930  AVGIFTER (kontoutdrag)",
                   "cratchit skapade 1 utkast från nordea.csv på konto 1930 Bank."}));
   EXPECT_FALSE(navigator.press(U'>')); // one page: nothing
   // The next statement starts in the folder of this one

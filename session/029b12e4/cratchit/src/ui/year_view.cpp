@@ -20,9 +20,19 @@ std::string row_text(std::string_view first, Date date, Amount amount, std::stri
   return std::format("  {:<11} {}  {:>12}  {}", first, format_iso_date(date), format_amount(amount), heading);
 }
 
-// The amount a draft shows: its event's, else what its postings move
+// The amount a draft shows: its event's (without sign, as a voucher's); without one, its
+// only posting's with its sign (in or out of the account, as a statement entry is); else
+// what its postings move (without sign)
 Amount shown_amount(books::Draft const& draft) {
   if (draft.event.amount != 0) return draft.event.amount;
+  books::Posting const* only = nullptr;
+  std::size_t counted = 0;
+  for (auto const& posting : draft.postings) {
+    if (posting.kind == books::Posting::Kind::removed) continue;
+    only = &posting;
+    ++counted;
+  }
+  if (counted == 1) return only->amount;
   return std::max(books::debit(draft.postings), books::credit(draft.postings));
 }
 
