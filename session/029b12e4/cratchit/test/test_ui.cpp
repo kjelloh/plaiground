@@ -1791,32 +1791,40 @@ TEST_F(RootMenuTest, InterpretGoesThroughThePdfFilesOneAtATime) {
   auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(folder / "underlag"));
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.enter(std::move(accepted->next));
+  // The files were read with the list: going through them reads nothing again
+  fs::remove(folder / "underlag" / "a_faktura.pdf");
   ASSERT_TRUE(navigator.press(U'0'));
-  // The first, with its text
+  // The first, with its text framed, a blank line before and after
+  auto const top = std::string(27, '=') + " sida 1 av 1 " + std::string(28, '=');
+  auto const bottom = std::string(68, '=');
   EXPECT_EQ(navigator.current().name(), "Underlag 1");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::document);
-  EXPECT_EQ(navigator.current().view(),
-            (View{"Underlag 1 av 3: a_faktura.pdf (text, 1 sida)", "--- sida 1 ---", "Faktura", "Summa 615,00"}));
+  EXPECT_EQ(navigator.current().view(), (View{"Underlag 1 av 3: a_faktura.pdf (text, 1 sida)", "", top, "Faktura",
+                                              "Summa 615,00", bottom, ""}));
   EXPECT_EQ(navigator.current().options(),
             (OptionsList{{U'<', "Föregående"}, {U'0', "Glöm"}, {U'1', "Tolka"}, {U'>', "Nästa"}}));
   EXPECT_FALSE(navigator.press(U'<')); // the first: nothing
-  // The next, cut after 20 lines
+  // The next, cut after 20 lines, how many more under the frame
   ASSERT_TRUE(navigator.press(U'>'));
   EXPECT_EQ(navigator.current().name(), "Underlag 2");
   auto const view = navigator.current().view();
-  ASSERT_EQ(view.size(), 22u); // the heading, 20 lines and how many more
-  EXPECT_EQ(view[1], "--- sida 1 ---");
-  EXPECT_EQ(view[20], "Rad 19");
-  EXPECT_EQ(view[21], "… 6 rader till");
+  ASSERT_EQ(view.size(), 26u);
+  EXPECT_EQ(view[2], top);
+  EXPECT_EQ(view[3], "Rad 1");
+  EXPECT_EQ(view[22], "Rad 20");
+  EXPECT_EQ(view[23], bottom);
+  EXPECT_EQ(view[24], "… 5 rader till");
+  EXPECT_EQ(view[25], "");
   // A file without text shows its status
   ASSERT_TRUE(navigator.press(U'>'));
-  EXPECT_EQ(navigator.current().view(), (View{"Underlag 3 av 3: c_trasig.pdf (inte en pdf)", "Ingen text att visa."}));
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Underlag 3 av 3: c_trasig.pdf (inte en pdf)", "", "Ingen text att visa.", ""}));
   EXPECT_FALSE(navigator.press(U'>')); // the last: nothing
   // Tolka shows the whole text, without options; back to the same file
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Tolka");
-  EXPECT_EQ(navigator.current().view(),
-            (View{"Tolka c_trasig.pdf (inte en pdf)", "Ingen text att tolka.", "Att göra en händelse av underlaget finns inte än."}));
+  EXPECT_EQ(navigator.current().view(), (View{"Tolka c_trasig.pdf (inte en pdf)", "", "Ingen text att tolka.", "",
+                                              "Att göra en händelse av underlaget finns inte än."}));
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Underlag 3");
   ASSERT_TRUE(navigator.press(U'<'));
@@ -1824,9 +1832,11 @@ TEST_F(RootMenuTest, InterpretGoesThroughThePdfFilesOneAtATime) {
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::interpret);
   EXPECT_TRUE(navigator.current().options().empty());
   auto const whole = navigator.current().view();
-  ASSERT_EQ(whole.size(), 28u); // the heading, the page line, 25 lines and the last line
-  EXPECT_EQ(whole[0], "Tolka b_lang.pdf (text, 1 sida, 26 rader)");
-  EXPECT_EQ(whole[26], "Rad 25");
+  ASSERT_EQ(whole.size(), 31u); // the heading, a blank, the frame around 25 lines, a blank and the last line
+  EXPECT_EQ(whole[0], "Tolka b_lang.pdf (text, 1 sida, 25 rader)");
+  EXPECT_EQ(whole[27], "Rad 25");
+  EXPECT_EQ(whole[28], bottom);
+  EXPECT_EQ(whole[30], "Att göra en händelse av underlaget finns inte än.");
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'>'));
   // Glöm is not there yet

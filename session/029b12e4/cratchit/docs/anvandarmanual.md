@@ -538,7 +538,7 @@ Tab fyller bara i mappar. Pdf-filerna visas som information; du väljer mappen, 
 Mappens pdf-filer, numrerade, med vad cratchit hittar i varje fil: text eller inte. Listan visar 20 filer i taget; tryck `>` för nästa sida och `<` för föregående. Tryck `0` för att gå igenom filerna en i taget och tolka dem som händelser. Tryck `-` för att gå tillbaka och välja en annan mapp.
 <!-- /hjälp -->
 
-När du trycker Enter på en mapp läser cratchit varje pdf-fil i den (inte i undermappar) och visar en rad per fil:
+När du trycker Enter på en mapp läser cratchit varje pdf-fil i den (inte i undermappar). Medan det pågår står det på en rad under sökvägen vilken fil cratchit läser, till exempel `Läser pdf-filer: 3 av 9 (62600010365346.pdf)`, och när det är klart `Läste 9 pdf-filer, 9 med text.` cratchit läser varje fil en gång och kommer ihåg texten tills du väljer en mapp igen. Sedan visar cratchit en rad per fil:
 
 ```text
 Pdf-underlag i /Users/me/Documents/The ITfied AB/M2 Juli-Sep: 9 filer
@@ -572,12 +572,15 @@ Tryck `0 Tolka som händelser` i Pdf-underlag. cratchit visar den första filen:
 
 ```text
 Underlag 5 av 9: Faktura50555657.pdf (text, 2 sidor)
---- sida 1 ---
+
+=========================== sida 1 av 2 ============================
 Faktura
 Fakturadatum: 2026-08-07
 OCR-nummer: 574512366662450
 …
-… 31 rader till
+====================================================================
+… 96 rader till
+
   < Föregående
   0 Glöm
   1 Tolka
@@ -586,7 +589,8 @@ Cratchit > … > Pdf-underlag > Underlag 5>
 ```
 
 * Överst står filens nummer i listan, namnet och vad cratchit hittade i den.
-* Texten visas sida för sida, högst 20 rader. Finns det fler står det hur många.
+* Underlagets text står mellan två dubbla linjer, `====`, med en tom rad före och efter. Den övre linjen säger vilken sida texten börjar på, och en enkel linje, `----`, skiljer sidorna åt.
+* Högst 20 rader visas. Finns det fler står det under linjen hur många.
 * En fil utan text visas med sin status och `Ingen text att visa.`, så att du kan gå vidare till nästa.
 * `0 Glöm` ska ta bort underlaget ur listan, till exempel när filen inte är ett underlag. Det finns inte än.
 
@@ -599,13 +603,16 @@ Hela texten i underlaget. Att göra en händelse av underlaget finns inte än. T
 Tryck `1` i Underlag. cratchit visar hela texten, alla sidor, utan val:
 
 ```text
-Tolka Faktura50555657.pdf (text, 2 sidor, 117 rader)
---- sida 1 ---
+Tolka Faktura50555657.pdf (text, 2 sidor, 115 rader)
+
+=========================== sida 1 av 2 ============================
 Faktura
 Fakturadatum: 2026-08-07
 …
---- sida 2 ---
+--------------------------- sida 2 av 2 ----------------------------
 …
+====================================================================
+
 Att göra en händelse av underlaget finns inte än.
 Cratchit > … > Pdf-underlag > Underlag 5 > Tolka> 
 ```

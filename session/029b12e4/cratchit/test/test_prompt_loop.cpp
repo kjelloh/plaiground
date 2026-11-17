@@ -556,3 +556,16 @@ TEST(PromptLoop, AnOptionThatDoesNothingNowStartsNoInput) {
   auto keys = keys_of({'>', '>'});
   EXPECT_EQ(run(keys, navigator), "\n  > Nästa\nRot> \n");
 }
+
+TEST(PromptLoop, ProgressIsShownOnOneLineBelowTheInput) {
+  int alive = 0;
+  Navigator navigator(test::menu("Rot", {}, [](std::u32string_view) -> pyroceph::tui::InputResult {
+    pyroceph::tui::show_progress("Läser 1 av 2");
+    pyroceph::tui::show_progress("Klart");
+    return pyroceph::tui::Accepted("ok");
+  }, &alive));
+  auto keys = keys_of({'x', '\n'});
+  EXPECT_EQ(run(keys, navigator), "\nRot> \b\b: x\n\rL\xC3\xA4ser 1 av 2\rKlart       \nok\nRot> \n");
+  // Outside the loop it does nothing
+  pyroceph::tui::show_progress("ingenting");
+}

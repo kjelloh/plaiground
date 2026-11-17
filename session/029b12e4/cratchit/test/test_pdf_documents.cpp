@@ -77,3 +77,14 @@ TEST(PdfStatusText, EveryKind) {
   EXPECT_EQ(cratchit::status_text({PdfStatus::Kind::unsupported, 0, 0}), "krypterad (AES), går inte att läsa");
   EXPECT_EQ(cratchit::status_text({PdfStatus::Kind::not_permitted, 0, 0}), "textkopiering spärrad i filen");
 }
+
+TEST_F(PdfDocumentsTest, ReadsStatusAndTextOnce) {
+  auto const file = write("faktura.pdf", pdf("BT /F1 10 Tf 72 700 Td (Faktura 123) Tj ET"));
+  auto const document = cratchit::read_pdf(file);
+  EXPECT_EQ(document.file, file);
+  EXPECT_EQ(document.status.kind, PdfStatus::Kind::text);
+  EXPECT_EQ(document.pages, (std::vector<std::vector<std::string>>{{"Faktura 123"}}));
+  auto const broken = cratchit::read_pdf(write("trasig.pdf", "inte en pdf\n"));
+  EXPECT_EQ(broken.status.kind, PdfStatus::Kind::not_a_pdf);
+  EXPECT_TRUE(broken.pages.empty());
+}

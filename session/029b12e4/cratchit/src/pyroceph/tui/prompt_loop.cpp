@@ -68,6 +68,14 @@ std::size_t code_points_of(std::string const& utf8) {
   return static_cast<std::size_t>(std::ranges::count_if(utf8, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
 }
 
+// Where show_progress writes, while run_prompt_loop gives input to a state
+struct Progress {
+  std::FILE* out = nullptr;
+  bool started = false;   // the progress line is begun, below the input
+  std::size_t width = 0;  // the code points of the longest text on it, to write over
+};
+Progress progress;
+
 // The loop's own state: the navigator, the input and where the terminal's cursor is
 class Loop {
 public:
@@ -249,7 +257,9 @@ private:
   // input is emptied, the state it leads to (if any) becomes current and is
   // shown. When not, the error text is shown and the input is kept.
   void enter() {
+    progress = Progress{out_};
     auto result = navigator_.current().on_input(input_.text());
+    progress = Progress{};
     if (result) {
       input_.clear();
       field_ = false;
@@ -325,6 +335,19 @@ void show(Navigator const& navigator, std::FILE* out) {
   }
   std::print(out, "{}", prompt_of(navigator));
   std::fflush(out);
+}
+
+void show_progress(std::string_view text) {
+  if (!progress.out) return;
+  if (!progress.started) {
+    std::print(progress.out, "\n");
+    progress.started = true;
+  }
+  auto const shown = code_points_of(std::string(text));
+  auto const padding = progress.width > shown ? std::string(progress.width - shown, ' ') : std::string();
+  std::print(progress.out, "\r{}{}", text, padding);
+  progress.width = std::max(progress.width, shown);
+  std::fflush(progress.out);
 }
 
 void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out, TerminalWidth width, HelpSource help) {

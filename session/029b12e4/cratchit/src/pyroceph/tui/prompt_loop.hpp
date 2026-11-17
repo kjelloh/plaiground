@@ -122,4 +122,11 @@ void show(Navigator const& navigator, std::FILE* out);
 void run_prompt_loop(KeyReader& keys, Navigator& navigator, std::FILE* out, TerminalWidth width = {},
                      HelpSource help = {});
 
+// Tells the user what a long task started by the input is doing, while the
+// state's on_input runs, e.g. "Läser pdf-filer: 3 av 9": on a line of its own
+// below the input, each call writing over the last (text is UTF-8, one line).
+// The line stays when the state is then shown. Does nothing unless
+// run_prompt_loop is giving input to a state, e.g. in tests.
+void show_progress(std::string_view text);
+
 } // namespace pyroceph::tui

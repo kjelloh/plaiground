@@ -43,9 +43,10 @@ std::vector<fs::path> pdf_files_in(fs::path const& folder) {
   return files;
 }
 
-PdfStatus pdf_status(fs::path const& file) {
-  auto const extracted = walk_pdf::extract_text(file);
-  PdfStatus status;
+PdfDocument read_pdf(fs::path const& file) {
+  auto extracted = walk_pdf::extract_text(file);
+  PdfDocument document{file, {}, {}};
+  auto& status = document.status;
   if (!extracted) {
     using Kind = walk_pdf::TextError::Kind;
     switch (extracted.error().kind) {
@@ -55,7 +56,7 @@ PdfStatus pdf_status(fs::path const& file) {
     case Kind::unsupported_encryption: status.kind = PdfStatus::Kind::unsupported; break;
     case Kind::not_permitted: status.kind = PdfStatus::Kind::not_permitted; break;
     }
-    return status;
+    return document;
   }
   status.pages = extracted->report.pages;
   if (status.pages == 0) {
@@ -63,17 +64,14 @@ PdfStatus pdf_status(fs::path const& file) {
   } else if (has_text(extracted->text)) {
     status.kind = PdfStatus::Kind::text;
     status.unmapped = extracted->report.unmapped_glyphs;
+    document.pages = std::move(extracted->text.pages);
   } else {
     status.kind = PdfStatus::Kind::no_text;
   }
-  return status;
+  return document;
 }
 
-std::optional<std::vector<std::vector<std::string>>> pdf_pages(fs::path const& file) {
-  auto extracted = walk_pdf::extract_text(file);
-  if (!extracted) return std::nullopt;
-  return std::move(extracted->text.pages);
-}
+PdfStatus pdf_status(fs::path const& file) { return read_pdf(file).status; }
 
 std::string status_text(PdfStatus const& status) {
   switch (status.kind) {

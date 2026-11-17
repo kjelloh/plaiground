@@ -34,12 +34,18 @@ struct PdfStatus {
   std::size_t unmapped = 0; // characters that could not be read (text only)
 };
 
-// Reads file with walk_pdf::extract_text and tells what it holds. Does not log.
-PdfStatus pdf_status(std::filesystem::path const& file);
+// A PDF read once: what walk_pdf finds in it and its text
+struct PdfDocument {
+  std::filesystem::path file;
+  PdfStatus status;
+  std::vector<std::vector<std::string>> pages; // each page's lines (UTF-8); none unless status is text
+};
 
-// The text of a PDF, page by page, each page its lines (UTF-8), as walk_pdf
-// gives it; none when walk_pdf gives no text (see pdf_status for why). Does not log.
-std::optional<std::vector<std::vector<std::string>>> pdf_pages(std::filesystem::path const& file);
+// Reads file with walk_pdf::extract_text, once: its status and its text. Does not log.
+PdfDocument read_pdf(std::filesystem::path const& file);
+
+// The status of file (see read_pdf). Does not log.
+PdfStatus pdf_status(std::filesystem::path const& file);
 
 // The status for the user, e.g. "text, 2 sidor", "text, 1 sida, 4 tecken oläsliga",
 // "ingen text, 1 sida (inskannad?)", "inga sidor hittade", "krypterad med lösenord"
