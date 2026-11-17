@@ -477,7 +477,7 @@ Raden börjar som all annan text: med en tangent som inte är ett val eller en g
 ###### Belopp?
 
 <!-- hjälp: belopp-otydligt -->
-Beloppet kan läsas på flera sätt, eftersom ett mellanslag kan skilja tusental. Tryck siffran för det du menar. Tryck `-` för att gå tillbaka och ändra raden.
+Beloppet kan läsas på flera sätt, eftersom ett mellanslag kan skilja tusental. Tryck siffran för det du menar, så skapar cratchit utkastet. Tryck `-` för att gå tillbaka och ändra raden.
 <!-- /hjälp -->
 
 När tal står före beloppet kan ett mellanslag skilja tusental (`1 118,00`) eller ett tal i rubriken från beloppet (`Faktura 87 500`). cratchit gissar inte utan visar varje läsning:
@@ -491,24 +491,7 @@ Cratchit > … > Beskriv händelse > Belopp?>
 
 Ett ord räknas bara som en grupp tusental när det har exakt tre siffror och inget tecken, och ordet före har högst tre siffror och inga decimaler. Så `Faktura 8700 500` och `Faktura 87 50,00` är tydliga. Skriv beloppet utan mellanslag så slipper du frågan.
 
-###### Bekräfta händelse
-
-<!-- hjälp: bekrafta-handelse -->
-Ovanför prompten står händelsen som cratchit läste den. Tryck `J` för att skapa utkastet, eller `N` för att gå tillbaka och ändra raden.
-<!-- /hjälp -->
-
-```text
-Händelse
-  Rubrik   Telia faktura oktober
-  Belopp   1118.00
-  Datum    2026-10-22
-Skapa utkastet?
-  J Ja
-  N Nej
-Cratchit > … > Beskriv händelse > Bekräfta> 
-```
-
-`J` skapar utkastet och går tillbaka till Utkast. Där står det nya utkastet i listan, med stadiet `händelse` eftersom det inte har några konteringar än, och under listan till exempel `cratchit skapade utkast #13: Telia faktura oktober.` `N` går tillbaka till raden, som står kvar så att du kan ändra den.
+När cratchit har läst raden skapas utkastet direkt, utan att du behöver bekräfta, och du kommer tillbaka till Utkast. Där står det nya utkastet i listan, med stadiet `händelse` eftersom det inte har några konteringar än, och under listan till exempel `cratchit skapade utkast #13: Telia faktura oktober.`
 
 #### Bokfört
 

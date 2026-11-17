@@ -268,75 +268,29 @@ private:
 // Reports what was done to the state the TUI goes back to
 using EventReport = std::function<void(View)>;
 
-// "  Rubrik   Telia faktura oktober" and so on
-View event_lines(books::Event const& event) {
-  return {std::format("  {:<9}{}", "Rubrik", event.heading), std::format("  {:<9}{}", "Belopp", format_amount(event.amount)),
-          std::format("  {:<9}{}", "Datum", format_iso_date(event.date))};
+// Adds the event as a draft of year and tells report so; the error text when it cannot
+std::expected<void, std::string> make_event_draft(Project const& project, FiscalYear const& year,
+                                                  books::Event const& event, EventReport const& report) {
+  auto const start = parse_iso_date(year.start);
+  if (!start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year.start));
+  auto const added = add_event_draft(project.folder, *start, event, today_date());
+  if (!added) {
+    LOG_BUSINESS("Kunde inte skapa utkast av händelsen {} i {}: {}", event.heading, project.folder.string(),
+                 added.error());
+    return std::unexpected(std::format("cratchit kunde inte skapa utkastet: {}", added.error()));
+  }
+  LOG_BUSINESS("Utkast {} skapat i {} ({}): {} {} {}", draft_id(*added), label_of(year), project.folder.string(),
+               format_iso_date(event.date), format_amount(event.amount), event.heading);
+  if (report) report({std::format("cratchit skapade utkast {}: {}.", draft_id(*added), event.heading)});
+  return {};
 }
-
-class ConfirmEventState : public State {
-public:
-  ConfirmEventState(Project project, FiscalYear year, books::Event event, State const* origin, State const* chooser,
-                    EventReport report)
-      : project_(std::move(project)), year_(std::move(year)), event_(std::move(event)), origin_(origin),
-        chooser_(chooser), report_(std::move(report)) {}
-  std::string name() const override { return "Bekräfta"; }
-  View view() const override {
-    View lines{"Händelse"};
-    auto const event = event_lines(event_);
-    lines.insert(lines.end(), event.begin(), event.end());
-    lines.push_back("Skapa utkastet?");
-    return lines;
-  }
-  OptionsList options() const override {
-    if (done_) return {};
-    return {{U'J', "Ja"}, {U'N', "Nej"}};
-  }
-  OnKeyResult on_key(CodePoint key) override {
-    if (done_) return nullptr;
-    if (key == U'N') { // keys match exactly (beslut.md)
-      declined_ = true;
-      return nullptr;
-    }
-    if (key != U'J') return nullptr;
-    auto const start = parse_iso_date(year_.start);
-    if (!start) return pyroceph::tui::make_error_state(std::format("Felaktigt räkenskapsår {}", year_.start));
-    auto const added = add_event_draft(project_.folder, *start, event_, today_date());
-    if (!added) {
-      LOG_BUSINESS("Kunde inte skapa utkast av händelsen {} i {}: {}", event_.heading, project_.folder.string(),
-                   added.error());
-      return pyroceph::tui::make_error_state(std::format("cratchit kunde inte skapa utkastet: {}", added.error()));
-    }
-    LOG_BUSINESS("Utkast {} skapat i {} ({}): {} {} {}", draft_id(*added), label_of(year_), project_.folder.string(),
-                 format_iso_date(event_.date), format_amount(event_.amount), event_.heading);
-    done_ = true;
-    if (report_) report_({std::format("cratchit skapade utkast {}: {}.", draft_id(*added), event_.heading)});
-    return nullptr; // back to Utkast (back_to)
-  }
-  // Done: back to Utkast. N: back to the line, to change it.
-  State const* back_to() const override {
-    if (done_) return origin_;
-    return declined_ ? chooser_ : nullptr;
-  }
-  std::string help_topic() const override { return std::string(help_topic::confirm_event); }
-
-private:
-  Project project_;
-  FiscalYear year_;
-  books::Event event_;
-  State const* origin_;
-  State const* chooser_;
-  EventReport report_;
-  bool done_ = false;
-  bool declined_ = false;
-};
 
 class AmountChoiceState : public State {
 public:
   AmountChoiceState(Project project, FiscalYear year, std::vector<books::Event> readings, State const* origin,
-                    State const* chooser, EventReport report)
+                    EventReport report)
       : project_(std::move(project)), year_(std::move(year)), readings_(std::move(readings)), origin_(origin),
-        chooser_(chooser), report_(std::move(report)) {}
+        report_(std::move(report)) {}
   std::string name() const override { return "Belopp?"; }
   View view() const override { return {"Beloppet är otydligt: mellanslag kan skilja tusental. Vilket menar du?"}; }
   OptionsList options() const override {
@@ -347,12 +301,18 @@ public:
     }
     return result;
   }
+  // A reading makes the draft and goes back to Utkast (back_to)
   OnKeyResult on_key(CodePoint key) override {
-    if (key < U'1' || key > U'9') return nullptr;
+    if (done_ || key < U'1' || key > U'9') return nullptr;
     auto const i = static_cast<std::size_t>(key - U'1');
     if (i >= readings_.size()) return nullptr;
-    return std::make_unique<ConfirmEventState>(project_, year_, readings_[i], origin_, chooser_, report_);
+    if (auto made = make_event_draft(project_, year_, readings_[i], report_); !made) {
+      return pyroceph::tui::make_error_state(made.error());
+    }
+    done_ = true;
+    return nullptr;
   }
+  State const* back_to() const override { return done_ ? origin_ : nullptr; }
   std::string help_topic() const override { return std::string(help_topic::amount_choice); }
 
 private:
@@ -360,8 +320,8 @@ private:
   FiscalYear year_;
   std::vector<books::Event> readings_;
   State const* origin_;
-  State const* chooser_;
   EventReport report_;
+  bool done_ = false;
 };
 
 class DescribeEventState : public State {
@@ -389,10 +349,17 @@ public:
       return std::unexpected(std::format("{} ligger utanför räkenskapsåret {} – {}.", format_iso_date(date),
                                          year_.start, year_.end));
     }
-    if (readings->size() == 1) {
-      return Accepted(std::make_unique<ConfirmEventState>(project_, year_, readings->front(), origin_, this, report_));
+    if (readings->size() > 1) {
+      return Accepted(std::make_unique<AmountChoiceState>(project_, year_, std::move(*readings), origin_, report_));
     }
-    return Accepted(std::make_unique<AmountChoiceState>(project_, year_, std::move(*readings), origin_, this, report_));
+    // A clear line makes the draft at once and goes back to Utkast (back_to): no confirmation (beslut 2026-11-17)
+    if (auto made = make_event_draft(project_, year_, readings->front(), report_); !made) {
+      return std::unexpected(made.error());
+    }
+    done_ = true;
+    return Accepted();
+  }
+  State const* back_to() const override { return done_ ? origin_ : nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::describe_event); }
 
@@ -402,6 +369,7 @@ private:
   State const* origin_;
   EventReport report_;
   std::u32string line_;
+  bool done_ = false;
 };
 
 class DraftState : public State {

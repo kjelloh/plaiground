@@ -1609,22 +1609,26 @@ TEST_F(RootMenuTest, DescribeEventMakesADraftOfTheEvent) {
   EXPECT_EQ(navigator.current().name(), "Belopp?");
   EXPECT_EQ(navigator.current().options(),
             (OptionsList{{U'1', "      118.00  Telia faktura 1"}, {U'2', "     1118.00  Telia faktura"}}));
-  ASSERT_TRUE(navigator.press(U'2'));
-  EXPECT_EQ(navigator.current().name(), "Bekräfta");
-  EXPECT_EQ(navigator.current().view(), (View{"Händelse", "  Rubrik   Telia faktura", "  Belopp   1118.00",
-                                              "  Datum    2025-10-22", "Skapa utkastet?"}));
-  // N goes back to the line, kept
-  ASSERT_TRUE(navigator.press(U'N'));
+  // - goes back to the line, kept
+  ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Beskriv händelse");
   EXPECT_EQ(navigator.current().start_input(), U"Telia faktura 1 118,00 2025-10-22");
-  accepted = navigator.current().on_input(U"Telia faktura 1118,00 2025-10-22");
+  accepted = navigator.current().on_input(U"Telia faktura 1 118,00 2025-10-22");
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.enter(std::move(accepted->next));
-  EXPECT_EQ(navigator.current().name(), "Bekräfta");
-  // J makes the draft and goes back to Utkast, which lists it and tells what was done
-  ASSERT_TRUE(navigator.press(U'J'));
+  // A reading makes the draft at once, without confirmation, and goes back to Utkast, which lists it
+  ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(), (View{"Utkast 2025: utkast 1–1 av 1",
                                               "  #1          2025-10-22       1118.00  Telia faktura (händelse)",
                                               "cratchit skapade utkast #1: Telia faktura."}));
+  // A clear line makes the draft at once too
+  ASSERT_TRUE(navigator.press(U'1'));
+  accepted = navigator.current().on_input(U"Loopia 1308,75 2025-09-28");
+  ASSERT_TRUE(accepted) << accepted.error();
+  EXPECT_FALSE(accepted->next);
+  ASSERT_TRUE(navigator.follow_back_to());
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  EXPECT_EQ(navigator.current().view()[1], "  #2          2025-10-22       1118.00  Telia faktura (händelse)");
+  EXPECT_EQ(navigator.current().view().back(), "cratchit skapade utkast #1: Loopia.");
 }

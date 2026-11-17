@@ -23,10 +23,10 @@ namespace cratchit::ui {
 // 1 Beskriv händelse: the user types the event on one line (see parse_event):
 // an error is shown below the line, which is kept to correct. When the amount
 // can be read in more than one way, "Belopp?" lists the readings to choose
-// with 1, 2, ...; then "Bekräfta" shows heading, amount and date with J Ja and
-// N Nej. J adds the draft (add_event_draft) and goes back to Utkast, which
-// tells "cratchit skapade utkast #13: <heading>."; N goes back to the line,
-// kept to change. Opened with 0 in Årsflöde. No input.
+// with 1, 2, ... (- goes back to the line, kept). A clear line, or a reading
+// chosen, adds the draft (add_event_draft) at once, without confirmation
+// (beslut 2026-11-17), and goes back to Utkast, which tells "cratchit skapade
+// utkast #13: <heading>.". Opened with 0 in Årsflöde. No input.
 std::unique_ptr<pyroceph::tui::State> make_draft_menu(Project project, FiscalYear year);
 
 // Tells the state the TUI goes back to what was done, as lines for its view,
