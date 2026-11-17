@@ -1,6 +1,7 @@
 #include "ui/year_flow_menu.hpp"
 
 #include "ui/booked_menu.hpp"
+#include "ui/command_hint_menu.hpp"
 #include "ui/draft_menu.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
@@ -46,10 +47,10 @@ public:
     case U'1': return make_booked_menu(project_, year_);
     case U'2': return make_design_insufficiency_state("Momsrapport", "momsrapporten");
     case U'3': return make_closing_menu();
-    case U'4': return make_design_insufficiency_state("Årsredovisning", "årsredovisningen");
+    case U'4': return make_annual_report_menu(project_, year_);
     case U'5': return make_design_insufficiency_state("Årsstämma", "årsstämman");
     case U'6': return make_design_insufficiency_state("Rapport till Bolagsverket", "rapporten till Bolagsverket");
-    case U'7': return make_design_insufficiency_state("Deklaration till SKV", "deklarationen till Skatteverket");
+    case U'7': return make_tax_return_menu(project_, year_);
     default: return nullptr;
     }
   }

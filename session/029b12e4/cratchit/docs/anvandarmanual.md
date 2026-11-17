@@ -343,7 +343,7 @@ Utkast skapar du i [Utkast](#utkast) under Årsflöde, från ett kontoutdrag ell
 ### Årsflöde
 
 <!-- hjälp: arsflode -->
-Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `0 Utkast`, `1 Bokfört` och `3 Bokslut` leder vidare, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
+Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `0 Utkast`, `1 Bokfört` och `3 Bokslut` leder vidare, `4 Årsredovisning` och `7 Deklaration till SKV` visar hur du gör dem från kommandoraden, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
 <!-- /hjälp -->
 
 Tryck `0` i räkenskapsåret:
@@ -683,6 +683,51 @@ Cratchit > … > Bokfört > D19 > Konteringar > 1>
 <!-- hjälp: bokslut -->
 Bokslutet avslutar räkenskapsåret. Tryck `0` för avstämning mot kontoutdrag. Den finns inte än. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
+
+#### Årsredovisning
+
+<!-- hjälp: arsredovisning -->
+Årsredovisningen gör cratchit från kommandoraden, med `cratchit --sie-to-ar`. Ovanför prompten står stegen med kommandona för den här bokföringen och det här räkenskapsåret: exportera året till en SIE-fil, läs hjälpen, avsluta cratchit och kör kommandot i bokföringens mapp. Tryck `-` för att gå tillbaka till Årsflöde.
+<!-- /hjälp -->
+
+Tryck `4` i Årsflöde. cratchit visar till exempel:
+
+```text
+Årsredovisningen gör cratchit från kommandoraden, av en SIE-fil för räkenskapsåret.
+
+1. Exportera räkenskapsåret till en SIE-fil: 1 Exportera till SIE > 1 Allt i räkenskapsåret.
+   Senast exporterad: sie_2025-26_allt.se. Exportera igen om du har bokfört något sedan dess.
+
+2. Läs hjälpen, bland annat om --bas-year:
+     cratchit --sie-to-ar --help | less
+
+3. Avsluta cratchit (qq) och kör i bokföringens mapp:
+     cd /Users/me/Documents/itfied
+     cratchit --sie-to-ar sie_2025-26_allt.se
+   cratchit skapar mappen 556782-8172_2025-05-01_2026-04-30 med årsredovisningen, en rapport och en kopia av SIE-filen.
+```
+
+* SIE-filen är den senaste exporten av räkenskapsåret i bokföringens mapp. Finns ingen står det `<SIE-fil>`; exportera året först.
+* Mappen och organisationsnumret är bokföringens. En sökväg med mellanslag står inom citattecken.
+* På Windows står `cd /d` och `| more` i stället för `cd` och `| less`.
+
+#### Deklaration till SKV
+
+<!-- hjälp: deklaration -->
+Inkomstdeklaration 2 (INK2) gör cratchit från kommandoraden, med `cratchit --sie-to-ink2`. Ovanför prompten står stegen med kommandona för den här bokföringen och det här räkenskapsåret, som för årsredovisningen. Kommandot behöver också förra årets deklaration, för underskottet, eller förra årets underskott i kronor. Tryck `-` för att gå tillbaka till Årsflöde.
+<!-- /hjälp -->
+
+Tryck `7` i Årsflöde. Stegen är desamma som för årsredovisningen. Har du gjort förra årets deklaration med `cratchit --sie-to-ink2` i bokföringens mapp, och den fick sina SRU-filer, föreslår cratchit den mappen:
+
+```text
+     cratchit --sie-to-ink2 sie_2025-26_allt.se 556782-8172_2024-05-01_2025-04-30
+```
+
+Annars står det var förra årets `BLANKETTER.SRU` ska anges, och hur du anger förra årets underskott i stället:
+
+```text
+     cratchit --sie-to-ink2 sie_2025-26_allt.se --previous-deficit 0
+```
 
 ### Importera från SIE
 

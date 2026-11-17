@@ -12,6 +12,7 @@
 #include "pyroceph/tui/path_completion.hpp"
 #include "ui/add_project_menu.hpp"
 #include "ui/booked_menu.hpp"
+#include "ui/command_hint_menu.hpp"
 #include "ui/draft_menu.hpp"
 #include "ui/voucher_menu.hpp"
 #include "ui/design_insufficiency.hpp"
@@ -315,9 +316,18 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
                          {U'5', "Årsstämma"},
                          {U'6', "Rapport till Bolagsverket"},
                          {U'7', "Deklaration till SKV"}}));
-  // Every step but Utkast, Bokfört and Bokslut is not there yet
+  // Årsredovisning and Deklaration till SKV tell how to make them from the command line
+  ASSERT_TRUE(navigator.press(U'4'));
+  EXPECT_EQ(navigator.current().name(), "Årsredovisning");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::annual_report);
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'7'));
+  EXPECT_EQ(navigator.current().name(), "Deklaration till SKV");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::tax_return);
+  ASSERT_TRUE(navigator.back());
+  // Momsrapport, Årsstämma and Rapport till Bolagsverket are not there yet
   for (auto const& [key, caption] : navigator.current().options()) {
-    if (key == U'0' || key == U'1' || key == U'3') continue;
+    if (key == U'0' || key == U'1' || key == U'3' || key == U'4' || key == U'7') continue;
     ASSERT_TRUE(navigator.press(key));
     EXPECT_EQ(navigator.current().name(), "Inte än (" + caption + ")");
     ASSERT_TRUE(navigator.back());
@@ -1679,4 +1689,37 @@ TEST_F(RootMenuTest, ReadPdfChoosesAFolderShowingItsPdfFiles) {
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().start_input(), underlag);
+}
+
+TEST_F(RootMenuTest, CommandHintsUseTheProjectsExportAndLastYearsReturn) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#RAR -1 20240101 20241231\r\n#KONTO 1930 \"Bank\"\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  cratchit::FiscalYear const year{"2025-01-01", "2025-12-31"};
+  // No export yet, and no return of last year
+  auto facts = cratchit::ui::command_hint_facts(*project, year);
+  EXPECT_EQ(facts.orgnr, "556000-0001");
+  EXPECT_FALSE(facts.sie);
+  EXPECT_EQ(facts.output_folder, "556000-0001_2025-01-01_2025-12-31");
+  EXPECT_FALSE(facts.last_return_folder);
+  auto lines = cratchit::ui::tax_return_hint(facts);
+  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-ink2 <SIE-fil> --previous-deficit 0"), lines.end());
+  // Two exports: the latest counts. Last year's return folder with its BLANKETTER.SRU is found.
+  std::ofstream(project->folder / "sie_2025_allt.se") << "x";
+  std::ofstream(project->folder / "sie_2025_allt_2.se") << "x";
+  fs::create_directories(project->folder / "556000-0001_2024-01-01_2024-12-31");
+  std::ofstream(project->folder / "556000-0001_2024-01-01_2024-12-31" / "BLANKETTER.SRU") << "x";
+  facts = cratchit::ui::command_hint_facts(*project, year);
+  ASSERT_TRUE(facts.sie);
+  EXPECT_EQ(facts.sie->filename(), "sie_2025_allt_2.se");
+  EXPECT_EQ(facts.last_return_folder, "556000-0001_2024-01-01_2024-12-31");
+  lines = cratchit::ui::annual_report_hint(facts);
+  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-ar sie_2025_allt_2.se"), lines.end());
+  lines = cratchit::ui::tax_return_hint(facts);
+  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-ink2 sie_2025_allt_2.se 556000-0001_2024-01-01_2024-12-31"),
+            lines.end());
 }
