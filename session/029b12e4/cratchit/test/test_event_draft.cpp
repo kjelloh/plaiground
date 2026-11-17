@@ -78,9 +78,14 @@ TEST(ParseEvent, Errors) {
   EXPECT_EQ(error_of("Telia 0,00 2026-10-20"), "Beloppet är noll.");
   EXPECT_EQ(error_of("Telia 1118,005 2026-10-20"), "1118,005 är inget belopp (högst två decimaler).");
   EXPECT_EQ(error_of(""), "Inget belopp. Skriv det med siffror, till exempel 1118,00.");
-  // No amount below zero for now
-  EXPECT_EQ(error_of("Kreditfaktura -500 2026-10-20"), "Skriv beloppet utan minustecken.");
-  EXPECT_EQ(error_of("Utbetalning -1 118,00 2026-10-20"), "Skriv beloppet utan minustecken.");
+}
+
+TEST(ParseEvent, AnAmountBelowZeroKeepsItsSign) {
+  // Minus for an event the other way than usual, e.g. a credit note (beslut 2026-11-17)
+  EXPECT_EQ(event("Telia kreditfaktura -1245,00 2026-10-20"), (Event{"Telia kreditfaktura", -124500, oct20}));
+  // Groups of thousands after a minus are unclear as after any number
+  EXPECT_EQ(readings("Utbetalning -1 118,00 2026-10-20"),
+            (std::vector<Event>{{"Utbetalning -1", 11800, oct20}, {"Utbetalning", -111800, oct20}}));
 }
 
 TEST(AddEventDraft, AddsTheEventAsADraftInsideTheYear) {
@@ -144,4 +149,18 @@ TEST(ForgetDraft, ForgetsTheDraftSeenOnly) {
   ASSERT_EQ(after->years.front().drafts.size(), 1u);
   EXPECT_EQ(after->years.front().drafts[0].event.heading, "Telia");
   fs::remove_all(folder);
+}
+
+TEST(DraftStage, ACreditNoteIsReadyWhenDebitAddsUpToItsAmountWithoutSign) {
+  books::Draft draft{{"Telia kreditfaktura", -124500, oct20}, oct20, {}};
+  auto posting = [](std::string account, Amount amount) {
+    books::Posting p;
+    p.account = std::move(account);
+    p.amount = amount;
+    return p;
+  };
+  draft.postings = {posting("2440", 124500), posting("6212", -99600), posting("2641", -24900)};
+  EXPECT_EQ(books::stage(draft), books::DraftStage::ready);
+  draft.postings[0].amount = 124400;
+  EXPECT_EQ(books::stage(draft), books::DraftStage::unbalanced);
 }

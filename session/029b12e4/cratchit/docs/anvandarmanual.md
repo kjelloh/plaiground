@@ -527,7 +527,7 @@ Du kan alltså läsa samma fil flera gånger, och filer som överlappar varandra
 ##### Beskriv händelser
 
 <!-- hjälp: beskriv-handelse -->
-Skriv händelsen på en rad: rubrik, belopp och datum, i vilken ordning som helst, till exempel `Telia faktura oktober 1118,00 2026-10-22`, och tryck Enter. Datumet måste finnas och ligga i räkenskapsåret. Skriv beloppet utan minustecken. cratchit skapar utkastet och du står kvar, med en tom rad för nästa händelse; det du skapat står under *Skapade nu*. Är något fel säger cratchit vad, och raden står kvar så att du kan rätta den. Tryck `-` på en tom rad för att gå tillbaka till Utkast.
+Skriv händelsen på en rad: rubrik, belopp och datum, i vilken ordning som helst, till exempel `Telia faktura oktober 1118,00 2026-10-22`, och tryck Enter. Datumet måste finnas och ligga i räkenskapsåret. Ett minustecken betyder att händelsen går åt andra hållet än vanligt, till exempel en kreditfaktura eller en återbetalning. cratchit skapar utkastet och du står kvar, med en tom rad för nästa händelse; det du skapat står under *Skapade nu*. Är något fel säger cratchit vad, och raden står kvar så att du kan rätta den. Tryck `-` på en tom rad för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 En händelse är det som hände, när och för hur mycket, till exempel en faktura eller ett kvitto. Tryck `0` i Utkast och skriv den på en rad. Du kan skriva den ena händelsen efter den andra utan att lämna platsen:
@@ -542,7 +542,8 @@ Cratchit > … > Utkast > Beskriv händelser: Telia faktura oktober 1118,00 2026
 Så läser cratchit raden:
 
 * **Datumet** är det sista ordet som är ett datum, skrivet `2026-10-22` eller `20261022`. Det måste finnas; cratchit tar inte dagens datum av sig själv.
-* **Beloppet** är det sista andra talet: siffror, och decimalkomma eller decimalpunkt med högst två decimaler (`1118`, `1118,5`, `1118.00`). Ett hårt mellanslag inne i talet, som en bank kan skriva, räknas inte. Minustecken går inte än.
+* **Beloppet** är det sista andra talet: siffror, och decimalkomma eller decimalpunkt med högst två decimaler (`1118`, `1118,5`, `1118.00`). Ett hårt mellanslag inne i talet, som en bank kan skriva, räknas inte.
+* **Minustecken** (`-1245,00`) betyder att händelsen går åt andra hållet än vanligt: en kreditfaktura, en återbetalning eller en kreditering. Det betyder inte "pengar ut"; en vanlig leverantörsfaktura är positiv. Utkastet behåller tecknet, och listan visar det. När utkastet bokförs får verifikationen beloppet utan tecken, som alla verifikationer; tecknet säger då att konteringarna går åt andra hållet än för en vanlig sådan händelse.
 * **Rubriken** är resten, i den ordning du skrev den. Tal i rubriken står kvar så länge de inte står sist: i `Faktura 87 Payex 500 2026-10-22` är rubriken `Faktura 87 Payex`.
 
 Raden börjar som all annan text: med en tangent som inte är ett val eller en gemensam tangent. Börjar rubriken med litet `q` leder det till [Avsluta](#avsluta); tryck `N` och skriv `Q` i stället, eller börja med något annat ord.

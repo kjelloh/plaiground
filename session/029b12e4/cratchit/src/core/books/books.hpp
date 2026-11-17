@@ -114,7 +114,10 @@ struct Voucher {
 // (e.g. an invoice or a receipt noted), just postings (e.g. from statement
 // entries), or both. It stores no kind; see stage.
 struct Draft {
-  Event event; // the amount without sign, as in a voucher; heading and amount may be empty
+  // The amount with its sign (beslut 2026-11-17): minus for an event that goes the other
+  // way than usual, e.g. a credit note or a refund, so that a template can be turned to
+  // fit it; the voucher it is booked as has the amount without sign. Heading and amount may be empty.
+  Event event;
   Date noted;  // the day it was noted
   Postings postings{}; // each with its date and text
 
@@ -127,7 +130,7 @@ enum class DraftStage {
   statement,  // postings but no heading, e.g. from statement entries
   unbalanced, // heading and postings, but not ready (see ready)
   ready,      // can be booked: a heading, an amount, postings each on an account,
-              // that balance and whose debit adds up to the amount
+              // that balance and whose debit adds up to the amount (without its sign)
 };
 
 // The stage of draft (removed postings do not count)

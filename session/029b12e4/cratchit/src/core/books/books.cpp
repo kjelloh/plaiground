@@ -387,8 +387,9 @@ DraftStage stage(Draft const& draft) {
   auto const on_accounts = std::ranges::all_of(draft.postings, [&](Posting const& posting) {
     return !counted(posting) || !posting.account.empty();
   });
-  auto const ready = on_accounts && draft.event.amount != 0 && sum(draft.postings) == 0 &&
-                     debit(draft.postings) == draft.event.amount;
+  // The amount has its sign in a draft (minus for an event the other way); debit adds up to it without sign
+  auto const amount = draft.event.amount < 0 ? -draft.event.amount : draft.event.amount;
+  auto const ready = on_accounts && amount != 0 && sum(draft.postings) == 0 && debit(draft.postings) == amount;
   return ready ? DraftStage::ready : DraftStage::unbalanced;
 }
 

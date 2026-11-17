@@ -44,7 +44,7 @@ std::string draft_id(std::size_t index);
 std::string draft_text(books::Draft const& draft);
 
 // The year's drafts, one line each as voucher_rows, newest first. A draft's
-// amount is its event's (without sign); a draft without one shows its only
+// amount is its event's, with its sign; a draft without one shows its only
 // posting's amount with its sign (e.g. -2292.00 out of the account), or what
 // its postings move when it has several. (the drafts
 // are kept oldest first, ties in the order noted), each with its draft_id. None for nullptr.

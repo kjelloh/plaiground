@@ -22,9 +22,10 @@ namespace cratchit {
 // typed, is the heading. Number words just before the amount may be groups of
 // thousands (87 500 may be 500 or 87500), so each reading is a choice: the last
 // word alone first, then with one more word before it, and so on; a reading
-// without heading is left out. A single choice is clear. An amount below zero
-// is refused for now (beslut 2026-11-17). Error text says what is missing or
-// wrong. Does not log.
+// without heading is left out. A single choice is clear. The amount may be
+// below zero: a draft's amount keeps its sign, minus for an event that goes the
+// other way than usual (a credit note, a refund; beslut 2026-11-17). Error
+// text says what is missing or wrong. Does not log.
 std::expected<std::vector<books::Event>, std::string> parse_event(std::string_view text);
 
 // Adds the event as a draft of the fiscal year starting on year_start, noted

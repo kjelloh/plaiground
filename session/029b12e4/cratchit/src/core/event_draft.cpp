@@ -130,9 +130,6 @@ std::expected<std::vector<books::Event>, std::string> parse_event(std::string_vi
       break;
     }
   }
-  if (std::ranges::any_of(choices, [](books::Event const& e) { return e.amount < 0; })) {
-    return std::unexpected("Skriv beloppet utan minustecken.");
-  }
   return choices;
 }
 
