@@ -369,7 +369,7 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att beskriva händelser, en i taget, och skapa ett utkast av var och en, `1` för att se vilka utkast som kan vara samma händelse, `2` för att läsa ett kontoutdrag och skapa utkast av dess rader, eller `3` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att beskriva händelser, en i taget, och skapa ett utkast av var och en, `1` för att se vilka utkast som kan vara samma händelse, `2` för att fullborda utkasten ett i taget, `3` för att läsa ett kontoutdrag och skapa utkast av dess rader, eller `4` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
@@ -383,8 +383,9 @@ Utkast 2026/27: utkast 1–12 av 12
   #1            2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontohändelse)
   0 Beskriv händelser
   1 Samma?
-  2 Läs kontoutdrag
-  3 Läs pdf-underlag
+  2 Fullborda utkast
+  3 Läs kontoutdrag
+  4 Läs pdf-underlag
   < Föregående sida
   > Nästa sida
 Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast> 
@@ -467,6 +468,31 @@ Ett utkast med flera delar kan inte glömmas direkt. Dela det först och glöm s
 Händelsen i utkastet: datum, rubrik och belopp. I ett utkast ska allt gå att ändra, men det finns inte än: valen leder till *Inte än*. Tryck `-` för att gå tillbaka till utkastet.
 <!-- /hjälp -->
 
+##### Fullborda utkast
+
+<!-- hjälp: fullborda -->
+Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Tryck `0` för att fullborda utkastet, eller för att bokföra det när det är klart. Det finns inte än. Tryck `-` för att gå tillbaka till Utkast.
+<!-- /hjälp -->
+
+Att fullborda ett utkast är att göra det klart att bokföra: välja en mall, fylla i det som saknas och få konteringarna att balansera. Att bokföra är sista steget. Tryck `2` i Utkast:
+
+```text
+Utkast #1 av 18 i 2026/27 (kontohändelse)
+  Noterad:        2026-11-17
+Händelse:
+  Datum:          2026-07-03
+  Rubrik:
+  Belopp:
+Konteringar:
+  1920  PlusGiro        -3.70  AVGIFTER NORDEA
+  0 Fullborda
+  < Föregående
+  > Nästa
+Cratchit > … > Utkast > Fullborda #1>
+```
+
+Verifikationer bokförs i den ordning händelserna inträffade, så cratchit börjar med det äldsta utkastet. Prompten har utkastets nummer, och överst står hur många utkast det finns. Valet heter `0 Fullborda` så länge utkastet inte är klart och `0 Bokför` när det är det. Båda leder till *Inte än* för nu. Saknar året utkast står det `Inga utkast att fullborda i 2026/27.`
+
 ##### Läs kontoutdrag
 
 <!-- hjälp: las-kontoutdrag -->
@@ -475,7 +501,7 @@ Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och fil
 
 Ett kontoutdrag är en fil från banken eller från Skatteverket med raderna för ett konto, till exempel Nordeas CSV-fil eller Skatteverkets *Bokförda transaktioner*. Varje rad i kontoutdraget blir ett utkast med en enda kontering på det BAS-konto du anger. Utkastet har ingen rubrik än; det fyller du i senare.
 
-Tryck `2` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka, och nästa gång du läser ett kontoutdrag eller pdf-underlag, börjar sökvägen i mappen du valde senast. Kontoutdrag och underlag för en period ligger ofta i samma mapp.
+Tryck `3` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka, och nästa gång du läser ett kontoutdrag eller pdf-underlag, börjar sökvägen i mappen du valde senast. Kontoutdrag och underlag för en period ligger ofta i samma mapp.
 
 ```text
 Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och filer.
@@ -676,7 +702,7 @@ Efteråt är du tillbaka i Samma?. cratchit söker paren igen, och under listan 
 Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar vilka pdf-filer mappen har. Väljer du en fil, eller en mapp som inte finns, säger cratchit det och sökvägen står kvar. En mapp leder till *Pdf-underlag*, en lista över mappens pdf-filer. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
-Underlag är dokumenten som visar en affärshändelse, till exempel fakturor och kvitton som pdf. Tryck `3` i Utkast och välj mappen där de ligger. Sökvägen börjar i bokföringens mapp, eller i mappen du valde senast för kontoutdrag eller underlag.
+Underlag är dokumenten som visar en affärshändelse, till exempel fakturor och kvitton som pdf. Tryck `4` i Utkast och välj mappen där de ligger. Sökvägen börjar i bokföringens mapp, eller i mappen du valde senast för kontoutdrag eller underlag.
 
 ```text
 Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar mappens pdf-filer.

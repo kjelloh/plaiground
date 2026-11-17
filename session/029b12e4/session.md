@@ -132,6 +132,13 @@ Jag lät i alla fall Claude göra en ansträngning att läsa 'mer text'.
 
 Nåja, med Claude är detta ändå en kul liten undersökning som vi kan ha i cratchit som en framtida tråd att ta upp för något?
 
+Nu köer jag ett kvälls-rally!
+
+* Jag har nu lagt till utkast-funktioner för att välja, slå samman ('samma') och dela upp igen ('inte samma')
+* Och jag håller på med 'fullborda utkast' som en bläddrings-funktion.
+
+Ja, jag tror det är rätt spår? Det känns bra i alla fall.
+
 ## 20261116
 
 Nu är det väl ändå dags att till slut få till ett sätt att redigera och skapa verifikationer till bokföringen?

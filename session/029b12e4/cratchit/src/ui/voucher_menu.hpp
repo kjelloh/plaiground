@@ -56,6 +56,11 @@ std::unique_ptr<pyroceph::tui::State> make_draft_view(books::Draft const& draft,
                                                       std::string summary, pyroceph::tui::State const* origin,
                                                       ForgetDraft forget, ForgetDraft split);
 
+// The lines of a draft's view (as make_draft_view shows it, without options),
+// with id in its heading, e.g. "Utkast #1 av 18 i 2026/27 (kontohändelse)"
+pyroceph::tui::View draft_view_lines(books::Draft const& draft, std::string const& id, std::string year_label,
+                                     std::vector<books::Account> accounts);
+
 // "Glöm" for the draft id (e.g. "#3"), as from a draft's view: it shows summary
 // (one line about the draft), says the draft cannot be had back, and offers
 // 9 Glöm and N Nej. 9 calls forget; done, the TUI goes back to forgotten_to;

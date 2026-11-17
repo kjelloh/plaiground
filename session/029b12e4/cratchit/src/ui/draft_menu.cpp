@@ -999,6 +999,74 @@ private:
   View done_; // what was done here, until the user leaves
 };
 
+// Fullborda #<n>: the drafts one at a time, from the oldest (date order), each as
+// its view shows it, with "#n av N" in the heading. < and > go to the one before
+// and after (in place; at either end they do nothing). 0 Fullborda (Bokför for a
+// draft that is ready) leads to Inte än for now: it is to start choosing a
+// template or editing until it balances. The drafts are read again when the user
+// comes back, at the same place.
+class CompleteState : public State {
+public:
+  CompleteState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) { read(); }
+  std::string name() const override {
+    return drafts_.empty() ? std::string("Fullborda") : "Fullborda " + draft_id(index_);
+  }
+  View view() const override {
+    if (!error_.empty()) return {std::format("cratchit kunde inte läsa bokföringen: {}", error_)};
+    if (drafts_.empty()) return {std::format("Inga utkast att fullborda i {}.", label_of(year_))};
+    return draft_view_lines(drafts_[index_], std::format("{} av {}", draft_id(index_), drafts_.size()),
+                            label_of(year_), accounts_);
+  }
+  OptionsList options() const override {
+    if (drafts_.empty()) return {};
+    auto const ready = books::stage(drafts_[index_]) == books::DraftStage::ready;
+    return {{U'0', ready ? "Bokför" : "Fullborda"}, {back_key, "Föregående"}, {forward_key, "Nästa"}};
+  }
+  bool on_key_in_place(CodePoint key) override {
+    if (key == back_key && index_ > 0) {
+      --index_;
+      return true;
+    }
+    if (key == forward_key && index_ + 1 < drafts_.size()) {
+      ++index_;
+      return true;
+    }
+    return false; // at either end: nothing
+  }
+  OnKeyResult on_key(CodePoint key) override {
+    if (key != U'0' || drafts_.empty()) return nullptr;
+    if (books::stage(drafts_[index_]) == books::DraftStage::ready) {
+      return make_design_insufficiency_state("Bokför", "att bokföra ett utkast som är klart");
+    }
+    return make_design_insufficiency_state("Fullborda", "att fullborda ett utkast med en mall eller genom att ändra det");
+  }
+  void on_return() override { read(); }
+  std::string help_topic() const override { return std::string(help_topic::complete); }
+
+private:
+  void read() {
+    error_.clear();
+    drafts_.clear();
+    auto const books = books::read_books(project_.folder);
+    if (!books) {
+      LOG_BUSINESS("Kunde inte läsa bokföringen i {}: {}", project_.folder.string(), books.error());
+      error_ = books.error();
+      return;
+    }
+    accounts_ = books->accounts;
+    auto const start = parse_iso_date(year_.start);
+    if (auto const* year = start ? books->year_starting(*start) : nullptr; year != nullptr) drafts_ = year->drafts;
+    if (index_ >= drafts_.size()) index_ = drafts_.empty() ? 0 : drafts_.size() - 1;
+  }
+
+  Project project_;
+  FiscalYear year_;
+  std::vector<books::Draft> drafts_;
+  std::vector<books::Account> accounts_;
+  std::size_t index_ = 0;
+  std::string error_;
+};
+
 class DraftState : public State {
 public:
   DraftState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) { read(); }
@@ -1021,8 +1089,9 @@ public:
   OptionsList options() const override {
     return {{U'0', "Beskriv händelser"},
             {U'1', "Samma?"},
-            {U'2', "Läs kontoutdrag"},
-            {U'3', "Läs pdf-underlag"},
+            {U'2', "Fullborda utkast"},
+            {U'3', "Läs kontoutdrag"},
+            {U'4', "Läs pdf-underlag"},
             {back_key, "Föregående sida"},
             {forward_key, "Nästa sida"}};
   }
@@ -1037,7 +1106,11 @@ public:
       report_.clear();
       return std::make_unique<SameState>(project_, year_, [this](std::string line) { report_.push_back(std::move(line)); });
     }
-    if (key == U'3') {
+    if (key == U'2') {
+      report_.clear();
+      return std::make_unique<CompleteState>(project_, year_);
+    }
+    if (key == U'4') {
       report_.clear();
       return std::make_unique<ReadPdfState>(project_, year_, folder_,
                                             [this](fs::path const& folder) { folder_ = folder; });
@@ -1046,7 +1119,7 @@ public:
       report_.clear();
       return std::make_unique<DescribeEventState>(project_, year_, [this](View text) { report_ = std::move(text); });
     }
-    if (key != U'2') return nullptr;
+    if (key != U'3') return nullptr;
     report_.clear();
     return make_read_statement_menu(
         project_, year_, this,

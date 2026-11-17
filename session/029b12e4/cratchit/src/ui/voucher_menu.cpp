@@ -320,22 +320,36 @@ private:
   bool declined_ = false;
 };
 
+// The whole voucher or draft: heading, how it is booked (or noted), event and postings
+View view_of(Shown const& shown, std::string const& id) {
+  View lines{shown.draft ? std::format("Utkast {} i {} ({})", id, shown.year_label, shown.stage)
+                         : "Verifikation " + id};
+  auto const booking = shown.booking_rows();
+  lines.insert(lines.end(), booking.begin(), booking.end());
+  lines.push_back("Händelse:");
+  auto const event = shown.event_rows();
+  lines.insert(lines.end(), event.begin(), event.end());
+  lines.push_back("Konteringar:");
+  for (auto const& line : shown.posting_lines()) lines.push_back("  " + line);
+  return lines;
+}
+
+Shown draft_shown(books::Draft const& draft, std::string id, std::string year_label,
+                  std::vector<books::Account> accounts) {
+  Shown shown{books::Voucher{"", "", draft.event, std::nullopt, "", draft.postings}, std::move(accounts), "", ""};
+  shown.draft = true;
+  shown.draft_id = std::move(id);
+  shown.year_label = std::move(year_label);
+  shown.stage = std::string(stage_text(books::stage(draft)));
+  shown.noted = draft.noted;
+  return shown;
+}
+
 class VoucherState : public State {
 public:
   explicit VoucherState(std::shared_ptr<Shown const> shown) : shown_(std::move(shown)) {}
   std::string name() const override { return shown_->id(); }
-  View view() const override {
-    View lines{shown_->draft ? std::format("Utkast {} i {} ({})", name(), shown_->year_label, shown_->stage)
-                             : "Verifikation " + name()};
-    auto const booking = shown_->booking_rows();
-    lines.insert(lines.end(), booking.begin(), booking.end());
-    lines.push_back("Händelse:");
-    auto const event = shown_->event_rows();
-    lines.insert(lines.end(), event.begin(), event.end());
-    lines.push_back("Konteringar:");
-    for (auto const& line : shown_->posting_lines()) lines.push_back("  " + line);
-    return lines;
-  }
+  View view() const override { return view_of(*shown_, name()); }
   OptionsList options() const override {
     if (split_) return {};
     OptionsList options{{U'0', "Händelse"}, {U'1', "Konteringar"}};
@@ -371,6 +385,11 @@ private:
 
 } // namespace
 
+View draft_view_lines(books::Draft const& draft, std::string const& id, std::string year_label,
+                      std::vector<books::Account> accounts) {
+  return view_of(draft_shown(draft, id, std::move(year_label), std::move(accounts)), id);
+}
+
 std::unique_ptr<State> make_forget_draft_state(std::string id, std::string summary, ForgetDraft forget,
                                                State const* forgotten_to, State const* declined_to) {
   return std::make_unique<ForgetState>(std::move(id), std::move(summary), std::move(forget), forgotten_to, declined_to);
@@ -385,12 +404,7 @@ std::unique_ptr<State> make_voucher_menu(books::Voucher voucher, std::vector<boo
 std::unique_ptr<State> make_draft_view(books::Draft const& draft, std::string id, std::string year_label,
                                        std::vector<books::Account> accounts, std::string summary, State const* origin,
                                        ForgetDraft forget, ForgetDraft split) {
-  Shown shown{books::Voucher{"", "", draft.event, std::nullopt, "", draft.postings}, std::move(accounts), "", ""};
-  shown.draft = true;
-  shown.draft_id = std::move(id);
-  shown.year_label = std::move(year_label);
-  shown.stage = std::string(stage_text(books::stage(draft)));
-  shown.noted = draft.noted;
+  auto shown = draft_shown(draft, std::move(id), std::move(year_label), std::move(accounts));
   shown.summary = std::move(summary);
   shown.origin = origin;
   shown.forget = std::move(forget);

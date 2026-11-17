@@ -22,7 +22,7 @@ inline constexpr std::size_t same_page_pairs = 6;
 // above and below the page when there are more. "<" and ">" turn a page in
 // place; at either end they do nothing. The drafts are read again when the
 // user comes back. Below the list, what was just done (e.g. the drafts a
-// statement gave), until the user goes on. 2 Läs kontoutdrag leads to
+// statement gave), until the user goes on. 3 Läs kontoutdrag leads to
 // make_read_statement_menu.
 // 0 Beskriv händelser: the user types one event after the other, each on one
 // line (see parse_event): an error is shown below the line, which is kept to
@@ -42,7 +42,9 @@ inline constexpr std::size_t same_page_pairs = 6;
 // event of the one that has it (at most one has). A draft and a
 // voucher: 9 Glöm forgets the draft (9 again confirms). Done, back to Samma?,
 // which finds the pairs again and lists what was done; Utkast tells it too.
-// 3 Läs pdf-underlag: the user types the path of a folder, starting in the
+// 2 Fullborda utkast: the drafts one at a time from the oldest, < and > to
+// browse, 0 Fullborda (Bokför when ready) leads to Inte än for now.
+// 4 Läs pdf-underlag: the user types the path of a folder, starting in the
 // project folder; Tab completes folders and shows the folder's pdf files as
 // information. Enter on a folder reads its pdf files with walk_pdf (see
 // pdf_status) and leads to "Pdf-underlag": the files numbered, each with a
