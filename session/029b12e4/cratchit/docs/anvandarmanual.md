@@ -350,7 +350,7 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Under listan står vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader, eller `1` för att beskriva en händelse och skapa ett utkast av den. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Under listan står vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader, `1` för att beskriva en händelse och skapa ett utkast av den, eller `2` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
@@ -364,6 +364,7 @@ Utkast 2026/27: utkast 1–12 av 12
   #1          2026-07-03          3.70  1920  AVGIFTER NORDEA (kontoutdrag)
   0 Läs kontoutdrag
   1 Beskriv händelse
+  2 Läs pdf-underlag
   < Föregående sida
   > Nästa sida
 Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast> 
@@ -383,7 +384,7 @@ Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och fil
 
 Ett kontoutdrag är en fil från banken eller från Skatteverket med raderna för ett konto, till exempel Nordeas CSV-fil eller Skatteverkets *Bokförda transaktioner*. Varje rad i kontoutdraget blir ett utkast med en enda kontering på det BAS-konto du anger. Utkastet har ingen rubrik än; det fyller du i senare.
 
-Tryck `0` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka börjar sökvägen i mappen där du valde fil senast.
+Tryck `0` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka, och nästa gång du läser ett kontoutdrag eller pdf-underlag, börjar sökvägen i mappen du valde senast. Kontoutdrag och underlag för en period ligger ofta i samma mapp.
 
 ```text
 Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och filer.
@@ -492,6 +493,26 @@ Cratchit > … > Beskriv händelse > Belopp?>
 Ett ord räknas bara som en grupp tusental när det har exakt tre siffror och inget tecken, och ordet före har högst tre siffror och inga decimaler. Så `Faktura 8700 500` och `Faktura 87 50,00` är tydliga. Skriv beloppet utan mellanslag så slipper du frågan.
 
 När cratchit har läst raden skapas utkastet direkt, utan att du behöver bekräfta, och du kommer tillbaka till Utkast. Där står det nya utkastet i listan, med stadiet `händelse` eftersom det inte har några konteringar än, och under listan till exempel `cratchit skapade utkast #13: Telia faktura oktober.`
+
+##### Läs pdf-underlag
+
+<!-- hjälp: las-pdf-underlag -->
+Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar vilka pdf-filer mappen har. Väljer du en fil, eller en mapp som inte finns, säger cratchit det och sökvägen står kvar. Att läsa pdf-underlagen finns inte än, så en mapp leder till *Inte än*. Tryck `-` för att gå tillbaka till Utkast.
+<!-- /hjälp -->
+
+Underlag är dokumenten som visar en affärshändelse, till exempel fakturor och kvitton som pdf. Tryck `2` i Utkast och välj mappen där de ligger. Sökvägen börjar i bokföringens mapp, eller i mappen du valde senast för kontoutdrag eller underlag.
+
+```text
+Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar mappens pdf-filer.
+Cratchit > … > Utkast > Läs pdf-underlag: /Users/me/Documents/The ITfied AB/M2 Juli-Sep/
+      4 pdf-filer i mappen:
+        62600010249540.pdf
+        Faktura50555657.pdf
+        M2.pdf
+        momsrapport 2026-07-01 - 2026-09-30.pdf
+```
+
+Tab fyller bara i mappar. Pdf-filerna visas som information; du väljer mappen, inte filerna. cratchit läser filerna och låter dem ligga. Att skapa utkast av underlagen kommer senare.
 
 #### Bokfört
 

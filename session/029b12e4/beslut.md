@@ -72,3 +72,4 @@ Beslut som gäller i den här sessionen. Beslut från tidigare sessioner gäller
   * *Ny bokföring > Från SIE > Bekräfta*: cratchit skapar `.cratchit` i en mapp och tar inte bort bokföringar.
   * *Avsluta* (`qq`): ett skyddsnät mot ett `q` av misstag, inte en bekräftelse av en effekt.
   * *Läs kontoutdrag > Konto > Bekräfta*: tills vidare, eftersom utkast ännu inte går att ta bort. Tas bort när det går.
+* **Läs pdf-underlag** (användarens val): ett val `2 Läs pdf-underlag` i *Utkast* där användaren pekar ut en mapp, och cratchit ska senare tillämpa koden från walk_pdf (9fe36d28) på mappens pdf-filer. Tab fyller bara i mappar och visar mappens pdf-filer som information (användarens val). *Läs kontoutdrag* och *Läs pdf-underlag* börjar i den mapp som valdes senast i någon av dem (användarens val: kontoutdrag och underlag för en period ligger ofta i samma mapp). Första steget slutar i *Inte än*.

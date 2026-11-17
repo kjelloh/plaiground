@@ -9,12 +9,14 @@
 #include "core/statement_drafts.hpp"
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
+#include "ui/design_insufficiency.hpp"
 #include "pyroceph/tui/pager.hpp"
 #include "ui/booked_menu.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/year_view.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <expected>
 #include <filesystem>
 #include <functional>
@@ -372,6 +374,97 @@ private:
   bool done_ = false;
 };
 
+// True for a file named *.pdf, in any case
+bool is_pdf(fs::path const& file) {
+  auto extension = file.extension().string();
+  std::ranges::transform(extension, extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  return extension == ".pdf";
+}
+
+// The pdf files in folder, by name; none when it cannot be read
+std::vector<fs::path> pdf_files_in(fs::path const& folder) {
+  std::vector<fs::path> files;
+  std::error_code ec;
+  for (fs::directory_iterator it(folder, ec), end; !ec && it != end; it.increment(ec)) {
+    if (it->is_regular_file(ec) && is_pdf(it->path()) && !it->path().filename().string().starts_with('.')) {
+      files.push_back(it->path());
+    }
+  }
+  std::ranges::sort(files);
+  return files;
+}
+
+// What Tab tells about the pdf files of a folder, e.g. "3 pdf-filer i mappen:" and their names
+std::vector<std::string> pdf_lines(fs::path const& folder) {
+  auto const files = pdf_files_in(folder);
+  if (files.empty()) return {"Inga pdf-filer i mappen."};
+  std::vector<std::string> lines{files.size() == 1 ? std::string("1 pdf-fil i mappen:")
+                                                   : std::format("{} pdf-filer i mappen:", files.size())};
+  for (auto const& file : files) {
+    auto const name = file.filename().u8string();
+    lines.push_back("  " + std::string(name.begin(), name.end()));
+  }
+  return lines;
+}
+
+class ReadPdfState : public State {
+public:
+  ReadPdfState(Project project, FiscalYear year, std::optional<fs::path> start_folder,
+               std::function<void(fs::path const&)> remember)
+      : project_(std::move(project)), year_(std::move(year)), chosen_folder_(std::move(start_folder)),
+        remember_(std::move(remember)) {}
+  std::string name() const override { return "Läs pdf-underlag"; }
+  View view() const override {
+    return {"Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar mappens "
+            "pdf-filer."};
+  }
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::u32string start_input() const override {
+    return pyroceph::tui::path_input_of(chosen_folder_.value_or(project_.folder));
+  }
+  // Folders only; the pdf files of the folder reached are shown as information, not to choose
+  Completion complete(std::u32string_view text) const override {
+    auto completion = pyroceph::tui::complete_path(text, false);
+    std::u32string completed(text);
+    completed += completion.added;
+    auto const path = pyroceph::tui::path_of(completed);
+    auto const ends_in_folder = !completed.empty() && pyroceph::tui::path_input_of(path).back() == completed.back();
+    auto const folder = ends_in_folder ? path : path.parent_path();
+    std::error_code ec;
+    if (!fs::is_directory(folder, ec)) return completion;
+    auto const lines = pdf_lines(folder);
+    if (!completion.candidates.empty()) {
+      completion.candidates.push_back("");
+      completion.candidates.insert(completion.candidates.end(), lines.begin(), lines.end());
+    } else {
+      completion.notes.insert(completion.notes.end(), lines.begin(), lines.end());
+    }
+    return completion;
+  }
+  InputResult on_input(std::u32string_view text) override {
+    auto const folder = pyroceph::tui::path_of(text);
+    if (folder.empty()) return std::unexpected(std::string("Skriv sökvägen till mappen."));
+    std::error_code ec;
+    if (fs::is_regular_file(folder, ec)) {
+      return std::unexpected(std::format("{} är en fil. Välj mappen den ligger i.", folder.string()));
+    }
+    if (!fs::is_directory(folder, ec)) return std::unexpected(std::format("Det finns ingen mapp {}.", folder.string()));
+    chosen_folder_ = folder;
+    if (remember_) remember_(folder);
+    LOG_BUSINESS("Mapp med pdf-underlag vald för {} i {}: {} ({} pdf-filer)", label_of(year_),
+                 project_.folder.string(), folder.string(), pdf_files_in(folder).size());
+    return Accepted(make_design_insufficiency_state("Läs pdf-underlag", "att läsa in pdf-underlag"));
+  }
+  std::string help_topic() const override { return std::string(help_topic::read_pdf); }
+
+private:
+  Project project_;
+  FiscalYear year_;
+  std::optional<fs::path> chosen_folder_;
+  std::function<void(fs::path const&)> remember_;
+};
+
 class DraftState : public State {
 public:
   DraftState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) { read(); }
@@ -394,6 +487,7 @@ public:
   OptionsList options() const override {
     return {{U'0', "Läs kontoutdrag"},
             {U'1', "Beskriv händelse"},
+            {U'2', "Läs pdf-underlag"},
             {back_key, "Föregående sida"},
             {forward_key, "Nästa sida"}};
   }
@@ -404,6 +498,11 @@ public:
     return false;
   }
   OnKeyResult on_key(CodePoint key) override {
+    if (key == U'2') {
+      report_.clear();
+      return std::make_unique<ReadPdfState>(project_, year_, folder_,
+                                            [this](fs::path const& folder) { folder_ = folder; });
+    }
     if (key == U'1') {
       report_.clear();
       return std::make_unique<DescribeEventState>(project_, year_, this, [this](View text) { report_ = std::move(text); });
@@ -414,9 +513,9 @@ public:
         project_, year_, this,
         [this](View text, fs::path const& file) {
           report_ = std::move(text);
-          statement_folder_ = file.parent_path();
+          folder_ = file.parent_path();
         },
-        statement_folder_);
+        folder_);
   }
   void on_return() override { read(); }
   std::string help_topic() const override { return std::string(help_topic::drafts); }
@@ -440,7 +539,7 @@ private:
   pyroceph::tui::Pager pager_{booked_page_rows};
   std::string error_;
   View report_; // what was just done, shown until the user goes on from here
-  std::optional<fs::path> statement_folder_; // of the statement read last
+  std::optional<fs::path> folder_; // of the statement or pdf files read last: they often lie together
 };
 
 } // namespace

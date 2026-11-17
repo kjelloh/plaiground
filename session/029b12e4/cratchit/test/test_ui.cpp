@@ -328,6 +328,7 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Läs kontoutdrag"},
                                                         {U'1', "Beskriv händelse"},
+                                                        {U'2', "Läs pdf-underlag"},
                                                         {U'<', "Föregående sida"},
                                                         {U'>', "Nästa sida"}}));
   ASSERT_TRUE(navigator.back());
@@ -1631,4 +1632,44 @@ TEST_F(RootMenuTest, DescribeEventMakesADraftOfTheEvent) {
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view()[1], "  #2          2025-10-22       1118.00  Telia faktura (händelse)");
   EXPECT_EQ(navigator.current().view().back(), "cratchit skapade utkast #1: Loopia.");
+}
+
+TEST_F(RootMenuTest, ReadPdfChoosesAFolderShowingItsPdfFiles) {
+  auto const folder = documents / "Exempel AB";
+  fs::create_directories(folder / "underlag" / "äldre");
+  ASSERT_TRUE(cratchit::create_project_here(folder, "Exempel AB", "556677-8899", {"2025-01-01", "2025-12-31"},
+                                            "2026-11-09"));
+  auto const project = cratchit::open_project(folder);
+  ASSERT_TRUE(project) << project.error();
+  std::ofstream(folder / "underlag" / "faktura.pdf") << "%PDF-1.4\n";
+  std::ofstream(folder / "underlag" / "Kvitto.PDF") << "%PDF-1.4\n";
+  std::ofstream(folder / "underlag" / "anteckning.txt") << "x\n";
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Läs pdf-underlag");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::read_pdf);
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(folder));
+  // Tab completes the folder and shows its pdf files, not to choose
+  auto const underlag = pyroceph::tui::path_input_of(folder / "underlag");
+  auto completion = navigator.current().complete(pyroceph::tui::path_input_of(folder) + U"un");
+  EXPECT_EQ(completion.added, underlag.substr(pyroceph::tui::path_input_of(folder).size() + 2));
+  EXPECT_EQ(completion.notes, (std::vector<std::string>{"2 pdf-filer i mappen:", "  Kvitto.PDF", "  faktura.pdf"}));
+  completion = navigator.current().complete(underlag + U"f");
+  EXPECT_TRUE(completion.added.empty()); // files are not completed
+  // A file or a missing folder is refused
+  auto refused = navigator.current().on_input(underlag + U"faktura.pdf");
+  ASSERT_FALSE(refused);
+  EXPECT_TRUE(refused.error().ends_with("är en fil. Välj mappen den ligger i.")) << refused.error();
+  refused = navigator.current().on_input(underlag + U"saknas");
+  ASSERT_FALSE(refused);
+  EXPECT_TRUE(refused.error().starts_with("Det finns ingen mapp ")) << refused.error();
+  // A folder leads to Inte än
+  auto accepted = navigator.current().on_input(underlag);
+  ASSERT_TRUE(accepted) << accepted.error();
+  ASSERT_TRUE(accepted->next);
+  EXPECT_EQ(accepted->next->name(), "Inte än (Läs pdf-underlag)");
+  // Läs kontoutdrag starts in the folder chosen last
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().start_input(), underlag);
 }
