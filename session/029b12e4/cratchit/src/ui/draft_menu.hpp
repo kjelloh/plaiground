@@ -11,11 +11,14 @@
 
 namespace cratchit::ui {
 
-// Utkast: the fiscal year's drafts, the events on their way into the books.
-// For now the view only says how many drafts the year has ("Utkast <year>:
-// inga utkast" or "Utkast <year>: 3 utkast"), read again when the user comes
-// back, and below it what was just done (e.g. the drafts a statement gave),
-// until the user goes on. Läs kontoutdrag starts in the folder of the
+// Utkast: the fiscal year's drafts, the events on their way into the books, as
+// Bokfört lists the vouchers: newest first, a page of booked_page_rows at a
+// time (see draft_rows and pyroceph::tui::Pager), with a heading "Utkast
+// <year>: utkast 1–20 av 31" ("Utkast <year>: inga utkast." for none) and "…"
+// above and below the page when there are more. "<" and ">" turn a page in
+// place; at either end they do nothing. The drafts are read again when the
+// user comes back. Below the list, what was just done (e.g. the drafts a
+// statement gave), until the user goes on. Läs kontoutdrag starts in the folder of the
 // statement read last from here. 0 Läs kontoutdrag leads to make_read_statement_menu.
 // Opened with 0 in Årsflöde. No input.
 std::unique_ptr<pyroceph::tui::State> make_draft_menu(Project project, FiscalYear year);

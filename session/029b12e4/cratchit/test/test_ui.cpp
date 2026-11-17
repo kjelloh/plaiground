@@ -326,7 +326,8 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
   // Utkast has Läs kontoutdrag
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Utkast");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Läs kontoutdrag"}}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Läs kontoutdrag"}, {U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
   ASSERT_TRUE(navigator.back());
   // Bokfört lists the year's vouchers
   ASSERT_TRUE(navigator.press(U'1'));
@@ -1571,7 +1572,10 @@ TEST_F(RootMenuTest, ReadStatementMakesDraftsOnTheAccountTyped) {
   ASSERT_TRUE(navigator.press(U'J'));
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(),
-            (View{"Utkast 2025: 1 utkast.", "cratchit skapade 1 utkast från nordea.csv på konto 1930 Bank."}));
+            (View{"Utkast 2025: utkast 1–1 av 1",
+                  "  #1          2025-03-05         10.00  1930  AVGIFTER (kontoutdrag)",
+                  "cratchit skapade 1 utkast från nordea.csv på konto 1930 Bank."}));
+  EXPECT_FALSE(navigator.press(U'>')); // one page: nothing
   // The next statement starts in the folder of this one
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(documents / "bank"));

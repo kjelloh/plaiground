@@ -33,6 +33,20 @@ YearView year_view(books::FiscalYear const* year, std::size_t max_rows = year_vi
 // on the same date later ones in the books before earlier ones). None for nullptr.
 std::vector<std::string> voucher_rows(books::FiscalYear const* year);
 
+// A draft's id as the user sees it: its place among the year's drafts, oldest
+// first, from 1, after '#', e.g. "#3" for index 2. Not stable: it changes when
+// a draft of an earlier date is added or a draft leaves the list (beslut 2026-11-17).
+std::string draft_id(std::size_t index);
+
+// What a draft's row tells about it: its heading, else its first posting's
+// account and text (e.g. a statement entry), then its stage in parentheses,
+// e.g. "1920  AVGIFTER NORDEA (kontoutdrag)"
+std::string draft_text(books::Draft const& draft);
+
+// The year's drafts, one line each as voucher_rows, newest first (the drafts
+// are kept oldest first, ties in the order noted), each with its draft_id. None for nullptr.
+std::vector<std::string> draft_rows(books::FiscalYear const* year);
+
 // The stage of a draft for the user: "händelse", "kontoutdrag", "obalanserat" or "klart"
 std::string_view stage_text(books::DraftStage stage);
 

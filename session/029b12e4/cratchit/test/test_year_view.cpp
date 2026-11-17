@@ -86,3 +86,18 @@ TEST(YearView, AtMostMaxRowsAreShownThenHowManyOlder) {
   EXPECT_EQ(rows[10], "  … 2 äldre");
   EXPECT_EQ(year_view(&year, 12).rows.size(), 12u); // all shown: no row about older ones
 }
+
+TEST(DraftRows, NewestFirstWithIdFromOldestAndTextOrPosting) {
+  auto year = year_with({voucher("1", date(2026, 10, 20), "Sale", 10000)});
+  year.place_draft({{"Telia oktober", 111800, date(2026, 10, 20)}, date(2026, 10, 23)});
+  auto fee = row("1920", -185);
+  fee.text = "AVGIFTER NORDEA";
+  year.place_draft({{"", 0, date(2026, 10, 21)}, date(2026, 10, 23), {fee}});
+  year.place_draft({{"", 0, date(2026, 9, 3)}, date(2026, 10, 23), {row("1630", 100)}});
+  EXPECT_EQ(cratchit::ui::draft_rows(&year),
+            (Rows{"  #3          2026-10-21          1.85  1920  AVGIFTER NORDEA (kontoutdrag)",
+                  "  #2          2026-10-20       1118.00  Telia oktober (händelse)",
+                  "  #1          2026-09-03          1.00  1630 (kontoutdrag)"}));
+  EXPECT_TRUE(cratchit::ui::draft_rows(nullptr).empty());
+  EXPECT_EQ(cratchit::ui::draft_id(0), "#1");
+}

@@ -333,16 +333,29 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda. Än så länge står det bara hur många utkast året har, och under det vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Under listan står vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
 
 ```text
-Utkast 2026/27: inga utkast.
+Utkast 2026/27: utkast 1–12 av 12
+  #12         2026-09-28       1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1 (kontoutdrag)
+  #11         2026-09-10        204.68  1920  Kortköp 260910 ANTHROPIC* CLAUDE SU | ANTHROPIC* CLAU 2656 (kontoutdrag)
+  #10         2026-09-05          1.00  1630  Intäktsränta (kontoutdrag)
+  …
+  #1          2026-07-03          3.70  1920  AVGIFTER NORDEA (kontoutdrag)
   0 Läs kontoutdrag
+  < Föregående sida
+  > Nästa sida
 Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast> 
 ```
+
+Saknar året utkast står det `Utkast 2026/27: inga utkast.`
+
+Varje rad visar utkastets nummer, datum, belopp och text, och sist hur långt utkastet har kommit inom parentes (se tabellen i [Räkenskapsår](#räkenskapsår)). Har utkastet ingen rubrik, som ett utkast från ett kontoutdrag, visar raden kontot och konteringens text i stället. Beloppet är händelsens, eller, när händelsen saknar belopp, vad konteringarna flyttar.
+
+Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat från det äldsta. Det är inget fast id: numren ändras när ett utkast med tidigare datum tillkommer eller när ett utkast försvinner ur listan, till exempel när det bokförs.
 
 ##### Läs kontoutdrag
 

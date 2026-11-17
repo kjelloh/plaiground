@@ -55,6 +55,32 @@ std::string_view stage_text(books::DraftStage stage) {
   return "";
 }
 
+std::string draft_text(books::Draft const& draft) {
+  std::string text = draft.event.heading;
+  if (text.empty()) {
+    auto const posting = std::ranges::find_if(draft.postings, [](books::Posting const& p) {
+      return p.kind != books::Posting::Kind::removed;
+    });
+    if (posting != draft.postings.end()) {
+      text = posting->text.empty() ? posting->account : std::format("{}  {}", posting->account, posting->text);
+    }
+  }
+  auto const stage = std::format("({})", stage_text(books::stage(draft)));
+  return text.empty() ? stage : std::format("{} {}", text, stage);
+}
+
+std::string draft_id(std::size_t index) { return std::format("#{}", index + 1); }
+
+std::vector<std::string> draft_rows(books::FiscalYear const* year) {
+  std::vector<std::string> lines;
+  if (year == nullptr) return lines;
+  for (std::size_t i = year->drafts.size(); i-- > 0;) {
+    auto const& draft = year->drafts[i];
+    lines.push_back(row_text(draft_id(i), draft.event.date, shown_amount(draft), draft_text(draft)));
+  }
+  return lines;
+}
+
 std::vector<std::string> voucher_rows(books::FiscalYear const* year) {
   std::vector<std::string> lines;
   if (year == nullptr) return lines;

@@ -8,7 +8,10 @@
 #include "core/statement_drafts.hpp"
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
+#include "pyroceph/tui/pager.hpp"
+#include "ui/booked_menu.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/year_view.hpp"
 
 #include <algorithm>
 #include <expected>
@@ -33,6 +36,9 @@ using pyroceph::tui::OnKeyResult;
 using pyroceph::tui::OptionsList;
 using pyroceph::tui::State;
 using pyroceph::tui::View;
+
+constexpr CodePoint back_key = U'<';
+constexpr CodePoint forward_key = U'>';
 
 // The new entries Bekräfta lists at most
 constexpr std::size_t listed_entries = 20;
@@ -263,12 +269,28 @@ public:
   std::string name() const override { return "Utkast"; }
   View view() const override {
     if (!error_.empty()) return {std::format("cratchit kunde inte läsa bokföringen: {}", error_)};
-    View lines{count_ == 0 ? std::format("Utkast {}: inga utkast.", label_of(year_))
-                           : std::format("Utkast {}: {} utkast.", label_of(year_), count_)};
+    View lines;
+    if (pager_.count() == 0) {
+      lines.push_back(std::format("Utkast {}: inga utkast.", label_of(year_)));
+    } else {
+      lines.push_back(std::format("Utkast {}: utkast {}–{} av {}", label_of(year_), pager_.first() + 1,
+                                  pager_.first() + pager_.shown(), pager_.count()));
+      auto const page = pager_.view();
+      lines.insert(lines.end(), page.begin(), page.end());
+    }
     lines.insert(lines.end(), report_.begin(), report_.end());
     return lines;
   }
-  OptionsList options() const override { return {{U'0', "Läs kontoutdrag"}}; }
+  // < and > always, so that turning past either end does nothing (and starts no input)
+  OptionsList options() const override {
+    return {{U'0', "Läs kontoutdrag"}, {back_key, "Föregående sida"}, {forward_key, "Nästa sida"}};
+  }
+  // < and > turn the page in place (keys match exactly, beslut.md)
+  bool on_key_in_place(CodePoint key) override {
+    if (key == back_key) return pager_.back();
+    if (key == forward_key) return pager_.forward();
+    return false;
+  }
   OnKeyResult on_key(CodePoint key) override {
     if (key != U'0') return nullptr;
     report_.clear();
@@ -286,21 +308,20 @@ public:
 private:
   void read() {
     error_.clear();
-    count_ = 0;
     auto const books = books::read_books(project_.folder);
     if (!books) {
       LOG_BUSINESS("Kunde inte läsa bokföringen i {}: {}", project_.folder.string(), books.error());
       error_ = books.error();
+      pager_.set({});
       return;
     }
     auto const start = parse_iso_date(year_.start);
-    auto const* year = start ? books->year_starting(*start) : nullptr;
-    if (year != nullptr) count_ = year->drafts.size();
+    pager_.set(draft_rows(start ? books->year_starting(*start) : nullptr));
   }
 
   Project project_;
   FiscalYear year_;
-  std::size_t count_ = 0;
+  pyroceph::tui::Pager pager_{booked_page_rows};
   std::string error_;
   View report_; // what was just done, shown until the user goes on from here
   std::optional<fs::path> statement_folder_; // of the statement read last
