@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cstdint>
 #include <utility>
 
 namespace walk_pdf {
@@ -14,12 +15,13 @@ constexpr std::pair<std::string_view, charset::unicode::CodePoint> names[] = {
 };
 
 std::optional<charset::unicode::CodePoint> hex(std::string_view digits) {
-  charset::unicode::CodePoint value = 0;
+  // std::from_chars takes integer types only, not char32_t (libstdc++ refuses it; libc++ let it through)
+  std::uint32_t value = 0;
   auto const [ptr, ec] = std::from_chars(digits.data(), digits.data() + digits.size(), value, 16);
   if (digits.empty() || ec != std::errc{} || ptr != digits.data() + digits.size()) {
     return std::nullopt;
   }
-  return value;
+  return static_cast<charset::unicode::CodePoint>(value);
 }
 
 } // namespace

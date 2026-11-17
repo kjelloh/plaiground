@@ -29,6 +29,8 @@ books::Voucher voucher(std::string series, std::string number, Date date, books:
   return {.series = std::move(series),
           .number = std::move(number),
           .event = {"Event", 0, date},
+          .registered = std::nullopt,
+          .signature = {},
           .postings = std::move(postings)};
 }
 

@@ -69,6 +69,8 @@ TEST(Eskd, DocumentOfTheBooksTakesTheFormFigures) {
   books.years[0].vouchers.push_back({.series = "B",
                                      .number = "1",
                                      .event = {"Sale", 125000, 2026y / August / 10},
+                                     .registered = std::nullopt,
+                                     .signature = {},
                                      .postings = {{.account = "1930", .amount = 125000},
                                                   {.account = "3001", .amount = -100000},
                                                   {.account = "2611", .amount = -25000}}});
