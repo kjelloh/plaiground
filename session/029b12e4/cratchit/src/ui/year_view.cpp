@@ -81,13 +81,19 @@ std::string draft_text(books::Draft const& draft) {
 
 std::string draft_id(std::size_t index) { return std::format("#{}", index + 1); }
 
+std::string draft_row(std::size_t index, books::Draft const& draft) {
+  return row_text(draft_id(index), draft.event.date, shown_amount(draft), draft_text(draft));
+}
+
+std::string voucher_row(books::Voucher const& voucher) {
+  return row_text(books::voucher_id(voucher.series, voucher.number), voucher.event.date, voucher.event.amount,
+                  voucher.event.heading);
+}
+
 std::vector<std::string> draft_rows(books::FiscalYear const* year) {
   std::vector<std::string> lines;
   if (year == nullptr) return lines;
-  for (std::size_t i = year->drafts.size(); i-- > 0;) {
-    auto const& draft = year->drafts[i];
-    lines.push_back(row_text(draft_id(i), draft.event.date, shown_amount(draft), draft_text(draft)));
-  }
+  for (std::size_t i = year->drafts.size(); i-- > 0;) lines.push_back(draft_row(i, year->drafts[i]));
   return lines;
 }
 
@@ -96,8 +102,7 @@ std::vector<std::string> voucher_rows(books::FiscalYear const* year) {
   if (year == nullptr) return lines;
   std::vector<Row> rows;
   for (auto const& voucher : year->vouchers) {
-    rows.push_back({voucher.event.date, row_text(books::voucher_id(voucher.series, voucher.number),
-                                                 voucher.event.date, voucher.event.amount, voucher.event.heading)});
+    rows.push_back({voucher.event.date, voucher_row(voucher)});
   }
   std::ranges::stable_sort(rows, {}, &Row::date);
   for (auto const& row : rows | std::views::reverse) lines.push_back(row.text);

@@ -337,12 +337,13 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
     ASSERT_TRUE(navigator.back());
   }
   EXPECT_FALSE(navigator.press(U'8'));
-  // Utkast has Beskriv händelser, Läs kontoutdrag and Läs pdf-underlag
+  // Utkast has Beskriv händelser, Samma?, Läs kontoutdrag and Läs pdf-underlag
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Beskriv händelser"},
-                                                        {U'1', "Läs kontoutdrag"},
-                                                        {U'2', "Läs pdf-underlag"},
+                                                        {U'1', "Samma?"},
+                                                        {U'2', "Läs kontoutdrag"},
+                                                        {U'3', "Läs pdf-underlag"},
                                                         {U'<', "Föregående sida"},
                                                         {U'>', "Nästa sida"}}));
   ASSERT_TRUE(navigator.back());
@@ -1515,7 +1516,7 @@ TEST_F(RootMenuTest, DraftsSayHowManyTheYearHas) {
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(), (View{"Utkast 2025: inga utkast."}));
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::drafts);
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Läs kontoutdrag");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::read_statement);
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(folder));
@@ -1566,7 +1567,7 @@ TEST_F(RootMenuTest, ReadStatementMakesDraftsOnTheAccountTyped) {
                                                                "2025/03/05;-10,00;AVGIFTER;490,00\n"
                                                                "2025/03/01;500,00;Kund;500,00\n";
   Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'2'));
   auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.enter(std::move(accepted->next));
@@ -1594,7 +1595,7 @@ TEST_F(RootMenuTest, ReadStatementMakesDraftsOnTheAccountTyped) {
                   "cratchit skapade 1 utkast från nordea.csv på konto 1930 Bank."}));
   EXPECT_FALSE(navigator.press(U'>')); // one page: nothing
   // The next statement starts in the folder of this one
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(documents / "bank"));
 }
 
@@ -1669,7 +1670,7 @@ TEST_F(RootMenuTest, ReadPdfChoosesAFolderShowingItsPdfFiles) {
   std::ofstream(folder / "underlag" / "Kvitto.PDF") << "%PDF-1.4\n";
   std::ofstream(folder / "underlag" / "anteckning.txt") << "x\n";
   Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
-  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'3'));
   EXPECT_EQ(navigator.current().name(), "Läs pdf-underlag");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::read_pdf);
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(folder));
@@ -1703,7 +1704,7 @@ TEST_F(RootMenuTest, ReadPdfChoosesAFolderShowingItsPdfFiles) {
   // Läs kontoutdrag starts in the folder chosen last
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().start_input(), underlag);
 }
 
@@ -1797,7 +1798,7 @@ TEST_F(RootMenuTest, InterpretGoesThroughThePdfFilesOneAtATime) {
   std::ofstream(folder / "underlag" / "b_lang.pdf", std::ios::binary) << pdf_with_lines(many);
   std::ofstream(folder / "underlag" / "c_trasig.pdf", std::ios::binary) << "x";
   Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
-  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'3'));
   auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(folder / "underlag"));
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.enter(std::move(accepted->next));
@@ -1869,7 +1870,7 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
                                                                        "2025/03/01;500,00;Kund;500,00\n";
   Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
   // Drafts from the statement (#1 Kund, #2 AVGIFTER) and an event (#3, later)
-  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'2'));
   auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.enter(std::move(accepted->next));
@@ -1950,4 +1951,95 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   auto const books = cratchit::books::read_books(project->folder);
   ASSERT_TRUE(books) << books.error();
   EXPECT_EQ(books->years.front().drafts.size(), 2u);
+}
+
+TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 1510 \"Kundfordringar\"\r\n"
+         "#VER \"A\" \"1\" 20250301 \"Kundinbetalning\"\r\n{\r\n#TRANS 1930 {} 500.00\r\n#TRANS 1510 {} -500.00\r\n}\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  fs::create_directories(documents / "bank");
+  std::ofstream(documents / "bank" / "nordea.csv", std::ios::binary) << "Datum;Belopp;Text;Saldo\n"
+                                                                       "2025/03/05;-10,00;AVGIFTER;490,00\n"
+                                                                       "2025/03/01;500,00;Kund;500,00\n";
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  // #1 Kund betalar (in A1 already), #2 Bankavgift (the event) and #3 AVGIFTER (its payment);
+  // the entry Kund is in A1, so it makes no draft
+  ASSERT_TRUE(navigator.press(U'2'));
+  auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  accepted = navigator.current().on_input(U"1930");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  ASSERT_TRUE(navigator.press(U'J'));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.current().on_input(U"Bankavgift 10,00 2025-03-04"));
+  ASSERT_TRUE(navigator.current().on_input(U"Kund betalar 500,00 2025-03-02"));
+  ASSERT_TRUE(navigator.back());
+  // The pairs, the likely first: the one that fits
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Samma?");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::same);
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Möjliga par i 2025 (samma belopp, högst 4 dagar emellan):",
+                  "  1  utkast   #2          2025-03-04         10.00  Bankavgift (händelse)",
+                  "              #3          2025-03-05        -10.00  1930  AVGIFTER (kontoutdrag)",
+                  "              passar, 1 dag emellan",
+                  "  2  bokfört  #1          2025-03-02        500.00  Kund betalar (händelse)",
+                  "              A1          2025-03-01        500.00  Kundinbetalning",
+                  "              1 dag emellan"}));
+  auto refused = navigator.current().on_input(U"3");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Det finns inget par 3.");
+  refused = navigator.current().on_input(U"#2");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Skriv parets nummer, till exempel 1.");
+  // Two drafts: both in full, 0 makes them one at once
+  accepted = navigator.current().on_input(U"1");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().name(), "1");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::same_pair);
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Slå ihop"}}));
+  auto view = navigator.current().view();
+  EXPECT_EQ(view.front(), "Samma händelse? passar, 1 dag emellan.");
+  EXPECT_EQ(view.back(), "Det ena har händelsen och det andra konteringar.");
+  EXPECT_NE(std::ranges::find(view, "    1930  Bank        -10.00  AVGIFTER"), view.end());
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Samma?");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Möjliga par i 2025 (samma belopp, högst 4 dagar emellan):",
+                  "  1  bokfört  #1          2025-03-02        500.00  Kund betalar (händelse)",
+                  "              A1          2025-03-01        500.00  Kundinbetalning",
+                  "              1 dag emellan",
+                  "cratchit slog ihop #2 och #3 till #2: Bankavgift (obalanserat)."}));
+  // A draft already booked: 9 and 9 again forget it
+  accepted = navigator.current().on_input(U"1");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'9', "Glöm"}}));
+  EXPECT_EQ(navigator.current().view().back(), "Utkastet har inga konteringar.");
+  ASSERT_TRUE(navigator.press(U'9'));
+  EXPECT_EQ(navigator.current().name(), "Glöm");
+  ASSERT_TRUE(navigator.press(U'N')); // no: back to the pair
+  EXPECT_EQ(navigator.current().name(), "1");
+  ASSERT_TRUE(navigator.press(U'9'));
+  ASSERT_TRUE(navigator.press(U'9'));
+  EXPECT_EQ(navigator.current().name(), "Samma?");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Inga möjliga par i 2025 (samma belopp, högst 4 dagar emellan).",
+                  "cratchit slog ihop #2 och #3 till #2: Bankavgift (obalanserat).",
+                  "cratchit glömde utkast #1, redan bokfört som A1: Kund betalar (händelse)."}));
+  // Utkast tells what was done
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Utkast 2025: utkast 1–1 av 1",
+                  "  #1          2025-03-04         10.00  Bankavgift (obalanserat)",
+                  "cratchit slog ihop #2 och #3 till #2: Bankavgift (obalanserat).",
+                  "cratchit glömde utkast #1, redan bokfört som A1: Kund betalar (händelse)."}));
 }

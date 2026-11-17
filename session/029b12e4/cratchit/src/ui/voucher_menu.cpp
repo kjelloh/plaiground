@@ -275,10 +275,11 @@ private:
 // Glöm: the draft forgotten with 9 again (9 is the option that removes); N goes back
 class ForgetState : public State {
 public:
-  ForgetState(std::shared_ptr<Shown const> shown, State const* draft) : shown_(std::move(shown)), draft_(draft) {}
+  ForgetState(std::string id, std::string summary, ForgetDraft forget, State const* origin, State const* draft)
+      : id_(std::move(id)), summary_(std::move(summary)), forget_(std::move(forget)), origin_(origin), draft_(draft) {}
   std::string name() const override { return "Glöm"; }
   View view() const override {
-    return {std::format("Glöm utkast {}?", shown_->id()), "  " + shown_->summary,
+    return {std::format("Glöm utkast {}?", id_), "  " + summary_,
             "Utkastet tas bort ur bokföringen och går inte att få tillbaka."};
   }
   OptionsList options() const override {
@@ -291,8 +292,8 @@ public:
       declined_ = true;
       return nullptr;
     }
-    if (key != U'9' || !shown_->forget) return nullptr;
-    if (auto forgotten = shown_->forget(); !forgotten) {
+    if (key != U'9' || !forget_) return nullptr;
+    if (auto forgotten = forget_(); !forgotten) {
       return pyroceph::tui::make_error_state(std::format("cratchit kunde inte glömma utkastet: {}", forgotten.error()));
     }
     done_ = true;
@@ -300,13 +301,16 @@ public:
   }
   // Forgotten: back to Utkast, as the draft is gone. N: back to the draft.
   State const* back_to() const override {
-    if (done_) return shown_->origin;
+    if (done_) return origin_;
     return declined_ ? draft_ : nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::forget_draft); }
 
 private:
-  std::shared_ptr<Shown const> shown_;
+  std::string id_;
+  std::string summary_;
+  ForgetDraft forget_;
+  State const* origin_;
   State const* draft_;
   bool done_ = false;
   bool declined_ = false;
@@ -335,7 +339,9 @@ public:
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'0') return std::make_unique<EventState>(shown_);
     if (key == U'1') return std::make_unique<PostingsState>(shown_);
-    if (key == U'9' && shown_->draft) return std::make_unique<ForgetState>(shown_, this);
+    if (key == U'9' && shown_->draft) {
+      return make_forget_draft_state(shown_->id(), shown_->summary, shown_->forget, shown_->origin, this);
+    }
     return nullptr;
   }
   std::string help_topic() const override {
@@ -347,6 +353,11 @@ private:
 };
 
 } // namespace
+
+std::unique_ptr<State> make_forget_draft_state(std::string id, std::string summary, ForgetDraft forget,
+                                               State const* forgotten_to, State const* declined_to) {
+  return std::make_unique<ForgetState>(std::move(id), std::move(summary), std::move(forget), forgotten_to, declined_to);
+}
 
 std::unique_ptr<State> make_voucher_menu(books::Voucher voucher, std::vector<books::Account> accounts,
                                          std::string series_name, std::string last_in_series) {

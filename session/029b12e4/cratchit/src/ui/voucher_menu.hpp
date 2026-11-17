@@ -52,4 +52,12 @@ std::unique_ptr<pyroceph::tui::State> make_draft_view(books::Draft const& draft,
                                                       std::string summary, pyroceph::tui::State const* origin,
                                                       ForgetDraft forget);
 
+// "Glöm" for the draft id (e.g. "#3"), as from a draft's view: it shows summary
+// (one line about the draft), says the draft cannot be had back, and offers
+// 9 Glöm and N Nej. 9 calls forget; done, the TUI goes back to forgotten_to;
+// N goes back to declined_to. A failure of forget leads to the error state.
+std::unique_ptr<pyroceph::tui::State> make_forget_draft_state(std::string id, std::string summary, ForgetDraft forget,
+                                                              pyroceph::tui::State const* forgotten_to,
+                                                              pyroceph::tui::State const* declined_to);
+
 } // namespace cratchit::ui

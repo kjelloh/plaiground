@@ -368,21 +368,22 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att beskriva händelser, en i taget, och skapa ett utkast av var och en, `1` för att läsa ett kontoutdrag och skapa utkast av dess rader, eller `2` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att beskriva händelser, en i taget, och skapa ett utkast av var och en, `1` för att se vilka utkast som kan vara samma händelse, `2` för att läsa ett kontoutdrag och skapa utkast av dess rader, eller `3` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
 
 ```text
 Utkast 2026/27: utkast 1–12 av 12
-  #12         2026-09-28       1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1 (kontoutdrag)
-  #11         2026-09-10        204.68  1920  Kortköp 260910 ANTHROPIC* CLAUDE SU | ANTHROPIC* CLAU 2656 (kontoutdrag)
+  #12         2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1 (kontoutdrag)
+  #11         2026-09-10       -204.68  1920  Kortköp 260910 ANTHROPIC* CLAUDE SU | ANTHROPIC* CLAU 2656 (kontoutdrag)
   #10         2026-09-05          1.00  1630  Intäktsränta (kontoutdrag)
   …
-  #1          2026-07-03          3.70  1920  AVGIFTER NORDEA (kontoutdrag)
+  #1          2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontoutdrag)
   0 Beskriv händelser
-  1 Läs kontoutdrag
-  2 Läs pdf-underlag
+  1 Samma?
+  2 Läs kontoutdrag
+  3 Läs pdf-underlag
   < Föregående sida
   > Nästa sida
 Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast> 
@@ -390,7 +391,7 @@ Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast>
 
 Saknar året utkast står det `Utkast 2026/27: inga utkast.`
 
-Varje rad visar utkastets nummer, datum, belopp och text, och sist hur långt utkastet har kommit inom parentes (se tabellen i [Räkenskapsår](#räkenskapsår)). Har utkastet ingen rubrik, som ett utkast från ett kontoutdrag, visar raden kontot och konteringens text i stället. Beloppet är händelsens, eller, när händelsen saknar belopp, vad konteringarna flyttar.
+Varje rad visar utkastets nummer, datum, belopp och text, och sist hur långt utkastet har kommit inom parentes (se tabellen i [Räkenskapsår](#räkenskapsår)). Har utkastet ingen rubrik, som ett utkast från ett kontoutdrag, visar raden kontot och konteringens text i stället. Beloppet är händelsens, med tecken (se [Beskriv händelser](#beskriv-händelser)). Saknar händelsen belopp och utkastet har en enda kontering, som ett utkast från ett kontoutdrag, är det konteringens belopp med tecken: minus är ut från kontot. Har utkastet flera konteringar är det vad de flyttar, utan tecken.
 
 Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat från det äldsta. Det är inget fast id: numren ändras när ett utkast med tidigare datum tillkommer eller när ett utkast försvinner ur listan, till exempel när det bokförs.
 
@@ -456,7 +457,7 @@ Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och fil
 
 Ett kontoutdrag är en fil från banken eller från Skatteverket med raderna för ett konto, till exempel Nordeas CSV-fil eller Skatteverkets *Bokförda transaktioner*. Varje rad i kontoutdraget blir ett utkast med en enda kontering på det BAS-konto du anger. Utkastet har ingen rubrik än; det fyller du i senare.
 
-Tryck `1` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka, och nästa gång du läser ett kontoutdrag eller pdf-underlag, börjar sökvägen i mappen du valde senast. Kontoutdrag och underlag för en period ligger ofta i samma mapp.
+Tryck `2` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka, och nästa gång du läser ett kontoutdrag eller pdf-underlag, börjar sökvägen i mappen du valde senast. Kontoutdrag och underlag för en period ligger ofta i samma mapp.
 
 ```text
 Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och filer.
@@ -580,13 +581,81 @@ Cratchit > … > Utkast > Beskriv händelser>
 
 Valde du ett belopp i *Belopp?* kommer du också tillbaka hit. cratchit föreslår inget datum: skriv det på varje rad. Tryck `-` på en tom rad för att gå tillbaka till Utkast. Där står de nya utkasten i listan, med stadiet `händelse` eftersom de inte har några konteringar än, och under listan till exempel `cratchit skapade 2 utkast.`
 
+##### Samma?
+
+<!-- hjälp: samma -->
+Utkast som kan vara samma händelse: två utkast, eller ett utkast och en verifikation som redan är bokförd, med samma belopp (utan tecken) och högst 4 dagar emellan. De troligaste står först. Skriv parets nummer och tryck Enter för att se det i sin helhet. Det är du som avgör om det är samma händelse. Tryck `>` för nästa sida och `<` för föregående. Tryck `-` för att gå tillbaka till Utkast.
+<!-- /hjälp -->
+
+Samma händelse kan bli två utkast: kvittot du beskrev och kortköpet på kontoutdraget, eller en överföring mellan två egna konton, en rad på vart kontoutdrag. Och ett utkast kan redan vara bokfört, till exempel när en SIE-import senare tog in verifikationen. Tryck `1` i Utkast:
+
+```text
+Möjliga par i 2026/27 (samma belopp, högst 4 dagar emellan):
+  1  utkast   #12         2026-09-26       1308.75  Loopia webhotell (händelse)
+              #13         2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontoutdrag)
+              passar, 2 dagar emellan, delar orden: loopia, webhotell
+  2  bokfört  #4          2026-09-01       -311.25  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontoutdrag)
+              D6          2026-08-31        311.25  Loopia Faktura
+              1 dag emellan, delar orden: loopia
+  < Föregående sida
+  > Nästa sida
+Cratchit > … > Utkast > Samma?>
+```
+
+Varje par har tre rader: det äldre utkastet, det andra utkastet eller verifikationen, och vad som talar för paret. *utkast* är två utkast och *bokfört* ett utkast och en verifikation. Ett utkast kan finnas i flera par. Hittar cratchit inga står det `Inga möjliga par i 2026/27 (samma belopp, högst 4 dagar emellan).`
+
+Belopp och datum gör bara paret möjligt. Med fakturametoden har en faktura och dess betalning samma belopp inom några dagar, men de är två händelser. Därför avgör du. Först står paren som *passar*, sedan de vars texter delar flest ord (stora och små bokstäver räknas lika; tal och ord på en bokstav räknas inte), sedan de med minst dagar emellan. Ett utkast utan rubrik jämförs med konteringarnas texter. Ett par passar när
+
+* två utkast kompletterar varandra: det ena har bara händelsen och det andra bara konteringar, eller båda har konteringar, på olika konton, som balanserar tillsammans;
+* verifikationen har alla utkastets konteringar (samma konto, datum och belopp).
+
+Fyra dagar är en helg och en bankdag på var sida; helgdagar räknas inte. Ett par du lämnar kommer cratchit inte ihåg: det står med nästa gång.
+
+###### Paret
+
+<!-- hjälp: samma-par -->
+Paret i sin helhet och vad som talar för det. Två utkast: tryck `0` för att slå ihop dem till ett. Har båda en rubrik väljer du med `0` eller `1` vems händelse det ena utkastet får. Ett utkast och en verifikation: tryck `9` för att glömma utkastet, eftersom det redan är bokfört, och `9` igen för att bekräfta. Tryck `-` för att gå tillbaka till Samma?.
+<!-- /hjälp -->
+
+```text
+Samma händelse? passar, 2 dagar emellan, delar orden: loopia, webhotell.
+Utkast #12 (händelse), noterat 2026-11-17
+  Datum:          2026-09-26
+  Rubrik:         Loopia webhotell
+  Belopp:         1308.75
+  Konteringar:    inga
+Utkast #13 (kontoutdrag), noterat 2026-11-17
+  Datum:          2026-09-28
+  Rubrik:         
+  Belopp:         
+  Konteringar:
+    1920  Plusgiro     -1308.75  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1
+Det ena har händelsen och det andra konteringar.
+  0 Slå ihop
+Cratchit > … > Utkast > Samma? > 1>
+```
+
+När båda utkasten har konteringar säger raden sist om de balanserar tillsammans. Konterar båda på samma konto säger cratchit det: konteringarna tar då ut varandra, så det är troligen två händelser efter varandra, till exempel ett beslut på skattekontot och utbetalningen.
+
+`0` slår ihop utkasten direkt. Paret du ser i sin helhet är bekräftelsen; cratchit frågar inte en gång till. Det ena utkastet får
+
+* **händelsen** från utkastet med rubrik; har båda en rubrik väljer du med `0` eller `1`, och har inget en rubrik får det det äldres händelse;
+* **konteringarna** från båda, men en kontering från samma kontoutdragsrad bara en gång;
+* **noteringsdagen** som är tidigast.
+
+Du kan ännu inte dela upp ett utkast igen, men du kan glömma det.
+
+För ett utkast och en verifikation visar cratchit utkastets konteringar som inte finns i verifikationen. De glöms med utkastet. `9` leder till [Glöm](#glöm), som för ett utkast du öppnat. Verifikationen ändras inte.
+
+Efteråt är du tillbaka i Samma?. cratchit söker paren igen, och under listan står vad du gjorde, till exempel `cratchit slog ihop #12 och #13 till #12: Loopia webhotell (obalanserat).` Numren kan ha ändrats, eftersom ett utkast har försvunnit. Utkast säger samma sak när du går tillbaka dit.
+
 ##### Läs pdf-underlag
 
 <!-- hjälp: las-pdf-underlag -->
 Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar vilka pdf-filer mappen har. Väljer du en fil, eller en mapp som inte finns, säger cratchit det och sökvägen står kvar. En mapp leder till *Pdf-underlag*, en lista över mappens pdf-filer. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
-Underlag är dokumenten som visar en affärshändelse, till exempel fakturor och kvitton som pdf. Tryck `2` i Utkast och välj mappen där de ligger. Sökvägen börjar i bokföringens mapp, eller i mappen du valde senast för kontoutdrag eller underlag.
+Underlag är dokumenten som visar en affärshändelse, till exempel fakturor och kvitton som pdf. Tryck `3` i Utkast och välj mappen där de ligger. Sökvägen börjar i bokföringens mapp, eller i mappen du valde senast för kontoutdrag eller underlag.
 
 ```text
 Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar mappens pdf-filer.

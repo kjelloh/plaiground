@@ -4,12 +4,16 @@
 #include "core/project.hpp"
 #include "pyroceph/tui/state.hpp"
 
+#include <cstddef>
 #include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
 
 namespace cratchit::ui {
+
+// The pairs Samma? shows at a time, three lines each
+inline constexpr std::size_t same_page_pairs = 6;
 
 // Utkast: the fiscal year's drafts, the events on their way into the books, as
 // Bokfört lists the vouchers: newest first, a page of booked_page_rows at a
@@ -18,7 +22,7 @@ namespace cratchit::ui {
 // above and below the page when there are more. "<" and ">" turn a page in
 // place; at either end they do nothing. The drafts are read again when the
 // user comes back. Below the list, what was just done (e.g. the drafts a
-// statement gave), until the user goes on. 1 Läs kontoutdrag leads to
+// statement gave), until the user goes on. 2 Läs kontoutdrag leads to
 // make_read_statement_menu.
 // 0 Beskriv händelser: the user types one event after the other, each on one
 // line (see parse_event): an error is shown below the line, which is kept to
@@ -29,7 +33,16 @@ namespace cratchit::ui {
 // empty line, the drafts made there listed under "Skapade nu:" (date, amount,
 // heading; no ids, as they change). - goes back to Utkast, which tells
 // "cratchit skapade 3 utkast." (or "cratchit skapade 1 utkast: <heading>.").
-// 2 Läs pdf-underlag: the user types the path of a folder, starting in the
+// 1 Samma? (beslut 2026-11-17, as take 3's matches): the possible pairs of
+// drafts that may be the same event, or a draft already in the books as a
+// voucher (find_same_events), numbered, the likely ones first, same_page_pairs
+// at a time. A number and Enter opens the pair, named by its number: both in
+// full and what holds them together. Two drafts: 0 Slå ihop makes them one at
+// once (merge_drafts; the pair shown in full is the confirmation); when both
+// have a heading, 0 and 1 choose whose event the one draft gets. A draft and a
+// voucher: 9 Glöm forgets the draft (9 again confirms). Done, back to Samma?,
+// which finds the pairs again and lists what was done; Utkast tells it too.
+// 3 Läs pdf-underlag: the user types the path of a folder, starting in the
 // project folder; Tab completes folders and shows the folder's pdf files as
 // information. Enter on a folder reads its pdf files with walk_pdf (see
 // pdf_status) and leads to "Pdf-underlag": the files numbered, each with a
