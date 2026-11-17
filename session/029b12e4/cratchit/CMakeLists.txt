@@ -41,9 +41,18 @@ target_link_libraries(charset PRIVATE cratchit_warnings)
 find_package(ZLIB REQUIRED)
 
 # walk_pdf (session 9fe36d28): the text of a PDF, namespace walk_pdf. Its own
-# sources unchanged in src/walk_pdf, without its program, manual and command
-# line; the charsets it needs are in charset. See src/walk_pdf/walk_pdf.hpp.
+# sources unchanged in src/walk_pdf, its main.cpp as cli.cpp (cratchit --walk_pdf)
+# and its manual as docs/walk_pdf.md; the charsets it needs are in charset.
+# See src/walk_pdf/walk_pdf.hpp.
+# docs/walk_pdf.md into the program as bytes, for cratchit --walk_pdf --help;
+# CMake re-runs when it changes
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS docs/walk_pdf.md)
+file(READ docs/walk_pdf.md walk_pdf_manual_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," manual_bytes "${walk_pdf_manual_hex}")
+configure_file(src/walk_pdf/manual_text.cpp.in generated/walk_pdf_manual_text.cpp @ONLY)
+
 add_library(walk_pdf
+  src/walk_pdf/cli.cpp
   src/walk_pdf/cmap.cpp
   src/walk_pdf/crypto/md5.cpp
   src/walk_pdf/crypto/rc4.cpp
@@ -59,6 +68,7 @@ add_library(walk_pdf
   src/walk_pdf/syntax.cpp
   src/walk_pdf/text_string.cpp
   src/walk_pdf/walk_pdf.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/walk_pdf_manual_text.cpp
 )
 target_include_directories(walk_pdf PUBLIC src/walk_pdf)
 target_link_libraries(walk_pdf PUBLIC charset PRIVATE ZLIB::ZLIB cratchit_warnings)
@@ -181,7 +191,7 @@ add_executable(cratchit
   ${build_stamp_file}
 )
 add_dependencies(cratchit cratchit_build_stamp)
-target_link_libraries(cratchit PRIVATE cratchit_core cratchit_ui pyroceph cratchit_warnings)
+target_link_libraries(cratchit PRIVATE cratchit_core cratchit_ui pyroceph walk_pdf cratchit_warnings)
 
 # The framework comes with the program: a .cratchit folder next to it, which
 # cratchit only reads. resources/ holds its sources; framework.txt gets the

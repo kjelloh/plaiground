@@ -12,12 +12,16 @@
 #include "pyroceph/tui/terminal_width.hpp"
 #include "ui/root_menu.hpp"
 #include "ui/start.hpp"
+#include "walk_pdf/cli.hpp"
 
 #include <cstdio>
 #include <filesystem>
 #include <format>
 #include <string>
 #include <print>
+#include <span>
+#include <string_view>
+#include <vector>
 
 namespace {
 
@@ -29,7 +33,18 @@ charset::Encoding encoding_of(cratchit::Charset charset) {
 
 } // namespace
 
-int main() {
+int main(int argc, char* argv[]) {
+  // With arguments cratchit runs a command and ends, without its user interface:
+  // nothing else is printed, logged or required (no ~/.cratchit, no framework)
+  std::vector<std::string_view> const arguments(argv + 1, argv + argc);
+  if (!arguments.empty()) {
+    if (arguments.front() == "--walk_pdf") {
+      return walk_pdf::run_cli(std::span(arguments).subspan(1), stdout, stderr, cratchit::version());
+    }
+    std::println(stderr, "Fel: okänt argument '{}'. cratchit tar bara emot --walk_pdf (se cratchit --walk_pdf --help).",
+                 arguments.front());
+    return 2;
+  }
   // First of all, which build runs: so that the user sees at once whether it is the one just built or installed
   auto const program = cratchit::program_path();
   auto const startup = cratchit::startup_lines(cratchit::version(), cratchit::build_type(), cratchit::build_time(),

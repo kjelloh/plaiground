@@ -63,6 +63,18 @@ Cratchit > Samlingsmapp > The ITfied AB>
 
 Tryck `q` två gånger för att avsluta.
 
+### Läsa en pdf från kommandoraden
+
+cratchit kan också läsa en pdf-fil utan att starta gränssnittet, med koden från walk_pdf:
+
+```sh
+cratchit --walk_pdf --text faktura.pdf        # pdf:ens text, sida för sida
+cratchit --walk_pdf faktura.pdf               # pdf:ens uppbyggnad
+cratchit --walk_pdf --help                    # walk_pdf:s manual (på engelska)
+```
+
+Med `--walk_pdf` gör cratchit bara det och avslutar: inga rader om bygget, ingen logg och ingen samlingsmapp. Texten går till standard output, så du kan spara den med `> faktura.txt`. Allt om argumenten står i walk_pdf:s egen manual, som `--help` visar. Andra argument än `--walk_pdf` känner cratchit inte igen; då säger cratchit det och startar inte.
+
 ## Att använda cratchit
 
 ### Prompten

@@ -58,6 +58,7 @@ gtest_discover_tests(cratchit_tests)
 # walk_pdf's own tests (session 9fe36d28), those that need no PDF files of the user
 add_executable(walk_pdf_tests
   walk_pdf/test_api.cpp
+  walk_pdf/test_cli.cpp
   walk_pdf/test_crypto.cpp
   walk_pdf/test_document.cpp
   walk_pdf/test_filters.cpp

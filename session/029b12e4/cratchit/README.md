@@ -159,6 +159,10 @@ The user manual is in Swedish: [docs/anvandarmanual.md](docs/anvandarmanual.md).
 * The manual is copied into the framework at build time and read at start (`core/manual`). The program shows the help text as plain text, without `**`, `*`, backticks and link targets; code blocks show as they are, without their fences.
 * The tests check that the manual has a help text for every topic, and no help text for an unknown topic.
 
+## Reading a PDF from the command line
+
+`cratchit --walk_pdf ...` runs walk_pdf (session 9fe36d28) without the user interface: the same arguments, output and exit codes as walk_pdf had (`<file> [<path>] [--depth N]`, `--text <file>`, `--help`). Its manual is [docs/walk_pdf.md](docs/walk_pdf.md), built into the program for `--help`. The code is walk_pdf's `main.cpp` as `src/walk_pdf/cli.cpp`. Any other argument is refused with exit code 2.
+
 ## Trying another day
 
 Some of cratchit depends on today's date, e.g. which fiscal year is the current one (key 0). To try another day, e.g. the turn of a fiscal year, set `CRATCHIT_TODAY`:
