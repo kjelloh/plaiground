@@ -66,13 +66,12 @@ TEST(SameEvent, TheSameAmountWithinFourDaysTheFittingFirst) {
       event_draft("För långt bort", 130875, on(5, 10)),                                       // #5: too far
   });
   auto const pairs = find_same_events(year);
-  ASSERT_EQ(pairs.size(), 3u);
+  ASSERT_EQ(pairs.size(), 2u);
   // An event and a statement entry with shared words first
   EXPECT_EQ(pairs[0], (SameEvent{SameEvent::Kind::drafts, 0, 1, 2, {"loopia", "webhotell"}, true}));
-  // Telia and the entry fit (event and postings), no shared words
+  // Telia and the entry (event and postings), no shared words
   EXPECT_EQ(pairs[1], (SameEvent{SameEvent::Kind::drafts, 1, 3, 2, {}, true}));
-  // Two events: they do not fit
-  EXPECT_EQ(pairs[2], (SameEvent{SameEvent::Kind::drafts, 0, 3, 4, {}, false}));
+  // Two events (Loopia and Telia) are never a pair: one of them would be lost
 }
 
 TEST(SameEvent, PostingsThatBalanceTogetherFitButNotOnTheSameAccount) {
@@ -82,12 +81,24 @@ TEST(SameEvent, PostingsThatBalanceTogetherFitButNotOnTheSameAccount) {
   auto pairs = find_same_events(year);
   ASSERT_EQ(pairs.size(), 1u);
   EXPECT_TRUE(pairs[0].fits);
-  // Both on the tax account: they cancel out, two events in a row
+  // Both on the tax account: they cancel out, two events in a row; not a pair
   year = year_of({statement_draft("1630", 229200, on(18, 7), "Moms", "skv.csv:2"),
                   statement_draft("1630", -229200, on(21, 7), "Utbetalning", "skv.csv:3")});
-  pairs = find_same_events(year);
-  ASSERT_EQ(pairs.size(), 1u);
-  EXPECT_FALSE(pairs[0].fits);
+  EXPECT_TRUE(find_same_events(year).empty());
+  // Both out of an account: two events, not a pair
+  year = year_of({statement_draft("1920", -500000, on(3), "Till sparkonto", "pg.csv:2"),
+                  statement_draft("1940", -500000, on(4), "Uttag", "spar.csv:2")});
+  EXPECT_TRUE(find_same_events(year).empty());
+  // An event merged with its payment, and another event of the same amount: not a pair
+  auto paid = event_draft("Loopia webhotell", 130875, on(28));
+  paid.postings = {posting("1920", -130875, "LOOPIA", "nordea.csv:7")};
+  year = year_of({paid, event_draft("Loopia webhotell", 130875, on(28))});
+  EXPECT_TRUE(find_same_events(year).empty());
+  // ... but it pairs with an entry that balances its posting (signs of an event are not compared)
+  year = year_of({paid, statement_draft("1940", 130875, on(29), "Från PlusGiro", "spar.csv:3")});
+  ASSERT_EQ(find_same_events(year).size(), 1u);
+  year = year_of({event_draft("Kundbetalning", 50000, on(3)), statement_draft("1920", 50000, on(3), "Kund", "pg.csv:4")});
+  EXPECT_EQ(find_same_events(year).size(), 1u);
 }
 
 TEST(SameEvent, ADraftAndAVoucherInTheBooks) {

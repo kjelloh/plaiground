@@ -59,15 +59,19 @@ std::set<std::string> words_of(std::string_view text) {
   return words;
 }
 
-// One has just the event, the other just postings; or both have postings, on
-// accounts the other has none on, and together they balance
+bool has_event(books::Draft const& draft) { return !draft.event.heading.empty() || draft.event.amount != 0; }
+
+// Two drafts that can be the same event (beslut 2026-11-17): at most one has an
+// event; when both have postings, they are on accounts the other has none on
+// and balance together (money out of one account and into another); else one
+// is just the event and the other has the postings (signs are not compared: an
+// event's sign tells its direction, a posting's in or out of the account)
 bool fit_together(books::Draft const& a, books::Draft const& b) {
+  if (has_event(a) && has_event(b)) return false;
   auto const a_postings = has_postings(a);
   auto const b_postings = has_postings(b);
-  auto const a_heading = !a.event.heading.empty();
-  auto const b_heading = !b.event.heading.empty();
-  if (a_heading != b_heading && a_postings != b_postings && a_heading != a_postings) return true;
-  if (!a_postings || !b_postings) return false;
+  if (a_postings != b_postings) return true;
+  if (!a_postings) return false;
   for (auto const& posting : a.postings) {
     if (!counted(posting)) continue;
     if (std::ranges::any_of(b.postings, [&](books::Posting const& other) {
@@ -116,9 +120,9 @@ std::vector<SameEvent> find_same_events(books::FiscalYear const& year, int windo
     for (std::size_t j = i + 1; j < year.drafts.size(); ++j) {
       auto const& other = year.drafts[j];
       auto const days = days_between(draft.event.date, other.event.date);
-      if (amount_of(other) == amount && days <= window_days) {
+      if (amount_of(other) == amount && days <= window_days && fit_together(draft, other)) {
         pairs.push_back({SameEvent::Kind::drafts, i, j, days, shared_words(compared_text(draft), compared_text(other)),
-                         fit_together(draft, other)});
+                         true});
       }
     }
     for (std::size_t v = 0; v < year.vouchers.size(); ++v) {

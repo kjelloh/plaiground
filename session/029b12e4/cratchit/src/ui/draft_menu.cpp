@@ -737,9 +737,10 @@ std::string days_text(int days) {
   return days == 1 ? "1 dag emellan" : std::format("{} dagar emellan", days);
 }
 
-// What a pair has going for it: "passar, 2 dagar emellan, delar orden: loopia"
+// What a pair has going for it: "2 dagar emellan, delar orden: loopia"; "passar, ..." for
+// a draft whose postings are all in the voucher (two drafts listed always fit)
 std::string pair_note(SameEvent const& pair) {
-  std::string note = pair.fits ? "passar, " : "";
+  std::string note = pair.kind == SameEvent::Kind::booked && pair.fits ? "passar, " : "";
   note += days_text(pair.days);
   if (!pair.words.empty()) {
     note += ", delar orden: ";
@@ -786,20 +787,6 @@ View draft_lines(std::size_t index, books::Draft const& draft, std::vector<books
                      draft.event, true, draft.postings, accounts);
 }
 
-// Accounts both drafts post to (they cancel out: two events in a row, more likely)
-std::vector<std::string> common_accounts(books::Draft const& a, books::Draft const& b) {
-  std::vector<std::string> common;
-  for (auto const& posting : a.postings) {
-    if (posting.kind == books::Posting::Kind::removed || std::ranges::contains(common, posting.account)) continue;
-    if (std::ranges::any_of(b.postings, [&](books::Posting const& other) {
-          return other.kind != books::Posting::Kind::removed && other.account == posting.account;
-        })) {
-      common.push_back(posting.account);
-    }
-  }
-  return common;
-}
-
 // What the year holds that a pair needs: its drafts, vouchers and account names
 struct PairBooks {
   std::vector<books::Draft> drafts;
@@ -827,14 +814,9 @@ public:
     if (pair_.kind == SameEvent::Kind::drafts) {
       auto const& other = books_->drafts[pair_.other];
       append(draft_lines(pair_.other, other, books_->accounts));
-      auto const common = common_accounts(draft, other);
-      if (!common.empty()) {
-        lines.push_back(std::format("Båda konterar på {}: konteringarna tar ut varandra, så det är troligen två "
-                                    "händelser efter varandra.",
-                                    common.front()));
-      } else if (pair_.fits && !draft.postings.empty() && !other.postings.empty()) {
-        lines.push_back("Konteringarna balanserar tillsammans.");
-      } else if (pair_.fits) {
+      if (!draft.postings.empty() && !other.postings.empty()) {
+        lines.push_back("Konteringarna balanserar tillsammans: ut från ett konto och in på ett annat.");
+      } else {
         auto const& postings = draft.postings.empty() ? other : draft;
         lines.push_back(books::stage(postings) == books::DraftStage::account_event
                             ? "Det ena är en händelse och det andra en kontohändelse."

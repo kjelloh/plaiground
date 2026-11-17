@@ -1989,7 +1989,7 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
             (View{"Möjliga par i 2025 (samma belopp, högst 4 dagar emellan):",
                   "  1  utkast   #2            2025-03-04         10.00  Bankavgift (händelse)",
                   "              #3            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
-                  "              passar, 1 dag emellan",
+                  "              1 dag emellan",
                   "  2  bokfört  #1            2025-03-02        500.00  Kund betalar (händelse)",
                   "              A1            2025-03-01        500.00  Kundinbetalning",
                   "              1 dag emellan"}));
@@ -2007,7 +2007,7 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::same_pair);
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Slå ihop"}}));
   auto view = navigator.current().view();
-  EXPECT_EQ(view.front(), "Samma händelse? passar, 1 dag emellan.");
+  EXPECT_EQ(view.front(), "Samma händelse? 1 dag emellan.");
   EXPECT_EQ(view.back(), "Det ena är en händelse och det andra en kontohändelse.");
   EXPECT_NE(std::ranges::find(view, "    1930  Bank        -10.00  AVGIFTER"), view.end());
   ASSERT_TRUE(navigator.press(U'0'));

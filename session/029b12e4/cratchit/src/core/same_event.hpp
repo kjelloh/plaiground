@@ -20,7 +20,9 @@ namespace cratchit {
 // and a bank day on each side (Thursday to Monday). Calendar days, no holidays.
 inline constexpr int same_event_window_days = 4;
 
-// Two that may be the same event: the same amount without sign, at most the window apart
+// Two that may be the same event: the same amount without sign, at most the window
+// apart. Two drafts only when they fit (see fits): at most one has an event, and
+// when both have postings these balance together on different accounts.
 struct SameEvent {
   enum class Kind {
     drafts, // two drafts
@@ -32,8 +34,8 @@ struct SameEvent {
   std::size_t other = 0; // the other draft (drafts), or the voucher (booked), an index into the year's
   int days = 0;          // the days between their dates
   std::vector<std::string> words; // the words their texts share (see shared_words)
-  // drafts: one has just the event and the other just postings, or both have postings,
-  // on different accounts, that balance together; booked: the draft has postings, all in the voucher
+  // drafts: always (pairs that do not fit are not listed); booked: the draft has
+  // postings, all in the voucher
   bool fits = false;
 
   bool operator==(SameEvent const&) const = default;

@@ -601,7 +601,7 @@ Valde du ett belopp i *Belopp?* kommer du också tillbaka hit. cratchit föresl�
 ##### Samma?
 
 <!-- hjälp: samma -->
-Utkast som kan vara samma händelse: två utkast, eller ett utkast och en verifikation som redan är bokförd, med samma belopp (utan tecken) och högst 4 dagar emellan. De troligaste står först. Skriv parets nummer och tryck Enter för att se det i sin helhet. Det är du som avgör om det är samma händelse. Tryck `>` för nästa sida och `<` för föregående. Tryck `-` för att gå tillbaka till Utkast.
+Utkast som kan vara samma händelse: två utkast som kompletterar varandra, eller ett utkast och en verifikation som redan är bokförd, med samma belopp (utan tecken) och högst 4 dagar emellan. De troligaste står först. Skriv parets nummer och tryck Enter för att se det i sin helhet. Det är du som avgör om det är samma händelse. Tryck `>` för nästa sida och `<` för föregående. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Samma händelse kan bli två utkast: kvittot du beskrev och kortköpet på kontoutdraget, eller en överföring mellan två egna konton, en rad på vart kontoutdrag. Och ett utkast kan redan vara bokfört, till exempel när en SIE-import senare tog in verifikationen. Tryck `1` i Utkast:
@@ -610,7 +610,7 @@ Samma händelse kan bli två utkast: kvittot du beskrev och kortköpet på konto
 Möjliga par i 2026/27 (samma belopp, högst 4 dagar emellan):
   1  utkast   #12           2026-09-26       1308.75  Loopia webhotell (händelse)
               #13           2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontohändelse)
-              passar, 2 dagar emellan, delar orden: loopia, webhotell
+              2 dagar emellan, delar orden: loopia, webhotell
   2  bokfört  #4            2026-09-01       -311.25  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontohändelse)
               D6            2026-08-31        311.25  Loopia Faktura
               1 dag emellan, delar orden: loopia
@@ -621,10 +621,13 @@ Cratchit > … > Utkast > Samma?>
 
 Varje par har tre rader: det äldre utkastet, det andra utkastet eller verifikationen, och vad som talar för paret. *utkast* är två utkast och *bokfört* ett utkast och en verifikation. Ett utkast kan finnas i flera par. Hittar cratchit inga står det `Inga möjliga par i 2026/27 (samma belopp, högst 4 dagar emellan).`
 
-Belopp och datum gör bara paret möjligt. Med fakturametoden har en faktura och dess betalning samma belopp inom några dagar, men de är två händelser. Därför avgör du. Först står paren som *passar*, sedan de vars texter delar flest ord (stora och små bokstäver räknas lika; tal och ord på en bokstav räknas inte), sedan de med minst dagar emellan. Ett utkast utan rubrik jämförs med konteringarnas texter. Ett par passar när
+Två utkast är ett par bara när de kompletterar varandra:
 
-* två utkast kompletterar varandra: det ena är en händelse och det andra en kontohändelse (eller har bara konteringar), eller båda har konteringar, på olika konton, som balanserar tillsammans;
-* verifikationen har alla utkastets konteringar (samma konto, datum och belopp).
+* **Högst det ena har en händelse.** Två händelser med samma belopp slås aldrig ihop, eftersom den ena då skulle försvinna. Är det samma faktura beskriven två gånger glömmer du den ena i Utkast.
+* **Har båda konteringar måste de balansera tillsammans:** ut från ett konto och in på ett annat, som en överföring. Två kontohändelser åt samma håll, eller en in och en ut på samma konto (som momsen och utbetalningen på skattekontot), är två händelser.
+* **Är det ena bara en händelse** har det andra konteringarna, till exempel betalningen på kontoutdraget. Tecknen jämförs inte: händelsens tecken säger om den går åt det vanliga hållet, kontohändelsens om pengarna går in eller ut. En leverantörsfaktura har plus och betalningen minus, en kundbetalning plus och plus.
+
+Belopp och datum gör bara paret möjligt. Med fakturametoden har en faktura och dess betalning samma belopp inom några dagar, men de är två händelser. Därför avgör du. Först står paren vars texter delar flest ord (stora och små bokstäver räknas lika; tal och ord på en bokstav räknas inte), sedan de med minst dagar emellan. Ett utkast utan rubrik jämförs med konteringarnas texter. För ett utkast och en verifikation står först de som *passar*: verifikationen har alla utkastets konteringar (samma konto, datum och belopp).
 
 Fyra dagar är en helg och en bankdag på var sida; helgdagar räknas inte. Ett par du lämnar kommer cratchit inte ihåg: det står med nästa gång.
 
@@ -635,7 +638,7 @@ Paret i sin helhet och vad som talar för det. Två utkast: tryck `0` för att s
 <!-- /hjälp -->
 
 ```text
-Samma händelse? passar, 2 dagar emellan, delar orden: loopia, webhotell.
+Samma händelse? 2 dagar emellan, delar orden: loopia, webhotell.
 Utkast #12 (händelse), noterat 2026-11-17
   Datum:          2026-09-26
   Rubrik:         Loopia webhotell
@@ -652,7 +655,7 @@ Det ena är en händelse och det andra en kontohändelse.
 Cratchit > … > Utkast > Samma? > 1>
 ```
 
-När båda utkasten har konteringar säger raden sist om de balanserar tillsammans. Konterar båda på samma konto säger cratchit det: konteringarna tar då ut varandra, så det är troligen två händelser efter varandra, till exempel ett beslut på skattekontot och utbetalningen.
+När båda utkasten har konteringar säger raden sist att de balanserar tillsammans: ut från ett konto och in på ett annat.
 
 `0` slår ihop utkasten direkt. Paret du ser i sin helhet är bekräftelsen; cratchit frågar inte en gång till. Det ena utkastet får
 
