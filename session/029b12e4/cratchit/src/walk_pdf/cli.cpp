@@ -147,7 +147,7 @@ int run_cli(std::span<std::string_view const> arguments, std::FILE* out, std::FI
     std::print(out, "{}", extracted->text.to_string());
     auto const& report = extracted->report;
     if (report.pages == 0) {
-      std::println(err, "Warning: '{}': no pages found (they may be in object streams, not read yet)",
+      std::println(err, "Warning: '{}': no pages found",
                    parsed->file);
     }
     if (report.unmapped_glyphs > 0) {

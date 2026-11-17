@@ -106,6 +106,19 @@ Jag undrar nu två saker.
 1. Saknas funktion i vår pdf-läsare för att få ut all text?
 2. Är formatet 'H   #            62600011232941 #     323 75   8 >                 53432795#41#' någon slags OCR-text (standard)
 
+Claude hittade nu att walk_pdf inte var 'färdig' för att tolka mer text i pdf-er.
+
+* Det gällde något pm pdf 1.7 och 'objektströmmar'?
+
+Jag lät i alla fall Claude göra en ansträngning att läsa 'mer text'.
+
+* MEN: Jag tror detta är en dead-end?
+* Dels läser vi pdf-er som inte har text och/eller redan är bokförda (utskrivna verifikationer som moms-rapporter t.ex.)
+* Dels är jag osäker om alla händelser kommer med?
+    * Jag kanske har verifikationer bara utskrivna på papper?
+
+Nåja, med Claude är detta ändå en kul liten undersökning som vi kan ha i cratchit som en framtida tråd att ta upp för något?
+
 ## 20261116
 
 Nu är det väl ändå dags att till slut få till ett sätt att redigera och skapa verifikationer till bokföringen?

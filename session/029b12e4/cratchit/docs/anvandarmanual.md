@@ -553,7 +553,7 @@ Cratchit > … > Utkast > Läs pdf-underlag > Pdf-underlag>
 | `text, 2 sidor` | Filen har text som cratchit kan läsa |
 | `text, 1 sida, 4 tecken oläsliga` | Filen har text, men några tecken gick inte att läsa; kontrollera texten innan du litar på den |
 | `ingen text, 1 sida (inskannad?)` | Sidorna har ingen text, till exempel en inskannad bild |
-| `inga sidor hittade` | cratchit hittade inga sidor. Filen kan lägga sidorna i objektströmmar, som cratchit inte läser än |
+| `inga sidor hittade` | cratchit hittade inga sidor i filen, till exempel för att den är skadad |
 | `krypterad med lösenord` | Filen behöver ett lösenord för att öppnas |
 | `krypterad (AES), går inte att läsa` | Filen är krypterad på ett sätt som cratchit inte kan läsa |
 | `textkopiering spärrad i filen` | Den som skapade filen har spärrat kopiering av texten, och cratchit respekterar det |

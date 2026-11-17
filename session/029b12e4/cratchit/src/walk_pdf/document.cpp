@@ -48,13 +48,20 @@ ChildIterator::ChildIterator(Content const& parent) : parent_(parent), position_
   auto const bytes = parent.source();
   std::optional<Value> body;
   switch (parent.kind_) {
-  case Kind::object: body = body_of(bytes, parent, "obj"); break;
+  case Kind::object:
+    // An object in the file follows "n g obj"; one in an object stream is just its value
+    body = parent.in_file() ? body_of(bytes, parent, "obj") : value_at(bytes, parent.begin_, parent.end_);
+    break;
   case Kind::trailer: body = body_of(bytes, parent, "trailer"); break;
   case Kind::dictionary:
   case Kind::array: body = Value{parent.kind_, parent.begin_, parent.end_}; break;
   default: break;
   }
   decoded_ = parent.kind_ == Kind::stream && parent.in_file();
+  if (parent.kind_ == Kind::decoded) {
+    compressed_ = parent.document_->object_stream_objects(parent.path_.parent().parent());
+    position_ = 0;
+  }
   operations_ = (parent.kind_ == Kind::decoded && parent.document_->is_content_stream(parent.path_.parent())) ||
                 parent.kind_ == Kind::text_block;
   if (parent.kind_ == Kind::pages) {
@@ -144,13 +151,23 @@ void ChildIterator::find_next() {
     }
   }
 
+  // An object stream's objects
+  if (parent.kind_ == Kind::decoded && !compressed_.empty()) {
+    if (position_ < compressed_.size()) {
+      auto const& object = compressed_[position_++];
+      emit(Segment::object(object.number), Kind::object, object.begin, object.end, parent.buffer_);
+    }
+    return;
+  }
+
   // Display order: the pages, and a page's (or form's) drawing operations
   if (parent.kind_ == Kind::pages) {
     auto const& pages = document.pages();
     if (position_ < pages.size()) {
       if (auto const object = document.find(pages[position_])) {
         auto const begin = object->offset();
-        emit(Segment::ordinal(Kind::page, position_), Kind::page, begin, begin + object->bytes().size(), nullptr);
+        emit(Segment::ordinal(Kind::page, position_), Kind::page, begin, begin + object->bytes().size(),
+             object->buffer_);
       }
       ++position_;
     }
@@ -322,7 +339,8 @@ std::optional<Content> Document::find(Path const& path) const {
       if (!object) {
         return std::nullopt;
       }
-      return Content{*this, path, Kind::page, object->offset(), object->offset() + object->bytes().size()};
+      return Content{*this, path, Kind::page, object->offset(), object->offset() + object->bytes().size(),
+                     object->buffer_};
     }
   }
   // Found before (or a sibling of something found before)
@@ -618,9 +636,81 @@ std::shared_ptr<std::string const> Document::buffer_for(Path const& path) const 
 std::optional<Path> Document::object(std::uint64_t number) const {
   auto const latest = latest_.find(number);
   if (latest == latest_.end()) {
-    return std::nullopt;
+    find_compressed();
+    auto const compressed = compressed_->find(number);
+    if (compressed == compressed_->end()) {
+      return std::nullopt;
+    }
+    return compressed->second;
   }
   return Path{}.child(Segment::revision(latest->second)).child(Segment::object(number));
+}
+
+std::vector<CompressedObject> Document::object_stream_objects(Path const& object) const {
+  std::vector<CompressedObject> result;
+  auto const entry = [&](std::string key) { return find(object.child(Segment::entry(std::move(key)))); };
+  if (name_of(entry("Type")) != "ObjStm") {
+    return result;
+  }
+  auto const count = integer_of(entry("N"));
+  auto const first = integer_of(entry("First"));
+  auto const decoded = decode(object.child(Segment::stream()));
+  if (!count || !first || !decoded || *count < 0 || *first < 0) {
+    return result;
+  }
+  std::string_view const data{*decoded->bytes};
+  auto const start = static_cast<std::size_t>(*first);
+  if (start > data.size()) {
+    return result;
+  }
+  // The header: n pairs of an object number and its offset from /First
+  std::vector<std::uint64_t> numbers;
+  std::size_t at = 0;
+  auto const next_number = [&]() -> std::optional<std::uint64_t> {
+    while (at < start && std::string_view{" \t\r\n\f"}.find(data[at]) != std::string_view::npos) {
+      ++at;
+    }
+    std::uint64_t value = 0;
+    auto const [end, error] = std::from_chars(data.data() + at, data.data() + start, value);
+    if (error != std::errc{}) {
+      return std::nullopt;
+    }
+    at = static_cast<std::size_t>(end - data.data());
+    return value;
+  };
+  std::vector<std::size_t> offsets;
+  for (long long i = 0; i < *count; ++i) {
+    auto const number = next_number();
+    auto const offset = next_number();
+    if (!number || !offset || start + *offset > data.size()) {
+      break; // a damaged header: the objects read so far
+    }
+    numbers.push_back(*number);
+    offsets.push_back(start + static_cast<std::size_t>(*offset));
+  }
+  for (std::size_t i = 0; i < numbers.size(); ++i) {
+    auto const end = i + 1 < offsets.size() ? offsets[i + 1] : data.size();
+    if (offsets[i] <= end) {
+      result.push_back({numbers[i], offsets[i], end});
+    }
+  }
+  return result;
+}
+
+void Document::find_compressed() const {
+  if (compressed_) {
+    return;
+  }
+  compressed_.emplace();
+  for (auto const& [number, revision] : latest_) {
+    auto const holder = Path{}.child(Segment::revision(revision)).child(Segment::object(number));
+    auto const decoded = holder.child(Segment::stream()).child(Segment::decoded());
+    for (auto const& object : object_stream_objects(holder)) {
+      if (!latest_.contains(object.number)) {
+        compressed_->try_emplace(object.number, decoded.child(Segment::object(object.number)));
+      }
+    }
+  }
 }
 
 std::optional<Path> Document::resolve(Path const& reference) const {
@@ -671,8 +761,16 @@ std::vector<std::uint64_t> referenced_objects(Document const& document, Path con
 
 void Document::find_resources() const {
   std::map<std::uint64_t, Path> found;
+  // The objects in the file, and those in object streams
+  find_compressed();
+  std::vector<std::pair<std::uint64_t, Path>> objects;
   for (auto const& [number, revision] : latest_) {
-    auto const object = Path{}.child(Segment::revision(revision)).child(Segment::object(number));
+    objects.emplace_back(number, Path{}.child(Segment::revision(revision)).child(Segment::object(number)));
+  }
+  for (auto const& [number, path] : *compressed_) {
+    objects.emplace_back(number, path);
+  }
+  for (auto const& [number, object] : objects) {
     auto const entry = [&](std::string key) { return object.child(Segment::entry(std::move(key))); };
     if (name_of(find(entry("Type"))) == "Page") {
       // A page's resources may be inherited from its ancestors in the page tree

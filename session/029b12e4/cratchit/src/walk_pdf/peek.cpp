@@ -238,7 +238,8 @@ std::string peek_comment(std::string_view bytes, std::size_t width) {
 std::string peek_object(Content const& content, std::size_t width) {
   auto const bytes = content.bytes();
   Bytes const all{bytes};
-  auto const begin = all.find_keyword(0, "obj").value_or(0) + 3;
+  // An object in an object stream (not in the file) is just its value, without "n g obj"
+  auto const begin = content.in_file() ? all.find_keyword(0, "obj").value_or(0) + 3 : std::size_t{0};
   auto end = bytes.size();
   if (auto const endobj = bytes.rfind("endobj");
       endobj != std::string_view::npos && endobj >= begin && all.keyword_at(endobj, "endobj")) {

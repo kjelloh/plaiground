@@ -150,7 +150,10 @@ looked up in the resources the content stream draws with: its page's
 through `/Parent`), or for a form its own `/Resources`. Then `/Font/F8` there
 leads to the font, shown in the peek: `/F8 16 Tf -> /rev[0]/obj[8]`.
 
-Objects stored inside object streams (`/Type /ObjStm`) are not found yet.
+Objects stored inside object streams (`/Type /ObjStm`, PDF 1.5 and later) are
+found too (cratchit's addition to walk_pdf): a reference to one leads into the
+stream's decoded data, e.g. `3 0 R -> /rev[0]/obj[360]/stream/decoded/obj[3]`, and
+the decoded data of an object stream lists its objects as children.
 
 ## Text
 
@@ -207,16 +210,15 @@ followed through the page in drawing order, across its content streams, with
 `/Resources` (or else its page's); forms drawing forms are followed eight
 levels deep at most, so a form that draws itself does not go on forever.
 
-Pages and fonts kept in object streams (`/Type /ObjStm`) are not found yet:
-such files show no pages.
+Pages and fonts kept in object streams (`/Type /ObjStm`) are found as any other
+object.
 
 ## Plain text
 
 `cratchit --walk-pdf --text file.pdf` prints the document's text to standard output,
 each page after a `--- page n ---` line. walk_pdf writes no files; to keep the
 text, redirect it: `cratchit --walk-pdf --text file.pdf > file.txt`. Errors go to
-standard error, and so do warnings: when no pages were found (they may be in
-object streams), or when some characters could not be mapped (shown as `�`).
+standard error, and so do warnings: when no pages were found, or when some characters could not be mapped (shown as `�`).
 
 cratchit gets the same text through walk_pdf's API, `extract_text`; see
 `src/walk_pdf/walk_pdf.hpp`.

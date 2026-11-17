@@ -59,6 +59,14 @@ private:
   std::shared_ptr<std::string const> buffer_; // a decoded stream, or null for the file
 };
 
+// An object kept in an object stream: its number and where its value is in the
+// stream's decoded data
+struct CompressedObject {
+  std::uint64_t number;
+  std::size_t begin;
+  std::size_t end;
+};
+
 // A child found while looping over a Content
 struct Element {
   Path path;
@@ -96,6 +104,7 @@ private:
   std::optional<Value> stream_;                      // a stream object's data, its last child
   bool decoded_ = false;                             // a stream's decoded data, its only child
   bool operations_ = false;                          // the parent is a content stream
+  std::vector<CompressedObject> compressed_; // the parent is an object stream: its objects
   // Display order: the decoded content streams a page or a form-drawing Do
   // draws, whose operations are its children, in order
   void next_drawn_operation();
@@ -162,11 +171,18 @@ public:
   std::optional<DecodedStream> decode(Path const& stream) const;
 
   // References (PDF 32000-1:2008, 7.3.10): "12 0 R" refers to object 12, in
-  // the latest revision that has it. walk_pdf does not yet look into object
-  // streams, so objects stored in them are not found.
+  // the latest revision that has it, or else in an object stream (7.5.7,
+  // /Type /ObjStm), as PDF 1.5 and later may keep objects there.
 
-  // The latest version of an object, e.g. /rev[1]/obj[12]
+  // The latest version of an object, e.g. /rev[1]/obj[12]; an object kept in an
+  // object stream is inside that stream's decoded data, e.g.
+  // /rev[0]/obj[360]/stream/decoded/obj[3] (cratchit's addition to walk_pdf)
   std::optional<Path> object(std::uint64_t number) const;
+
+  // An object stream's objects: each object number and where its value is in
+  // the decoded data (from /N and /First, and the pairs of numbers and offsets
+  // before /First). None if object is not an object stream or can not be decoded.
+  std::vector<CompressedObject> object_stream_objects(Path const& object) const;
 
   // The object the reference at path refers to
   std::optional<Path> resolve(Path const& reference) const;
@@ -250,6 +266,11 @@ private:
   // revision, and the latest revision that has it
   std::map<std::pair<std::uint64_t, std::uint64_t>, Range> objects_; // (revision, number)
   std::map<std::uint64_t, std::uint64_t> latest_;                    // number -> revision
+
+  // Objects kept in object streams and not in the file itself: number -> its
+  // path, found on first use (an object in the file wins)
+  mutable std::optional<std::map<std::uint64_t, Path>> compressed_;
+  void find_compressed() const;
 
   // Content stream object number -> its resources, found on first use
   mutable std::optional<std::map<std::uint64_t, Path>> resources_;

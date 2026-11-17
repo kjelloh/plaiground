@@ -27,7 +27,7 @@ struct TextError {
 
 // What to know before trusting the text
 struct TextReport {
-  std::size_t pages = 0;           // pages found; 0 can mean they are in object streams (not read yet)
+  std::size_t pages = 0;           // pages found; 0 when the file has no page tree walk_pdf can find
   std::size_t unmapped_glyphs = 0; // characters that could not be mapped, shown as U+FFFD
   bool encrypted = false;          // the file is encrypted (and walk_pdf decrypted it)
 };

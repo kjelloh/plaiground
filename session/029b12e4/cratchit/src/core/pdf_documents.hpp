@@ -22,7 +22,7 @@ struct PdfStatus {
   enum class Kind {
     text,          // text on some page
     no_text,       // pages, but no text on them (e.g. a scanned image)
-    no_pages,      // no pages found: they may be in object streams, which walk_pdf does not read yet
+    no_pages,      // no pages found: walk_pdf finds no page tree
     password,      // encrypted, and it needs a password
     unsupported,   // encrypted in a way walk_pdf cannot decrypt (AES)
     not_permitted, // its owner has marked its text not to be copied

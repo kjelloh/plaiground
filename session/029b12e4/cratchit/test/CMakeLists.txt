@@ -102,6 +102,7 @@ add_executable(walk_pdf_tests
   walk_pdf/test_document.cpp
   walk_pdf/test_filters.cpp
   walk_pdf/test_fonts.cpp
+  walk_pdf/test_object_streams.cpp
   walk_pdf/test_path.cpp
   walk_pdf/test_plain_text.cpp
   walk_pdf/test_references.cpp
