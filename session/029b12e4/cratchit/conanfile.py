@@ -8,6 +8,7 @@ class CratchitConan(ConanFile):
     generators = "CMakeToolchain", "CMakeDeps"
 
     def requirements(self):
+        self.requires("zlib/1.3.1")  # walk_pdf: compressed PDF streams
         self.test_requires("gtest/1.15.0")
 
     def validate(self):

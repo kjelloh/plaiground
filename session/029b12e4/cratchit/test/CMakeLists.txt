@@ -19,6 +19,7 @@ add_executable(cratchit_tests
   test_statement.cpp
   test_statement_drafts.cpp
   test_event_draft.cpp
+  test_pdf_documents.cpp
   test_cp437.cpp
   test_decoder.cpp
   test_design_insufficiency.cpp
@@ -53,3 +54,22 @@ target_link_libraries(cratchit_tests PRIVATE cratchit_core cratchit_ui pyroceph 
 
 include(GoogleTest)
 gtest_discover_tests(cratchit_tests)
+
+# walk_pdf's own tests (session 9fe36d28), those that need no PDF files of the user
+add_executable(walk_pdf_tests
+  walk_pdf/test_api.cpp
+  walk_pdf/test_crypto.cpp
+  walk_pdf/test_document.cpp
+  walk_pdf/test_filters.cpp
+  walk_pdf/test_fonts.cpp
+  walk_pdf/test_path.cpp
+  walk_pdf/test_plain_text.cpp
+  walk_pdf/test_references.cpp
+  walk_pdf/test_security.cpp
+  walk_pdf/test_single_byte.cpp
+  walk_pdf/test_syntax.cpp
+  walk_pdf/test_text_string.cpp
+)
+target_include_directories(walk_pdf_tests PRIVATE ${PROJECT_SOURCE_DIR}/src/walk_pdf)
+target_link_libraries(walk_pdf_tests PRIVATE walk_pdf cratchit_warnings GTest::gtest_main ZLIB::ZLIB)
+gtest_discover_tests(walk_pdf_tests)

@@ -1663,12 +1663,19 @@ TEST_F(RootMenuTest, ReadPdfChoosesAFolderShowingItsPdfFiles) {
   refused = navigator.current().on_input(underlag + U"saknas");
   ASSERT_FALSE(refused);
   EXPECT_TRUE(refused.error().starts_with("Det finns ingen mapp ")) << refused.error();
-  // A folder leads to Inte än
+  // A folder lists its pdf files with what walk_pdf finds in them
   auto accepted = navigator.current().on_input(underlag);
   ASSERT_TRUE(accepted) << accepted.error();
   ASSERT_TRUE(accepted->next);
-  EXPECT_EQ(accepted->next->name(), "Inte än (Läs pdf-underlag)");
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().name(), "Pdf-underlag");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::pdf_list);
+  EXPECT_EQ(navigator.current().view(), (View{"Pdf-underlag i " + (folder / "underlag").string() + ": 2 filer",
+                                              "    1  Kvitto.PDF   inga sidor hittade",
+                                              "    2  faktura.pdf  inga sidor hittade"}));
+  EXPECT_FALSE(navigator.press(U'>')); // one page: nothing
   // Läs kontoutdrag starts in the folder chosen last
+  ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().start_input(), underlag);

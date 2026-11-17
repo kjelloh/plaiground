@@ -21,18 +21,47 @@ else()
   target_compile_options(cratchit_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()
 
-# Text transcoding: Unicode, UTF-8, UTF-16, CP437 and detection (from walk_pdf, session 9fe36d28),
+# Text transcoding: Unicode, UTF-8, UTF-16, CP437, WinAnsi, MacRoman, Adobe Standard and detection
+# (from walk_pdf, session 9fe36d28),
 # and Transcoder that pairs a decoder with an encoder
 add_library(charset
+  src/charset/adobe_standard.cpp
   src/charset/cp437.cpp
   src/charset/decoder.cpp
   src/charset/detect.cpp
+  src/charset/macroman.cpp
   src/charset/transcoder.cpp
   src/charset/utf16.cpp
   src/charset/utf8.cpp
+  src/charset/winansi.cpp
 )
 target_include_directories(charset PUBLIC src)
 target_link_libraries(charset PRIVATE cratchit_warnings)
+
+find_package(ZLIB REQUIRED)
+
+# walk_pdf (session 9fe36d28): the text of a PDF, namespace walk_pdf. Its own
+# sources unchanged in src/walk_pdf, without its program, manual and command
+# line; the charsets it needs are in charset. See src/walk_pdf/walk_pdf.hpp.
+add_library(walk_pdf
+  src/walk_pdf/cmap.cpp
+  src/walk_pdf/crypto/md5.cpp
+  src/walk_pdf/crypto/rc4.cpp
+  src/walk_pdf/document.cpp
+  src/walk_pdf/filters.cpp
+  src/walk_pdf/font.cpp
+  src/walk_pdf/glyph_names.cpp
+  src/walk_pdf/path.cpp
+  src/walk_pdf/peek.cpp
+  src/walk_pdf/plain_text.cpp
+  src/walk_pdf/scanner.cpp
+  src/walk_pdf/security.cpp
+  src/walk_pdf/syntax.cpp
+  src/walk_pdf/text_string.cpp
+  src/walk_pdf/walk_pdf.cpp
+)
+target_include_directories(walk_pdf PUBLIC src/walk_pdf)
+target_link_libraries(walk_pdf PUBLIC charset PRIVATE ZLIB::ZLIB cratchit_warnings)
 
 # The terminal UI library pyroceph, namespace pyroceph::tui. Knows nothing of
 # cratchit, so that it can become a library of its own.
@@ -69,6 +98,7 @@ add_library(cratchit_core
   src/core/log.cpp
   src/core/manual.cpp
   src/core/path_value.cpp
+  src/core/pdf_documents.cpp
   src/core/project.cpp
   src/core/sie/check.cpp
   src/core/sie/document.cpp
@@ -86,7 +116,7 @@ add_library(cratchit_core
   src/core/version.cpp
 )
 target_include_directories(cratchit_core PUBLIC src)
-target_link_libraries(cratchit_core PUBLIC charset PRIVATE cratchit_warnings)
+target_link_libraries(cratchit_core PUBLIC charset PRIVATE walk_pdf cratchit_warnings)
 target_compile_definitions(cratchit_core PRIVATE CRATCHIT_VERSION="${PROJECT_VERSION}")
 if(WIN32)
   # SHGetKnownFolderPath and CoTaskMemFree, for the Documents folder

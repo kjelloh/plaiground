@@ -4,12 +4,12 @@
 #include "core/books/books.hpp"
 #include "core/date.hpp"
 #include "core/event_draft.hpp"
+#include "core/pdf_documents.hpp"
 #include "core/log.hpp"
 #include "core/sie_summary.hpp"
 #include "core/statement_drafts.hpp"
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
-#include "ui/design_insufficiency.hpp"
 #include "pyroceph/tui/pager.hpp"
 #include "ui/booked_menu.hpp"
 #include "ui/help_topics.hpp"
@@ -374,26 +374,6 @@ private:
   bool done_ = false;
 };
 
-// True for a file named *.pdf, in any case
-bool is_pdf(fs::path const& file) {
-  auto extension = file.extension().string();
-  std::ranges::transform(extension, extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-  return extension == ".pdf";
-}
-
-// The pdf files in folder, by name; none when it cannot be read
-std::vector<fs::path> pdf_files_in(fs::path const& folder) {
-  std::vector<fs::path> files;
-  std::error_code ec;
-  for (fs::directory_iterator it(folder, ec), end; !ec && it != end; it.increment(ec)) {
-    if (it->is_regular_file(ec) && is_pdf(it->path()) && !it->path().filename().string().starts_with('.')) {
-      files.push_back(it->path());
-    }
-  }
-  std::ranges::sort(files);
-  return files;
-}
-
 // What Tab tells about the pdf files of a folder, e.g. "3 pdf-filer i mappen:" and their names
 std::vector<std::string> pdf_lines(fs::path const& folder) {
   auto const files = pdf_files_in(folder);
@@ -406,6 +386,66 @@ std::vector<std::string> pdf_lines(fs::path const& folder) {
   }
   return lines;
 }
+
+// Code points in UTF-8 text, for lining up columns
+std::size_t width_of(std::string const& text) {
+  return static_cast<std::size_t>(
+      std::ranges::count_if(text, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
+}
+
+// The pdf files a list shows its names to at most, before the status
+constexpr std::size_t pdf_name_width = 50;
+
+// The pdf files of a folder, numbered, each with what walk_pdf finds in it
+// (see status_text): "   1  faktura.pdf          text, 1 sida"
+std::vector<std::string> pdf_rows(std::vector<fs::path> const& files, std::vector<PdfStatus> const& statuses) {
+  std::vector<std::string> names;
+  std::size_t width = 0;
+  for (auto const& file : files) {
+    auto const name = file.filename().u8string();
+    names.emplace_back(name.begin(), name.end());
+    width = std::max(width, std::min(width_of(names.back()), pdf_name_width));
+  }
+  std::vector<std::string> rows;
+  for (std::size_t i = 0; i < files.size(); ++i) {
+    auto const shown = width_of(names[i]);
+    auto const padding = shown < width ? std::string(width - shown, ' ') : std::string();
+    rows.push_back(std::format("  {:>3}  {}{}  {}", i + 1, names[i], padding, status_text(statuses[i])));
+  }
+  return rows;
+}
+
+// Pdf-underlag: the pdf files of a folder, numbered, each with a status line
+// telling whether walk_pdf finds text in it; a page at a time. Just a view.
+class PdfListState : public State {
+public:
+  PdfListState(fs::path folder, std::vector<fs::path> files, std::vector<PdfStatus> statuses)
+      : folder_(std::move(folder)), count_(files.size()) {
+    pager_.set(pdf_rows(files, statuses));
+  }
+  std::string name() const override { return "Pdf-underlag"; }
+  View view() const override {
+    if (count_ == 0) return {std::format("Inga pdf-filer i {}.", folder_.string())};
+    View lines{std::format("Pdf-underlag i {}: {}", folder_.string(),
+                           count_ == 1 ? std::string("1 fil") : std::format("{} filer", count_))};
+    auto const page = pager_.view();
+    lines.insert(lines.end(), page.begin(), page.end());
+    return lines;
+  }
+  OptionsList options() const override { return {{back_key, "Föregående sida"}, {forward_key, "Nästa sida"}}; }
+  bool on_key_in_place(CodePoint key) override {
+    if (key == back_key) return pager_.back();
+    if (key == forward_key) return pager_.forward();
+    return false;
+  }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::pdf_list); }
+
+private:
+  fs::path folder_;
+  std::size_t count_;
+  pyroceph::tui::Pager pager_{booked_page_rows};
+};
 
 class ReadPdfState : public State {
 public:
@@ -443,8 +483,11 @@ public:
     return completion;
   }
   InputResult on_input(std::u32string_view text) override {
-    auto const folder = pyroceph::tui::path_of(text);
+    auto folder = pyroceph::tui::path_of(text);
     if (folder.empty()) return std::unexpected(std::string("Skriv sökvägen till mappen."));
+    if (!folder.has_filename() && folder.has_parent_path() && folder != folder.root_path()) {
+      folder = folder.parent_path(); // without the separator at the end
+    }
     std::error_code ec;
     if (fs::is_regular_file(folder, ec)) {
       return std::unexpected(std::format("{} är en fil. Välj mappen den ligger i.", folder.string()));
@@ -452,9 +495,16 @@ public:
     if (!fs::is_directory(folder, ec)) return std::unexpected(std::format("Det finns ingen mapp {}.", folder.string()));
     chosen_folder_ = folder;
     if (remember_) remember_(folder);
-    LOG_BUSINESS("Mapp med pdf-underlag vald för {} i {}: {} ({} pdf-filer)", label_of(year_),
-                 project_.folder.string(), folder.string(), pdf_files_in(folder).size());
-    return Accepted(make_design_insufficiency_state("Läs pdf-underlag", "att läsa in pdf-underlag"));
+    auto files = pdf_files_in(folder);
+    std::vector<PdfStatus> statuses;
+    std::size_t with_text = 0;
+    for (auto const& file : files) {
+      statuses.push_back(pdf_status(file));
+      with_text += statuses.back().kind == PdfStatus::Kind::text ? 1 : 0;
+    }
+    LOG_BUSINESS("Pdf-underlag lästa för {} i {}: {} ({} pdf-filer, {} med text)", label_of(year_),
+                 project_.folder.string(), folder.string(), files.size(), with_text);
+    return Accepted(std::make_unique<PdfListState>(folder, std::move(files), std::move(statuses)));
   }
   std::string help_topic() const override { return std::string(help_topic::read_pdf); }
 

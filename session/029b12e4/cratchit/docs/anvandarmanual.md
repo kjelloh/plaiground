@@ -497,7 +497,7 @@ När cratchit har läst raden skapas utkastet direkt, utan att du behöver bekr�
 ##### Läs pdf-underlag
 
 <!-- hjälp: las-pdf-underlag -->
-Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar vilka pdf-filer mappen har. Väljer du en fil, eller en mapp som inte finns, säger cratchit det och sökvägen står kvar. Att läsa pdf-underlagen finns inte än, så en mapp leder till *Inte än*. Tryck `-` för att gå tillbaka till Utkast.
+Skriv sökvägen till mappen med pdf-underlagen och tryck Enter. Tab fyller i mappar och visar vilka pdf-filer mappen har. Väljer du en fil, eller en mapp som inte finns, säger cratchit det och sökvägen står kvar. En mapp leder till *Pdf-underlag*, en lista över mappens pdf-filer. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Underlag är dokumenten som visar en affärshändelse, till exempel fakturor och kvitton som pdf. Tryck `2` i Utkast och välj mappen där de ligger. Sökvägen börjar i bokföringens mapp, eller i mappen du valde senast för kontoutdrag eller underlag.
@@ -512,7 +512,37 @@ Cratchit > … > Utkast > Läs pdf-underlag: /Users/me/Documents/The ITfied AB/M
         momsrapport 2026-07-01 - 2026-09-30.pdf
 ```
 
-Tab fyller bara i mappar. Pdf-filerna visas som information; du väljer mappen, inte filerna. cratchit läser filerna och låter dem ligga. Att skapa utkast av underlagen kommer senare.
+Tab fyller bara i mappar. Pdf-filerna visas som information; du väljer mappen, inte filerna. cratchit läser filerna och låter dem ligga.
+
+###### Pdf-underlag
+
+<!-- hjälp: pdf-underlag -->
+Mappens pdf-filer, numrerade, med vad cratchit hittar i varje fil: text eller inte. Listan visar 20 filer i taget; tryck `>` för nästa sida och `<` för föregående. Listan är bara en vy. Tryck `-` för att gå tillbaka och välja en annan mapp.
+<!-- /hjälp -->
+
+När du trycker Enter på en mapp läser cratchit varje pdf-fil i den (inte i undermappar) och visar en rad per fil:
+
+```text
+Pdf-underlag i /Users/me/Documents/The ITfied AB/M2 Juli-Sep: 9 filer
+    1  4816_13_1784701252.pdf                                  text, 1 sida
+    2  62600010249540.pdf                                      text, 2 sidor
+    …
+Cratchit > … > Utkast > Läs pdf-underlag > Pdf-underlag> 
+```
+
+| Står det | Betyder |
+|---|---|
+| `text, 2 sidor` | Filen har text som cratchit kan läsa |
+| `text, 1 sida, 4 tecken oläsliga` | Filen har text, men några tecken gick inte att läsa; kontrollera texten innan du litar på den |
+| `ingen text, 1 sida (inskannad?)` | Sidorna har ingen text, till exempel en inskannad bild |
+| `inga sidor hittade` | cratchit hittade inga sidor. Filen kan lägga sidorna i objektströmmar, som cratchit inte läser än |
+| `krypterad med lösenord` | Filen behöver ett lösenord för att öppnas |
+| `krypterad (AES), går inte att läsa` | Filen är krypterad på ett sätt som cratchit inte kan läsa |
+| `textkopiering spärrad i filen` | Den som skapade filen har spärrat kopiering av texten, och cratchit respekterar det |
+| `inte en pdf` | Filen heter `.pdf` men är ingen pdf |
+| `går inte att läsa` | Filen gick inte att öppna |
+
+cratchit läser texten med koden från walk_pdf. Att visa texten och skapa utkast av underlagen kommer senare.
 
 #### Bokfört
 

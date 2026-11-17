@@ -29,8 +29,10 @@ namespace cratchit::ui {
 // utkast #13: <heading>.".
 // 2 Läs pdf-underlag: the user types the path of a folder, starting in the
 // project folder; Tab completes folders and shows the folder's pdf files as
-// information. Enter on a folder leads to Inte än, as reading the pdf files is
-// not there yet; anything else is refused with the reason, and the path kept.
+// information. Enter on a folder reads its pdf files with walk_pdf (see
+// pdf_status) and leads to "Pdf-underlag": the files numbered, each with a
+// status line telling whether it has text, a page at a time with < and >.
+// Anything else is refused with the reason, and the path kept.
 // Läs kontoutdrag and Läs pdf-underlag start in the folder chosen last in
 // either (beslut 2026-11-17: statements and documents often lie together).
 // Opened with 0 in Årsflöde. No input.

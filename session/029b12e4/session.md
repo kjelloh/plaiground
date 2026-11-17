@@ -76,6 +76,12 @@ Har nu påbörjat inläsning av kontoutdrag till utkast.
 
 * Todo: Utöka läsning till fler format (fler banker)
 
+Jag fick en idé angående hur vi lägger in kod från de fristående apparna i tidigare sessioner?
+
+* Kan vi lägga till och låta cratchit också ta över cli argumenten?
+* Alltså att cratchit kan göra walk_pdf med lämpliga input-argument?
+* Detsamma skulle vi då kunna göra för cratchit_ar or cratchit_ink2?
+
 ## 20261116
 
 Nu är det väl ändå dags att till slut få till ett sätt att redigera och skapa verifikationer till bokföringen?
