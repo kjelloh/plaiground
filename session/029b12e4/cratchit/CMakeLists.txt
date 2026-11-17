@@ -157,7 +157,6 @@ add_library(cratchit_core
   src/core/sru.cpp
   src/core/ar/arguments.cpp
   src/core/ar/cli.cpp
-  src/core/ar/closing.cpp
   src/core/ar/disposition.cpp
   src/core/ar/equity.cpp
   src/core/ar/layout.cpp

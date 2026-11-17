@@ -1,7 +1,7 @@
 find_package(GTest REQUIRED)
 
 add_executable(cratchit_tests
-  ink2/test_closing.cpp
+  test_closing.cpp
   ink2/test_ink2_accounts.cpp
   ink2/test_ink2_arguments.cpp
   ink2/test_ink2_check.cpp

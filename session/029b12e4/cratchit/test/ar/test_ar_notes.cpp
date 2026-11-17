@@ -15,7 +15,7 @@
 #include <vector>
 
 using cratchit::Amount;
-using cratchit::ar::Balances;
+using cratchit::Balances;
 using cratchit::ar::build_notes;
 using cratchit::ar::Notes;
 using cratchit::sie::Transaction;
@@ -161,7 +161,7 @@ TEST_P(ArNotesAgainstPdf, AmountsMatchWithinAKrona) {
   auto const lines = cratchit::ar::parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(lines);
   auto const statement = cratchit::ar::build_statement(
-      *lines, {cratchit::ar::year_balances(document, 0), cratchit::ar::year_balances(document, -1)});
+      *lines, {cratchit::year_balances(document, 0), cratchit::year_balances(document, -1)});
   auto const notes = build_notes(statement, document);
   EXPECT_TRUE(notes.errors.empty());
   ASSERT_EQ(notes.notes.size(), 1u);
@@ -189,9 +189,9 @@ TEST_P(ArNotesAgainstPdf, AmountsMatchWithinAKrona) {
   for (std::size_t index = 1; index < rows->size(); ++index) {
     auto const& row = (*rows)[index];
     EXPECT_EQ(row[0], shown[index - 1].first);
-    cratchit::ar::Kronor expected = 0;
+    cratchit::Kronor expected = 0;
     std::from_chars(row[1].data(), row[1].data() + row[1].size(), expected);
-    auto const kronor = cratchit::ar::to_kronor(shown[index - 1].second);
+    auto const kronor = cratchit::to_kronor(shown[index - 1].second);
     EXPECT_LE(std::abs(kronor - expected), 1) << row[0] << ": " << kronor << " against " << expected;
   }
 }

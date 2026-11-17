@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-using cratchit::ar::Balances;
+using cratchit::Balances;
 using cratchit::ar::Check;
 using cratchit::ar::check_requirements;
 using namespace std::chrono;
@@ -164,7 +164,7 @@ TEST_P(ArRequirementsOfFile, MissingItems) {
   auto const lines = cratchit::ar::parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(lines);
   auto const statement = cratchit::ar::build_statement(
-      *lines, {cratchit::ar::year_balances(document, 0), cratchit::ar::year_balances(document, -1)});
+      *lines, {cratchit::year_balances(document, 0), cratchit::year_balances(document, -1)});
   auto const check = check_requirements(statement, cratchit::ar::build_overview(statement),
                                         cratchit::ar::build_notes(statement, document));
   EXPECT_EQ(ids_of(check.missing), GetParam().second);

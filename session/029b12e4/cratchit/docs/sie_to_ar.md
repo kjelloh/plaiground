@@ -497,7 +497,7 @@ exactly the year's result, as that is not booked to 2099. Then:
   the closing entry Fortnox makes, 2099 against 8999 on the balance day, so that the
   balansräkning balances and Förändringar i eget kapital and the Resultatdisposition
   show the year's result. It is not a voucher of the books: `--trace` shows it as
-  `* 2026-04-30 Ej bokfört: Årets resultat (simulerat av cratchit_ar)`.
+  `* 2026-04-30 Ej bokfört: Årets resultat (simulerat av cratchit)`.
 - The årsredovisning starts with
   `PRELIMINÄR: bokslutet är inte gjort, årets resultat är inte bokfört (TBD [1]).`, and
   the K2 check has the missing item Bokslut (BFL 6 kap. 1 §: the bookkeeping is closed

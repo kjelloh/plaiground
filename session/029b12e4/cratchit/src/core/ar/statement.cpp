@@ -29,25 +29,6 @@ std::size_t scope_end(std::vector<StatementLine> const& lines, std::size_t index
 
 } // namespace
 
-Kronor to_kronor(Amount amount) {
-  return amount >= 0 ? (amount + 50) / 100 : -((-amount + 50) / 100);
-}
-
-Balances year_balances(sie::Document const& document, int year) {
-  Balances balances;
-  for (auto const& balance : document.closing) {
-    if (balance.year == year) {
-      balances[balance.account] += balance.amount;
-    }
-  }
-  for (auto const& result : document.results) {
-    if (result.year == year) {
-      balances[result.account] += result.amount;
-    }
-  }
-  return balances;
-}
-
 Statement build_statement(std::vector<Line> const& layout, std::vector<Balances> const& years) {
   Statement statement;
   // Whether each line of the layout is under the statement heading Noter

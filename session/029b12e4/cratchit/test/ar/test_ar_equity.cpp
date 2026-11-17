@@ -204,10 +204,10 @@ TEST_P(ArEquityAgainstPdf, AmountsMatchWithinAKrona) {
     auto const& shown = changes.rows[index - 1];
     EXPECT_EQ(row[0], shown.text);
     for (std::size_t column = 0; column < shown.amounts.size(); ++column) {
-      cratchit::ar::Kronor expected = 0;
+      cratchit::Kronor expected = 0;
       std::from_chars(row[column + 1].data(), row[column + 1].data() + row[column + 1].size(), expected);
-      EXPECT_LE(std::abs(cratchit::ar::to_kronor(shown.amounts[column]) - expected), 1)
-          << row[0] << " column " << column << ": " << cratchit::ar::to_kronor(shown.amounts[column]) << " against "
+      EXPECT_LE(std::abs(cratchit::to_kronor(shown.amounts[column]) - expected), 1)
+          << row[0] << " column " << column << ": " << cratchit::to_kronor(shown.amounts[column]) << " against "
           << expected;
     }
   }

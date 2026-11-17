@@ -16,7 +16,7 @@
 #include <vector>
 
 using cratchit::Amount;
-using cratchit::ar::Balances;
+using cratchit::Balances;
 using cratchit::ar::build_disposition;
 using cratchit::ar::build_overview;
 using cratchit::ar::format_percent;
@@ -194,7 +194,7 @@ TEST_P(ArDirectorsReportAgainstPdf, MatchesWithinARoundingStep) {
   auto const lines = cratchit::ar::parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(lines);
   auto const statement = cratchit::ar::build_statement(
-      *lines, {cratchit::ar::year_balances(document, 0), cratchit::ar::year_balances(document, -1)});
+      *lines, {cratchit::year_balances(document, 0), cratchit::year_balances(document, -1)});
   std::string const period = GetParam().second;
 
   auto const overview = build_overview(statement);
@@ -212,10 +212,10 @@ TEST_P(ArDirectorsReportAgainstPdf, MatchesWithinARoundingStep) {
   ASSERT_EQ(funds.size(), disposition.funds.size() + 1);
   for (std::size_t index = 0; index < disposition.funds.size(); ++index) {
     EXPECT_EQ(funds[index][0], disposition.funds[index].text);
-    EXPECT_LE(std::abs(cratchit::ar::to_kronor(disposition.funds[index].amount) - number_of(funds[index][1])), 1);
+    EXPECT_LE(std::abs(cratchit::to_kronor(disposition.funds[index].amount) - number_of(funds[index][1])), 1);
   }
   EXPECT_EQ(funds.back()[0], "Summa");
-  EXPECT_LE(std::abs(cratchit::ar::to_kronor(disposition.total) - number_of(funds.back()[1])), 1);
+  EXPECT_LE(std::abs(cratchit::to_kronor(disposition.total) - number_of(funds.back()[1])), 1);
 }
 
 INSTANTIATE_TEST_SUITE_P(Filed, ArDirectorsReportAgainstPdf,

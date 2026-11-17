@@ -9,6 +9,8 @@
 #include <string_view>
 #include <vector>
 
+// The year-end closing of a fiscal year in an SIE file, shared by cratchit_ar
+// (--sie-to-ar) and cratchit_ink2 (--sie-to-ink2): from both sessions, the same code.
 namespace cratchit {
 
 // The closing entries BAS asks for at the balance day that the books of a
@@ -38,6 +40,6 @@ std::optional<Amount> unbooked_result(sie::Document const& document);
 sie::Document with_closing_entry(sie::Document document, Amount result);
 
 // The text of the simulated closing entry
-constexpr std::string_view simulated_closing_text = "Ej bokfört: Årets resultat (simulerat av cratchit_ink2)";
+constexpr std::string_view simulated_closing_text = "Ej bokfört: Årets resultat (simulerat av cratchit)";
 
 } // namespace cratchit

@@ -14,13 +14,13 @@
 #include <fstream>
 #include <string>
 
-using cratchit::ar::Balances;
+using cratchit::Balances;
 using cratchit::ar::build_statement;
 using cratchit::ar::check_statement;
 using cratchit::ar::format_kronor;
-using cratchit::ar::Kronor;
+using cratchit::Kronor;
 using cratchit::ar::Statement;
-using cratchit::ar::to_kronor;
+using cratchit::to_kronor;
 
 namespace {
 
@@ -182,8 +182,8 @@ TEST_P(ArAgainstPdf, AmountsMatchWithinAKrona) {
   ASSERT_TRUE(parsed.errors.empty());
   auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(layout);
-  auto const statement = build_statement(*layout, {cratchit::ar::year_balances(parsed.document, 0),
-                                                   cratchit::ar::year_balances(parsed.document, -1)});
+  auto const statement = build_statement(*layout, {cratchit::year_balances(parsed.document, 0),
+                                                   cratchit::year_balances(parsed.document, -1)});
   EXPECT_TRUE(statement.errors.empty());
   EXPECT_TRUE(check_statement(statement).empty());
 

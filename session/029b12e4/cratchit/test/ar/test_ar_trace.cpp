@@ -13,7 +13,7 @@
 #include <vector>
 
 using cratchit::Amount;
-using cratchit::ar::Balances;
+using cratchit::Balances;
 using cratchit::ar::trace_statement;
 using cratchit::sie::Transaction;
 using namespace std::chrono;
@@ -111,7 +111,7 @@ TEST_P(ArTraceOfFile, AddsUp) {
   auto const layout = cratchit::ar::parse_layout(cratchit::ar::layout_text());
   ASSERT_TRUE(layout);
   auto const statement = cratchit::ar::build_statement(
-      *layout, {cratchit::ar::year_balances(document, 0), cratchit::ar::year_balances(document, -1)});
+      *layout, {cratchit::year_balances(document, 0), cratchit::year_balances(document, -1)});
 
   auto const traced = trace_statement(statement, document);
   std::size_t shown = 0;
