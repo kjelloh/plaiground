@@ -159,9 +159,16 @@ The user manual is in Swedish: [docs/anvandarmanual.md](docs/anvandarmanual.md).
 * The manual is copied into the framework at build time and read at start (`core/manual`). The program shows the help text as plain text, without `**`, `*`, backticks and link targets; code blocks show as they are, without their fences.
 * The tests check that the manual has a help text for every topic, and no help text for an unknown topic.
 
-## Reading a PDF from the command line
+## Commands without the user interface
 
-`cratchit --walk_pdf ...` runs walk_pdf (session 9fe36d28) without the user interface: the same arguments, output and exit codes as walk_pdf had (`<file> [<path>] [--depth N]`, `--text <file>`, `--help`). Its manual is [docs/walk_pdf.md](docs/walk_pdf.md), built into the program for `--help`. The code is walk_pdf's `main.cpp` as `src/walk_pdf/cli.cpp`. Any other argument is refused with exit code 2.
+With a command as its first argument cratchit runs it and ends, without the user interface: no startup lines, no log, no `~/.cratchit` or framework needed. Each command keeps the arguments, output, texts (English) and exit codes of the program it came from, and its manual is built into cratchit for `--help`. Any other argument is refused with exit code 2.
+
+| Command | From | Code | Manual |
+|---|---|---|---|
+| `cratchit --walk-pdf <file> [<path>] [--depth N]`, `--text <file>` | walk_pdf (session 9fe36d28) | `src/walk_pdf/cli.cpp` | [docs/walk_pdf.md](docs/walk_pdf.md) |
+| `cratchit --sie-to-ar [--trace] [--bas-year <year>] <file.se>` | cratchit_ar (session 5b35b2b9) | `src/core/ar/cli.cpp` | [docs/sie_to_ar.md](docs/sie_to_ar.md) |
+
+`--sie-to-ar` writes the folder `<orgnr>_<start>_<end>` in the working directory. Its BAS to ÅR mappings are `resources/ar/bas_to_ar_<year>.csv`, built into the program. It reads the SIE file with cratchit's own SIE parser (`core/sie`), which is the one cratchit_ar had, under the charset names of today.
 
 ## Trying another day
 

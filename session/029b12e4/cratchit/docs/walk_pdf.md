@@ -1,8 +1,8 @@
 # walk_pdf
 
 > In cratchit, walk_pdf (session 9fe36d28) runs from the command line as
-> `cratchit --walk_pdf ...`, without cratchit's user interface. `cratchit
-> --walk_pdf --help` prints this manual. cratchit's own user manual is
+> `cratchit --walk-pdf ...`, without cratchit's user interface. `cratchit
+> --walk-pdf --help` prints this manual. cratchit's own user manual is
 > separate.
 
 walk_pdf walks the structure of a PDF file and shows each part it visits as a
@@ -20,9 +20,9 @@ the text of the PDF, so that it can be turned into plain text or Markdown.
 ## Usage
 
 ```
-cratchit --walk_pdf <file.pdf> [<path>] [--depth N]
-cratchit --walk_pdf --text <file.pdf>
-cratchit --walk_pdf [options]
+cratchit --walk-pdf <file.pdf> [<path>] [--depth N]
+cratchit --walk-pdf --text <file.pdf>
+cratchit --walk-pdf [options]
 ```
 
 walk_pdf lists the element at `path` and what is inside it, `N` levels down,
@@ -30,7 +30,7 @@ depth first: each element is followed by its children before its next
 sibling. Without a path it starts at `/`, the whole file. Without `--depth` it
 goes 3 levels down.
 
-`cratchit --walk_pdf <file.pdf>` prints one line per element:
+`cratchit --walk-pdf <file.pdf>` prints one line per element:
 
 ```
     offset       size  path                             peek
@@ -59,12 +59,12 @@ goes 3 levels down.
 - *path* says which element it is (see Paths below).
 - *peek* is a short look at what the element holds (see Peek below).
 
-`cratchit --walk_pdf <file.pdf> <path>` starts at the element at `path`. Quote the path in
+`cratchit --walk-pdf <file.pdf> <path>` starts at the element at `path`. Quote the path in
 the shell, as `[` and `]` mean something to most shells:
 
 ```
-cratchit --walk_pdf book.pdf '/rev[1]/trailer[0]'
-cratchit --walk_pdf book.pdf '/rev[1]' --depth 0     # only the revision itself
+cratchit --walk-pdf book.pdf '/rev[1]/trailer[0]'
+cratchit --walk-pdf book.pdf '/rev[1]' --depth 0     # only the revision itself
 ```
 
 ## Peek
@@ -186,8 +186,8 @@ catalog's page tree, and in each page its content streams and the forms they
 draw. walk_pdf walks that order under `/pages`:
 
 ```
-cratchit --walk_pdf file.pdf /pages --depth 1           the pages, in order
-cratchit --walk_pdf file.pdf '/pages/page[0]' --depth 1  the first page's drawing operations
+cratchit --walk-pdf file.pdf /pages --depth 1           the pages, in order
+cratchit --walk-pdf file.pdf '/pages/page[0]' --depth 1  the first page's drawing operations
 ```
 
 | Path                         | Element                                              |
@@ -198,7 +198,7 @@ cratchit --walk_pdf file.pdf '/pages/page[0]' --depth 1  the first page's drawin
 | `.../op[j]/[k]`              | Operand k of an operation                            |
 | `.../op[j]/op[k]`            | When op[j] draws a form (`/Fm1 Do`), operation k of the form |
 
-`/pages` is not listed under `/`, so a plain `cratchit --walk_pdf file.pdf` does not list
+`/pages` is not listed under `/`, so a plain `cratchit --walk-pdf file.pdf` does not list
 every drawing operation; the `/` row says how many pages there are.
 
 Text-showing operations show their text, as elsewhere. The font in effect is
@@ -212,9 +212,9 @@ such files show no pages.
 
 ## Plain text
 
-`cratchit --walk_pdf --text file.pdf` prints the document's text to standard output,
+`cratchit --walk-pdf --text file.pdf` prints the document's text to standard output,
 each page after a `--- page n ---` line. walk_pdf writes no files; to keep the
-text, redirect it: `cratchit --walk_pdf --text file.pdf > file.txt`. Errors go to
+text, redirect it: `cratchit --walk-pdf --text file.pdf > file.txt`. Errors go to
 standard error, and so do warnings: when no pages were found (they may be in
 object streams), or when some characters could not be mapped (shown as `�`).
 
@@ -348,11 +348,11 @@ With the default depth of 3, walk_pdf lists revisions, their elements, and the
 entries and items of objects and trailers, but not what is nested deeper.
 `--depth 4` also lists each stream's decoded data, and `--depth 7` everything
 down to the operands of text operators. To look into one page's text, start at
-its decoded stream: `cratchit --walk_pdf file.pdf '/rev[0]/obj[35]/stream/decoded' --depth 2`. Give
+its decoded stream: `cratchit --walk-pdf file.pdf '/rev[0]/obj[35]/stream/decoded' --depth 2`. Give
 a path and a depth to look further into one part, e.g.
-`cratchit --walk_pdf file.pdf '/rev[0]/obj[5]' --depth 3`.
+`cratchit --walk-pdf file.pdf '/rev[0]/obj[5]' --depth 3`.
 
-Running `cratchit --walk_pdf` without further arguments prints walk_pdf's name and version, and cratchit's.
+Running `cratchit --walk-pdf` without further arguments prints walk_pdf's name and version, and cratchit's.
 
 ## Exit codes
 

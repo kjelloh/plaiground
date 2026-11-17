@@ -92,8 +92,48 @@ target_include_directories(pyroceph PUBLIC src)
 target_link_libraries(pyroceph PUBLIC charset PRIVATE cratchit_warnings)
 
 # Application logic (from take 3, session 60cae9fe)
+# cratchit_ar (session 5b35b2b9): the årsredovisning of an SIE file, run as
+# cratchit --sie-to-ar. Its manual, docs/sie_to_ar.md, and each BAS to ÅR
+# mapping, resources/ar/bas_to_ar_<year>.csv, are built into the program as
+# bytes, with a list of the mappings. A new mapping is a new CSV and its year here.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS docs/sie_to_ar.md)
+file(READ docs/sie_to_ar.md ar_manual_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," ar_manual_bytes "${ar_manual_hex}")
+configure_file(src/core/ar/manual_text.cpp.in generated/ar_manual_text.cpp @ONLY)
+set(BAS_TO_AR_YEARS 2024 2026)
+set(layout_declarations "")
+set(layout_entries "")
+set(layout_sources "")
+foreach(year IN LISTS BAS_TO_AR_YEARS)
+  set(layout_file resources/ar/bas_to_ar_${year}.csv)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${layout_file})
+  file(READ ${layout_file} layout_hex HEX)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," layout_bytes "${layout_hex}")
+  configure_file(src/core/ar/layout_text.cpp.in generated/layout_text_${year}.cpp @ONLY)
+  string(APPEND layout_declarations "std::string_view layout_text_${year}();\n")
+  string(APPEND layout_entries "      {${year}, \"${layout_file}\", layout_text_${year}()},\n")
+  list(APPEND layout_sources ${CMAKE_CURRENT_BINARY_DIR}/generated/layout_text_${year}.cpp)
+endforeach()
+configure_file(src/core/ar/layouts.cpp.in generated/layouts.cpp @ONLY)
+
 add_library(cratchit_core
   src/core/amount.cpp
+  src/core/ar/arguments.cpp
+  src/core/ar/cli.cpp
+  src/core/ar/closing.cpp
+  src/core/ar/disposition.cpp
+  src/core/ar/equity.cpp
+  src/core/ar/layout.cpp
+  src/core/ar/notes.cpp
+  src/core/ar/output.cpp
+  src/core/ar/overview.cpp
+  src/core/ar/requirements.cpp
+  src/core/ar/statement.cpp
+  src/core/ar/text.cpp
+  src/core/ar/trace.cpp
+  ${layout_sources}
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/layouts.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/ar_manual_text.cpp
   src/core/bas.cpp
   src/core/books/books.cpp
   src/core/books/export.cpp

@@ -7,7 +7,7 @@
 namespace walk_pdf {
 
 // walk_pdf's command line (its main.cpp, session 9fe36d28), run by cratchit as
-// cratchit --walk_pdf <arguments>. arguments are those after --walk_pdf:
+// cratchit --walk-pdf <arguments>. arguments are those after --walk-pdf:
 //   <file> [<path>] [--depth N]  lists the element at path (default the whole
 //                                file) and what is inside it, depth levels down (default 3)
 //   --text <file>                the document's text, page by page

@@ -1,6 +1,16 @@
 find_package(GTest REQUIRED)
 
 add_executable(cratchit_tests
+  ar/test_ar_arguments.cpp
+  ar/test_ar_closing.cpp
+  ar/test_ar_equity.cpp
+  ar/test_ar_layout.cpp
+  ar/test_ar_notes.cpp
+  ar/test_ar_output.cpp
+  ar/test_ar_overview.cpp
+  ar/test_ar_requirements.cpp
+  ar/test_ar_statement.cpp
+  ar/test_ar_trace.cpp
   test_amount.cpp
   test_books.cpp
   test_csv.cpp
@@ -51,6 +61,13 @@ add_executable(cratchit_tests
 # The manual in the source tree, so that the tests check the one that is edited
 target_compile_definitions(cratchit_tests PRIVATE CRATCHIT_MANUAL_FILE="${PROJECT_SOURCE_DIR}/docs/anvandarmanual.md")
 target_link_libraries(cratchit_tests PRIVATE cratchit_core cratchit_ui pyroceph cratchit_warnings GTest::gtest_main)
+target_include_directories(cratchit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# cratchit_ar's tests (session 5b35b2b9): those that read filed årsredovisningar's SIE
+# files skip, as cratchit's tests use no files outside the repository (the folder
+# below does not exist); the amounts typed in from them are in ar/expected_ar
+target_compile_definitions(cratchit_tests PRIVATE
+  CRATCHIT_AR_SIE_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}/ar/no_sie_files_in_the_repository"
+  CRATCHIT_AR_EXPECTED_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}/ar/expected_ar")
 
 include(GoogleTest)
 gtest_discover_tests(cratchit_tests)

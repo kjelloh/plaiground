@@ -1,3 +1,4 @@
+#include "core/ar/cli.hpp"
 #include "core/build_stamp.hpp"
 #include "core/date.hpp"
 #include "core/dot_folder.hpp"
@@ -38,10 +39,15 @@ int main(int argc, char* argv[]) {
   // nothing else is printed, logged or required (no ~/.cratchit, no framework)
   std::vector<std::string_view> const arguments(argv + 1, argv + argc);
   if (!arguments.empty()) {
-    if (arguments.front() == "--walk_pdf") {
+    if (arguments.front() == "--walk-pdf") {
       return walk_pdf::run_cli(std::span(arguments).subspan(1), stdout, stderr, cratchit::version());
     }
-    std::println(stderr, "Fel: okänt argument '{}'. cratchit tar bara emot --walk_pdf (se cratchit --walk_pdf --help).",
+    if (arguments.front() == "--sie-to-ar") {
+      return cratchit::ar::run_cli(std::span(arguments).subspan(1), stdout, stderr, cratchit::version());
+    }
+    std::println(stderr,
+                 "Fel: okänt argument '{}'. cratchit tar emot --walk-pdf och --sie-to-ar (se till exempel cratchit "
+                 "--sie-to-ar --help).",
                  arguments.front());
     return 2;
   }

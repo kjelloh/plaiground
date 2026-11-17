@@ -78,14 +78,14 @@ TEST(Cli, HelpGivesTheManual) {
     auto const result = run({help});
     EXPECT_EQ(result.code, 0);
     EXPECT_TRUE(result.out.starts_with("# walk_pdf\n")) << result.out.substr(0, 40);
-    EXPECT_NE(result.out.find("cratchit --walk_pdf --text <file.pdf>"), std::string::npos);
+    EXPECT_NE(result.out.find("cratchit --walk-pdf --text <file.pdf>"), std::string::npos);
   }
 }
 
 TEST(Cli, InvalidArgumentsAreExitCodeTwo) {
   auto result = run({"--depth"});
   EXPECT_EQ(result.code, 2);
-  EXPECT_EQ(result.err, "Error: --depth needs a number\nSee cratchit --walk_pdf --help\n");
+  EXPECT_EQ(result.err, "Error: --depth needs a number\nSee cratchit --walk-pdf --help\n");
   EXPECT_EQ(run({"a.pdf", "/", "x"}).code, 2);
   EXPECT_EQ(run({"--bogus"}).code, 2);
 }

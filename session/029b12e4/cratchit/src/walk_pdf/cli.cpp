@@ -132,7 +132,7 @@ int run_cli(std::span<std::string_view const> arguments, std::FILE* out, std::FI
 
   auto const parsed = parse_arguments(arguments);
   if (!parsed) {
-    std::println(err, "Error: {}\nSee cratchit --walk_pdf --help", parsed.error());
+    std::println(err, "Error: {}\nSee cratchit --walk-pdf --help", parsed.error());
     return 2;
   }
 

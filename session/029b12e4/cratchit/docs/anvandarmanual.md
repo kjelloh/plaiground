@@ -63,17 +63,19 @@ Cratchit > Samlingsmapp > The ITfied AB>
 
 Tryck `q` två gånger för att avsluta.
 
-### Läsa en pdf från kommandoraden
+### Kommandoraden
 
-cratchit kan också läsa en pdf-fil utan att starta gränssnittet, med koden från walk_pdf:
+cratchit kan också köra ett kommando utan att starta gränssnittet. Med ett kommando gör cratchit bara det och avslutar: inga rader om bygget, ingen logg och ingen samlingsmapp. Varje kommando har sin egen manual, på engelska, som `--help` efter kommandot visar.
 
-```sh
-cratchit --walk_pdf --text faktura.pdf        # pdf:ens text, sida för sida
-cratchit --walk_pdf faktura.pdf               # pdf:ens uppbyggnad
-cratchit --walk_pdf --help                    # walk_pdf:s manual (på engelska)
-```
+| Kommando | Gör |
+|---|---|
+| `cratchit --walk-pdf --text faktura.pdf` | Skriver pdf:ens text, sida för sida (walk_pdf) |
+| `cratchit --walk-pdf faktura.pdf` | Visar pdf:ens uppbyggnad (walk_pdf) |
+| `cratchit --sie-to-ar bokföring.se` | Gör årsredovisningen av en SIE-fil, i en ny mapp `<orgnr>_<start>_<slut>` i mappen du står i, med årsredovisningen, en rapport och en kopia av SIE-filen (cratchit_ar) |
+| `cratchit --sie-to-ar --trace bokföring.se` | Visar konton och verifikationer bakom varje belopp i årsredovisningen, utan att skriva filer |
+| `cratchit --walk-pdf --help`, `cratchit --sie-to-ar --help` | Kommandots manual |
 
-Med `--walk_pdf` gör cratchit bara det och avslutar: inga rader om bygget, ingen logg och ingen samlingsmapp. Texten går till standard output, så du kan spara den med `> faktura.txt`. Allt om argumenten står i walk_pdf:s egen manual, som `--help` visar. Andra argument än `--walk_pdf` känner cratchit inte igen; då säger cratchit det och startar inte.
+Texten går till standard output, så du kan spara den, till exempel med `> faktura.txt`. Andra argument känner cratchit inte igen; då säger cratchit det och startar inte.
 
 ## Att använda cratchit
 
