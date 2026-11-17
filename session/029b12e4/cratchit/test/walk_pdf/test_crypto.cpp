@@ -54,5 +54,8 @@ TEST(Rc4, DecryptingIsEncryptingAgain) {
 
 TEST(Rc4, InPiecesIsTheSameAsInOneGo) {
   crypto::Rc4 rc4{"Secret"};
-  EXPECT_EQ(rc4.apply("Attack") + rc4.apply(" at dawn"), crypto::rc4("Secret", "Attack at dawn"));
+  // One statement each: the order the operands of + are evaluated in is not given (GCC takes the right first)
+  auto const first = rc4.apply("Attack");
+  auto const second = rc4.apply(" at dawn");
+  EXPECT_EQ(first + second, crypto::rc4("Secret", "Attack at dawn"));
 }

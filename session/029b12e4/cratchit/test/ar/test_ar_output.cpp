@@ -64,7 +64,7 @@ TEST_F(ArOutput, WritesTheFolder) {
   EXPECT_EQ(std::distance(std::filesystem::directory_iterator(paths.folder), std::filesystem::directory_iterator()), 3);
 }
 
-TEST_F(ArOutput, ReplacesTheÅrsredovisningAndKeepsAnIdenticalSieFile) {
+TEST_F(ArOutput, ReplacesTheArsredovisningAndKeepsAnIdenticalSieFile) {
   auto const paths = output_paths(base_, "556782-8172", fiscal_year);
   ASSERT_TRUE(write_outputs(paths, std::string("first\n"), "report 1\n", base_ / "export.se"));
   write(paths.ar, "edited by hand\n");
@@ -94,7 +94,7 @@ TEST_F(ArOutput, TheCopyItselfAsInputIsKept) {
   EXPECT_EQ(read(paths.sie), "#FLAGGA 0\n");
 }
 
-TEST_F(ArOutput, NoÅrsredovisningOnErrorsLeavesTheEarlierOne) {
+TEST_F(ArOutput, NoArsredovisningOnErrorsLeavesTheEarlierOne) {
   auto const paths = output_paths(base_, "556782-8172", fiscal_year);
   ASSERT_TRUE(write_outputs(paths, std::string("good\n"), "report 1\n", base_ / "export.se"));
   // Books with errors, exported again: neither the årsredovisning nor its SIE file is replaced

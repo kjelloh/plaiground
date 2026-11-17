@@ -33,7 +33,9 @@ std::string pdf(std::string_view content) {
 class PdfDocumentsTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    folder = fs::temp_directory_path() / "cratchit_pdf_documents_test";
+    // Its own folder for each test, as ctest runs them at the same time
+    auto const* info = ::testing::UnitTest::GetInstance()->current_test_info();
+    folder = fs::temp_directory_path() / (std::string("cratchit_pdf_documents_test_") + info->name());
     fs::remove_all(folder);
     fs::create_directories(folder / "under");
   }

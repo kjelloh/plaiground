@@ -1,6 +1,7 @@
 #include "pyroceph/tui/prompt_loop.hpp"
 
 #include "menu_state.hpp"
+#include "temporary_file.hpp"
 
 #include <gtest/gtest.h>
 
@@ -31,22 +32,10 @@ KeyReader keys_of(std::vector<std::uint8_t> bytes) {
       Encoding::utf8);
 }
 
-// A temporary file, removed when closed. MSVC marks std::tmpfile as unsafe
-// (C4996) and wants tmpfile_s, which only it has.
-std::FILE* temporary_file() {
-#ifdef _MSC_VER
-  std::FILE* file = nullptr;
-  if (tmpfile_s(&file) != 0) return nullptr;
-  return file;
-#else
-  return std::tmpfile();
-#endif
-}
-
 // Runs the loop and gives back what it wrote
 std::string run(KeyReader& keys, Navigator& navigator, pyroceph::tui::TerminalWidth width = {},
                 pyroceph::tui::HelpSource help = {}) {
-  auto* out = temporary_file();
+  auto* out = test::temporary_file();
   if (out == nullptr) {
     ADD_FAILURE() << "No temporary file";
     return {};

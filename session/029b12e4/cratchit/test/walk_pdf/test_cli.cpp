@@ -1,5 +1,7 @@
 #include "cli.hpp"
 
+#include "temporary_file.hpp"
+
 #include <gtest/gtest.h>
 
 #include <cstdio>
@@ -29,8 +31,8 @@ std::string read_back(std::FILE* file) {
 }
 
 Run run(std::vector<std::string_view> const& arguments) {
-  auto* out = std::tmpfile();
-  auto* err = std::tmpfile();
+  auto* out = test::temporary_file();
+  auto* err = test::temporary_file();
   Run result;
   result.code = walk_pdf::run_cli(arguments, out, err, "9.9.9");
   result.out = read_back(out);
@@ -58,7 +60,9 @@ std::string pdf(std::string_view text) {
 class CliTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    file = fs::temp_directory_path() / "cratchit_walk_pdf_cli_test.pdf";
+    // Its own file for each test, as ctest runs them at the same time
+    auto const* info = ::testing::UnitTest::GetInstance()->current_test_info();
+    file = fs::temp_directory_path() / (std::string("cratchit_walk_pdf_cli_test_") + info->name() + ".pdf");
     std::ofstream(file, std::ios::binary) << pdf("Faktura 123");
   }
   void TearDown() override { fs::remove(file); }

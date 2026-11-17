@@ -111,6 +111,6 @@ add_executable(walk_pdf_tests
   walk_pdf/test_syntax.cpp
   walk_pdf/test_text_string.cpp
 )
-target_include_directories(walk_pdf_tests PRIVATE ${PROJECT_SOURCE_DIR}/src/walk_pdf)
+target_include_directories(walk_pdf_tests PRIVATE ${PROJECT_SOURCE_DIR}/src/walk_pdf ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(walk_pdf_tests PRIVATE walk_pdf cratchit_warnings GTest::gtest_main ZLIB::ZLIB)
 gtest_discover_tests(walk_pdf_tests)

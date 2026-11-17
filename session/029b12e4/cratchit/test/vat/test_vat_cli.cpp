@@ -1,5 +1,7 @@
 #include "core/skv/vat_return/cli.hpp"
 
+#include "temporary_file.hpp"
+
 #include <gtest/gtest.h>
 
 #include <cstdio>
@@ -28,8 +30,8 @@ std::string read_back(std::FILE* file) {
 }
 
 Run run(std::vector<std::string_view> const& arguments) {
-  auto* out = std::tmpfile();
-  auto* err = std::tmpfile();
+  auto* out = test::temporary_file();
+  auto* err = test::temporary_file();
   Run result;
   result.code = cratchit::skv::vat_return::run_cli(arguments, out, err, "9.9.9");
   result.out = read_back(out);

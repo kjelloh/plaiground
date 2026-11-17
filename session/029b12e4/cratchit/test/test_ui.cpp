@@ -1384,7 +1384,7 @@ TEST_F(RootMenuTest, BookedOpensAVoucherByItsIdAsOneWord) {
   EXPECT_FALSE(has("  Signatur:       Kjell")); // the signature of a row is not the voucher's
 }
 
-TEST(VoucherMenu, HändelseAndKonteringarShowTheVoucherInParts) {
+TEST(VoucherMenu, HandelseAndKonteringarShowTheVoucherInParts) {
   using cratchit::books::Posting;
   cratchit::books::Voucher voucher;
   voucher.series = "D";
@@ -1443,7 +1443,7 @@ TEST(VoucherMenu, HändelseAndKonteringarShowTheVoucherInParts) {
   EXPECT_EQ(navigator.current().name(), "Konteringar");
   EXPECT_EQ(navigator.current().view(), (View{"Konteringar i D19"}));
   EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "2440  Leverantörsskulder          -1233.75"},
+            (OptionsList{{U'0', "2440  Leverantörsskulder           -1233.75"},
                          {U'1', "6210  Telekommunikation              987.00  (struken)"},
                          {U'2', "2641  Debiterad ingående moms        246.75"},
                          {U'3', "6230  Datakommunikation              987.00  Rättat konto  2026-05-02  (tillagd)"}}));

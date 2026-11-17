@@ -167,8 +167,8 @@ Form build_form(std::vector<Line> const& lines, Balances const& balances, SruCod
   if (!sru.empty() && !without_sru.empty()) {
     form.notes.push_back(std::format("#SRU: no #SRU in the books for {}; the mapping decides", join(without_sru)));
   }
-  for (auto& [sru, field] : form.fields) {
-    field.kronor = to_kronor(field.exact);
+  for (auto& entry : form.fields) { // not [sru, field]: sru is a parameter (MSVC C4457)
+    entry.second.kronor = to_kronor(entry.second.exact);
   }
   auto const sums = sums_of(form);
   if (sums.assets != sums.equity_and_debt) {
