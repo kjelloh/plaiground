@@ -535,7 +535,7 @@ Tab fyller bara i mappar. Pdf-filerna visas som information; du väljer mappen, 
 ###### Pdf-underlag
 
 <!-- hjälp: pdf-underlag -->
-Mappens pdf-filer, numrerade, med vad cratchit hittar i varje fil: text eller inte. Listan visar 20 filer i taget; tryck `>` för nästa sida och `<` för föregående. Listan är bara en vy. Tryck `-` för att gå tillbaka och välja en annan mapp.
+Mappens pdf-filer, numrerade, med vad cratchit hittar i varje fil: text eller inte. Listan visar 20 filer i taget; tryck `>` för nästa sida och `<` för föregående. Tryck `0` för att gå igenom filerna en i taget och tolka dem som händelser. Tryck `-` för att gå tillbaka och välja en annan mapp.
 <!-- /hjälp -->
 
 När du trycker Enter på en mapp läser cratchit varje pdf-fil i den (inte i undermappar) och visar en rad per fil:
@@ -560,7 +560,35 @@ Cratchit > … > Utkast > Läs pdf-underlag > Pdf-underlag>
 | `inte en pdf` | Filen heter `.pdf` men är ingen pdf |
 | `går inte att läsa` | Filen gick inte att öppna |
 
-cratchit läser texten med koden från walk_pdf. Att visa texten och skapa utkast av underlagen kommer senare.
+cratchit läser texten med koden från walk_pdf.
+
+###### Underlag
+
+<!-- hjälp: underlag -->
+Ett underlag i taget, med dess text. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. `0 Glöm` och `1 Tolka` finns inte än. Tryck `-` för att gå tillbaka till listan.
+<!-- /hjälp -->
+
+Tryck `0 Tolka som händelser` i Pdf-underlag. cratchit visar den första filen:
+
+```text
+Underlag 5 av 9: Faktura50555657.pdf (text, 2 sidor)
+--- sida 1 ---
+Faktura
+Fakturadatum: 2026-08-07
+OCR-nummer: 574512366662450
+…
+… 31 rader till
+  < Föregående
+  0 Glöm
+  1 Tolka
+  > Nästa
+Cratchit > … > Pdf-underlag > Underlag 5> 
+```
+
+* Överst står filens nummer i listan, namnet och vad cratchit hittade i den.
+* Texten visas sida för sida, högst 20 rader. Finns det fler står det hur många.
+* En fil utan text visas med sin status och `Ingen text att visa.`, så att du kan gå vidare till nästa.
+* `1 Tolka` ska göra underlaget till ett utkast av en händelse, och `0 Glöm` ska ta bort det ur listan, till exempel när filen inte är ett underlag. Det finns inte än.
 
 #### Bokfört
 

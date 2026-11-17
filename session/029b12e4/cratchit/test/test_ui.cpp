@@ -1687,6 +1687,8 @@ TEST_F(RootMenuTest, ReadPdfChoosesAFolderShowingItsPdfFiles) {
   EXPECT_EQ(navigator.current().view(), (View{"Pdf-underlag i " + (folder / "underlag").string() + ": 2 filer",
                                               "    1  Kvitto.PDF   inga sidor hittade",
                                               "    2  faktura.pdf  inga sidor hittade"}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Tolka som händelser"}, {U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
   EXPECT_FALSE(navigator.press(U'>')); // one page: nothing
   // Läs kontoutdrag starts in the folder chosen last
   ASSERT_TRUE(navigator.back());
@@ -1747,4 +1749,74 @@ TEST_F(RootMenuTest, VatHintNeedsLastYearForAQuarterThatStartsInIt) {
   lines = cratchit::ui::vat_return_hint(facts, *cratchit::parse_iso_date("2026-05-10"));
   EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-vat sie_2025-26_allt.se --period 2026Q1"), lines.end());
   EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-vat sie_2025-26_allt.se <förra årets SIE-fil>"), lines.end());
+}
+
+namespace {
+
+// A one-page PDF with the lines given, as walk_pdf's own tests make them
+std::string pdf_with_lines(std::vector<std::string> const& lines) {
+  std::string widths;
+  for (int i = 0; i < 224; ++i) widths += "500 ";
+  std::string content = "BT /F1 10 Tf 12 TL 72 700 Td";
+  for (auto const& line : lines) content += " (" + line + ") Tj T*";
+  content += " ET";
+  return std::string{"%PDF-1.4\n"
+                     "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+                     "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n"
+                     "3 0 obj\n<< /Type /Page /Parent 2 0 R /Contents 4 0 R"
+                     " /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n"
+                     "4 0 obj\n<< /Length "} +
+         std::to_string(content.size()) + " >>\nstream\n" + content +
+         "\nendstream\nendobj\n"
+         "5 0 obj\n<< /Type /Font /Subtype /Type1 /Encoding /WinAnsiEncoding /FirstChar 32 /Widths [" +
+         widths + "] >>\nendobj\ntrailer\n<< /Size 6 /Root 1 0 R >>\n%%EOF\n";
+}
+
+} // namespace
+
+TEST_F(RootMenuTest, InterpretGoesThroughThePdfFilesOneAtATime) {
+  auto const folder = documents / "Exempel AB";
+  fs::create_directories(folder / "underlag");
+  ASSERT_TRUE(cratchit::create_project_here(folder, "Exempel AB", "556677-8899", {"2025-01-01", "2025-12-31"},
+                                            "2026-11-09"));
+  auto const project = cratchit::open_project(folder);
+  ASSERT_TRUE(project) << project.error();
+  std::ofstream(folder / "underlag" / "a_faktura.pdf", std::ios::binary) << pdf_with_lines({"Faktura", "Summa 615,00"});
+  std::vector<std::string> many;
+  for (int i = 1; i <= 25; ++i) many.push_back("Rad " + std::to_string(i));
+  std::ofstream(folder / "underlag" / "b_lang.pdf", std::ios::binary) << pdf_with_lines(many);
+  std::ofstream(folder / "underlag" / "c_trasig.pdf", std::ios::binary) << "x";
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(folder / "underlag"));
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  ASSERT_TRUE(navigator.press(U'0'));
+  // The first, with its text
+  EXPECT_EQ(navigator.current().name(), "Underlag 1");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::document);
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Underlag 1 av 3: a_faktura.pdf (text, 1 sida)", "--- sida 1 ---", "Faktura", "Summa 615,00"}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'<', "Föregående"}, {U'0', "Glöm"}, {U'1', "Tolka"}, {U'>', "Nästa"}}));
+  EXPECT_FALSE(navigator.press(U'<')); // the first: nothing
+  // The next, cut after 20 lines
+  ASSERT_TRUE(navigator.press(U'>'));
+  EXPECT_EQ(navigator.current().name(), "Underlag 2");
+  auto const view = navigator.current().view();
+  ASSERT_EQ(view.size(), 22u); // the heading, 20 lines and how many more
+  EXPECT_EQ(view[1], "--- sida 1 ---");
+  EXPECT_EQ(view[20], "Rad 19");
+  EXPECT_EQ(view[21], "… 6 rader till");
+  // A file without text shows its status
+  ASSERT_TRUE(navigator.press(U'>'));
+  EXPECT_EQ(navigator.current().view(), (View{"Underlag 3 av 3: c_trasig.pdf (inte en pdf)", "Ingen text att visa."}));
+  EXPECT_FALSE(navigator.press(U'>')); // the last: nothing
+  // Glöm and Tolka are not there yet; back to the same file
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Inte än (Tolka)");
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Underlag 3");
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Inte än (Glöm)");
 }

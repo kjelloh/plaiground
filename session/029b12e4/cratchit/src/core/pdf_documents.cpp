@@ -6,6 +6,7 @@
 #include <cctype>
 #include <format>
 #include <system_error>
+#include <utility>
 
 namespace cratchit {
 
@@ -66,6 +67,12 @@ PdfStatus pdf_status(fs::path const& file) {
     status.kind = PdfStatus::Kind::no_text;
   }
   return status;
+}
+
+std::optional<std::vector<std::vector<std::string>>> pdf_pages(fs::path const& file) {
+  auto extracted = walk_pdf::extract_text(file);
+  if (!extracted) return std::nullopt;
+  return std::move(extracted->text.pages);
 }
 
 std::string status_text(PdfStatus const& status) {

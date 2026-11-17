@@ -82,6 +82,30 @@ Jag fick en idé angående hur vi lägger in kod från de fristående apparna i 
 * Alltså att cratchit kan göra walk_pdf med lämpliga input-argument?
 * Detsamma skulle vi då kunna göra för cratchit_ar or cratchit_ink2?
 
+JA! Jag lät nu Claude ta in kod och göra så cratchit nu har cli-funktion.
+
+* Argument '--walk-pdf' ger funktioner från walk_pdf
+* Argument '--sie-to-ar' ger funktioner från cratchit_ar
+* Argument '--sie-to-ink2' ger funktioner från cratchit_ink2
+
+Och Claude föreslog en cli-mod för momsrapporten också.
+
+* Argument '--sie-to-vat' ger underlag för momsrapporten
+
+Nu har jag gått vidare och ser vad vi kan göra med den text som vi kan läsa ut från pdf-er
+
+* Många har text 'H   #            62600011232941 #     323 75   8 >                 53432795#41#'
+
+    * År det någon slags OCR-standard?
+* Enstaka har mycket text
+
+    * Filen 'Faktura50555657.pdf' har 97 rader som inte ryms på skärmen för nu.
+
+Jag undrar nu två saker.
+
+1. Saknas funktion i vår pdf-läsare för att få ut all text?
+2. Är formatet 'H   #            62600011232941 #     323 75   8 >                 53432795#41#' någon slags OCR-text (standard)
+
 ## 20261116
 
 Nu är det väl ändå dags att till slut få till ett sätt att redigera och skapa verifikationer till bokföringen?

@@ -37,6 +37,10 @@ struct PdfStatus {
 // Reads file with walk_pdf::extract_text and tells what it holds. Does not log.
 PdfStatus pdf_status(std::filesystem::path const& file);
 
+// The text of a PDF, page by page, each page its lines (UTF-8), as walk_pdf
+// gives it; none when walk_pdf gives no text (see pdf_status for why). Does not log.
+std::optional<std::vector<std::vector<std::string>>> pdf_pages(std::filesystem::path const& file);
+
 // The status for the user, e.g. "text, 2 sidor", "text, 1 sida, 4 tecken oläsliga",
 // "ingen text, 1 sida (inskannad?)", "inga sidor hittade", "krypterad med lösenord"
 std::string status_text(PdfStatus const& status);

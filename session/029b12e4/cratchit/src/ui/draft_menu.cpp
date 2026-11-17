@@ -11,6 +11,7 @@
 #include "pyroceph/tui/error_state.hpp"
 #include "pyroceph/tui/path_completion.hpp"
 #include "pyroceph/tui/pager.hpp"
+#include "ui/design_insufficiency.hpp"
 #include "ui/booked_menu.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/year_view.hpp"
@@ -415,35 +416,117 @@ std::vector<std::string> pdf_rows(std::vector<fs::path> const& files, std::vecto
   return rows;
 }
 
+// The lines a document shows at most, for now (invoices are short)
+constexpr std::size_t document_lines = 20;
+
+// Underlag <n>: the pdf files of a folder one at a time, from the first: its
+// text, page by page, at most document_lines lines. < and > go to the one
+// before and after (in place; at either end they do nothing). 0 Glöm and
+// 1 Tolka lead to Inte än for now.
+class DocumentState : public State {
+public:
+  DocumentState(std::vector<fs::path> files, std::vector<PdfStatus> statuses)
+      : files_(std::move(files)), statuses_(std::move(statuses)), texts_(files_.size()) {}
+  std::string name() const override { return std::format("Underlag {}", index_ + 1); }
+  View view() const override {
+    View lines{std::format("Underlag {} av {}: {} ({})", index_ + 1, files_.size(), name_of(files_[index_]),
+                           status_text(statuses_[index_]))};
+    auto const& text = text_of(index_);
+    if (text.empty()) {
+      lines.push_back("Ingen text att visa.");
+      return lines;
+    }
+    auto const shown = std::min(text.size(), document_lines);
+    lines.insert(lines.end(), text.begin(), text.begin() + static_cast<std::ptrdiff_t>(shown));
+    if (shown < text.size()) lines.push_back(std::format("… {} rader till", text.size() - shown));
+    return lines;
+  }
+  OptionsList options() const override {
+    return {{back_key, "Föregående"}, {U'0', "Glöm"}, {U'1', "Tolka"}, {forward_key, "Nästa"}};
+  }
+  bool on_key_in_place(CodePoint key) override {
+    if (key == back_key && index_ > 0) {
+      --index_;
+      return true;
+    }
+    if (key == forward_key && index_ + 1 < files_.size()) {
+      ++index_;
+      return true;
+    }
+    return false;
+  }
+  OnKeyResult on_key(CodePoint key) override {
+    if (key == U'0') return make_design_insufficiency_state("Glöm", "att glömma ett underlag");
+    if (key == U'1') return make_design_insufficiency_state("Tolka", "att tolka ett underlag som en händelse");
+    return nullptr;
+  }
+  std::string help_topic() const override { return std::string(help_topic::document); }
+
+private:
+  static std::string name_of(fs::path const& file) {
+    auto const name = file.filename().u8string();
+    return {name.begin(), name.end()};
+  }
+  // The text of file i as lines with a line before each page, read once when first shown
+  std::vector<std::string> const& text_of(std::size_t i) const {
+    if (!texts_[i]) {
+      std::vector<std::string> lines;
+      if (statuses_[i].kind == PdfStatus::Kind::text) {
+        if (auto const pages = pdf_pages(files_[i])) {
+          for (std::size_t page = 0; page < pages->size(); ++page) {
+            lines.push_back(std::format("--- sida {} ---", page + 1));
+            lines.insert(lines.end(), (*pages)[page].begin(), (*pages)[page].end());
+          }
+        }
+      }
+      texts_[i] = std::move(lines);
+    }
+    return *texts_[i];
+  }
+
+  std::vector<fs::path> files_;
+  std::vector<PdfStatus> statuses_;
+  mutable std::vector<std::optional<std::vector<std::string>>> texts_;
+  std::size_t index_ = 0;
+};
+
 // Pdf-underlag: the pdf files of a folder, numbered, each with a status line
-// telling whether walk_pdf finds text in it; a page at a time. Just a view.
+// telling whether walk_pdf finds text in it; a page at a time. 0 Tolka som
+// händelser goes through them one at a time (DocumentState).
 class PdfListState : public State {
 public:
   PdfListState(fs::path folder, std::vector<fs::path> files, std::vector<PdfStatus> statuses)
-      : folder_(std::move(folder)), count_(files.size()) {
-    pager_.set(pdf_rows(files, statuses));
+      : folder_(std::move(folder)), files_(std::move(files)), statuses_(std::move(statuses)) {
+    pager_.set(pdf_rows(files_, statuses_));
   }
   std::string name() const override { return "Pdf-underlag"; }
   View view() const override {
-    if (count_ == 0) return {std::format("Inga pdf-filer i {}.", folder_.string())};
+    if (files_.empty()) return {std::format("Inga pdf-filer i {}.", folder_.string())};
     View lines{std::format("Pdf-underlag i {}: {}", folder_.string(),
-                           count_ == 1 ? std::string("1 fil") : std::format("{} filer", count_))};
+                           files_.size() == 1 ? std::string("1 fil") : std::format("{} filer", files_.size()))};
     auto const page = pager_.view();
     lines.insert(lines.end(), page.begin(), page.end());
     return lines;
   }
-  OptionsList options() const override { return {{back_key, "Föregående sida"}, {forward_key, "Nästa sida"}}; }
+  OptionsList options() const override {
+    if (files_.empty()) return {};
+    return {{U'0', "Tolka som händelser"}, {back_key, "Föregående sida"}, {forward_key, "Nästa sida"}};
+  }
   bool on_key_in_place(CodePoint key) override {
     if (key == back_key) return pager_.back();
     if (key == forward_key) return pager_.forward();
     return false;
   }
-  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  OnKeyResult on_key(CodePoint key) override {
+    if (key != U'0' || files_.empty()) return nullptr;
+    return std::make_unique<DocumentState>(files_, statuses_);
+  }
   std::string help_topic() const override { return std::string(help_topic::pdf_list); }
 
 private:
   fs::path folder_;
-  std::size_t count_;
+  std::vector<fs::path> files_;
+  std::vector<PdfStatus> statuses_;
   pyroceph::tui::Pager pager_{booked_page_rows};
 };
 
