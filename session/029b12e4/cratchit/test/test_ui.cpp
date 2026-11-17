@@ -1890,7 +1890,7 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
             (View{"Utkast #2 i 2025 (kontoutdrag)", "  Noterad:        " + cratchit::today_iso(), "Händelse:",
                   "  Datum:          2025-03-05", "  Rubrik:         ", "  Belopp:         ", "Konteringar:",
                   "  1930  Bank        -10.00  AVGIFTER"}));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
   // Its event: what it lacks shows empty, and changing is not there yet
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::draft_event);
@@ -1918,4 +1918,26 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   EXPECT_EQ(view[5], "  Belopp:         1118.00");
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().view(), (View{"#3 har inga konteringar."}));
+  ASSERT_TRUE(navigator.back());
+  // 9 Glöm, apart from the other options; N goes back to the draft
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
+  ASSERT_TRUE(navigator.press(U'9'));
+  EXPECT_EQ(navigator.current().name(), "Glöm");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::forget_draft);
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Glöm utkast #3?", "  2025-10-22       1118.00  Telia faktura (händelse)",
+                  "Utkastet tas bort ur bokföringen och går inte att få tillbaka."}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'9', "Glöm"}, {U'N', "Nej"}}));
+  ASSERT_TRUE(navigator.press(U'N'));
+  EXPECT_EQ(navigator.current().name(), "#3");
+  // 9 again forgets it, and Utkast tells so
+  ASSERT_TRUE(navigator.press(U'9'));
+  ASSERT_TRUE(navigator.press(U'9'));
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  auto const after = navigator.current().view();
+  EXPECT_EQ(after.front(), "Utkast 2025: utkast 1–2 av 2");
+  EXPECT_EQ(after.back(), "cratchit glömde utkast #3: Telia faktura (händelse).");
+  auto const books = cratchit::books::read_books(project->folder);
+  ASSERT_TRUE(books) << books.error();
+  EXPECT_EQ(books->years.front().drafts.size(), 2u);
 }

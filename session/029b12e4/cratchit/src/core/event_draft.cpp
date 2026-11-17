@@ -156,4 +156,20 @@ std::expected<std::size_t, std::string> add_event_draft(std::filesystem::path co
   return index;
 }
 
+std::expected<void, std::string> forget_draft(std::filesystem::path const& project_folder, Date year_start,
+                                              std::size_t index, books::Draft const& expected) {
+  auto books = books::read_books(project_folder);
+  if (!books) return std::unexpected(books.error());
+  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
+  if (year == books->years.end()) {
+    return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
+  }
+  if (index >= year->drafts.size() || year->drafts[index] != expected) {
+    return std::unexpected("Utkastet finns inte längre på sin plats i bokföringen. Öppna det igen från Utkast.");
+  }
+  year->drafts.erase(year->drafts.begin() + static_cast<std::ptrdiff_t>(index));
+  if (auto written = books::write_books(project_folder, *books); !written) return std::unexpected(written.error());
+  return {};
+}
+
 } // namespace cratchit

@@ -2,6 +2,7 @@
 
 #include "core/amount.hpp"
 #include "core/date.hpp"
+#include "pyroceph/tui/error_state.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/year_view.hpp"
@@ -54,6 +55,9 @@ struct Shown {
   std::string year_label{};
   std::string stage{};
   Date noted{};
+  std::string summary{};             // one line about it, for Glöm
+  State const* origin = nullptr;     // Utkast, to go back to once forgotten
+  ForgetDraft forget{};
 
   std::string id() const { return draft ? draft_id : books::voucher_id(voucher.series, voucher.number); }
 
@@ -268,6 +272,46 @@ private:
   std::shared_ptr<Shown const> shown_;
 };
 
+// Glöm: the draft forgotten with 9 again (9 is the option that removes); N goes back
+class ForgetState : public State {
+public:
+  ForgetState(std::shared_ptr<Shown const> shown, State const* draft) : shown_(std::move(shown)), draft_(draft) {}
+  std::string name() const override { return "Glöm"; }
+  View view() const override {
+    return {std::format("Glöm utkast {}?", shown_->id()), "  " + shown_->summary,
+            "Utkastet tas bort ur bokföringen och går inte att få tillbaka."};
+  }
+  OptionsList options() const override {
+    if (done_) return {};
+    return {{U'9', "Glöm"}, {U'N', "Nej"}};
+  }
+  OnKeyResult on_key(CodePoint key) override {
+    if (done_) return nullptr;
+    if (key == U'N') { // keys match exactly (beslut.md)
+      declined_ = true;
+      return nullptr;
+    }
+    if (key != U'9' || !shown_->forget) return nullptr;
+    if (auto forgotten = shown_->forget(); !forgotten) {
+      return pyroceph::tui::make_error_state(std::format("cratchit kunde inte glömma utkastet: {}", forgotten.error()));
+    }
+    done_ = true;
+    return nullptr; // back to Utkast (back_to)
+  }
+  // Forgotten: back to Utkast, as the draft is gone. N: back to the draft.
+  State const* back_to() const override {
+    if (done_) return shown_->origin;
+    return declined_ ? draft_ : nullptr;
+  }
+  std::string help_topic() const override { return std::string(help_topic::forget_draft); }
+
+private:
+  std::shared_ptr<Shown const> shown_;
+  State const* draft_;
+  bool done_ = false;
+  bool declined_ = false;
+};
+
 class VoucherState : public State {
 public:
   explicit VoucherState(std::shared_ptr<Shown const> shown) : shown_(std::move(shown)) {}
@@ -284,10 +328,14 @@ public:
     for (auto const& line : shown_->posting_lines()) lines.push_back("  " + line);
     return lines;
   }
-  OptionsList options() const override { return {{U'0', "Händelse"}, {U'1', "Konteringar"}}; }
+  OptionsList options() const override {
+    if (shown_->draft) return {{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}};
+    return {{U'0', "Händelse"}, {U'1', "Konteringar"}};
+  }
   OnKeyResult on_key(CodePoint key) override {
     if (key == U'0') return std::make_unique<EventState>(shown_);
     if (key == U'1') return std::make_unique<PostingsState>(shown_);
+    if (key == U'9' && shown_->draft) return std::make_unique<ForgetState>(shown_, this);
     return nullptr;
   }
   std::string help_topic() const override {
@@ -307,13 +355,17 @@ std::unique_ptr<State> make_voucher_menu(books::Voucher voucher, std::vector<boo
 }
 
 std::unique_ptr<State> make_draft_view(books::Draft const& draft, std::string id, std::string year_label,
-                                       std::vector<books::Account> accounts) {
+                                       std::vector<books::Account> accounts, std::string summary, State const* origin,
+                                       ForgetDraft forget) {
   Shown shown{books::Voucher{"", "", draft.event, std::nullopt, "", draft.postings}, std::move(accounts), "", ""};
   shown.draft = true;
   shown.draft_id = std::move(id);
   shown.year_label = std::move(year_label);
   shown.stage = std::string(stage_text(books::stage(draft)));
   shown.noted = draft.noted;
+  shown.summary = std::move(summary);
+  shown.origin = origin;
+  shown.forget = std::move(forget);
   return std::make_unique<VoucherState>(std::make_shared<Shown const>(std::move(shown)));
 }
 

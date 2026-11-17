@@ -752,7 +752,31 @@ public:
       return std::unexpected(std::format("Det finns inget utkast {} i {}.", typed, label_of(year_)));
     }
     report_.clear();
-    return Accepted(make_draft_view(year->drafts[number - 1], draft_id(number - 1), label_of(year_), books->accounts));
+    auto const index = number - 1;
+    auto const& draft = year->drafts[index];
+    auto const id = draft_id(index);
+    // The draft as the list shows it, without the id: date, amount and text
+    auto summary = draft_rows(year)[year->drafts.size() - 1 - index];
+    summary = summary.substr(summary.find(format_iso_date(draft.event.date)));
+    auto forget = [this, index, draft, id]() -> std::expected<void, std::string> {
+      auto const year_start = parse_iso_date(year_.start);
+      if (!year_start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year_.start));
+      if (auto forgotten = forget_draft(project_.folder, *year_start, index, draft); !forgotten) {
+        LOG_BUSINESS("Kunde inte glömma utkast {} i {} ({}): {}", id, label_of(year_), project_.folder.string(),
+                     forgotten.error());
+        return forgotten;
+      }
+      LOG_BUSINESS("Utkast {} glömt i {} ({}): {} {} \"{}\", {} konteringar", id, label_of(year_), project_.folder.string(),
+                   format_iso_date(draft.event.date), format_amount(draft.event.amount), draft.event.heading,
+                   draft.postings.size());
+      for (auto const& posting : draft.postings) {
+        LOG_BUSINESS("  glömd kontering: {} {} {} \"{}\" {}", posting.account, format_amount(posting.amount),
+                     posting.date ? format_iso_date(*posting.date) : std::string(), posting.text, posting.source);
+      }
+      report_ = {std::format("cratchit glömde utkast {}: {}.", id, draft_text(draft))};
+      return {};
+    };
+    return Accepted(make_draft_view(draft, id, label_of(year_), books->accounts, summary, this, std::move(forget)));
   }
   void on_return() override { read(); }
   std::string help_topic() const override { return std::string(help_topic::drafts); }

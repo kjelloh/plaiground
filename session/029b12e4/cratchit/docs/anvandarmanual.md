@@ -397,7 +397,7 @@ Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat frå
 ##### Utkastet
 
 <!-- hjälp: utkastet -->
-Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för händelsen och `1` för konteringarna. Än så länge kan du bara se utkastet. Tryck `-` för att gå tillbaka till Utkast.
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för händelsen och `1` för konteringarna, eller `9` för att glömma utkastet. Än så länge kan du inte ändra utkastet. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
@@ -413,12 +413,34 @@ Konteringar:
   1920  PlusGiro        -3.70  AVGIFTER NORDEA
   0 Händelse
   1 Konteringar
+  9 Glöm
 Cratchit > … > Utkast > #1> 
 ```
 
 Skriver du något annat än `#` och ett nummer säger cratchit `Skriv utkastets id som #13.`, och finns inget utkast med numret `Det finns inget utkast #20 i 2026/27.` Raden står kvar så att du kan rätta den.
 
 *Konteringar* och *Kontering* fungerar som för en verifikation. En kontering från ett kontoutdrag visar också var den kom ifrån, till exempel `Från: bank/nordea.csv rad 8`.
+
+###### Glöm
+
+<!-- hjälp: glom-utkast -->
+Utkastet tas bort ur bokföringen om du trycker `9` en gång till, och går då inte att få tillbaka. Tryck `N` eller `-` för att ångra och gå tillbaka till utkastet.
+<!-- /hjälp -->
+
+Tryck `9` i utkastet för att glömma det, till exempel ett utkast du skapade för att prova. `9` står för sig, skilt från de andra valen, så att det inte trycks av misstag, och cratchit frågar först:
+
+```text
+Glöm utkast #14?
+  2026-09-28       1308.75  Loopia webhotell (händelse)
+Utkastet tas bort ur bokföringen och går inte att få tillbaka.
+  9 Glöm
+  N Nej
+Cratchit > … > Utkast > #14 > Glöm> 
+```
+
+Tryck `9` igen för att glömma utkastet. cratchit går då tillbaka till Utkast och skriver under listan till exempel `cratchit glömde utkast #14: Loopia webhotell (händelse).` De utkast som kom efter det glömda får nya nummer. Loggen får det glömda utkastet med alla dess konteringar.
+
+Glömmer du ett utkast från ett kontoutdrag och läser kontoutdraget igen blir raden ett nytt utkast, eftersom den varken är bokförd eller ett utkast längre.
 
 ###### Utkastets händelse
 

@@ -35,4 +35,13 @@ std::expected<std::vector<books::Event>, std::string> parse_event(std::string_vi
 std::expected<std::size_t, std::string> add_event_draft(std::filesystem::path const& project_folder, Date year_start,
                                                         books::Event const& event, Date today);
 
+// Forgets (removes) the draft at index among the drafts of the fiscal year
+// starting on year_start, and writes the books. Only when the draft there is
+// still expected (the one the user saw), as the drafts are numbered by their
+// place and may have changed. Error text when the books cannot be read or
+// written, the year is not in them, or the draft is not there any more.
+// Does not log.
+std::expected<void, std::string> forget_draft(std::filesystem::path const& project_folder, Date year_start,
+                                              std::size_t index, books::Draft const& expected);
+
 } // namespace cratchit

@@ -115,3 +115,33 @@ TEST(AddEventDraft, AddsTheEventAsADraftInsideTheYear) {
   EXPECT_EQ(books::stage(year->drafts[1]), books::DraftStage::event);
   fs::remove_all(folder);
 }
+
+TEST(ForgetDraft, ForgetsTheDraftSeenOnly) {
+  auto const folder = fs::temp_directory_path() / "cratchit_forget_draft_test";
+  fs::remove_all(folder);
+  fs::create_directories(folder);
+  std::ofstream(folder / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20260101 20261231\r\n";
+  auto plan = plan_project_from_sie(folder / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(create_project_from_sie(*plan, "2026-11-09"));
+  Date const start{2026y, January, 1d};
+  Date const today{2026y, November, 17d};
+  ASSERT_TRUE(add_event_draft(folder, start, {"Telia", 111800, oct20}, today));
+  ASSERT_TRUE(add_event_draft(folder, start, {"Loopia", 130875, Date{2026y, November, 1d}}, today));
+  auto const books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  auto const loopia = books->years.front().drafts[1];
+  // Not the draft seen at that place: refused, nothing changes
+  auto const refused = forget_draft(folder, start, 0, loopia);
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Utkastet finns inte längre på sin plats i bokföringen. Öppna det igen från Utkast.");
+  EXPECT_FALSE(forget_draft(folder, start, 5, loopia));
+  // The one seen
+  ASSERT_TRUE(forget_draft(folder, start, 1, loopia));
+  auto const after = books::read_books(folder);
+  ASSERT_TRUE(after);
+  ASSERT_EQ(after->years.front().drafts.size(), 1u);
+  EXPECT_EQ(after->years.front().drafts[0].event.heading, "Telia");
+  fs::remove_all(folder);
+}
