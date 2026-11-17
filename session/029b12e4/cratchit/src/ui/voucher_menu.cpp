@@ -4,6 +4,7 @@
 #include "core/date.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/year_view.hpp"
 
 #include <algorithm>
 #include <format>
@@ -39,22 +40,31 @@ std::string row(std::string_view label, std::string const& value) {
   return std::format("  {:<16}{}", std::string(label) + ":", value);
 }
 
-// What the voucher states share: the voucher and how to name its accounts
+// What the voucher states share: the voucher and how to name its accounts. A
+// draft is shown as a voucher without series and number, with what only a draft has.
 struct Shown {
   books::Voucher voucher;
   std::vector<books::Account> accounts;
   std::string series_name;
   std::string last_in_series; // the id of the last voucher in the series, in the fiscal year
 
-  std::string id() const { return books::voucher_id(voucher.series, voucher.number); }
+  // A draft: its id ("#3"), fiscal year, stage and the day it was noted
+  bool draft = false;
+  std::string draft_id{};
+  std::string year_label{};
+  std::string stage{};
+  Date noted{};
+
+  std::string id() const { return draft ? draft_id : books::voucher_id(voucher.series, voucher.number); }
 
   std::string account_name(std::string const& number) const {
     auto const found = std::ranges::find(accounts, number, &books::Account::number);
     return found != accounts.end() ? found->name : std::string();
   }
 
-  // How the voucher is booked: series, registered, signature
+  // How the voucher is booked: series, registered, signature; for a draft when it was noted
   View booking_rows() const {
+    if (draft) return {row("Noterad", format_iso_date(noted))};
     View lines;
     lines.push_back(row("Serie", series_name.empty() ? voucher.series : std::format("{}  {}", voucher.series, series_name)));
     if (voucher.registered) lines.push_back(row("Registrerad", format_iso_date(*voucher.registered)));
@@ -63,8 +73,10 @@ struct Shown {
   }
 
   View event_rows() const {
+    // A draft may lack its heading and amount: they show empty
+    auto const amount = draft && voucher.event.amount == 0 ? std::string() : format_amount(voucher.event.amount);
     return {row("Datum", format_iso_date(voucher.event.date)), row("Rubrik", voucher.event.heading),
-            row("Belopp", format_amount(voucher.event.amount))};
+            row("Belopp", amount)};
   }
 
   // The postings, one line each without indent, the columns lined up over all of them
@@ -100,6 +112,14 @@ public:
     if (posting.date && *posting.date != shown_->voucher.event.date) lines.push_back(row("Datum", format_iso_date(*posting.date)));
     if (posting.kind == books::Posting::Kind::removed) lines.push_back("  Raden är struken.");
     if (posting.kind == books::Posting::Kind::added) lines.push_back("  Raden är tillagd.");
+    if (!posting.source.empty()) {
+      // A statement entry's file and line, e.g. "bank/nordea.csv:5"
+      auto const colon = posting.source.rfind(':');
+      lines.push_back(row("Från", colon == std::string::npos
+                                      ? posting.source
+                                      : std::format("{} rad {}", posting.source.substr(0, colon),
+                                                    posting.source.substr(colon + 1))));
+    }
     return lines;
   }
   OptionsList options() const override {
@@ -217,12 +237,22 @@ public:
   View view() const override { return {std::format("Händelsen i {}", shown_->id())}; }
   OptionsList options() const override {
     auto const& event = shown_->voucher.event;
+    auto const amount = shown_->draft && event.amount == 0 ? std::string() : format_amount(event.amount);
     return {{U'0', "Datum: " + format_iso_date(event.date)},
-            {U'1', "Rubrik: " + event.heading},
-            {U'2', "Belopp: " + format_amount(event.amount)}};
+            {U'1', event.heading.empty() ? std::string("Rubrik:") : "Rubrik: " + event.heading},
+            {U'2', amount.empty() ? std::string("Belopp:") : "Belopp: " + amount}};
   }
-  // The event of a booked voucher is locked: each option tells why, and what to do instead
+  // The event of a booked voucher is locked: each option tells why, and what to do instead.
+  // A draft's can be changed, but not yet.
   OnKeyResult on_key(CodePoint key) override {
+    if (shown_->draft) {
+      switch (key) {
+      case U'0': return make_design_insufficiency_state("Datum", "att ändra datumet i ett utkast");
+      case U'1': return make_design_insufficiency_state("Rubrik", "att ändra rubriken i ett utkast");
+      case U'2': return make_design_insufficiency_state("Belopp", "att ändra beloppet i ett utkast");
+      default: return nullptr;
+      }
+    }
     switch (key) {
     case U'0': return std::make_unique<LockedState>(shown_, "Datum", "datumet");
     case U'1': return std::make_unique<LockedState>(shown_, "Rubrik", "rubriken");
@@ -230,7 +260,9 @@ public:
     default: return nullptr;
     }
   }
-  std::string help_topic() const override { return std::string(help_topic::event); }
+  std::string help_topic() const override {
+    return std::string(shown_->draft ? help_topic::draft_event : help_topic::event);
+  }
 
 private:
   std::shared_ptr<Shown const> shown_;
@@ -241,7 +273,8 @@ public:
   explicit VoucherState(std::shared_ptr<Shown const> shown) : shown_(std::move(shown)) {}
   std::string name() const override { return shown_->id(); }
   View view() const override {
-    View lines{"Verifikation " + name()};
+    View lines{shown_->draft ? std::format("Utkast {} i {} ({})", name(), shown_->year_label, shown_->stage)
+                             : "Verifikation " + name()};
     auto const booking = shown_->booking_rows();
     lines.insert(lines.end(), booking.begin(), booking.end());
     lines.push_back("Händelse:");
@@ -257,7 +290,9 @@ public:
     if (key == U'1') return std::make_unique<PostingsState>(shown_);
     return nullptr;
   }
-  std::string help_topic() const override { return std::string(help_topic::voucher); }
+  std::string help_topic() const override {
+    return std::string(shown_->draft ? help_topic::draft : help_topic::voucher);
+  }
 
 private:
   std::shared_ptr<Shown const> shown_;
@@ -269,6 +304,17 @@ std::unique_ptr<State> make_voucher_menu(books::Voucher voucher, std::vector<boo
                                          std::string series_name, std::string last_in_series) {
   return std::make_unique<VoucherState>(std::make_shared<Shown const>(
       Shown{std::move(voucher), std::move(accounts), std::move(series_name), std::move(last_in_series)}));
+}
+
+std::unique_ptr<State> make_draft_view(books::Draft const& draft, std::string id, std::string year_label,
+                                       std::vector<books::Account> accounts) {
+  Shown shown{books::Voucher{"", "", draft.event, std::nullopt, "", draft.postings}, std::move(accounts), "", ""};
+  shown.draft = true;
+  shown.draft_id = std::move(id);
+  shown.year_label = std::move(year_label);
+  shown.stage = std::string(stage_text(books::stage(draft)));
+  shown.noted = draft.noted;
+  return std::make_unique<VoucherState>(std::make_shared<Shown const>(std::move(shown)));
 }
 
 } // namespace cratchit::ui

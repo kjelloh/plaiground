@@ -15,10 +15,12 @@
 #include "ui/design_insufficiency.hpp"
 #include "ui/booked_menu.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/voucher_menu.hpp"
 #include "ui/year_view.hpp"
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <expected>
 #include <filesystem>
 #include <functional>
@@ -731,6 +733,26 @@ public:
           folder_ = file.parent_path();
         },
         folder_);
+  }
+  // A draft's id as one word, e.g. #3, opens it (its place in the list, oldest first)
+  InputResult on_input(std::u32string_view text) override {
+    auto const typed = utf8_of(text);
+    std::size_t number = 0;
+    auto const digits = std::string_view{typed}.substr(typed.starts_with('#') ? 1 : 0);
+    auto const [end, error] = std::from_chars(digits.data(), digits.data() + digits.size(), number);
+    if (!typed.starts_with('#') || digits.empty() || error != std::errc{} || end != digits.data() + digits.size() ||
+        number == 0) {
+      return std::unexpected(std::string("Skriv utkastets id som #13."));
+    }
+    auto const books = books::read_books(project_.folder);
+    if (!books) return std::unexpected(std::format("cratchit kunde inte läsa bokföringen: {}", books.error()));
+    auto const start = parse_iso_date(year_.start);
+    auto const* year = start ? books->year_starting(*start) : nullptr;
+    if (year == nullptr || number > year->drafts.size()) {
+      return std::unexpected(std::format("Det finns inget utkast {} i {}.", typed, label_of(year_)));
+    }
+    report_.clear();
+    return Accepted(make_draft_view(year->drafts[number - 1], draft_id(number - 1), label_of(year_), books->accounts));
   }
   void on_return() override { read(); }
   std::string help_topic() const override { return std::string(help_topic::drafts); }

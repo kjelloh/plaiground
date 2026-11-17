@@ -32,4 +32,13 @@ inline constexpr std::size_t postings_page_rows = 10;
 std::unique_ptr<pyroceph::tui::State> make_voucher_menu(books::Voucher voucher, std::vector<books::Account> accounts,
                                                         std::string series_name, std::string last_in_series);
 
+// A draft, named by its id in the path ("#3", see draft_id), shown as a voucher
+// is: the heading "Utkast #3 i 2026/27 (<stage>)", the day it was noted, then
+// "Händelse" (a heading or amount it lacks shows empty) and "Konteringar".
+// A posting from a statement entry shows where it came from ("Från: <file> rad
+// <n>"). Options as for a voucher; the event's and a posting's options lead to
+// Inte än for now (in a draft everything is to be changeable).
+std::unique_ptr<pyroceph::tui::State> make_draft_view(books::Draft const& draft, std::string id,
+                                                      std::string year_label, std::vector<books::Account> accounts);
+
 } // namespace cratchit::ui

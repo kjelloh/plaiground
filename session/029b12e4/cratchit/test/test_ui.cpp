@@ -1843,3 +1843,79 @@ TEST_F(RootMenuTest, InterpretGoesThroughThePdfFilesOneAtATime) {
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Inte än (Glöm)");
 }
+
+TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  fs::create_directories(documents / "bank");
+  std::ofstream(documents / "bank" / "nordea.csv", std::ios::binary) << "\xEF\xBB\xBF"
+                                                                       "Datum;Belopp;Text;Saldo\n"
+                                                                       "2025/03/05;-10,00;AVGIFTER;490,00\n"
+                                                                       "2025/03/01;500,00;Kund;500,00\n";
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  // Drafts from the statement (#1 Kund, #2 AVGIFTER) and an event (#3, later)
+  ASSERT_TRUE(navigator.press(U'0'));
+  auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  accepted = navigator.current().on_input(U"1930");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  ASSERT_TRUE(navigator.press(U'J'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  accepted = navigator.current().on_input(U"Telia faktura 1118,00 2025-10-22");
+  ASSERT_TRUE(accepted) << accepted.error();
+  ASSERT_TRUE(navigator.follow_back_to());
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  // Ids typed wrong, or not there
+  auto refused = navigator.current().on_input(U"1");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Skriv utkastets id som #13.");
+  refused = navigator.current().on_input(U"#4");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Det finns inget utkast #4 i 2025.");
+  EXPECT_FALSE(navigator.current().on_input(U"#0"));
+  // A draft from the statement
+  accepted = navigator.current().on_input(U"#2");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().name(), "#2");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::draft);
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Utkast #2 i 2025 (kontoutdrag)", "  Noterad:        " + cratchit::today_iso(), "Händelse:",
+                  "  Datum:          2025-03-05", "  Rubrik:         ", "  Belopp:         ", "Konteringar:",
+                  "  1930  Bank        -10.00  AVGIFTER"}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}}));
+  // Its event: what it lacks shows empty, and changing is not there yet
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::draft_event);
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Datum: 2025-03-05"}, {U'1', "Rubrik:"}, {U'2', "Belopp:"}}));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Inte än (Rubrik)");
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
+  // Its posting tells where it came from
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.press(U'0'));
+  auto const posting = navigator.current().view();
+  EXPECT_EQ(posting.back(), "  Från:           bank/nordea.csv rad 2"); // the file's line 2
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.back());
+  // The event without postings
+  accepted = navigator.current().on_input(U"#3");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  auto const view = navigator.current().view();
+  EXPECT_EQ(view[0], "Utkast #3 i 2025 (händelse)");
+  EXPECT_EQ(view[4], "  Rubrik:         Telia faktura");
+  EXPECT_EQ(view[5], "  Belopp:         1118.00");
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().view(), (View{"#3 har inga konteringar."}));
+}

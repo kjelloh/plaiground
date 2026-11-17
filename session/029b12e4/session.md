@@ -28,6 +28,19 @@
 * Bygg med: cmake --build cratchit/build/Debug -j
 * Installera med: sudo cmake --install cratchit/build/Debug
 
+## 20261118
+
+Så vad bör vi försöka få med innan dagen är slut (Och Claude-prenumerationen går ut)?
+
+* Utskrift / Formatering
+
+    * Verifikation (Typ Momsrapport)
+    * Verifikationslista?
+
+* Balansräkning
+* Resultaträkning
+* Verifikationslista
+
 ## 20261117
 
 Så har jag till slut preppat så jag kan testa att återskapa bokföring från några kända tillstånd.

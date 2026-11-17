@@ -368,7 +368,7 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Under listan står vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader, `1` för att beskriva en händelse och skapa ett utkast av den, eller `2` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader, `1` för att beskriva en händelse och skapa ett utkast av den, eller `2` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
@@ -393,6 +393,38 @@ Saknar året utkast står det `Utkast 2026/27: inga utkast.`
 Varje rad visar utkastets nummer, datum, belopp och text, och sist hur långt utkastet har kommit inom parentes (se tabellen i [Räkenskapsår](#räkenskapsår)). Har utkastet ingen rubrik, som ett utkast från ett kontoutdrag, visar raden kontot och konteringens text i stället. Beloppet är händelsens, eller, när händelsen saknar belopp, vad konteringarna flyttar.
 
 Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat från det äldsta. Det är inget fast id: numren ändras när ett utkast med tidigare datum tillkommer eller när ett utkast försvinner ur listan, till exempel när det bokförs.
+
+##### Utkastet
+
+<!-- hjälp: utkastet -->
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för händelsen och `1` för konteringarna. Än så länge kan du bara se utkastet. Tryck `-` för att gå tillbaka till Utkast.
+<!-- /hjälp -->
+
+Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
+
+```text
+Utkast #1 i 2026/27 (kontoutdrag)
+  Noterad:        2026-11-17
+Händelse:
+  Datum:          2026-07-03
+  Rubrik:
+  Belopp:
+Konteringar:
+  1920  PlusGiro        -3.70  AVGIFTER NORDEA
+  0 Händelse
+  1 Konteringar
+Cratchit > … > Utkast > #1> 
+```
+
+Skriver du något annat än `#` och ett nummer säger cratchit `Skriv utkastets id som #13.`, och finns inget utkast med numret `Det finns inget utkast #20 i 2026/27.` Raden står kvar så att du kan rätta den.
+
+*Konteringar* och *Kontering* fungerar som för en verifikation. En kontering från ett kontoutdrag visar också var den kom ifrån, till exempel `Från: bank/nordea.csv rad 8`.
+
+###### Utkastets händelse
+
+<!-- hjälp: utkastets-handelse -->
+Händelsen i utkastet: datum, rubrik och belopp. I ett utkast ska allt gå att ändra, men det finns inte än: valen leder till *Inte än*. Tryck `-` för att gå tillbaka till utkastet.
+<!-- /hjälp -->
 
 ##### Läs kontoutdrag
 
@@ -710,7 +742,7 @@ Det du valde går inte att ändra i en bokförd verifikation. Är verifikationen
 <!-- /hjälp -->
 
 <!-- hjälp: konteringar -->
-Verifikationens konteringar, numrerade `0`–`9`. Tryck en rads siffra för att öppna den. Har verifikationen fler än tio rader bläddrar `<` och `>` en sida. Strukna rader är med, märkta `(struken)`. Tryck `-` för att gå tillbaka till verifikationen.
+Verifikationens eller utkastets konteringar, numrerade `0`–`9`. Tryck en rads siffra för att öppna den. Finns det fler än tio rader bläddrar `<` och `>` en sida. Strukna rader är med, märkta `(struken)`. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
 ```text
@@ -722,7 +754,7 @@ Cratchit > … > Bokfört > D19 > Konteringar>
 ```
 
 <!-- hjälp: kontering -->
-En kontering: konto med kontots namn, beskrivning och belopp, och radens datum när det skiljer sig från händelsens. Står det att raden är struken eller tillagd är den en del av en rättelse. Än så länge kan du bara se raden: valen leder till *Inte än*. Tryck `-` för att gå tillbaka till konteringarna.
+En kontering: konto med kontots namn, beskrivning och belopp, och radens datum när det skiljer sig från händelsens. Står det att raden är struken eller tillagd är den en del av en rättelse. En rad från ett kontoutdrag visar vilken fil och rad den kom ifrån. Än så länge kan du bara se raden: valen leder till *Inte än*. Tryck `-` för att gå tillbaka till konteringarna.
 <!-- /hjälp -->
 
 ```text
