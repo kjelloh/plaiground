@@ -72,6 +72,10 @@ Jag har bestämt nu att bygga upp cratchit från 'andra hållet'
 * Göra om Stämman för 20250501-202060430
 * Göra om INK2 för 20250501-202060430
 
+Har nu påbörjat inläsning av kontoutdrag till utkast.
+
+* Todo: Utöka läsning till fler format (fler banker)
+
 ## 20261116
 
 Nu är det väl ändå dags att till slut få till ett sätt att redigera och skapa verifikationer till bokföringen?

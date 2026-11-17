@@ -78,6 +78,8 @@ add_library(cratchit_core
   src/core/sie_project.cpp
   src/core/sha256.cpp
   src/core/sie_summary.cpp
+  src/core/statement/statement.cpp
+  src/core/statement_drafts.cpp
   src/core/terminal_encoding.cpp
   src/core/version.cpp
 )

@@ -31,7 +31,8 @@ InventoryEntry entry_of(CsvRow const& r) {
   return {r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[12], r[13]};
 }
 
-// The path as stored: generic separators (/), so that the folder can move to another platform
+} // namespace
+
 std::string stored_path(fs::path const& file, fs::path const& project_folder) {
   std::error_code ec;
   auto const relative = fs::relative(file, project_folder, ec);
@@ -39,6 +40,8 @@ std::string stored_path(fs::path const& file, fs::path const& project_folder) {
   auto const text = path.generic_u8string();
   return std::string(text.begin(), text.end());
 }
+
+namespace {
 
 std::string utf8_name(fs::path const& file) {
   auto const text = file.filename().u8string();
@@ -128,6 +131,30 @@ std::expected<InventoryEntry, std::string> record_sie_use(fs::path const& projec
   entry.vouchers_added = std::to_string(use.vouchers_added);
   entry.vouchers_changed = std::to_string(use.vouchers_changed);
   if (auto added = add_to_inventory(year_inventory_file(project_folder, year->start), entry); !added) {
+    return std::unexpected(added.error());
+  }
+  return entry;
+}
+
+std::expected<InventoryEntry, std::string> record_statement_use(fs::path const& project_folder,
+                                                                fs::path const& statement_file, Date year_start,
+                                                                Date year_end, Date today) {
+  auto const sha256 = sha256_of_file(statement_file);
+  if (!sha256) return std::unexpected(sha256.error());
+  std::error_code ec;
+  auto const size = fs::file_size(statement_file, ec);
+  if (ec) return std::unexpected(std::format("Kan inte läsa {}: {}", statement_file.string(), ec.message()));
+  InventoryEntry entry;
+  entry.sha256 = *sha256;
+  entry.kind = "kontoutdrag";
+  entry.name = utf8_name(statement_file);
+  entry.path = stored_path(statement_file, project_folder);
+  entry.size = std::to_string(size);
+  entry.read = format_iso_date(today);
+  entry.use = "utkast";
+  entry.year_start = format_iso_date(year_start);
+  entry.year_end = format_iso_date(year_end);
+  if (auto added = add_to_inventory(year_inventory_file(project_folder, year_start), entry); !added) {
     return std::unexpected(added.error());
   }
   return entry;

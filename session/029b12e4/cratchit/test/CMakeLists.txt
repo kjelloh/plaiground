@@ -16,6 +16,8 @@ add_executable(cratchit_tests
   test_sie_project.cpp
   test_sha256.cpp
   test_sie_summary.cpp
+  test_statement.cpp
+  test_statement_drafts.cpp
   test_cp437.cpp
   test_decoder.cpp
   test_design_insufficiency.cpp

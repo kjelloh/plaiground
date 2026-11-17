@@ -4,23 +4,46 @@
 #include "core/project.hpp"
 #include "pyroceph/tui/state.hpp"
 
+#include <filesystem>
+#include <functional>
 #include <memory>
+#include <optional>
 
 namespace cratchit::ui {
 
 // Utkast: the fiscal year's drafts, the events on their way into the books.
 // For now the view only says how many drafts the year has ("Utkast <year>:
 // inga utkast" or "Utkast <year>: 3 utkast"), read again when the user comes
-// back. 0 Läs kontoutdrag leads to make_read_statement_menu. Opened with 0 in
-// Årsflöde. No input.
+// back, and below it what was just done (e.g. the drafts a statement gave),
+// until the user goes on. Läs kontoutdrag starts in the folder of the
+// statement read last from here. 0 Läs kontoutdrag leads to make_read_statement_menu.
+// Opened with 0 in Årsflöde. No input.
 std::unique_ptr<pyroceph::tui::State> make_draft_menu(Project project, FiscalYear year);
 
-// Läs kontoutdrag: the user types the path of an account statement, starting
-// in the project folder; Tab completes folders and all files (no filter on
-// what a statement may be). Enter on a file leads to Inte än, as reading a
-// statement is not there yet. Enter on anything else (nothing typed, a folder,
-// a path that does not exist) is refused with the reason, and the path is
-// kept. Coming back, the path starts in the folder of the file chosen last.
-std::unique_ptr<pyroceph::tui::State> make_read_statement_menu(Project project, FiscalYear year);
+// Tells the state the TUI goes back to what was done, as lines for its view,
+// and the statement file read
+using StatementReport = std::function<void(pyroceph::tui::View, std::filesystem::path)>;
+
+// Läs kontoutdrag: account statements read into drafts (beslut 2026-11-17).
+// The user types the path of the statement, starting in the project folder;
+// Tab completes folders and all files (no filter on what a statement may be).
+// Enter on anything but a file (nothing typed, a folder, a path that does not
+// exist), or on a file cratchit cannot read as a statement (see
+// read_statement_file), is refused with the reason, and the path is kept.
+// The path starts in start_folder when given, else the project folder; coming
+// back, in the folder of the file chosen last.
+//
+// A statement read leads to "Konto": what the file holds (encoding, entries,
+// saldo, lines that are not entries) and the account cratchit suggests (see
+// guess_statement_account), typed in for the user. Enter takes a BAS account
+// in the books' chart of accounts and leads to "Bekräfta": what reading it
+// into drafts of year would do (see plan_statement_drafts), with the new
+// entries, J Ja and N Nej, or just N Tillbaka when nothing is new. J adds the
+// drafts (add_statement_drafts), gives report what was done and goes back to
+// origin (State::back_to); N goes back to choose a file. A failure leads to
+// the error state.
+std::unique_ptr<pyroceph::tui::State> make_read_statement_menu(Project project, FiscalYear year,
+                                                               pyroceph::tui::State const* origin, StatementReport report,
+                                                               std::optional<std::filesystem::path> start_folder = {});
 
 } // namespace cratchit::ui

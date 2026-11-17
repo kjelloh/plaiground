@@ -191,7 +191,7 @@ Utvecklaren av cratchit har inte infört att … ännu.
 Cratchit > … > Inte än (<valet>)> 
 ```
 
-Tryck `-` för att gå tillbaka. Just nu gäller det valen i [Årsflöde](#årsflöde), i dess *Bokslut* och att läsa in ett kontoutdrag i *Utkast*.
+Tryck `-` för att gå tillbaka. Just nu gäller det valen i [Årsflöde](#årsflöde) och i dess *Bokslut*.
 
 ## Samlingsmappen
 
@@ -305,7 +305,7 @@ Listan visar de tio nyaste raderna. Finns det fler står det sist hur många äl
 | `obalanserat` | Utkastet har text och konteringar, men konteringarna balanserar inte eller stämmer inte med beloppet |
 | `klart` | Utkastet kan bokföras |
 
-Utkast skapar du i [Utkast](#utkast) under Årsflöde. Där går det än så länge bara att välja ett kontoutdrag; att läsa in det kommer senare.
+Utkast skapar du i [Utkast](#utkast) under Årsflöde. Än så länge skapar cratchit utkast från kontoutdrag.
 
 ### Årsflöde
 
@@ -333,7 +333,7 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda. Än så länge står det bara hur många utkast året har. Tryck `0` för att läsa ett kontoutdrag. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda. Än så länge står det bara hur många utkast året har, och under det vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
@@ -347,8 +347,10 @@ Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast>
 ##### Läs kontoutdrag
 
 <!-- hjälp: las-kontoutdrag -->
-Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och filer. cratchit begränsar inte vilka filer du kan välja. Väljer du en mapp, eller en fil som inte finns, säger cratchit det och sökvägen står kvar. Att läsa in kontoutdraget finns inte än, så en fil leder till *Inte än*. Tryck `-` för att gå tillbaka till Utkast.
+Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och filer. cratchit begränsar inte vilka filer du kan välja. Väljer du en mapp, en fil som inte finns eller en fil som cratchit inte kan läsa som kontoutdrag, säger cratchit varför och sökvägen står kvar. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
+
+Ett kontoutdrag är en fil från banken eller från Skatteverket med raderna för ett konto, till exempel Nordeas CSV-fil eller Skatteverkets *Bokförda transaktioner*. Varje rad i kontoutdraget blir ett utkast med en enda kontering på det BAS-konto du anger. Utkastet har ingen rubrik än; det fyller du i senare.
 
 Tryck `0` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka börjar sökvägen i mappen där du valde fil senast.
 
@@ -357,7 +359,66 @@ Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och fil
 Cratchit > … > Årsflöde > Utkast > Läs kontoutdrag> /Users/me/Documents/The ITfied AB/
 ```
 
-Att läsa in kontoutdraget kommer senare. Då kommer cratchit att säga vad som är fel om filen inte går att läsa.
+cratchit läser filen och låter den ligga kvar. Den kopieras inte, och cratchit ändrar den inte.
+
+**Så läser cratchit ett kontoutdrag.** cratchit hittar raderna genom vad cellerna innehåller, inte genom kolumnernas namn:
+
+* Teckenkodningen: UTF-8, med eller utan BOM i början, annars ASCII. Har filen tecken som varken är UTF-8 eller ASCII säger cratchit vilken rad det gäller; spara då filen som UTF-8.
+* Cellerna skiljs åt med `;`, tabb eller `,`, det som ger flest rader med lika många celler. En cell får stå inom citattecken.
+* En rad i kontoutdraget har exakt ett datum (`2026-09-28` eller `2026/09/28`, ensamt i sin cell) och minst ett belopp (`-1308,75`, `2 292`, ensamt i sin cell).
+* Kontoutdragets rader är den längsta följden av sådana rader i rad, med lika många celler och datumet på samma plats. Rader före och efter, som en rubrik eller *Ingående saldo*, hör inte till.
+* Finns det en kolumn med saldo måste den stämma rad för rad: saldot före plus beloppen sedan dess. En rad utan saldo går bra. Saldot visar också om filen har den nyaste eller den äldsta raden först; utan saldo avgör datumen.
+* Radens text är dess andra celler, åtskilda med ` | `, utan tomma celler och utan celler som är lika på alla rader (som `SEK`).
+
+När cratchit inte kan avgöra något, till exempel när inget saldo stämmer, säger cratchit varför och läser inte in något.
+
+##### Konto
+
+<!-- hjälp: kontoutdrag-konto -->
+Ovanför prompten står vad kontoutdraget innehåller. Skriv BAS-kontot som kontoutdraget gäller, till exempel `1930`, och tryck Enter. Kontot måste finnas i bokföringens kontoplan. Har cratchit ett förslag står det redan på prompten. Tryck `-` för att välja en annan fil.
+<!-- /hjälp -->
+
+```text
+Kontoutdrag: /Users/me/Documents/The ITfied AB/PLUSGIROKONTO FTG 51 86 87-9 - 2026-10-20 11.05.39.csv
+  Kodning   UTF-8 med BOM
+  Rader     7, 2026-07-03 – 2026-09-28 (rad 2–8, nyast först)
+  Saldo     6644.68 före, 6183.45 efter, stämmer på varje rad som har saldo
+  Rad 1 är ingen rad i kontoutdraget.
+Förslag: 1920 PlusGiro (1 av 7 rader stämmer med konteringar på 1920 i bokföringen).
+Skriv BAS-kontot som kontoutdraget gäller och tryck Enter.
+Cratchit > … > Läs kontoutdrag > Konto> 1920
+```
+
+Förslaget är det konto som har flest konteringar i bokföringens verifikationer med samma dag och belopp som en rad i kontoutdraget. Har två konton lika många, eller inget konto någon, föreslår cratchit inget.
+
+##### Bekräfta kontoutdrag
+
+<!-- hjälp: bekrafta-kontoutdrag -->
+Ovanför prompten står vad kontoutdraget ger: nya utkast, rader som redan är bokförda eller redan är utkast, och rader utanför räkenskapsåret. Tryck `J` för att skapa utkasten, eller `N` för att välja en annan fil. Finns inget nytt är det enda valet `N Tillbaka`.
+<!-- /hjälp -->
+
+```text
+Kontoutdrag: /Users/me/Documents/The ITfied AB/PLUSGIROKONTO FTG 51 86 87-9 - 2026-10-20 11.05.39.csv
+  Konto           1920 PlusGiro
+  Nya utkast      6
+  Redan bokförda  1
+  Redan utkast    0
+  Nya:
+    2026-08-26       -923.00  5020-7042 | Fortnox Finans AB | 574512366662450 | Fortnox sep-nov
+    …
+Skapa 6 utkast?
+  J Ja
+  N Nej
+```
+
+* En rad är *redan bokförd* när en verifikation i räkenskapsåret har en kontering på kontot med samma dag och belopp.
+* En rad är *redan utkast* när ett utkast i räkenskapsåret har en sådan kontering.
+* Varje kontering räknas bara för en rad. Två lika rader behöver alltså två konteringar.
+* Rader utanför räkenskapsåret läses inte in.
+
+Du kan alltså läsa samma fil flera gånger, och filer som överlappar varandra går bra: bara det nya blir utkast.
+
+`J` skapar utkasten och går tillbaka till Utkast, som säger hur många det blev. Varje utkast har radens datum, och en kontering på kontot med radens belopp (in på kontot är debet), datum och text. Konteringen minns vilken fil och rad den kom från. Filen förs in i räkenskapsårets förteckning (se [Dina filer](#dina-filer)).
 
 #### Bokfört
 
@@ -866,7 +927,7 @@ Skriv organisationens namn och tryck Enter, till exempel The ITfied AB. Namnet �
 
 cratchit verkar utan att märkas. cratchit flyttar, döper om, ändrar och tar aldrig bort dina filer. cratchit skriver i sina egna `.cratchit`-mappar, och skapar synliga filer och mappar bara när du ber om just det, till exempel en export till SIE. En ny bokföring från SIE får bara en `.cratchit`-mapp, i SIE-filens mapp eller i den mapp du startade i.
 
-När du skapar en bokföring från en SIE-fil eller importerar en, ligger filen kvar där den låg. cratchit för i stället en *förteckning* över de filer bokföringen har fått något från: vad filen hette, var den låg, när den lästes in och vad den gav. Förteckningen känner igen en fil på dess innehåll, så den vet vilken fil det var även om du senare flyttar filen eller byter namn på den.
+När du skapar en bokföring från en SIE-fil, importerar en eller läser ett kontoutdrag, ligger filen kvar där den låg. cratchit för i stället en *förteckning* över de filer bokföringen har fått något från: vad filen hette, var den låg, när den lästes in och vad den gav. Förteckningen känner igen en fil på dess innehåll, så den vet vilken fil det var även om du senare flyttar filen eller byter namn på den.
 
 Förteckningen ligger i bokföringens `.cratchit`-mapp, en för hela bokföringen och en för varje räkenskapsår. cratchit visar den inte än.
 

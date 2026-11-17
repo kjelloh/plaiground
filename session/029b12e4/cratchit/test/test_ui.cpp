@@ -1503,7 +1503,7 @@ TEST_F(RootMenuTest, DraftsSayHowManyTheYearHas) {
   EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(folder));
 }
 
-TEST_F(RootMenuTest, ReadStatementCompletesAnyFileAndLeadsToNotYet) {
+TEST_F(RootMenuTest, ReadStatementCompletesAnyFileAndRefusesWhatItCannotRead) {
   auto const folder = documents / "Exempel AB";
   fs::create_directories(folder / "bank");
   ASSERT_TRUE(cratchit::create_project_here(folder, "Exempel AB", "556677-8899", {"2025-01-01", "2025-12-31"},
@@ -1511,7 +1511,7 @@ TEST_F(RootMenuTest, ReadStatementCompletesAnyFileAndLeadsToNotYet) {
   auto const project = cratchit::open_project(folder);
   ASSERT_TRUE(project) << project.error();
   std::ofstream(folder / "bank" / "nordea_2025.csv") << "Bokföringsdag;Belopp\n";
-  Navigator navigator(cratchit::ui::make_read_statement_menu(*project, {"2025-01-01", "2025-12-31"}));
+  Navigator navigator(cratchit::ui::make_read_statement_menu(*project, {"2025-01-01", "2025-12-31"}, nullptr, {}));
   auto const bank = pyroceph::tui::path_input_of(folder / "bank");
   // Tab completes the folder, then any file in it (no filter on the kind of file)
   auto const separator = bank.back();
@@ -1526,10 +1526,53 @@ TEST_F(RootMenuTest, ReadStatementCompletesAnyFileAndLeadsToNotYet) {
   refused = navigator.current().on_input(bank + U"saknas.csv");
   ASSERT_FALSE(refused);
   EXPECT_TRUE(refused.error().starts_with("Det finns ingen fil ")) << refused.error();
-  // A file leads to Inte än, and coming back the path starts in its folder
-  auto accepted = navigator.current().on_input(bank + U"nordea_2025.csv");
-  ASSERT_TRUE(accepted);
-  ASSERT_TRUE(accepted->next);
-  EXPECT_EQ(accepted->next->name(), "Inte än (Läs kontoutdrag)");
+  // A file that is no statement is refused with the reason, and the path starts in its folder after
+  refused = navigator.current().on_input(bank + U"nordea_2025.csv");
+  ASSERT_FALSE(refused);
+  EXPECT_TRUE(refused.error().starts_with("cratchit kan inte läsa filen som kontoutdrag.")) << refused.error();
   EXPECT_EQ(navigator.current().start_input(), bank);
+}
+
+TEST_F(RootMenuTest, ReadStatementMakesDraftsOnTheAccountTyped) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 3010 \"Sales\"\r\n#KONTO 6570 \"Bank costs\"\r\n"
+         "#VER A 1 20250301 \"Sale\"\r\n{\r\n#TRANS 1930 {} 500\r\n#TRANS 3010 {} -500\r\n}\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  fs::create_directories(documents / "bank");
+  std::ofstream(documents / "bank" / "nordea.csv", std::ios::binary) << "\xEF\xBB\xBF"
+                                                               "Datum;Belopp;Text;Saldo\n"
+                                                               "2025/03/05;-10,00;AVGIFTER;490,00\n"
+                                                               "2025/03/01;500,00;Kund;500,00\n";
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  ASSERT_TRUE(navigator.press(U'0'));
+  auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().name(), "Konto");
+  EXPECT_EQ(navigator.current().start_input(), U"1930"); // suggested: A1 has 500 on 1930 that day
+  auto const view = navigator.current().view();
+  EXPECT_NE(std::ranges::find(view, "  Kodning   UTF-8 med BOM"), view.end());
+  EXPECT_NE(std::ranges::find(view, "Förslag: 1930 Bank (1 av 2 rader stämmer med konteringar på 1930 i bokföringen)."),
+            view.end());
+  EXPECT_FALSE(navigator.current().on_input(U"1931")); // not in the chart of accounts
+  accepted = navigator.current().on_input(U"1930");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().name(), "Bekräfta");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'J', "Ja"}, {U'N', "Nej"}}));
+  auto const confirm = navigator.current().view();
+  EXPECT_NE(std::ranges::find(confirm, "  Nya utkast      1"), confirm.end());
+  EXPECT_NE(std::ranges::find(confirm, "  Redan bokförda  1"), confirm.end());
+  // J makes the draft and goes back to Utkast, which tells what was done
+  ASSERT_TRUE(navigator.press(U'J'));
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Utkast 2025: 1 utkast.", "cratchit skapade 1 utkast från nordea.csv på konto 1930 Bank."}));
+  // The next statement starts in the folder of this one
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().start_input(), pyroceph::tui::path_input_of(documents / "bank"));
 }
