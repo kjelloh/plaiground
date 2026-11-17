@@ -340,7 +340,7 @@ Listan visar de tio nyaste raderna. Finns det fler står det sist hur många äl
 | `obalanserat` | Utkastet har text och konteringar, men konteringarna balanserar inte eller stämmer inte med beloppet |
 | `klart` | Utkastet kan bokföras |
 
-Utkast skapar du i [Utkast](#utkast) under Årsflöde, från ett kontoutdrag eller genom att beskriva en händelse.
+Utkast skapar du i [Utkast](#utkast) under Årsflöde, från ett kontoutdrag eller genom att beskriva händelser.
 
 ### Årsflöde
 
@@ -368,7 +368,7 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att läsa ett kontoutdrag och skapa utkast av dess rader, `1` för att beskriva en händelse och skapa ett utkast av den, eller `2` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att beskriva händelser, en i taget, och skapa ett utkast av var och en, `1` för att läsa ett kontoutdrag och skapa utkast av dess rader, eller `2` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
@@ -380,8 +380,8 @@ Utkast 2026/27: utkast 1–12 av 12
   #10         2026-09-05          1.00  1630  Intäktsränta (kontoutdrag)
   …
   #1          2026-07-03          3.70  1920  AVGIFTER NORDEA (kontoutdrag)
-  0 Läs kontoutdrag
-  1 Beskriv händelse
+  0 Beskriv händelser
+  1 Läs kontoutdrag
   2 Läs pdf-underlag
   < Föregående sida
   > Nästa sida
@@ -456,7 +456,7 @@ Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och fil
 
 Ett kontoutdrag är en fil från banken eller från Skatteverket med raderna för ett konto, till exempel Nordeas CSV-fil eller Skatteverkets *Bokförda transaktioner*. Varje rad i kontoutdraget blir ett utkast med en enda kontering på det BAS-konto du anger. Utkastet har ingen rubrik än; det fyller du i senare.
 
-Tryck `0` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka, och nästa gång du läser ett kontoutdrag eller pdf-underlag, börjar sökvägen i mappen du valde senast. Kontoutdrag och underlag för en period ligger ofta i samma mapp.
+Tryck `1` i Utkast. Sökvägen börjar i bokföringens mapp, och du tar dig fram med Tab som när du väljer en SIE-fil. Alla filer räknas; det är du som väljer rätt fil. När du går tillbaka, och nästa gång du läser ett kontoutdrag eller pdf-underlag, börjar sökvägen i mappen du valde senast. Kontoutdrag och underlag för en period ligger ofta i samma mapp.
 
 ```text
 Skriv sökvägen till kontoutdraget och tryck Enter. Tab fyller i mappar och filer.
@@ -524,19 +524,19 @@ Du kan alltså läsa samma fil flera gånger, och filer som överlappar varandra
 
 `J` skapar utkasten och går tillbaka till Utkast, som säger hur många det blev. Varje utkast har radens datum, och en kontering på kontot med radens belopp (in på kontot är debet), datum och text. Konteringen minns vilken fil och rad den kom från. Filen förs in i räkenskapsårets förteckning (se [Dina filer](#dina-filer)).
 
-##### Beskriv händelse
+##### Beskriv händelser
 
 <!-- hjälp: beskriv-handelse -->
-Skriv händelsen på en rad: rubrik, belopp och datum, i vilken ordning som helst, till exempel `Telia faktura oktober 1118,00 2026-10-22`, och tryck Enter. Datumet måste finnas och ligga i räkenskapsåret. Skriv beloppet utan minustecken. Är något fel säger cratchit vad, och raden står kvar så att du kan rätta den. Tryck `-` innan du skrivit något för att gå tillbaka till Utkast.
+Skriv händelsen på en rad: rubrik, belopp och datum, i vilken ordning som helst, till exempel `Telia faktura oktober 1118,00 2026-10-22`, och tryck Enter. Datumet måste finnas och ligga i räkenskapsåret. Skriv beloppet utan minustecken. cratchit skapar utkastet och du står kvar, med en tom rad för nästa händelse; det du skapat står under *Skapade nu*. Är något fel säger cratchit vad, och raden står kvar så att du kan rätta den. Tryck `-` på en tom rad för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
-En händelse är det som hände, när och för hur mycket, till exempel en faktura eller ett kvitto. Tryck `1` i Utkast och skriv den på en rad:
+En händelse är det som hände, när och för hur mycket, till exempel en faktura eller ett kvitto. Tryck `0` i Utkast och skriv den på en rad. Du kan skriva den ena händelsen efter den andra utan att lämna platsen:
 
 ```text
 Skriv händelsen: rubrik, belopp och datum, i vilken ordning som helst, och tryck Enter.
 Till exempel: Telia faktura oktober 1118,00 2026-10-22
 I dag är 2026-11-17. Räkenskapsåret är 2026-05-01 – 2027-04-30.
-Cratchit > … > Utkast > Beskriv händelse: Telia faktura oktober 1118,00 2026-10-22
+Cratchit > … > Utkast > Beskriv händelser: Telia faktura oktober 1118,00 2026-10-22
 ```
 
 Så läser cratchit raden:
@@ -559,12 +559,25 @@ När tal står före beloppet kan ett mellanslag skilja tusental (`1 118,00`) el
 Beloppet är otydligt: mellanslag kan skilja tusental. Vilket menar du?
   1       118.00  Telia faktura oktober 1
   2      1118.00  Telia faktura oktober
-Cratchit > … > Beskriv händelse > Belopp?> 
+Cratchit > … > Beskriv händelser > Belopp?> 
 ```
 
 Ett ord räknas bara som en grupp tusental när det har exakt tre siffror och inget tecken, och ordet före har högst tre siffror och inga decimaler. Så `Faktura 8700 500` och `Faktura 87 50,00` är tydliga. Skriv beloppet utan mellanslag så slipper du frågan.
 
-När cratchit har läst raden skapas utkastet direkt, utan att du behöver bekräfta, och du kommer tillbaka till Utkast. Där står det nya utkastet i listan, med stadiet `händelse` eftersom det inte har några konteringar än, och under listan till exempel `cratchit skapade utkast #13: Telia faktura oktober.`
+När cratchit har läst raden skapas utkastet direkt, utan att du behöver bekräfta. Raden töms och du står kvar för nästa händelse. Det du har skapat sedan du kom hit står under *Skapade nu*, med datum, belopp och rubrik (utan nummer, eftersom numren ändras när utkast tillkommer):
+
+```text
+Skriv händelsen: rubrik, belopp och datum, i vilken ordning som helst, och tryck Enter.
+Till exempel: Telia faktura oktober 1118,00 2026-10-22
+I dag är 2026-11-17. Räkenskapsåret är 2026-05-01 – 2027-04-30.
+
+Skapade nu:
+  2026-07-15        815.00  Fortnox bokföring
+  2026-08-29       1308.75  Loopia webhotell
+Cratchit > … > Utkast > Beskriv händelser> 
+```
+
+Valde du ett belopp i *Belopp?* kommer du också tillbaka hit. cratchit föreslår inget datum: skriv det på varje rad. Tryck `-` på en tom rad för att gå tillbaka till Utkast. Där står de nya utkasten i listan, med stadiet `händelse` eftersom de inte har några konteringar än, och under listan till exempel `cratchit skapade 2 utkast.`
 
 ##### Läs pdf-underlag
 

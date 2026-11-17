@@ -18,15 +18,17 @@ namespace cratchit::ui {
 // above and below the page when there are more. "<" and ">" turn a page in
 // place; at either end they do nothing. The drafts are read again when the
 // user comes back. Below the list, what was just done (e.g. the drafts a
-// statement gave), until the user goes on. 0 Läs kontoutdrag leads to
+// statement gave), until the user goes on. 1 Läs kontoutdrag leads to
 // make_read_statement_menu.
-// 1 Beskriv händelse: the user types the event on one line (see parse_event):
-// an error is shown below the line, which is kept to correct. When the amount
-// can be read in more than one way, "Belopp?" lists the readings to choose
-// with 1, 2, ... (- goes back to the line, kept). A clear line, or a reading
-// chosen, adds the draft (add_event_draft) at once, without confirmation
-// (beslut 2026-11-17), and goes back to Utkast, which tells "cratchit skapade
-// utkast #13: <heading>.".
+// 0 Beskriv händelser: the user types one event after the other, each on one
+// line (see parse_event): an error is shown below the line, which is kept to
+// correct. When the amount can be read in more than one way, "Belopp?" lists
+// the readings to choose with 1, 2, ... (- goes back to the line, kept). A
+// clear line, or a reading chosen, adds the draft (add_event_draft) at once,
+// without confirmation, and the user is back in Beskriv händelser with an
+// empty line, the drafts made there listed under "Skapade nu:" (date, amount,
+// heading; no ids, as they change). - goes back to Utkast, which tells
+// "cratchit skapade 3 utkast." (or "cratchit skapade 1 utkast: <heading>.").
 // 2 Läs pdf-underlag: the user types the path of a folder, starting in the
 // project folder; Tab completes folders and shows the folder's pdf files as
 // information. Enter on a folder reads its pdf files with walk_pdf (see

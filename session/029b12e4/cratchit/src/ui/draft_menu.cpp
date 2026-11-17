@@ -275,9 +275,9 @@ private:
 // Reports what was done to the state the TUI goes back to
 using EventReport = std::function<void(View)>;
 
-// Adds the event as a draft of year and tells report so; the error text when it cannot
+// Adds the event as a draft of year; the error text when it cannot
 std::expected<void, std::string> make_event_draft(Project const& project, FiscalYear const& year,
-                                                  books::Event const& event, EventReport const& report) {
+                                                  books::Event const& event) {
   auto const start = parse_iso_date(year.start);
   if (!start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year.start));
   auto const added = add_event_draft(project.folder, *start, event, today_date());
@@ -288,16 +288,18 @@ std::expected<void, std::string> make_event_draft(Project const& project, Fiscal
   }
   LOG_BUSINESS("Utkast {} skapat i {} ({}): {} {} {}", draft_id(*added), label_of(year), project.folder.string(),
                format_iso_date(event.date), format_amount(event.amount), event.heading);
-  if (report) report({std::format("cratchit skapade utkast {}: {}.", draft_id(*added), event.heading)});
   return {};
 }
 
+// Tells Beskriv händelser that a draft was made of the event
+using EventCreated = std::function<void(books::Event const&)>;
+
 class AmountChoiceState : public State {
 public:
-  AmountChoiceState(Project project, FiscalYear year, std::vector<books::Event> readings, State const* origin,
-                    EventReport report)
-      : project_(std::move(project)), year_(std::move(year)), readings_(std::move(readings)), origin_(origin),
-        report_(std::move(report)) {}
+  AmountChoiceState(Project project, FiscalYear year, std::vector<books::Event> readings, State const* describe,
+                    EventCreated created)
+      : project_(std::move(project)), year_(std::move(year)), readings_(std::move(readings)), describe_(describe),
+        created_(std::move(created)) {}
   std::string name() const override { return "Belopp?"; }
   View view() const override { return {"Beloppet är otydligt: mellanslag kan skilja tusental. Vilket menar du?"}; }
   OptionsList options() const override {
@@ -308,42 +310,56 @@ public:
     }
     return result;
   }
-  // A reading makes the draft and goes back to Utkast (back_to)
+  // A reading makes the draft and goes back to Beskriv händelser (back_to), for the next event
   OnKeyResult on_key(CodePoint key) override {
     if (done_ || key < U'1' || key > U'9') return nullptr;
     auto const i = static_cast<std::size_t>(key - U'1');
     if (i >= readings_.size()) return nullptr;
-    if (auto made = make_event_draft(project_, year_, readings_[i], report_); !made) {
+    if (auto made = make_event_draft(project_, year_, readings_[i]); !made) {
       return pyroceph::tui::make_error_state(made.error());
     }
+    if (created_) created_(readings_[i]);
     done_ = true;
     return nullptr;
   }
-  State const* back_to() const override { return done_ ? origin_ : nullptr; }
+  State const* back_to() const override { return done_ ? describe_ : nullptr; }
   std::string help_topic() const override { return std::string(help_topic::amount_choice); }
 
 private:
   Project project_;
   FiscalYear year_;
   std::vector<books::Event> readings_;
-  State const* origin_;
-  EventReport report_;
+  State const* describe_;
+  EventCreated created_;
   bool done_ = false;
 };
 
+// Beskriv händelser: one event after the other, each line a draft (beslut 2026-11-17); the
+// user stays here, with an empty line, and sees the drafts made so far. - goes back to Utkast.
 class DescribeEventState : public State {
 public:
-  DescribeEventState(Project project, FiscalYear year, State const* origin, EventReport report)
-      : project_(std::move(project)), year_(std::move(year)), origin_(origin), report_(std::move(report)) {}
-  std::string name() const override { return "Beskriv händelse"; }
+  DescribeEventState(Project project, FiscalYear year, EventReport report)
+      : project_(std::move(project)), year_(std::move(year)), report_(std::move(report)) {}
+  std::string name() const override { return "Beskriv händelser"; }
   View view() const override {
-    return {"Skriv händelsen: rubrik, belopp och datum, i vilken ordning som helst, och tryck Enter.",
-            "Till exempel: Telia faktura oktober 1118,00 2026-10-22",
-            std::format("I dag är {}. Räkenskapsåret är {} – {}.", format_iso_date(today_date()), year_.start, year_.end)};
+    View lines{"Skriv händelsen: rubrik, belopp och datum, i vilken ordning som helst, och tryck Enter.",
+               "Till exempel: Telia faktura oktober 1118,00 2026-10-22",
+               std::format("I dag är {}. Räkenskapsåret är {} – {}.", format_iso_date(today_date()), year_.start,
+                           year_.end)};
+    if (!created_.empty()) {
+      lines.push_back("");
+      lines.push_back("Skapade nu:");
+      for (auto const& event : created_) {
+        lines.push_back(std::format("  {}  {:>12}  {}", format_iso_date(event.date), format_amount(event.amount),
+                                    event.heading));
+      }
+    }
+    return lines;
   }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
-  // The line typed last, so that it can be changed when the user comes back to it
+  // The line typed last, kept when it was refused or the amount was unclear (- from Belopp?
+  // comes back to it); empty once a draft is made of it
   std::u32string start_input() const override { return line_; }
   InputResult on_input(std::u32string_view text) override {
     line_ = text;
@@ -357,26 +373,34 @@ public:
                                          year_.start, year_.end));
     }
     if (readings->size() > 1) {
-      return Accepted(std::make_unique<AmountChoiceState>(project_, year_, std::move(*readings), origin_, report_));
+      return Accepted(std::make_unique<AmountChoiceState>(project_, year_, std::move(*readings), this,
+                                                          [this](books::Event const& event) { created(event); }));
     }
-    // A clear line makes the draft at once and goes back to Utkast (back_to): no confirmation (beslut 2026-11-17)
-    if (auto made = make_event_draft(project_, year_, readings->front(), report_); !made) {
+    // A clear line makes the draft at once, without confirmation (beslut 2026-11-17); stay for the next
+    if (auto made = make_event_draft(project_, year_, readings->front()); !made) {
       return std::unexpected(made.error());
     }
-    done_ = true;
+    created(readings->front());
     return Accepted();
-  }
-  State const* back_to() const override { return done_ ? origin_ : nullptr;
   }
   std::string help_topic() const override { return std::string(help_topic::describe_event); }
 
 private:
+  // A draft made of event: listed here, the line emptied, and Utkast told how many so far
+  void created(books::Event const& event) {
+    created_.push_back(event);
+    line_.clear();
+    if (report_) {
+      report_({created_.size() == 1 ? std::format("cratchit skapade 1 utkast: {}.", event.heading)
+                                    : std::format("cratchit skapade {} utkast.", created_.size())});
+    }
+  }
+
   Project project_;
   FiscalYear year_;
-  State const* origin_;
   EventReport report_;
   std::u32string line_;
-  bool done_ = false;
+  std::vector<books::Event> created_;
 };
 
 // What Tab tells about the pdf files of a folder, e.g. "3 pdf-filer i mappen:" and their names
@@ -702,8 +726,8 @@ public:
   }
   // < and > always, so that turning past either end does nothing (and starts no input)
   OptionsList options() const override {
-    return {{U'0', "Läs kontoutdrag"},
-            {U'1', "Beskriv händelse"},
+    return {{U'0', "Beskriv händelser"},
+            {U'1', "Läs kontoutdrag"},
             {U'2', "Läs pdf-underlag"},
             {back_key, "Föregående sida"},
             {forward_key, "Nästa sida"}};
@@ -720,11 +744,11 @@ public:
       return std::make_unique<ReadPdfState>(project_, year_, folder_,
                                             [this](fs::path const& folder) { folder_ = folder; });
     }
-    if (key == U'1') {
+    if (key == U'0') {
       report_.clear();
-      return std::make_unique<DescribeEventState>(project_, year_, this, [this](View text) { report_ = std::move(text); });
+      return std::make_unique<DescribeEventState>(project_, year_, [this](View text) { report_ = std::move(text); });
     }
-    if (key != U'0') return nullptr;
+    if (key != U'1') return nullptr;
     report_.clear();
     return make_read_statement_menu(
         project_, year_, this,
