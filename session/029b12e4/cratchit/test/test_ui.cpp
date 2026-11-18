@@ -1905,7 +1905,7 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
             (View{"Utkast #2 i 2025 (kontohändelse)", "  Noterad:        " + cratchit::today_iso(), "Händelse:",
                   "  Datum:          2025-03-05", "  Rubrik:         ", "  Belopp:         ", "Konteringar:",
                   "  1930  Bank        -10.00  AVGIFTER"}));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'3', "Använd mall"}, {U'9', "Glöm"}}));
   // Its postings are changed in Kontera, which tells where a posting came from
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Kontera");
@@ -1922,7 +1922,7 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   EXPECT_EQ(navigator.current().name(), "Händelse");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::complete_event);
   EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "Datum: 2025-03-05"}, {U'1', "Rubrik:"}, {U'2', "Belopp:"}}));
+            (OptionsList{{U'0', "Datum: 2025-03-05"}, {U'1', "Rubrik:"}, {U'2', "Belopp:"}, {U'3', "Serie:"}}));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Rubrik");
   typed = navigator.current().on_input(U"");
@@ -1970,7 +1970,7 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   EXPECT_EQ(navigator.current().view().back(), "Inga konteringar än.");
   ASSERT_TRUE(navigator.back());
   // 9 Glöm, apart from the other options; N goes back to the draft
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'3', "Använd mall"}, {U'9', "Glöm"}}));
   ASSERT_TRUE(navigator.press(U'9'));
   EXPECT_EQ(navigator.current().name(), "Glöm");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::forget_draft);
@@ -2086,7 +2086,7 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   ASSERT_TRUE(opened) << opened.error();
   navigator.enter(std::move(opened->next));
   EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Inte samma"}}));
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'3', "Använd mall"}, {U'9', "Inte samma"}}));
   ASSERT_TRUE(navigator.press(U'9'));
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(),
@@ -2098,7 +2098,7 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   opened = navigator.current().on_input(U"#2");
   ASSERT_TRUE(opened) << opened.error();
   navigator.enter(std::move(opened->next));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'3', "Använd mall"}, {U'9', "Glöm"}}));
 }
 
 TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
@@ -2131,6 +2131,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   // The options of the draft's view, and < and >
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"},
                                                         {U'1', "Konteringar"},
+                                                        {U'3', "Använd mall"},
                                                         {U'9', "Glöm"},
                                                         {U'<', "Föregående"},
                                                         {U'>', "Nästa"}}));
@@ -2223,6 +2224,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"},
                                                         {U'1', "Konteringar"},
                                                         {U'2', "Bokför"},
+                                                        {U'3', "Använd mall"},
                                                         {U'9', "Glöm"},
                                                         {U'<', "Föregående"},
                                                         {U'>', "Nästa"}}));
@@ -2290,7 +2292,7 @@ TEST_F(RootMenuTest, AReadyDraftIsBookedFromItsView) {
   auto accepted = navigator.current().on_input(U"#1");
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.enter(std::move(accepted->next));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'3', "Använd mall"}, {U'9', "Glöm"}}));
   EXPECT_FALSE(navigator.press(U'2'));
   // Made ready in Kontera; back in its view, 2 Bokför
   ASSERT_TRUE(navigator.press(U'1'));
@@ -2299,7 +2301,7 @@ TEST_F(RootMenuTest, AReadyDraftIsBookedFromItsView) {
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().view().front(), "Utkast #1 i 2025 (klart)");
   EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Bokför"}, {U'9', "Glöm"}}));
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Bokför"}, {U'3', "Använd mall"}, {U'9', "Glöm"}}));
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Bokför");
   accepted = navigator.current().on_input(U"a");
@@ -2344,7 +2346,7 @@ TEST_F(RootMenuTest, AnAndringsverifikationIsADraftThatReversesTheVoucher) {
   ASSERT_TRUE(opened) << opened.error();
   drafts.enter(std::move(opened->next));
   EXPECT_EQ(drafts.current().options(),
-            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Bokför"}, {U'9', "Glöm"}}));
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Bokför"}, {U'3', "Använd mall"}, {U'9', "Glöm"}}));
   ASSERT_TRUE(drafts.press(U'9'));
   ASSERT_TRUE(drafts.press(U'9'));
   EXPECT_EQ(drafts.current().name(), "Utkast");
@@ -2379,4 +2381,70 @@ TEST_F(RootMenuTest, AStatementIsReadIntoAYearNotInTheBooksYet) {
   ASSERT_TRUE(books);
   ASSERT_EQ(books->years.size(), 2u);
   EXPECT_EQ(cratchit::format_iso_date(books->years[1].start), "2026-01-01");
+}
+
+TEST_F(RootMenuTest, ATemplateCompletesAnAccountEventInItsSeries) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 6570 \"Bankkostnader\"\r\n"
+         "#VER \"E\" \"1\" 20250201 \"Bankavgift\"\r\n{\r\n#TRANS 1930 {} -2.00\r\n#TRANS 6570 {} 2.00\r\n}\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  fs::create_directories(documents / "bank");
+  std::ofstream(documents / "bank" / "nordea.csv", std::ios::binary) << "Datum;Belopp;Text;Saldo\n"
+                                                                       "2025/03/06;100,00;Kund;590,00\n"
+                                                                       "2025/03/05;-10,00;AVGIFTER;490,00\n";
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  ASSERT_TRUE(navigator.press(U'3'));
+  auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  accepted = navigator.current().on_input(U"1930");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  ASSERT_TRUE(navigator.press(U'J'));
+  // Fullborda #1, the fee: 3 Använd mall lists E1 (1930 credit, as the fee)
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
+  ASSERT_TRUE(navigator.press(U'3'));
+  EXPECT_EQ(navigator.current().name(), "Mall");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::use_template);
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Utkastet:", "  #1            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
+                  "Tidigare verifikationer med samma konton och samma tecken som utkastets konteringar:",
+                  "  1  E1            2025-02-01          2.00  Bankavgift",
+                  "       1930  Bank                  -2.00",
+                  "       6570  Bankkostnader          2.00",
+                  "Skriv mallens nummer och tryck Enter."}));
+  auto refused = navigator.current().on_input(U"2");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Det finns ingen mall 2.");
+  accepted = navigator.current().on_input(U"1");
+  ASSERT_TRUE(accepted) << accepted.error();
+  EXPECT_EQ(accepted->reply, "cratchit använde E1 som mall: 1 rad tillagd, serie E.");
+  navigator.follow_back_to();
+  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
+  auto view = navigator.current().view();
+  EXPECT_NE(std::ranges::find(view, "  Serie:          E"), view.end());
+  EXPECT_NE(std::ranges::find(view, "  6570  Bankkostnader         10.00"), view.end());
+  // No text from the template: the heading is the account event's, typed in
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Datum: 2025-03-05"}, {U'1', "Rubrik:"}, {U'2', "Belopp: 10.00"}, {U'3', "Serie: E"}}));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().start_input(), U"AVGIFTER");
+  accepted = navigator.current().on_input(navigator.current().start_input());
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.follow_back_to();
+  ASSERT_TRUE(navigator.back());
+  // Ready: Bokför starts with the template's series
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Bokför");
+  EXPECT_EQ(navigator.current().start_input(), U"E");
+  accepted = navigator.current().on_input(navigator.current().start_input());
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.follow_back_to();
+  EXPECT_EQ(navigator.current().view().back(), "cratchit bokförde #1 som E2: AVGIFTER.");
 }

@@ -6,6 +6,7 @@
 #include "core/event_draft.hpp"
 #include "core/pdf_documents.hpp"
 #include "core/same_event.hpp"
+#include "core/templates.hpp"
 #include "core/log.hpp"
 #include "core/sie_summary.hpp"
 #include "core/statement_drafts.hpp"
@@ -1182,7 +1183,7 @@ struct Completing {
 };
 
 // The part of a draft's event that EventPartState changes
-enum class EventPart { date, heading, amount };
+enum class EventPart { date, heading, amount, series };
 
 // Datum, Rubrik or Belopp (in Händelse): one part of the draft's event, typed in
 // for the user to change: the date; the heading, else the text of the same event
@@ -1199,6 +1200,7 @@ public:
     case EventPart::date: return "Datum";
     case EventPart::heading: return "Rubrik";
     case EventPart::amount: return "Belopp";
+    case EventPart::series: return "Serie";
     }
     return {};
   }
@@ -1210,6 +1212,9 @@ public:
     case EventPart::heading: return {"Skriv rubriken och tryck Enter."};
     case EventPart::amount:
       return {"Skriv beloppet och tryck Enter. Ett minustecken betyder att händelsen går åt andra hållet än vanligt."};
+    case EventPart::series:
+      return {"Skriv serien som utkastet ska bokföras i, till exempel D, och tryck Enter. Bokför börjar med den. "
+              "En tom rad tar bort serien."};
     }
     return {};
   }
@@ -1225,6 +1230,7 @@ public:
       auto const amount = draft.event.amount != 0 ? draft.event.amount : amount_of(draft);
       return amount != 0 ? code_points_of(format_amount(amount)) : std::u32string();
     }
+    case EventPart::series: return code_points_of(draft.series);
     }
     return {};
   }
@@ -1257,6 +1263,17 @@ public:
       what = "belopp " + format_amount(*amount);
       break;
     }
+    case EventPart::series: {
+      for (auto& c : typed) {
+        if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+      }
+      if (!std::ranges::all_of(typed, [](char c) { return c >= 'A' && c <= 'Z'; })) {
+        return std::unexpected(std::format("{} är ingen serie. Skriv seriens bokstav, till exempel D.", typed));
+      }
+      changed.series = typed;
+      what = typed.empty() ? std::string("ingen serie") : "serie " + typed;
+      break;
+    }
     }
     if (auto done = completing_->change(std::move(changed), "händelsen ändrad: " + what); !done) {
       return std::unexpected(std::format("cratchit kunde inte ändra utkastet: {}", done.error()));
@@ -1287,13 +1304,15 @@ public:
     auto const& event = completing_->draft.event;
     return {{U'0', "Datum: " + format_iso_date(event.date)},
             {U'1', event.heading.empty() ? std::string("Rubrik:") : "Rubrik: " + event.heading},
-            {U'2', event.amount == 0 ? std::string("Belopp:") : "Belopp: " + format_amount(event.amount)}};
+            {U'2', event.amount == 0 ? std::string("Belopp:") : "Belopp: " + format_amount(event.amount)},
+            {U'3', completing_->draft.series.empty() ? std::string("Serie:") : "Serie: " + completing_->draft.series}};
   }
   OnKeyResult on_key(CodePoint key) override {
     switch (key) {
     case U'0': return std::make_unique<EventPartState>(completing_, EventPart::date, this);
     case U'1': return std::make_unique<EventPartState>(completing_, EventPart::heading, this);
     case U'2': return std::make_unique<EventPartState>(completing_, EventPart::amount, this);
+    case U'3': return std::make_unique<EventPartState>(completing_, EventPart::series, this);
     default: return nullptr;
     }
   }
@@ -1466,6 +1485,97 @@ private:
   std::u32string pending_; // a line chosen by name, to check and Enter again
 };
 
+// Mall (3 Använd mall, beslut 2026-11-18): earlier vouchers like the draft
+// (find_templates), numbered, the best first, each with its rows. A number and
+// Enter uses it at once (apply_template; the template shown in full is the
+// confirmation, and what it adds is removed with 9 Ta bort sista in Kontera):
+// the draft gets the rows and the template's series, not its text. The reply
+// tells what was added and which accounts were left out; then back to the
+// view the user came from (back_to), which shows the draft as it is now.
+class TemplateState : public State {
+public:
+  TemplateState(std::shared_ptr<Completing> completing, State const* back)
+      : completing_(std::move(completing)), back_(back) {
+    auto const books = books::read_books(completing_->project.folder);
+    if (!books) {
+      error_ = books.error();
+      return;
+    }
+    templates_ = find_templates(*books, completing_->draft);
+  }
+  std::string name() const override { return "Mall"; }
+  View view() const override {
+    if (!error_.empty()) return {std::format("cratchit kunde inte läsa bokföringen: {}", error_)};
+    auto const& c = *completing_;
+    auto const own = std::ranges::any_of(c.draft.postings, [](books::Posting const& p) {
+      return p.kind != books::Posting::Kind::removed;
+    });
+    auto const how = own ? "med samma konton och samma tecken som utkastets konteringar"
+                         : "vars text delar ord med utkastets rubrik";
+    View lines{"Utkastet:", draft_row(c.index, c.draft)};
+    if (templates_.empty()) {
+      lines.push_back(std::format("Inga tidigare verifikationer {}.", how));
+      return lines;
+    }
+    lines.push_back(std::format("Tidigare verifikationer {}:", how));
+    for (std::size_t i = 0; i < templates_.size(); ++i) {
+      auto const& voucher = templates_[i].voucher;
+      lines.push_back(std::format("  {:<3}{}", i + 1, unindented(voucher_row(voucher))));
+      std::size_t name_width = 0;
+      for (auto const& posting : voucher.postings) {
+        name_width = std::max(name_width, width_of(account_name(c.accounts, posting.account)));
+      }
+      for (auto const& posting : voucher.postings) {
+        if (posting.kind == books::Posting::Kind::removed) continue;
+        auto name = account_name(c.accounts, posting.account);
+        for (auto shown = width_of(name); shown < name_width; ++shown) name += ' ';
+        lines.push_back(std::format("       {}  {}  {:>12}", posting.account, name, format_amount(posting.amount)));
+      }
+    }
+    lines.push_back("Skriv mallens nummer och tryck Enter.");
+    return lines;
+  }
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  InputResult on_input(std::u32string_view text) override {
+    auto const typed = utf8_of(text);
+    std::size_t number = 0;
+    auto const [end, error] = std::from_chars(typed.data(), typed.data() + typed.size(), number);
+    if (typed.empty() || error != std::errc{} || end != typed.data() + typed.size() || number == 0) {
+      return std::unexpected(std::string("Skriv mallens nummer, till exempel 1."));
+    }
+    if (number > templates_.size()) return std::unexpected(std::format("Det finns ingen mall {}.", typed));
+    auto& c = *completing_;
+    auto const& voucher = templates_[number - 1].voucher;
+    auto const id = books::voucher_id(voucher.series, voucher.number);
+    auto const before = c.draft.postings.size();
+    auto applied = apply_template(c.draft, voucher, c.accounts);
+    auto const added = applied.draft.postings.size() - before;
+    if (auto done = c.change(std::move(applied.draft), std::format("mall {} använd, {} rader tillagda", id, added));
+        !done) {
+      return std::unexpected(std::format("cratchit kunde inte ändra utkastet: {}", done.error()));
+    }
+    auto reply = std::format("cratchit använde {} som mall: {} {}, serie {}.", id, added,
+                             added == 1 ? "rad tillagd" : "rader tillagda", voucher.series);
+    if (!applied.left_out.empty()) {
+      reply += " Kontona finns inte i kontoplanen och kom inte med:";
+      for (auto const& account : applied.left_out) reply += " " + account;
+      reply += ".";
+    }
+    done_ = true;
+    return Accepted(reply); // back where the user came from
+  }
+  State const* back_to() const override { return done_ ? back_ : nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::use_template); }
+
+private:
+  std::shared_ptr<Completing> completing_;
+  State const* back_;
+  std::vector<Template> templates_;
+  std::string error_;
+  bool done_ = false;
+};
+
 // Bokför: the voucher a ready draft is to become (book_draft), in full: date,
 // text, amount, the day it is registered and the postings, then the books'
 // series, each with its name and the number its next voucher gets. The user
@@ -1517,6 +1627,8 @@ public:
   }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
+  // The draft's series (from its template, or chosen in Händelse), to keep or change
+  std::u32string start_input() const override { return code_points_of(draft_.series); }
   InputResult on_input(std::u32string_view text) override {
     auto series = utf8_of(text);
     while (!series.empty() && series.back() == ' ') series.pop_back();
@@ -1613,6 +1725,7 @@ public:
     auto const& draft = drafts_[index_];
     OptionsList options{{U'0', "Händelse"}, {U'1', "Konteringar"}};
     if (books::stage(draft) == books::DraftStage::ready) options.push_back({U'2', "Bokför"});
+    options.push_back({U'3', "Använd mall"});
     if (removal_of(draft) == DraftRemoval::forget) options.push_back({U'9', "Glöm"});
     if (removal_of(draft) == DraftRemoval::split) options.push_back({U'9', "Inte samma"});
     options.push_back({back_key, "Föregående"});
@@ -1654,6 +1767,7 @@ public:
       if (books::stage(draft) != books::DraftStage::ready) return nullptr;
       return std::make_unique<BookState>(project_, year_, index_, draft, this,
                                          [this](std::string line) { report(std::move(line)); });
+    case U'3': return std::make_unique<TemplateState>(completing(), this);
     case U'9': {
       if (removal_of(draft) != DraftRemoval::forget) return nullptr;
       auto summary = draft_row(index_, draft);
@@ -1820,6 +1934,9 @@ public:
       return std::make_unique<DraftEventState>(completing);
     };
     actions.edit_postings = [completing]() -> std::unique_ptr<State> { return std::make_unique<PostingState>(completing); };
+    actions.use_template = [completing](State const* view) -> std::unique_ptr<State> {
+      return std::make_unique<TemplateState>(completing, view);
+    };
     actions.now = [completing, summary_of]() -> std::optional<DraftNow> {
       auto const& c = *completing;
       return DraftNow{c.draft, draft_id(c.index), summary_of(c.index, c.draft)};

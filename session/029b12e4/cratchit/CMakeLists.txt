@@ -214,6 +214,7 @@ add_library(cratchit_core
   src/core/dot_folder.cpp
   src/core/event_draft.cpp
   src/core/same_event.cpp
+  src/core/templates.cpp
   src/core/fiscal_year.cpp
   src/core/inventory.cpp
   src/core/log.cpp

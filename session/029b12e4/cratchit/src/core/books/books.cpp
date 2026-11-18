@@ -49,7 +49,9 @@ CsvRow const dimensions_header{"dimension", "name", "super"};
 CsvRow const objects_header{"dimension", "object", "name"};
 CsvRow const opening_header{"account", "amount"};
 CsvRow const vouchers_header{"series", "number", "date", "text", "amount", "registered", "signature"};
-CsvRow const events_header{"date", "text", "amount", "noted"};
+CsvRow const events_header{"date", "text", "amount", "noted", "series"};
+// events.csv as written before drafts had a series (2026-11-18): read as with no series
+CsvRow const events_header_without_series{"date", "text", "amount", "noted"};
 // event is the row of the event in events.csv, 1 for the first
 CsvRow const event_postings_header{"event", "account", "amount", "date", "text", "source"};
 CsvRow const postings_header{"series", "number", "kind",     "account",  "objects",
@@ -274,9 +276,12 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
   if (!fs::exists(events_path, ec)) {
     return year;
   }
-  auto const events = read_table(events_path, events_header);
+  auto events = read_table(events_path, events_header);
   if (!events) {
-    return std::unexpected(events.error());
+    auto older = read_table(events_path, events_header_without_series);
+    if (!older) return std::unexpected(events.error());
+    for (auto& row : *older) row.emplace_back();
+    events = std::move(older);
   }
   for (auto const& row : *events) {
     auto const date = date_field(events_path, row[0]);
@@ -291,7 +296,7 @@ std::expected<FiscalYear, std::string> read_year(fs::path const& folder, Date st
     if (!noted) {
       return std::unexpected(noted.error());
     }
-    year.drafts.push_back({{row[1], *amount, *date}, *noted});
+    year.drafts.push_back({{row[1], *amount, *date}, *noted, {}, row[4]});
   }
   auto const event_postings_path = year_folder / event_postings_file;
   if (fs::exists(event_postings_path, ec)) {
@@ -667,7 +672,7 @@ std::expected<std::vector<Written>, std::string> write_books(fs::path const& pro
     rows.clear();
     for (auto const& draft : year.drafts) {
       rows.push_back({format_iso_date(draft.event.date), draft.event.heading, format_amount(draft.event.amount),
-                      format_iso_date(draft.noted)});
+                      format_iso_date(draft.noted), draft.series});
     }
     if (rows.empty()) {
       gone.push_back(year_folder / events_file);

@@ -78,6 +78,8 @@ struct DraftActions {
   std::function<std::unique_ptr<pyroceph::tui::State>()> edit_postings;
   // Bokför, for a draft that is ready (2 Bokför), with the view
   std::function<std::unique_ptr<pyroceph::tui::State>(pyroceph::tui::State const* view)> book;
+  // Mall (3 Använd mall), with the view to go back to once a template is used
+  std::function<std::unique_ptr<pyroceph::tui::State>(pyroceph::tui::State const* view)> use_template;
   std::function<std::optional<DraftNow>()> now;
 };
 

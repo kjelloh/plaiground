@@ -120,6 +120,9 @@ struct Draft {
   Event event;
   Date noted;  // the day it was noted
   Postings postings{}; // each with its date and text
+  // The series to book it in, e.g. from the template used (beslut 2026-11-18); the user
+  // may change it, and Bokför starts with it. Empty when none.
+  std::string series{};
 
   bool operator==(Draft const&) const = default;
 };

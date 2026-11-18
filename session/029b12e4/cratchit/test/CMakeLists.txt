@@ -47,6 +47,7 @@ add_executable(cratchit_tests
   test_statement_drafts.cpp
   test_event_draft.cpp
   test_same_event.cpp
+  test_templates.cpp
   test_pdf_documents.cpp
   test_cp437.cpp
   test_decoder.cpp

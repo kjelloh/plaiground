@@ -211,7 +211,7 @@ TEST_F(BooksFiles, DraftsAreKeptOnlyWhileThereAreAny) {
   ASSERT_EQ(added->size(), 1u);
   EXPECT_EQ(added->at(0).file, fs::path(".cratchit") / "books" / "2026-01-01" / "events.csv");
   EXPECT_TRUE(added->at(0).created);
-  EXPECT_EQ(read_file(events), "date,text,amount,noted\n2026-10-20,\"Telia, oktober\",1118.00,2026-10-23\n");
+  EXPECT_EQ(read_file(events), "date,text,amount,noted,series\n2026-10-20,\"Telia, oktober\",1118.00,2026-10-23,\n");
   auto const back = cratchit::books::read_books(root);
   ASSERT_TRUE(back.has_value()) << back.error();
   EXPECT_EQ(back->years[1].drafts, books.years[1].drafts);
@@ -331,10 +331,11 @@ TEST_F(BooksFiles, DraftsInNotedOrderAreReadByDateWithTheirPostings) {
   ASSERT_EQ(drafts[2].postings.size(), 1u);
   EXPECT_EQ(drafts[2].postings[0].amount, -1000);
   ASSERT_TRUE(cratchit::books::write_books(root, *back).has_value());
-  EXPECT_EQ(read_file(year / "events.csv"), "date,text,amount,noted\n"
-                                            "2026-01-24,Till sparkonto,50000.00,2026-10-24\n"
-                                            "2026-10-20,Telia,1118.00,2026-10-23\n"
-                                            "2026-10-20,Telia rest,10.00,2026-10-24\n");
+  // Read without series (as written before 2026-11-18), written with it
+  EXPECT_EQ(read_file(year / "events.csv"), "date,text,amount,noted,series\n"
+                                            "2026-01-24,Till sparkonto,50000.00,2026-10-24,\n"
+                                            "2026-10-20,Telia,1118.00,2026-10-23,\n"
+                                            "2026-10-20,Telia rest,10.00,2026-10-24,\n");
   EXPECT_EQ(read_file(year / "event_postings.csv"), "event,account,amount,date,text,source\n"
                                                     "1,1920,-50000.00,2026-01-24,PG TILL SPAR,s.csv:12\n"
                                                     "3,1920,-10.00,2026-10-20,TELIA,s.csv:13\n");

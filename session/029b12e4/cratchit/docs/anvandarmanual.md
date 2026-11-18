@@ -403,7 +403,7 @@ Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat frå
 ##### Utkastet
 
 <!-- hjälp: utkastet -->
-Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för att ändra händelsen i [Ändra händelsen](#ändra-händelsen) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. `9` är *Glöm* för ett utkast utan kontohändelser och för ett ensamt utkast. Ett utkast med kontohändelser och flera delar med samma belopp har i stället *Inte samma*, som delar det direkt, och ett med kontohändelser och olika belopp har inget `9`, så att raderna från kontoutdraget finns kvar. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för att ändra händelsen i [Ändra händelsen](#ändra-händelsen) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. Tryck `3` för att fullborda det med en [mall](#använd-mall). `9` är *Glöm* för ett utkast utan kontohändelser och för ett ensamt utkast. Ett utkast med kontohändelser och flera delar med samma belopp har i stället *Inte samma*, som delar det direkt, och ett med kontohändelser och olika belopp har inget `9`, så att raderna från kontoutdraget finns kvar. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
@@ -475,7 +475,7 @@ Ett sådant utkast, med kontohändelser, glöms inte direkt; dela det först och
 ##### Fullborda utkast
 
 <!-- hjälp: fullborda -->
-Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Valen är desamma som när du öppnar ett utkast: `0` ändrar händelsen, `1` konteringarna i [Kontera](#kontera), `2` [bokför](#bokför) utkastet när det är klart, och `9` glömmer eller delar det. Under utkastet står vad du har gjort här. Tryck `-` för att gå tillbaka till Utkast.
+Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Valen är desamma som när du öppnar ett utkast: `0` ändrar händelsen, `1` konteringarna i [Kontera](#kontera), `2` [bokför](#bokför) utkastet när det är klart, `3` [använder en mall](#använd-mall), och `9` glömmer eller delar det. Under utkastet står vad du har gjort här. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Att fullborda ett utkast är att göra det klart att bokföra: välja en mall, fylla i det som saknas och få konteringarna att balansera. Att bokföra är sista steget. Tryck `2` i Utkast:
@@ -491,6 +491,7 @@ Konteringar:
   1920  PlusGiro        -3.70  AVGIFTER NORDEA
   0 Händelse
   1 Konteringar
+  3 Använd mall
   9 Glöm
   < Föregående
   > Nästa
@@ -552,7 +553,7 @@ En kontering från ett kontoutdrag står sist med fil och rad, till exempel `192
 ###### Ändra händelsen
 
 <!-- hjälp: kontera-handelse -->
-Utkastets händelse: datum, rubrik och belopp, som för en verifikation. Tryck `0`, `1` eller `2` för att ändra den delen. Raden står ifylld; ändra den och tryck Enter för att spara och komma tillbaka hit. Tryck `-` för att gå tillbaka utan att ändra.
+Utkastets händelse: datum, rubrik och belopp, som för en verifikation, och serien det ska bokföras i. Tryck `0`, `1`, `2` eller `3` för att ändra den delen. Raden står ifylld; ändra den och tryck Enter för att spara och komma tillbaka hit. Tryck `-` för att gå tillbaka utan att ändra.
 <!-- /hjälp -->
 
 Ett utkast behöver en rubrik och ett belopp för att bli klart. Tryck `0` i utkastets vy eller i Fullborda. Kontera har inget val för händelsen, eftersom där arbetar du bara med konteringarna:
@@ -562,6 +563,7 @@ Händelsen i #1
   0 Datum: 2026-07-03
   1 Rubrik:
   2 Belopp:
+  3 Serie:
 Cratchit > … > Utkast > Fullborda #1 > Händelse>
 ```
 
@@ -570,8 +572,46 @@ Det utkastet saknar står tomt. Varje val visar en rad som är ifylld med det ut
 * **Datum**: datumet, skrivet `2026-10-22` eller `20261022`. Det måste ligga i räkenskapsåret. Ändrar du datumet kan utkastet få ett nytt nummer.
 * **Rubrik**: rubriken, eller, för ett utkast med stadiet `samma` utan rubrik, delarnas text (se [Utkast](#utkast)). En tom rubrik går inte.
 * **Belopp**: beloppet, eller, när händelsen saknar belopp, vad delarna har för belopp. Ett minustecken betyder att händelsen går åt andra hållet än vanligt. Noll går inte.
+* **Serie**: serien utkastet ska bokföras i, till exempel `D`, som [Bokför](#bokför) börjar med. En mall ger sin serie. En tom rad tar bort serien.
 
 Ändra raden och tryck Enter. cratchit sparar ändringen direkt, och du är tillbaka i Händelse, där valen visar det nya. Går raden inte att använda säger cratchit varför, och raden står kvar så att du kan rätta den.
+
+###### Använd mall
+
+<!-- hjälp: anvand-mall -->
+Tidigare verifikationer som liknar utkastet, de bästa först, var och en med sina konteringar. Skriv mallens nummer och tryck Enter för att använda den: utkastet får mallens konteringar, skalade till utkastets belopp, och mallens serie. Tryck `-` för att gå tillbaka utan att använda någon.
+<!-- /hjälp -->
+
+En mall är en tidigare verifikation som du utgår från. Tryck `3` i utkastets vy eller i Fullborda:
+
+```text
+Utkastet:
+  #1            2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontohändelse)
+Tidigare verifikationer med samma konton och samma tecken som utkastets konteringar:
+  1  A2            2026-05-06          1.85  AVGIFTER NORDEA
+       1920  PlusGiro        -1.85
+       6570  Bankkostnader    1.85
+Skriv mallens nummer och tryck Enter.
+Cratchit > … > Fullborda #1 > Mall>
+```
+
+Vilka verifikationer som visas:
+
+* **Utkastet har konteringar**, till exempel en kontohändelse: verifikationer som har en kontering på vart och ett av utkastets konton, med samma tecken. Bankavgiften på 1920 i kredit hittar alltså tidigare verifikationer med 1920 i kredit.
+* **Utkastet har bara en händelse**: verifikationer vars text delar ord med rubriken.
+* **Ett utkast med minus** (åt andra hållet än vanligt, som en kreditfaktura) jämförs med tecknen vända, och mallen används vänd. En vanlig faktura blir då mall för kreditfakturan.
+
+Bara verifikationer med ett belopp och minst två konteringar räknas, från alla år i bokföringen. Först står de vars text delar flest ord med utkastets, sedan de senaste. Har flera samma konton på samma sidor visas bara den senaste av dem, och högst nio.
+
+Skriv numret och tryck Enter. Mallen syns i sin helhet innan du väljer, så cratchit frågar inte en gång till. Utkastet får
+
+* **mallens konteringar** på de konton utkastet inte redan har: utkastets egna konteringar, som kontohändelsen, står kvar. Varje rad skalas till utkastets belopp och avrundas till hela ören; den sista raden får det som återstår, så att konteringarna balanserar. Ett konto som inte finns i kontoplanen kommer inte med, och cratchit säger vilket;
+* **beloppet**: utkastets eget, eller, när händelsen saknar belopp, vad delarna har för belopp;
+* **mallens serie**, som [Bokför](#bokför) börjar med. Du ändrar den i [Händelse](#ändra-händelsen).
+
+Rubriken tas inte från mallen; den gäller en annan händelse. Saknar utkastet rubrik skriver du den i Händelse, där kontohändelsens text står ifylld.
+
+Du kommer tillbaka dit du var, och cratchit säger till exempel `cratchit använde A2 som mall: 1 rad tillagd, serie A.` Det mallen lade till tar du bort med `9 Ta bort sista` i [Kontera](#kontera).
 
 ###### Bokför
 
@@ -598,7 +638,7 @@ Skriv serien och tryck Enter för att bokföra. Verifikationen går inte att än
 Cratchit > … > Fullborda #1 > Bokför>
 ```
 
-Du väljer alltid serien själv; cratchit gissar inte. Stora och små bokstäver räknas lika. Numret är det högsta i serien under räkenskapsåret plus ett, så numreringen börjar om varje år. Serien och Enter är bekräftelsen: verifikationen står där i sin helhet innan du bokför, och cratchit frågar inte en gång till.
+Du väljer alltid serien själv; cratchit gissar inte. Har utkastet en serie, från en [mall](#använd-mall) eller från Händelse, står den ifylld, och du trycker Enter eller skriver en annan. Stora och små bokstäver räknas lika. Numret är det högsta i serien under räkenskapsåret plus ett, så numreringen börjar om varje år. Serien och Enter är bekräftelsen: verifikationen står där i sin helhet innan du bokför, och cratchit frågar inte en gång till.
 
 Verifikationen får
 

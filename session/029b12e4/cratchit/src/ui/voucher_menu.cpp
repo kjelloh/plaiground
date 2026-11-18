@@ -72,7 +72,11 @@ struct Shown {
 
   // How the voucher is booked: series, registered, signature; for a draft when it was noted
   View booking_rows() const {
-    if (draft) return {row("Noterad", format_iso_date(noted))};
+    if (draft) {
+      View lines{row("Noterad", format_iso_date(noted))};
+      if (!voucher.series.empty()) lines.push_back(row("Serie", voucher.series));
+      return lines;
+    }
     View lines;
     lines.push_back(row("Serie", series_name.empty() ? voucher.series : std::format("{}  {}", voucher.series, series_name)));
     if (voucher.registered) lines.push_back(row("Registrerad", format_iso_date(*voucher.registered)));
@@ -326,7 +330,8 @@ View view_of(Shown const& shown, std::string const& id) {
 
 Shown draft_shown(books::Draft const& draft, std::string id, std::string year_label,
                   std::vector<books::Account> accounts) {
-  Shown shown{books::Voucher{"", "", draft.event, std::nullopt, "", draft.postings}, std::move(accounts), "", ""};
+  Shown shown{books::Voucher{draft.series, "", draft.event, std::nullopt, "", draft.postings}, std::move(accounts), "",
+              ""};
   shown.draft = true;
   shown.draft_id = std::move(id);
   shown.year_label = std::move(year_label);
@@ -348,6 +353,7 @@ public:
     if (split_) return {};
     OptionsList options{{U'0', "Händelse"}, {U'1', "Konteringar"}};
     if (ready()) options.push_back({U'2', "Bokför"});
+    if (shown_->draft && shown_->actions.use_template) options.push_back({U'3', "Använd mall"});
     if (!shown_->draft && shown_->reverse) options.push_back({U'2', "Ändringsverifikation"});
     if (shown_->draft && shown_->removal == DraftRemoval::forget) options.push_back({U'9', "Glöm"});
     if (shown_->draft && shown_->removal == DraftRemoval::split) options.push_back({U'9', "Inte samma"});
@@ -358,6 +364,7 @@ public:
     if (shown_->draft && key == U'0' && shown_->actions.edit_event) return shown_->actions.edit_event(this);
     if (shown_->draft && key == U'1' && shown_->actions.edit_postings) return shown_->actions.edit_postings();
     if (key == U'2' && ready()) return shown_->actions.book(this);
+    if (key == U'3' && shown_->draft && shown_->actions.use_template) return shown_->actions.use_template(this);
     if (key == U'0') return std::make_unique<EventState>(shown_);
     if (key == U'1') return std::make_unique<PostingsState>(shown_);
     if (key != U'9' || !shown_->draft) return nullptr;
