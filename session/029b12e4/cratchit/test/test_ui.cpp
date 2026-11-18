@@ -20,6 +20,7 @@
 #include "ui/project_menu.hpp"
 #include "ui/root_menu.hpp"
 #include "ui/start.hpp"
+#include "ui/vat_return_menu.hpp"
 #include "ui/test_menu.hpp"
 #include "ui/workspace_menu.hpp"
 
@@ -1745,27 +1746,6 @@ TEST_F(RootMenuTest, CommandHintsUseTheProjectsExportAndLastYearsReturn) {
             lines.end());
 }
 
-TEST_F(RootMenuTest, VatHintNeedsLastYearForAQuarterThatStartsInIt) {
-  // A broken fiscal year: 2025-05-01 - 2026-04-30, so April-June 2025 starts in the year before
-  std::ofstream(documents / "test.se", std::ios::binary)
-      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250501 20260430\r\n"
-         "#KONTO 1930 \"Bank\"\r\n";
-  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
-  ASSERT_TRUE(plan) << plan.error();
-  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
-  ASSERT_TRUE(project) << project.error();
-  std::ofstream(project->folder / "sie_2025-26_allt.se") << "x";
-  auto const facts = cratchit::ui::command_hint_facts(*project, {"2025-05-01", "2026-04-30"});
-  // Early in the year only the first quarter has ended: it needs last year's file
-  auto lines = cratchit::ui::vat_return_hint(facts, *cratchit::parse_iso_date("2025-07-10"));
-  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-vat sie_2025-26_allt.se <förra årets SIE-fil> --period 2025Q2"),
-            lines.end());
-  // Later the latest ended quarter is within the year
-  lines = cratchit::ui::vat_return_hint(facts, *cratchit::parse_iso_date("2026-05-10"));
-  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-vat sie_2025-26_allt.se --period 2026Q1"), lines.end());
-  EXPECT_NE(std::ranges::find(lines, "     cratchit --sie-to-vat sie_2025-26_allt.se <förra årets SIE-fil>"), lines.end());
-}
-
 namespace {
 
 // A one-page PDF with the lines given, as walk_pdf's own tests make them
@@ -2500,4 +2480,90 @@ TEST_F(RootMenuTest, ATemplateLeadsOnToKonteraWhenThePostingsDoNotBalance) {
   navigator.follow_back_to();
   EXPECT_EQ(navigator.current().name(), "Bokför");
   EXPECT_EQ(navigator.current().start_input(), U"E");
+}
+
+TEST_F(RootMenuTest, MomsrapportClearsAQuarterAndWritesItsFiles) {
+  // Q1 2025: sales 1000 with 250 VAT, a purchase with 100 VAT; nothing in the other quarters
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 3001 \"Försäljning\"\r\n#KONTO 2611 \"Utgående moms 25%\"\r\n"
+         "#KONTO 2641 \"Debiterad ingående moms\"\r\n#KONTO 2650 \"Redovisningskonto för moms\"\r\n"
+         "#KONTO 6540 \"IT-tjänster\"\r\n#KONTO 3740 \"Öres- och kronutjämning\"\r\n"
+         "#VER \"A\" \"1\" 20250210 \"Försäljning\"\r\n{\r\n#TRANS 1930 {} 1250.00\r\n#TRANS 3001 {} -1000.00\r\n"
+         "#TRANS 2611 {} -250.00\r\n}\r\n"
+         "#VER \"A\" \"2\" 20250220 \"Inköp\"\r\n{\r\n#TRANS 1930 {} -500.00\r\n#TRANS 6540 {} 400.00\r\n"
+         "#TRANS 2641 {} 100.00\r\n}\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_vat_return_menu(*project, {"2025-01-01", "2025-12-31"}));
+  EXPECT_EQ(navigator.current().name(), "Momsrapport");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::vat_return);
+  // The quarters, the latest first; all have ended
+  auto const options = navigator.current().options();
+  ASSERT_EQ(options.size(), 4u);
+  EXPECT_TRUE(options[0].second.starts_with("2025 Q4")) << options[0].second;
+  EXPECT_EQ(options[3].first, U'3');
+  EXPECT_TRUE(options[3].second.starts_with("2025 Q1       -150.00        0.00        0.00")) << options[3].second;
+  // Q1: the report, the checks, the clearing proposed and the eSKD file
+  ASSERT_TRUE(navigator.press(U'3'));
+  EXPECT_EQ(navigator.current().name(), "2025 Q1");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::vat_quarter);
+  auto view = navigator.current().view();
+  EXPECT_EQ(view.front(), "Momsrapport 2025-01-01 – 2025-03-31");
+  EXPECT_NE(std::ranges::find(view, "Momstömning (förslag): M 2025-03-31 \"Momsrapport 2025-01-01 - 2025-03-31\""),
+            view.end());
+  EXPECT_NE(std::ranges::find(view, "eSKD-fil moms_202503.eskd:"), view.end());
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Granska rutorna"}, {U'1', "Momstömning"}, {U'2', "Skriv rapport och eSKD-fil"}}));
+  // Momstömning: a draft, and Bokför for it; - leaves it a draft
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Bokför");
+  EXPECT_EQ(navigator.current().start_input(), U"M");
+  ASSERT_TRUE(navigator.back());
+  view = navigator.current().view();
+  EXPECT_NE(std::ranges::find(view, "Den finns som utkast #1."), view.end());
+  // Again: the same draft, booked this time
+  ASSERT_TRUE(navigator.press(U'1'));
+  auto accepted = navigator.current().on_input(navigator.current().start_input());
+  ASSERT_TRUE(accepted) << accepted.error();
+  EXPECT_EQ(accepted->reply, "cratchit bokförde #1 som M1: Momsrapport 2025-01-01 - 2025-03-31.");
+  navigator.follow_back_to();
+  EXPECT_EQ(navigator.current().name(), "2025 Q1");
+  view = navigator.current().view();
+  EXPECT_NE(std::ranges::find(view, "2025 Q1 är redan avräknat av M1."), view.end());
+  EXPECT_EQ(view.back(), "cratchit bokförde #1 som M1: Momsrapport 2025-01-01 - 2025-03-31.");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Granska rutorna"}, {U'2', "Skriv rapport och eSKD-fil"}}));
+  auto const books = cratchit::books::read_books(project->folder);
+  ASSERT_TRUE(books) << books.error();
+  EXPECT_TRUE(books->years.front().drafts.empty());
+  // The report is the same after the clearing: the period's own clearing is left out
+  EXPECT_EQ(view.front(), "Momsrapport 2025-01-01 – 2025-03-31");
+  EXPECT_NE(std::ranges::find(view, std::format("  {:<24}{:>10}", "MomsBetala", 150)), view.end());
+  // Skriv: the folder of the quarter; an eSKD file is never overwritten
+  ASSERT_TRUE(navigator.press(U'2'));
+  auto const folder = project->folder / "moms_2025-01-01_2025-03-31";
+  EXPECT_TRUE(fs::exists(folder / "momsrapport.txt"));
+  EXPECT_TRUE(fs::exists(folder / "verifikation.txt"));
+  EXPECT_TRUE(fs::exists(folder / "moms_202503.eskd"));
+  view = navigator.current().view();
+  EXPECT_EQ(view[view.size() - 2],
+            "cratchit skrev momsrapport.txt, verifikation.txt och moms_202503.eskd i moms_2025-01-01_2025-03-31.");
+  EXPECT_EQ(view.back(), "Ladda upp moms_202503.eskd i Skatteverkets e-tjänst Lämna momsdeklaration.");
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_TRUE(fs::exists(folder / "moms_202503_2.eskd"));
+  // Granska rutorna: a box by its number, < and > the box before and after
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Granska rutorna");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::vat_review);
+  EXPECT_FALSE(navigator.current().on_input(U"99"));
+  accepted = navigator.current().on_input(U"10");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().name(), "Ruta 10");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::vat_box);
+  EXPECT_EQ(navigator.current().view().front(), "Ruta 10  Utgående moms 25%");
+  ASSERT_TRUE(navigator.press(U'>'));
+  EXPECT_EQ(navigator.current().name(), "Ruta 11");
 }

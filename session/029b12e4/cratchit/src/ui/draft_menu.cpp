@@ -2050,4 +2050,11 @@ std::unique_ptr<State> make_read_statement_menu(Project project, FiscalYear year
                                               std::move(start_folder));
 }
 
+std::unique_ptr<State> make_book_draft_state(Project project, FiscalYear year, std::size_t index, std::size_t count,
+                                             books::Draft draft, State const* back,
+                                             std::function<void(std::string)> report) {
+  return std::make_unique<BookState>(std::move(project), std::move(year), index, count, std::move(draft), back,
+                                     std::move(report));
+}
+
 } // namespace cratchit::ui

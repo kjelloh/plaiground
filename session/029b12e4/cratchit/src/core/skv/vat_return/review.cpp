@@ -62,26 +62,26 @@ std::vector<std::string> review_of(books::Books const& books, Document const& do
     }
   }
   std::vector<std::string> lines;
-  lines.push_back(std::format("Box {}  {}", box, texts.empty() ? std::string{} : texts.front()->title));
+  lines.push_back(std::format("Ruta {}  {}", box, texts.empty() ? std::string{} : texts.front()->title));
   for (std::size_t i = 1; i < texts.size(); ++i) {
-    lines.push_back(std::format("Also titled: {}", texts[i]->title));
+    lines.push_back(std::format("Även: {}", texts[i]->title));
   }
   if (!texts.empty()) {
-    lines.push_back(std::format("Section: {}", texts.front()->section));
+    lines.push_back(std::format("Avsnitt: {}", texts.front()->section));
   }
   std::set<std::string> with_postings;
   if (posted == document.boxes.end()) {
-    lines.push_back(std::format("No postings in {} - {}.", format_iso_date(document.period.first),
+    lines.push_back(std::format("Inga konteringar {} – {}.", format_iso_date(document.period.first),
                                 format_iso_date(document.period.last)));
   } else {
-    lines.push_back(std::format("On the form: {}", format_amount(posted->amount)));
-    lines.push_back("Accounts and vouchers as in the books (debit positive, credit negative):");
+    lines.push_back(std::format("På blanketten: {}", format_amount(posted->amount)));
+    lines.push_back("Konton och verifikationer som i bokföringen (debet positivt, kredit negativt):");
     for (auto const& account : posted->accounts) {
       with_postings.insert(account.account);
       lines.push_back(std::format("  {:<6}{:>15}  {}", account.account, format_amount(account.amount),
                                   account_name(books, account.account)));
       for (auto const& posting : account.postings) {
-        lines.push_back(std::format("        {:<8}{}{:>15}  {}", std::format("{} {}", posting.series, posting.number),
+        lines.push_back(std::format("        {:<8}{}{:>15}  {}", books::voucher_id(posting.series, posting.number),
                                     format_iso_date(posting.date), format_amount(posting.amount),
                                     heading_of(books, posting)));
       }
@@ -91,16 +91,16 @@ std::vector<std::string> review_of(books::Books const& books, Document const& do
   for (auto const& account : accounts_of(box)) {
     if (!with_postings.contains(account)) {
       auto const name = account_name(books, account);
-      others.push_back(std::format("  {:<6}{}", account, name.empty() ? "(not in the chart of accounts)" : name));
+      others.push_back(std::format("  {:<6}{}", account, name.empty() ? "(finns inte i kontoplanen)" : name));
     }
   }
   if (!others.empty()) {
-    lines.push_back(with_postings.empty() ? std::format("Accounts that report in box {}:", box)
-                                          : std::format("Other accounts that report in box {}, without postings:", box));
+    lines.push_back(with_postings.empty() ? std::format("Konton som redovisas i ruta {}:", box)
+                                          : std::format("Andra konton som redovisas i ruta {}, utan konteringar:", box));
     lines.insert(lines.end(), others.begin(), others.end());
   }
   lines.push_back("");
-  lines.push_back(std::format("SKV's description of box {}:", box));
+  lines.push_back(std::format("Skatteverkets beskrivning av ruta {}:", box));
   for (std::size_t i = 0; i < texts.size(); ++i) {
     if (i > 0) {
       lines.push_back("");

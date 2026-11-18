@@ -335,6 +335,23 @@ std::expected<std::size_t, std::string> add_reversal_draft(std::filesystem::path
   return index;
 }
 
+std::expected<std::size_t, std::string> add_draft(std::filesystem::path const& project_folder, Date year_start,
+                                                  books::Draft const& draft) {
+  auto books = books::read_books(project_folder);
+  if (!books) return std::unexpected(books.error());
+  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
+  if (year == books->years.end()) {
+    return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
+  }
+  if (draft.event.date < year->start || year->end < draft.event.date) {
+    return std::unexpected(std::format("{} ligger inte i räkenskapsåret {} – {}.", format_iso_date(draft.event.date),
+                                       format_iso_date(year->start), format_iso_date(year->end)));
+  }
+  auto const index = year->place_draft(draft);
+  if (auto written = books::write_books(project_folder, *books); !written) return std::unexpected(written.error());
+  return index;
+}
+
 std::optional<Amount> parse_typed_amount(std::string_view text) {
   std::string plain;
   for (std::size_t i = 0; i < text.size(); ++i) {

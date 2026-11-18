@@ -5,6 +5,7 @@
 #include "ui/draft_menu.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/vat_return_menu.hpp"
 
 #include <string>
 #include <utility>

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/books/books.hpp"
 #include "core/fiscal_year.hpp"
 #include "core/project.hpp"
 #include "pyroceph/tui/state.hpp"
@@ -9,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 
 namespace cratchit::ui {
 
@@ -82,5 +84,14 @@ using StatementReport = std::function<void(pyroceph::tui::View, std::filesystem:
 std::unique_ptr<pyroceph::tui::State> make_read_statement_menu(Project project, FiscalYear year,
                                                                pyroceph::tui::State const* origin, StatementReport report,
                                                                std::optional<std::filesystem::path> start_folder = {});
+
+// Bokför for the draft at index of count in year, the one seen (as from the
+// draft's view): the series typed, Enter books it (book_draft). Booked, the TUI
+// goes back to back, and report gets what was done (e.g. "cratchit bokförde #2
+// som M3: Momsrapport 2026-07-01 - 2026-09-30."). - goes back without booking.
+std::unique_ptr<pyroceph::tui::State> make_book_draft_state(Project project, FiscalYear year, std::size_t index,
+                                                            std::size_t count, books::Draft draft,
+                                                            pyroceph::tui::State const* back,
+                                                            std::function<void(std::string)> report);
 
 } // namespace cratchit::ui

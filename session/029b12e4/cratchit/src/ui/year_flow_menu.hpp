@@ -12,9 +12,9 @@ namespace cratchit::ui {
 // usually done over the year and after it: 0 Utkast, 1 Bokfört, 2 Momsrapport,
 // 3 Bokslut, 4 Årsredovisning, 5 Årsstämma, 6 Rapport till Bolagsverket and
 // 7 Deklaration till SKV. 0 leads to Utkast (make_draft_menu), 1 to Bokfört
-// (make_booked_menu), 3 to the Bokslut state (make_closing_menu), and 2, 4 and 7
-// to how to make them from the command line (make_vat_return_menu,
-// make_annual_report_menu, make_tax_return_menu); the others lead to Inte än
+// (make_booked_menu), 2 to Momsrapport (make_vat_return_menu), 3 to the Bokslut
+// state (make_closing_menu), and 4 and 7 to how to make them from the command
+// line (make_annual_report_menu, make_tax_return_menu); the others lead to Inte än
 // (make_design_insufficiency_state) until they are built. Opened with 0 in the
 // fiscal year of project. No input.
 std::unique_ptr<pyroceph::tui::State> make_year_flow_menu(Project project, FiscalYear year);

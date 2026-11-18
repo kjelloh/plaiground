@@ -193,62 +193,9 @@ std::vector<std::string> tax_return_hint(CommandHintFacts const& facts) {
   return lines;
 }
 
-std::vector<std::string> vat_return_hint(CommandHintFacts const& facts, Date today) {
-  std::vector<std::string> lines{
-      "Momsdeklarationen gör cratchit från kommandoraden, av SIE-filer, ett kvartal i taget.", ""};
-  if (!facts.start || !facts.end) return lines;
-  auto const quarters = skv::vat_return::quarters_ending_in(*facts.start, *facts.end);
-  // A quarter of the year that starts in the year before needs last year's file too
-  bool const spans = std::ranges::any_of(quarters, [&](auto const& q) { return q.first < *facts.start; });
-  auto period = quarters.front();
-  for (auto const& quarter : quarters) {
-    if (quarter.last < today) period = quarter;
-  }
-  bool const needs_last = period.first < *facts.start;
-  auto const sie = sie_word(facts);
-  auto const last = facts.last_sie ? quoted(utf8_of(facts.last_sie->filename())) : std::string("<förra årets SIE-fil>");
-  auto const files = needs_last ? std::format("{} {}", sie, last) : sie;
-  auto const name = skv::vat_return::quarter_name(period);
-  auto const quarter = name.substr(0, 4) + "Q" + name.substr(6);
-  lines.push_back("1. Exportera räkenskapsåret till en SIE-fil: 1 Exportera till SIE > 1 Allt i räkenskapsåret.");
-  lines.push_back(export_line(facts));
-  if (spans) {
-    lines.push_back(std::format("   Kvartalet {} – {} börjar i förra räkenskapsåret. Exportera också det året och ge",
-                                format_iso_date(quarters.front().first), format_iso_date(quarters.front().last)));
-    lines.push_back(facts.last_sie ? std::format("   båda filerna. Senast exporterad av förra året: {}.",
-                                                 utf8_of(facts.last_sie->filename()))
-                    : facts.last_year_in_books ? std::string("   båda filerna. Förra året är inte exporterat än.")
-                                               : std::string("   båda filerna. Förra året finns inte i bokföringen: "
-                                                             "använd en SIE-fil från ditt förra program."));
-  }
-  lines.push_back("");
-  lines.push_back("2. Läs hjälpen:");
-  lines.push_back(std::format("     cratchit --sie-to-vat --help | {}", pager));
-  lines.push_back("");
-  lines.push_back("3. Avsluta cratchit (qq) och kör i bokföringens mapp:");
-  lines.push_back(std::format("     {} {}", change_folder, quoted(utf8_of(facts.folder))));
-  lines.push_back("   Se räkenskapsårets kvartal med periodens moms, avräknat och debiterat:");
-  lines.push_back(std::format("     cratchit --sie-to-vat {}", spans ? std::format("{} {}", sie, last) : sie));
-  lines.push_back(std::format("   Gör momsdeklarationen för {}:", name));
-  lines.push_back(std::format("     cratchit --sie-to-vat {} --period {}", files, quarter));
-  lines.push_back(std::format("   cratchit skapar mappen {}_moms_{}_{} med momsrapporten, förslaget till",
-                              facts.orgnr.empty() ? std::string("<orgnr>") : facts.orgnr,
-                              format_iso_date(period.first), format_iso_date(period.last)));
-  lines.push_back("   momsverifikation (bokför den själv), eSKD-filen till Skatteverkets e-tjänst Lämna");
-  lines.push_back("   momsdeklaration och en kopia av SIE-filen. Ange ett annat kvartal med --period.");
-  return lines;
-}
-
 std::unique_ptr<State> make_annual_report_menu(Project project, FiscalYear year) {
   return std::make_unique<HintState>("Årsredovisning", std::string(help_topic::annual_report), std::move(project),
                                      std::move(year), annual_report_hint);
-}
-
-static std::vector<std::string> vat_return_hint_today(CommandHintFacts const& facts) { return vat_return_hint(facts, today_date()); }
-
-std::unique_ptr<State> make_vat_return_menu(Project project, FiscalYear year) {
-  return std::make_unique<HintState>("Momsrapport", std::string(help_topic::vat_return), std::move(project),
-                                     std::move(year), vat_return_hint_today);
 }
 
 std::unique_ptr<State> make_tax_return_menu(Project project, FiscalYear year) {

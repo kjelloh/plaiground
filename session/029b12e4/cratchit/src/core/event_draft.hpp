@@ -38,6 +38,13 @@ std::expected<std::vector<books::Event>, std::string> parse_event(std::string_vi
 std::expected<std::size_t, std::string> add_event_draft(std::filesystem::path const& project_folder, Date year_start,
                                                         books::Event const& event, Date today);
 
+// Adds draft as it is (e.g. a VAT clearing with its postings) to the fiscal
+// year starting on year_start, and writes the books. Gives the draft's index
+// among the year's drafts (see place_draft). Error text when the books cannot
+// be read or written, the year is not in them or the date is outside it. Does not log.
+std::expected<std::size_t, std::string> add_draft(std::filesystem::path const& project_folder, Date year_start,
+                                                  books::Draft const& draft);
+
 // Forgets (removes) the draft at index among the drafts of the fiscal year
 // starting on year_start, and writes the books. Only when the draft there is
 // still expected (the one the user saw), as the drafts are numbered by their

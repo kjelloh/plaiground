@@ -518,18 +518,18 @@ TEST(VatReturnReview, ABoxWithItsPostingsAndDescription) {
   auto const lines = review_of(books, a48_like(), "20");
   ASSERT_GT(lines.size(), 11u);
   EXPECT_EQ(std::vector<std::string>(lines.begin(), lines.begin() + 11),
-            (std::vector<std::string>{"Box 20  Inköp av varor från annat EU-land",
-                                      "Section: Momspliktiga inköp vid omvänd betalningsskyldighet",
-                                      "On the form: 124.00",
-                                      "Accounts and vouchers as in the books (debit positive, credit negative):",
+            (std::vector<std::string>{"Ruta 20  Inköp av varor från annat EU-land",
+                                      "Avsnitt: Momspliktiga inköp vid omvänd betalningsskyldighet",
+                                      "På blanketten: 124.00",
+                                      "Konton och verifikationer som i bokföringen (debet positivt, kredit negativt):",
                                       "  9021           124.00  Varuvärde Inköp annat EG-land",
-                                      "        A 48    2026-03-31         124.00  Kortköp LAMYSHOP",
-                                      "Other accounts that report in box 20, without postings:",
+                                      "        A48     2026-03-31         124.00  Kortköp LAMYSHOP",
+                                      "Andra konton som redovisas i ruta 20, utan konteringar:",
                                       "  4515  Inköp av varor från annat EU-land, 25 %",
-                                      "  4516  (not in the chart of accounts)",
-                                      "  4517  (not in the chart of accounts)",
+                                      "  4516  (finns inte i kontoplanen)",
+                                      "  4517  (finns inte i kontoplanen)",
                                       ""}));
-  EXPECT_EQ(lines[11], "SKV's description of box 20:");
+  EXPECT_EQ(lines[11], "Skatteverkets beskrivning av ruta 20:");
   EXPECT_EQ(lines.back(), "");
   EXPECT_TRUE(std::ranges::all_of(lines, [](std::string const& line) {
     return std::ranges::count_if(line, [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }) <= 80;
@@ -537,20 +537,20 @@ TEST(VatReturnReview, ABoxWithItsPostingsAndDescription) {
   // A box without postings: its accounts and description
   // Box 48: both titles and both descriptions
   auto const vat = review_of(books, a48_like(), "48");
-  EXPECT_EQ(vat[0], "Box 48  Ingående moms att dra av");
-  EXPECT_EQ(vat[1], "Also titled: Tidigare avdragen moms att betala tillbaka");
+  EXPECT_EQ(vat[0], "Ruta 48  Ingående moms att dra av");
+  EXPECT_EQ(vat[1], "Även: Tidigare avdragen moms att betala tillbaka");
   EXPECT_TRUE(std::ranges::any_of(vat, [](std::string const& line) {
     return line.starts_with("Välj alternativet Tidigare avdragen moms att betala tillbaka");
   })); // the second title's description follows the first
   auto const empty = review_of(books, a48_like(), "30");
-  EXPECT_EQ(empty[2], "No postings in 2026-01-01 - 2026-03-31.");
-  EXPECT_EQ(empty[3], "Accounts that report in box 30:");
-  EXPECT_EQ(empty[4], "  2614  (not in the chart of accounts)");
+  EXPECT_EQ(empty[2], "Inga konteringar 2026-01-01 – 2026-03-31.");
+  EXPECT_EQ(empty[3], "Konton som redovisas i ruta 30:");
+  EXPECT_EQ(empty[4], "  2614  (finns inte i kontoplanen)");
   // One account a line
   auto const sales = review_of(books, a48_like(), "05");
-  EXPECT_EQ(sales[3], "Accounts that report in box 05:");
-  EXPECT_EQ(sales[4], "  3001  (not in the chart of accounts)");
-  EXPECT_EQ(sales[5], "  3002  (not in the chart of accounts)");
+  EXPECT_EQ(sales[3], "Konton som redovisas i ruta 05:");
+  EXPECT_EQ(sales[4], "  3001  (finns inte i kontoplanen)");
+  EXPECT_EQ(sales[5], "  3002  (finns inte i kontoplanen)");
 }
 
 TEST(VatReturn, TheReturnWithoutThePeriodsOwnClearing) {

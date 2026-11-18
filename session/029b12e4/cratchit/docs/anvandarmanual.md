@@ -348,7 +348,7 @@ Utkast skapar du i [Utkast](#utkast) under Årsflöde, från ett kontoutdrag ell
 ### Årsflöde
 
 <!-- hjälp: arsflode -->
-Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `0 Utkast`, `1 Bokfört` och `3 Bokslut` leder vidare, `2 Momsrapport`, `4 Årsredovisning` och `7 Deklaration till SKV` visar hur du gör dem från kommandoraden, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
+Årsflöde samlar arbetet med räkenskapsåret, i den ordning det brukar göras under året och efter det. Tryck valets siffra. `0 Utkast`, `1 Bokfört`, `2 Momsrapport` och `3 Bokslut` leder vidare, `4 Årsredovisning` och `7 Deklaration till SKV` visar hur du gör dem från kommandoraden, de andra valen säger vad som saknas än så länge. Tryck `-` för att gå tillbaka till räkenskapsåret.
 <!-- /hjälp -->
 
 Tryck `0` i räkenskapsåret:
@@ -1159,18 +1159,66 @@ Bokslutet avslutar räkenskapsåret. Tryck `0` för avstämning mot kontoutdrag.
 #### Momsrapport
 
 <!-- hjälp: momsrapport -->
-Momsdeklarationen gör cratchit från kommandoraden, med `cratchit --sie-to-vat`, ett kvartal i taget. Ovanför prompten står stegen med kommandona för den här bokföringen och det här räkenskapsåret: exportera året till en SIE-fil (och förra året, när ett kvartal börjar i det), läs hjälpen, avsluta cratchit och kör kommandot i bokföringens mapp. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets momskvartal, det senaste först, vart och ett med momsen i tre steg: *Period* (momsen på momskontona i kvartalets verifikationer), *Avräknat* (det som en momsverifikation har flyttat till 2650 eller 1650) och *Debiterat* (det Skatteverket har debiterat eller krediterat skattekontot för kvartalet). Tryck kvartalets siffra för att se dess momsrapport; `0` är det senaste kvartalet som har tagit slut. Kvartalet som pågår i dag har `+`. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
-Tryck `2` i Årsflöde. Stegen är desamma som för [årsredovisningen](#årsredovisning). Kommandot för kvartalet gäller det senaste kvartalet i räkenskapsåret som har tagit slut; ange ett annat med `--period`, till exempel `--period 2026Q3`.
-
-Med brutet räkenskapsår börjar ett kvartal i förra räkenskapsåret, till exempel april – juni för ett år som börjar 1 maj. En SIE-fil har bara sitt eget års verifikationer, så då behövs förra årets SIE-fil också. cratchit föreslår den senaste exporten av förra året, när den finns:
+Tryck `2` i Årsflöde:
 
 ```text
-     cratchit --sie-to-vat sie_2026-27_allt.se sie_2025-26_allt.se --period 2026Q2
+Momskvartal som slutar i 2026/27 (i dag 2026-11-18):
+                   Period    Avräknat   Debiterat
+  + 2026 Q4          0.00        0.00        0.00  hittills
+  0 2026 Q3      -8467.20        0.00        0.00  nästa att rapportera  1 kontroll
+  1 2026 Q2       2292.68     2291.00        0.00  avräknat av M5, M1
+Cratchit > … > Årsflöde > Momsrapport>
 ```
 
-cratchit skapar mappen `<orgnr>_moms_<första dag>_<sista dag>` med momsrapporten och kontrollerna, förslaget till momsverifikation (som du bokför själv), eSKD-filen till Skatteverkets e-tjänst *Lämna momsdeklaration* och en kopia av SIE-filen.
+Ett kvartal hör till räkenskapsåret när det slutar i det, så med brutet räkenskapsår kan första kvartalet börja i förra året. Minus är moms att betala och plus moms att få tillbaka, som på momskontona. *nästa att rapportera* står vid kvartalet före det som pågår, och *kontroll* vid ett kvartal där kontrollerna har hittat något. En debitering som inget kvartal tar står under listan.
+
+##### Kvartalets momsrapport
+
+<!-- hjälp: momskvartal -->
+Kvartalets momsrapport: varje ruta med sitt belopp på blanketten, rutans konton och verifikationerna bakom, sedan stegen och ruta 49. Rapporten visas en sida i taget; tryck `>` och `<` för att bläddra. Under den står kontrollerna, förslaget till momstömning och eSKD-filens fält. Tryck `0` för att granska rutorna, `1` för att göra momstömningen och bokföra den, och `2` för att skriva rapporten och eSKD-filen. Tryck `-` för att gå tillbaka till kvartalen.
+<!-- /hjälp -->
+
+Rapporten är den som kvartalets verifikationer ger, utan kvartalets egen momstömning. Den blir alltså densamma före och efter att du har bokfört tömningen, och efteråt är den den du lämnade in. Under rapporten:
+
+```text
+Kontroller av 2026 Q3 (de varnar bara):
+  ! …
+
+Momstömning (förslag): M 2026-09-30 "Momsrapport 2026-07-01 - 2026-09-30"
+  2611  Utgående moms 25%                       8500.00
+  2641  Debiterad ingående moms                  -32.80
+  2650  Redovisningskonto för moms             -8468.00
+  3740  Öres- och kronutjämning                     0.80
+
+eSKD-fil moms_202609.eskd:
+  MomsUtgHog                    8500
+  MomsIngAvdr                     32
+  MomsBetala                    8468
+```
+
+Kontrollerna varnar för det som kan göra rapporten fel: utkast som är daterade i kvartalet, 2650 eller 1650 i en verifikation som inte är en momsverifikation, omvänd skattskyldighet som inte går jämnt upp, en verifikation som registrerades efter kvartalets momstömning, och konton 2600–2699 som inte redovisas i någon ruta.
+
+* `1 Momstömning` finns för ett kvartal som har tagit slut, har något att avräkna och inte redan är avräknat. cratchit gör tömningen till ett utkast i serie M, daterat kvartalets sista dag, och går direkt till [Bokför](#bokför), där `M` står ifyllt. Enter bokför. Trycker du `-` ligger tömningen kvar som utkast, och vyn säger vilket; nästa `1` använder samma utkast. Har bokföringen ändrats sedan dess byter cratchit ut utkastets konteringar. Efter bokföringen står det till exempel `2026 Q3 är redan avräknat av M3.`
+* `2 Skriv rapport och eSKD-fil` skriver mappen `moms_<första dag>_<sista dag>` i bokföringens mapp, till exempel `moms_2026-07-01_2026-09-30`, med `momsrapport.txt` (rapporten och kontrollerna), `verifikation.txt` (tömningen, eller att kvartalet redan är avräknat) och eSKD-filen `moms_202609.eskd`. Rapport och verifikation skrivs om varje gång. En eSKD-fil skrivs aldrig över; nästa får ett nummer, till exempel `moms_202609_2.eskd`, så filen du laddade upp finns kvar. Ladda upp eSKD-filen i Skatteverkets e-tjänst *Lämna momsdeklaration*. För kvartalet som pågår skriver cratchit bara rapporten.
+
+Ordningen mellan `1` och `2` spelar ingen roll. eSKD-filen behöver organisationsnumret; saknar bokföringen det säger cratchit det.
+
+###### Granska rutorna
+
+<!-- hjälp: granska-rutor -->
+Blankettens alla rutor under sina avsnitt, med rubrik och hur många konteringar kvartalet har i varje; också rutor utan konteringar, så att en ruta som saknas syns. Skriv rutans nummer och tryck Enter för att se den. Tryck `-` för att gå tillbaka till kvartalet.
+<!-- /hjälp -->
+
+###### Ruta
+
+<!-- hjälp: ruta -->
+En ruta: dess rubrik och avsnitt, beloppet på blanketten, kontona och verifikationerna bakom, andra konton som redovisas i rutan, och Skatteverkets beskrivning av rutan. Tryck `>` för nästa ruta och `<` för föregående. Tryck `-` för att gå tillbaka till rutorna.
+<!-- /hjälp -->
+
+Momsrapporten kan du också göra från kommandoraden med `cratchit --sie-to-vat` (se [Kommandoraden](#kommandoraden)).
 
 #### Årsredovisning
 

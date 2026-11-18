@@ -180,6 +180,7 @@ add_library(cratchit_core
   src/core/skv/vat_return/checks.cpp
   src/core/skv/vat_return/clearing.cpp
   src/core/skv/vat_return/cli.cpp
+  src/core/skv/vat_return/files.cpp
   src/core/skv/vat_return/document.cpp
   src/core/skv/vat_return/eskd.cpp
   src/core/skv/vat_return/report.cpp
@@ -264,6 +265,7 @@ add_library(cratchit_ui
   src/ui/add_project_menu.cpp
   src/ui/booked_menu.cpp
   src/ui/unbook_menu.cpp
+  src/ui/vat_return_menu.cpp
   src/ui/command_hint_menu.cpp
   src/ui/design_insufficiency.cpp
   src/ui/details_project_menu.cpp

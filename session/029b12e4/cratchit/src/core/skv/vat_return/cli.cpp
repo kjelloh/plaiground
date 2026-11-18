@@ -12,6 +12,7 @@
 #include "core/skv/vat_return/clearing.hpp"
 #include "core/skv/vat_return/document.hpp"
 #include "core/skv/vat_return/eskd.hpp"
+#include "core/skv/vat_return/files.hpp"
 #include "core/skv/vat_return/manual.hpp"
 #include "core/skv/vat_return/report.hpp"
 #include "core/skv/vat_return/steps.hpp"
@@ -141,49 +142,9 @@ std::vector<Period> all_quarters(books::Books const& books) {
 
 Date first_day(books::Books const& books) { return books.years.front().start; }
 
-// "202609": the year and last month of the period, as eSKD names it
-std::string eskd_period(Period const& period) {
-  return std::format("{:04}{:02}", static_cast<int>(period.last.year()), static_cast<unsigned>(period.last.month()));
-}
-
 std::string utf8_name(fs::path const& path) {
   auto const name = path.filename().u8string();
   return {name.begin(), name.end()};
-}
-
-// The suggested clearing voucher, in Swedish
-std::vector<std::string> voucher_lines(books::Books const& books, std::optional<Clearing> const& clearing,
-                                       Period const& period) {
-  std::vector<std::string> lines{
-      std::format("Förslag till momsavräkning {} – {}", format_iso_date(period.first), format_iso_date(period.last)),
-      ""};
-  if (!clearing) {
-    lines.push_back("Inget momskonto ändrades i perioden: det finns inget att avräkna.");
-    return lines;
-  }
-  lines.push_back(std::format("Serie:   {} (inte bokförd: bokför den själv)", clearing_series));
-  lines.push_back(std::format("Datum:   {}", format_iso_date(clearing->event.date)));
-  lines.push_back(std::format("Rubrik:  {}", clearing->event.heading));
-  lines.push_back(std::format("Belopp:  {}", format_amount(clearing->event.amount)));
-  lines.push_back("");
-  lines.push_back(std::format("{:<8}{:>15}{:>15}  {}", "Konto", "Debet", "Kredit", "Kontonamn"));
-  for (auto const& posting : clearing->postings) {
-    auto const* account = books.account(posting.account);
-    auto const debit = posting.amount > 0 ? format_amount(posting.amount) : std::string();
-    auto const credit = posting.amount < 0 ? format_amount(-posting.amount) : std::string();
-    lines.push_back(std::format("{:<8}{:>15}{:>15}  {}", posting.account, debit, credit, account ? account->name : ""));
-  }
-  lines.push_back(std::format("{:<8}{:>15}{:>15}", "Summa", format_amount(books::debit(clearing->postings)),
-                              format_amount(books::credit(clearing->postings))));
-  return lines;
-}
-
-std::expected<void, std::string> write_text(fs::path const& file, std::vector<std::string> const& lines) {
-  std::ofstream out(file, std::ios::binary);
-  for (auto const& line : lines) out << line << '\n';
-  out.close();
-  if (!out) return std::unexpected(std::format("Cannot write {}", file.string()));
-  return {};
 }
 
 } // namespace
@@ -260,15 +221,11 @@ int run_cli(std::span<std::string_view const> arguments_given, std::FILE* out, s
   bool const running = period.last >= today;
   // The return of the period's vouchers, without its VAT clearing: the one to file, also when it is cleared already
   auto const document = document_of(books, period, Clearings::left_out);
-  auto report = report_of(books, document, *found, company, running ? std::optional(today) : std::nullopt);
   auto const checks = checks_of(books, period);
-  report.push_back("");
-  report.push_back("Kontroller:");
-  if (checks.empty()) report.push_back("  Kontrollerna hittade inget att titta på.");
-  for (auto const& check : checks) report.push_back("  " + check);
-  report.push_back("");
-  report.push_back(std::format("Gjord {} av cratchit {} --sie-to-vat från {}", format_iso_date(today), version,
-                               utf8_name(read->latest_file)));
+  auto const report = report_with_checks(
+      books, document, *found, company, running ? std::optional(today) : std::nullopt,
+      std::format("Gjord {} av cratchit {} --sie-to-vat från {}", format_iso_date(today), version,
+                  utf8_name(read->latest_file)));
 
   auto const stem = std::format("{}_moms_{}_{}", read->identity.orgnr, format_iso_date(period.first),
                                 format_iso_date(period.last));
@@ -291,12 +248,7 @@ int run_cli(std::span<std::string_view const> arguments_given, std::FILE* out, s
     std::println(out, "  Did not write the eSKD file or the clearing voucher: the quarter has not ended");
     return 0;
   }
-  auto voucher = voucher_lines(books, clearing_of(document), period);
-  if (!found->clearings.empty()) {
-    voucher = {std::format("Momsavräkning {} – {}", format_iso_date(period.first), format_iso_date(period.last)), "",
-               std::format("Perioden är redan avräknad av {} i bokföringen. Ingen ny verifikation behövs.",
-                           vouchers_text(found->clearings))};
-  }
+  auto const voucher = voucher_lines(books, clearing_of(document), *found);
   if (auto written = write_text(folder / (stem + "_verifikation.txt"), voucher);
       !written) {
     std::println(err, "Error: {}", written.error());

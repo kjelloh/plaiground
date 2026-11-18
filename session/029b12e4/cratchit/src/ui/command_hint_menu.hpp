@@ -41,15 +41,9 @@ std::vector<std::string> annual_report_hint(CommandHintFacts const& facts);
 // last year's return folder when it is there, else --previous-deficit.
 std::vector<std::string> tax_return_hint(CommandHintFacts const& facts);
 
-// The view of Momsrapport: likewise for cratchit --sie-to-vat, with the latest
-// quarter of the year that has ended by today as --period, and last year's
-// export as the extra file when a quarter of the year starts in the year before.
-std::vector<std::string> vat_return_hint(CommandHintFacts const& facts, Date today);
-
-// Momsrapport, Årsredovisning and Deklaration till SKV in Årsflöde: the hints above, read
+// Årsredovisning and Deklaration till SKV in Årsflöde: the hints above, read
 // when the user comes there. No options, no input.
 std::unique_ptr<pyroceph::tui::State> make_annual_report_menu(Project project, FiscalYear year);
 std::unique_ptr<pyroceph::tui::State> make_tax_return_menu(Project project, FiscalYear year);
-std::unique_ptr<pyroceph::tui::State> make_vat_return_menu(Project project, FiscalYear year);
 
 } // namespace cratchit::ui

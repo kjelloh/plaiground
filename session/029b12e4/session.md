@@ -72,6 +72,10 @@ I have now lost confidence in trying to tell Claude to design states that tie to
     * A human developer would NEVER design the tests in this way?
     * Testing should be per-state, not UI locations or state flows?
 
+Nu kunde jag med hyfsad kontroll bokföra fram tillk M2 med hjälp av mallar ok!
+
+Så nu är det dags för ett UI för enklare momsrapport!
+
 
 Från igår gjorde jag några noteringar om funktioner som vore bra att få med för en fullödig bokföringsupplevelse (he he)
 

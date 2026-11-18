@@ -145,9 +145,16 @@ std::vector<std::string> checks_of(books::Books const& books, Period period) {
   }
   if (!drafts.empty()) {
     std::ranges::stable_sort(drafts, {}, [](auto const* d) { return d->event.date; });
-    findings.push_back(std::format("{} utkast daterade i perioden, inte bokförda än (det första {} \"{}\")",
-                                   drafts.size(), format_iso_date(drafts.front()->event.date),
-                                   drafts.front()->event.heading));
+    // The first one's heading, else the text of a posting (e.g. a statement entry's), else its date alone
+    auto const& first = *drafts.front();
+    auto text = first.event.heading;
+    for (auto const& posting : first.postings) {
+      if (!text.empty()) break;
+      if (posting.kind != books::Posting::Kind::removed) text = posting.text;
+    }
+    findings.push_back(std::format("{} utkast daterade i perioden, inte bokförda än (det första {}{})", drafts.size(),
+                                   format_iso_date(first.event.date),
+                                   text.empty() ? std::string() : std::format(" \"{}\"", text)));
   }
 
   // The period's vouchers, from every fiscal year
