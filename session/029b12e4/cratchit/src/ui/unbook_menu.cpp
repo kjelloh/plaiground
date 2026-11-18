@@ -81,8 +81,9 @@ public:
                    index.error());
       return std::unexpected(index.error());
     }
+    auto const draft = draft_id(*index, draft_count(project_.folder, *year_start));
     LOG_BUSINESS("Verifikation {} gjord till utkast {} i {} ({}): {} {} \"{}\", registrerad {}, signatur \"{}\"", id,
-                 draft_id(*index), label_of(year_), project_.folder.string(), format_iso_date(found->event.date),
+                 draft, label_of(year_), project_.folder.string(), format_iso_date(found->event.date),
                  format_amount(found->event.amount), found->event.heading,
                  found->registered ? format_iso_date(*found->registered) : std::string(), found->signature);
     for (auto const& posting : found->postings) {
@@ -90,7 +91,7 @@ public:
                    posting.date ? format_iso_date(*posting.date) : std::string(), posting.text,
                    posting.kind == books::Posting::Kind::removed ? " (struken)" : "");
     }
-    report_(std::format("cratchit gjorde {} till utkast {}: {}.", id, draft_id(*index), found->event.heading));
+    report_(std::format("cratchit gjorde {} till utkast {}: {}.", id, draft, found->event.heading));
     done_ = true;
     return Accepted(); // back to origin
   }

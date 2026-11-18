@@ -120,10 +120,11 @@ public:
                          project.folder.string(), index.error());
             return std::unexpected(index.error());
           }
-          LOG_BUSINESS("Ändringsverifikation för {} skapad som utkast {} i {} ({}): {} {}", id, draft_id(*index),
+          auto const draft = draft_id(*index, draft_count(project.folder, *year_start));
+          LOG_BUSINESS("Ändringsverifikation för {} skapad som utkast {} i {} ({}): {} {}", id, draft,
                        label_of(year), project.folder.string(), format_iso_date(voucher.event.date),
                        format_amount(-voucher.event.amount));
-          return View{std::format("cratchit skapade utkast {}: Ändring av {}, daterat {} som {}.", draft_id(*index), id,
+          return View{std::format("cratchit skapade utkast {}: Ändring av {}, daterat {} som {}.", draft, id,
                                   format_iso_date(voucher.event.date), id),
                       "Se till att datumet inte ligger i ett år eller en momsperiod som redan är rapporterad; då krävs "
                       "en ny rapport. Datumet ändrar du med 0 i utkastets vy innan du bokför."};

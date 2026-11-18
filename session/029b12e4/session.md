@@ -61,6 +61,17 @@ OK, so now we have entered the 'confused or brain fogged' Claude again.
     * Maybe that comes from the architecture?
     * Still, it is sub-optimal and requires patches to make them look alike.
 
+I have now lost confidence in trying to tell Claude to design states that tie together.
+
+* It seems 'better' to go with Claudes suggestion.
+* At least then it fills in the gap and can test for the behavior.
+* It seems Claude gets confused if I ask for 'common states'?
+* It just comprehend such meta-concepts and the UI tends to break rather than mend?
+* Also, Claude creates really TIGHT UI tests that comes with a HUGE PRICE when tweaking!
+    * I think I have to stop tweaking the UI now as the effects on the tests are just humongous!
+    * A human developer would NEVER design the tests in this way?
+    * Testing should be per-state, not UI locations or state flows?
+
 
 Från igår gjorde jag några noteringar om funktioner som vore bra att få med för en fullödig bokföringsupplevelse (he he)
 

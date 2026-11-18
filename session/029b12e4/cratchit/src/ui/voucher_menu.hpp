@@ -93,6 +93,11 @@ std::unique_ptr<pyroceph::tui::State> make_draft_view(books::Draft const& draft,
 pyroceph::tui::View draft_view_lines(books::Draft const& draft, std::string const& id, std::string year_label,
                                      std::vector<books::Account> accounts);
 
+// What a draft lacks to be booked, each with where to fix it, after the line
+// "Innan utkastet kan bokföras:", e.g. "  Rubrik saknas: tryck 0 och sedan 1.";
+// empty when it is ready. Shown last in the draft's view and in Fullborda.
+pyroceph::tui::View missing_to_book(books::Draft const& draft);
+
 // "Glöm" for the draft id (e.g. "#3"), as from a draft's view: it shows summary
 // (one line about the draft), says the draft cannot be had back, and offers
 // 9 Glöm and N Nej. 9 calls forget; done, the TUI goes back to forgotten_to;

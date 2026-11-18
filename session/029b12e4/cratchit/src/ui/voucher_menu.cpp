@@ -346,6 +346,11 @@ public:
   std::string name() const override { return shown_->id(); }
   View view() const override {
     auto lines = view_of(*shown_, name());
+    if (shown_->draft) {
+      auto const& v = shown_->voucher;
+      auto const missing = missing_to_book(books::Draft{v.event, {}, v.postings, v.series});
+      lines.insert(lines.end(), missing.begin(), missing.end());
+    }
     lines.insert(lines.end(), report_.begin(), report_.end());
     return lines;
   }
@@ -415,6 +420,31 @@ private:
 };
 
 } // namespace
+
+View missing_to_book(books::Draft const& draft) {
+  if (books::stage(draft) == books::DraftStage::ready) return {};
+  View lines{"Innan utkastet kan bokföras:"};
+  if (draft.event.heading.empty()) lines.push_back("  Rubrik saknas: tryck 0 och sedan 1.");
+  if (draft.event.amount == 0) lines.push_back("  Belopp saknas: tryck 0 och sedan 2.");
+  auto const counted = [](books::Posting const& p) { return p.kind != books::Posting::Kind::removed; };
+  if (std::ranges::none_of(draft.postings, counted)) {
+    lines.push_back("  Konteringar saknas: tryck 1, eller 3 för en mall.");
+    return lines;
+  }
+  if (std::ranges::any_of(draft.postings, [&](books::Posting const& p) { return counted(p) && p.account.empty(); })) {
+    lines.push_back("  En kontering saknar konto: tryck 1.");
+  }
+  auto const sum = books::sum(draft.postings);
+  auto const amount = draft.event.amount < 0 ? -draft.event.amount : draft.event.amount;
+  if (sum != 0) {
+    lines.push_back(std::format("  Konteringarna balanserar inte, kvar {} {}: tryck 1.", sum < 0 ? "debet" : "kredit",
+                                format_amount(sum < 0 ? -sum : sum)));
+  } else if (amount != 0 && books::debit(draft.postings) != amount) {
+    lines.push_back(std::format("  Debet {} är inte beloppet {}: tryck 0 och sedan 2, eller 1.",
+                                format_amount(books::debit(draft.postings)), format_amount(amount)));
+  }
+  return lines;
+}
 
 View draft_view_lines(books::Draft const& draft, std::string const& id, std::string year_label,
                       std::vector<books::Account> accounts) {

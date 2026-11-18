@@ -87,7 +87,7 @@ TEST(YearView, AtMostMaxRowsAreShownThenHowManyOlder) {
   EXPECT_EQ(year_view(&year, 12).rows.size(), 12u); // all shown: no row about older ones
 }
 
-TEST(DraftRows, NewestFirstWithIdFromOldestAndTextOrPosting) {
+TEST(DraftRows, NewestFirstWithIdFromNewestAndTextOrPosting) {
   auto year = year_with({voucher("1", date(2026, 10, 20), "Sale", 10000)});
   year.place_draft({{"Telia oktober", 111800, date(2026, 10, 20)}, date(2026, 10, 23)});
   auto fee = row("1920", -185);
@@ -95,11 +95,18 @@ TEST(DraftRows, NewestFirstWithIdFromOldestAndTextOrPosting) {
   year.place_draft({{"", 0, date(2026, 10, 21)}, date(2026, 10, 23), {fee}});
   year.place_draft({{"", 0, date(2026, 9, 3)}, date(2026, 10, 23), {row("1630", 100)}});
   EXPECT_EQ(cratchit::ui::draft_rows(&year),
-            (Rows{"  #3            2026-10-21         -1.85  1920  AVGIFTER NORDEA (kontohändelse)",
+            (Rows{"  #1            2026-10-21         -1.85  1920  AVGIFTER NORDEA (kontohändelse)",
                   "  #2            2026-10-20       1118.00  Telia oktober (händelse)",
-                  "  #1            2026-09-03          1.00  1630 (kontohändelse)"}));
+                  "  #3            2026-09-03          1.00  1630 (kontohändelse)"}));
   EXPECT_TRUE(cratchit::ui::draft_rows(nullptr).empty());
-  EXPECT_EQ(cratchit::ui::draft_id(0), "#1");
+  // The oldest has the highest id: booking it keeps the others' ids
+  EXPECT_EQ(cratchit::ui::draft_id(0, 3), "#3");
+  EXPECT_EQ(cratchit::ui::draft_id(2, 3), "#1");
+  EXPECT_EQ(cratchit::ui::draft_id(0, 2), "#2");
+  EXPECT_EQ(cratchit::ui::draft_index(1, 3), 2u);
+  EXPECT_EQ(cratchit::ui::draft_index(3, 3), 0u);
+  EXPECT_FALSE(cratchit::ui::draft_index(0, 3));
+  EXPECT_FALSE(cratchit::ui::draft_index(4, 3));
 }
 
 TEST(DraftRows, OnlyAPostingAloneShowsItsSign) {
@@ -110,8 +117,8 @@ TEST(DraftRows, OnlyAPostingAloneShowsItsSign) {
   year.place_draft({{"", 0, date(2026, 7, 22)}, date(2026, 11, 17), {row("1930", -500), row("6570", 300)}});
   auto const rows = cratchit::ui::draft_rows(&year);
   ASSERT_EQ(rows.size(), 2u);
-  EXPECT_TRUE(rows[1].starts_with("  #1            2026-07-21      -2292.00  1630")) << rows[1];
-  EXPECT_TRUE(rows[0].starts_with("  #2            2026-07-22          5.00  1930")) << rows[0];
+  EXPECT_TRUE(rows[1].starts_with("  #2            2026-07-21      -2292.00  1630")) << rows[1];
+  EXPECT_TRUE(rows[0].starts_with("  #1            2026-07-22          5.00  1930")) << rows[0];
 }
 
 TEST(DraftRows, TheSameEventShowsTheRawTextsOfItsParts) {
@@ -129,8 +136,8 @@ TEST(DraftRows, TheSameEventShowsTheRawTextsOfItsParts) {
   year.place_draft({{"Anthropic Claude", 20468, date(2026, 9, 10)}, date(2026, 11, 18), {paid}});
   auto const rows = cratchit::ui::draft_rows(&year);
   ASSERT_EQ(rows.size(), 2u);
-  EXPECT_EQ(rows[1], "  #1            2026-07-21       2292.00  Utbetalning : Skatt | 5050-1030 SK5567.. (samma)");
-  EXPECT_EQ(rows[0], "  #2            2026-09-10        204.68  Anthropic Claude : Kortköp 260910 ANTH.. (samma)");
+  EXPECT_EQ(rows[1], "  #2            2026-07-21       2292.00  Utbetalning : Skatt | 5050-1030 SK5567.. (samma)");
+  EXPECT_EQ(rows[0], "  #1            2026-09-10        204.68  Anthropic Claude : Kortköp 260910 ANTH.. (samma)");
   // Other stages as before: the heading alone
   Draft unbalanced{{"Anthropic Claude", 20468, date(2026, 9, 10)}, date(2026, 11, 18), {paid, silent, row("6540", 100)}};
   EXPECT_EQ(cratchit::ui::draft_text(unbalanced), "Anthropic Claude (obalanserat)");

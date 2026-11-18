@@ -3,6 +3,8 @@
 #include "core/books/books.hpp"
 
 #include <cstddef>
+#include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -36,10 +38,20 @@ YearView year_view(books::FiscalYear const* year, std::size_t max_rows = year_vi
 // on the same date later ones in the books before earlier ones). None for nullptr.
 std::vector<std::string> voucher_rows(books::FiscalYear const* year);
 
-// A draft's id as the user sees it: its place among the year's drafts, oldest
-// first, from 1, after '#', e.g. "#3" for index 2. Not stable: it changes when
-// a draft of an earlier date is added or a draft leaves the list (beslut 2026-11-17).
-std::string draft_id(std::size_t index);
+// A draft's id as the user sees it: its place among the year's count drafts,
+// newest first, from 1, after '#', e.g. "#3" for index 7 of 10 (index is in date
+// order, oldest first). Booking from the oldest keeps the others' ids; browsing
+// from the oldest the ids count down (beslut 2026-11-18). Not stable: it changes
+// when a draft of a later date is added or a newer draft leaves the list.
+std::string draft_id(std::size_t index, std::size_t count);
+
+// The index (date order) of the draft with id number (as draft_id) among count
+// drafts; none when there is no such draft
+std::optional<std::size_t> draft_index(std::size_t number, std::size_t count);
+
+// How many drafts the year starting at start has in the books in folder (0 when
+// they cannot be read), for the id of a draft just added
+std::size_t draft_count(std::filesystem::path const& folder, Date start);
 
 // What a draft's row tells about it: its heading, else its first posting's
 // account and text (e.g. a statement entry), then its stage in parentheses,
@@ -61,8 +73,8 @@ std::vector<std::string> draft_rows(books::FiscalYear const* year);
 // (e.g. "Anthropic Claude : Kortköp 260910 ANTH.."); empty for any other stage
 std::string same_text(books::Draft const& draft);
 
-// One row of draft_rows: the draft at index
-std::string draft_row(std::size_t index, books::Draft const& draft);
+// One row of draft_rows: the draft at index of count
+std::string draft_row(std::size_t index, std::size_t count, books::Draft const& draft);
 
 // One row of voucher_rows
 std::string voucher_row(books::Voucher const& voucher);

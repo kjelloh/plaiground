@@ -149,10 +149,24 @@ std::string draft_text(books::Draft const& draft) {
   return text.empty() ? shown_stage : std::format("{} {}", text, shown_stage);
 }
 
-std::string draft_id(std::size_t index) { return std::format("#{}", index + 1); }
+std::string draft_id(std::size_t index, std::size_t count) {
+  return std::format("#{}", index < count ? count - index : 0);
+}
 
-std::string draft_row(std::size_t index, books::Draft const& draft) {
-  return row_text(draft_id(index), draft.event.date, shown_amount(draft), draft_text(draft));
+std::optional<std::size_t> draft_index(std::size_t number, std::size_t count) {
+  if (number == 0 || number > count) return std::nullopt;
+  return count - number;
+}
+
+std::size_t draft_count(std::filesystem::path const& folder, Date start) {
+  auto const books = books::read_books(folder);
+  if (!books) return 0;
+  auto const* year = books->year_starting(start);
+  return year != nullptr ? year->drafts.size() : 0;
+}
+
+std::string draft_row(std::size_t index, std::size_t count, books::Draft const& draft) {
+  return row_text(draft_id(index, count), draft.event.date, shown_amount(draft), draft_text(draft));
 }
 
 std::string voucher_row(books::Voucher const& voucher) {
@@ -163,7 +177,7 @@ std::string voucher_row(books::Voucher const& voucher) {
 std::vector<std::string> draft_rows(books::FiscalYear const* year) {
   std::vector<std::string> lines;
   if (year == nullptr) return lines;
-  for (std::size_t i = year->drafts.size(); i-- > 0;) lines.push_back(draft_row(i, year->drafts[i]));
+  for (std::size_t i = year->drafts.size(); i-- > 0;) lines.push_back(draft_row(i, year->drafts.size(), year->drafts[i]));
   return lines;
 }
 

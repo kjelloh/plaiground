@@ -1658,8 +1658,8 @@ TEST_F(RootMenuTest, DescribeEventsMakesADraftOfEachEvent) {
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(), (View{"Utkast 2025: utkast 1–2 av 2",
-                                              "  #2            2025-10-22       1118.00  Telia faktura (händelse)",
-                                              "  #1            2025-09-28       1308.75  Loopia (händelse)",
+                                              "  #1            2025-10-22       1118.00  Telia faktura (händelse)",
+                                              "  #2            2025-09-28       1308.75  Loopia (händelse)",
                                               "cratchit skapade 2 utkast."}));
 }
 
@@ -1873,7 +1873,7 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
                                                                        "2025/03/05;-10,00;AVGIFTER;490,00\n"
                                                                        "2025/03/01;500,00;Kund;500,00\n";
   Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
-  // Drafts from the statement (#1 Kund, #2 AVGIFTER) and an event (#3, later)
+  // Drafts from the statement (#3 Kund, #2 AVGIFTER) and an event (#1, later)
   ASSERT_TRUE(navigator.press(U'3'));
   auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
   ASSERT_TRUE(accepted) << accepted.error();
@@ -1904,7 +1904,9 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   EXPECT_EQ(navigator.current().view(),
             (View{"Utkast #2 i 2025 (kontohändelse)", "  Noterad:        " + cratchit::today_iso(), "Händelse:",
                   "  Datum:          2025-03-05", "  Rubrik:         ", "  Belopp:         ", "Konteringar:",
-                  "  1930  Bank        -10.00  AVGIFTER"}));
+                  "  1930  Bank        -10.00  AVGIFTER", "Innan utkastet kan bokföras:",
+                  "  Rubrik saknas: tryck 0 och sedan 1.", "  Belopp saknas: tryck 0 och sedan 2.",
+                  "  Konteringarna balanserar inte, kvar debet 10.00: tryck 1."}));
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'3', "Använd mall"}, {U'9', "Glöm"}}));
   // Its postings are changed in Kontera, which tells where a posting came from
   ASSERT_TRUE(navigator.press(U'1'));
@@ -1916,7 +1918,8 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   ASSERT_TRUE(navigator.back());
   // Back in the draft: shown as it is now
   EXPECT_EQ(navigator.current().name(), "#2");
-  EXPECT_EQ(navigator.current().view().back(), "  1930  Bank         10.00");
+  auto const now = navigator.current().view();
+  EXPECT_NE(std::ranges::find(now, "  1930  Bank         10.00"), now.end());
   // Its event: each part changed for itself; back in the draft, shown as it is now
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Händelse");
@@ -1958,11 +1961,11 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   EXPECT_EQ(navigator.current().view()[5], "  Belopp:         -10.00");
   ASSERT_TRUE(navigator.back());
   // The event without postings
-  accepted = navigator.current().on_input(U"#3");
+  accepted = navigator.current().on_input(U"#1");
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.enter(std::move(accepted->next));
   auto const view = navigator.current().view();
-  EXPECT_EQ(view[0], "Utkast #3 i 2025 (händelse)");
+  EXPECT_EQ(view[0], "Utkast #1 i 2025 (händelse)");
   EXPECT_EQ(view[4], "  Rubrik:         Telia faktura");
   EXPECT_EQ(view[5], "  Belopp:         1118.00");
   ASSERT_TRUE(navigator.press(U'1'));
@@ -1975,18 +1978,18 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   EXPECT_EQ(navigator.current().name(), "Glöm");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::forget_draft);
   EXPECT_EQ(navigator.current().view(),
-            (View{"Glöm utkast #3?", "  2025-10-22       1118.00  Telia faktura (händelse)",
+            (View{"Glöm utkast #1?", "  2025-10-22       1118.00  Telia faktura (händelse)",
                   "Utkastet tas bort ur bokföringen och går inte att få tillbaka."}));
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'9', "Glöm"}, {U'N', "Nej"}}));
   ASSERT_TRUE(navigator.press(U'N'));
-  EXPECT_EQ(navigator.current().name(), "#3");
+  EXPECT_EQ(navigator.current().name(), "#1");
   // 9 again forgets it, and Utkast tells so
   ASSERT_TRUE(navigator.press(U'9'));
   ASSERT_TRUE(navigator.press(U'9'));
   EXPECT_EQ(navigator.current().name(), "Utkast");
   auto const after = navigator.current().view();
   EXPECT_EQ(after.front(), "Utkast 2025: utkast 1–2 av 2");
-  EXPECT_EQ(after.back(), "cratchit glömde utkast #3: Telia faktura (händelse).");
+  EXPECT_EQ(after.back(), "cratchit glömde utkast #1: Telia faktura (händelse).");
   auto const books = cratchit::books::read_books(project->folder);
   ASSERT_TRUE(books) << books.error();
   EXPECT_EQ(books->years.front().drafts.size(), 2u);
@@ -2006,7 +2009,7 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
                                                                        "2025/03/05;-10,00;AVGIFTER;490,00\n"
                                                                        "2025/03/01;500,00;Kund;500,00\n";
   Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
-  // #1 Kund betalar (in A1 already), #2 Bankavgift (the event) and #3 AVGIFTER (its payment);
+  // #3 Kund betalar (in A1 already), #2 Bankavgift (the event) and #1 AVGIFTER (its payment);
   // the entry Kund is in A1, so it makes no draft
   ASSERT_TRUE(navigator.press(U'3'));
   auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
@@ -2027,9 +2030,9 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   EXPECT_EQ(navigator.current().view(),
             (View{"Möjliga par i 2025 (samma belopp, högst 4 dagar emellan):",
                   "  1  utkast   #2            2025-03-04         10.00  Bankavgift (händelse)",
-                  "              #3            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
+                  "              #1            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
                   "              1 dag emellan",
-                  "  2  bokfört  #1            2025-03-02        500.00  Kund betalar (händelse)",
+                  "  2  bokfört  #3            2025-03-02        500.00  Kund betalar (händelse)",
                   "              A1            2025-03-01        500.00  Kundinbetalning",
                   "              1 dag emellan"}));
   auto refused = navigator.current().on_input(U"3");
@@ -2053,10 +2056,10 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   EXPECT_EQ(navigator.current().name(), "Samma?");
   EXPECT_EQ(navigator.current().view(),
             (View{"Möjliga par i 2025 (samma belopp, högst 4 dagar emellan):",
-                  "  1  bokfört  #1            2025-03-02        500.00  Kund betalar (händelse)",
+                  "  1  bokfört  #2            2025-03-02        500.00  Kund betalar (händelse)",
                   "              A1            2025-03-01        500.00  Kundinbetalning",
                   "              1 dag emellan",
-                  "cratchit slog ihop #2 och #3 till #2: Bankavgift : AVGIFTER (samma)."}));
+                  "cratchit slog ihop #2 och #1 till #1: Bankavgift : AVGIFTER (samma)."}));
   // A draft already booked: 9 and 9 again forget it
   accepted = navigator.current().on_input(U"1");
   ASSERT_TRUE(accepted) << accepted.error();
@@ -2072,15 +2075,15 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   EXPECT_EQ(navigator.current().name(), "Samma?");
   EXPECT_EQ(navigator.current().view(),
             (View{"Inga möjliga par i 2025 (samma belopp, högst 4 dagar emellan).",
-                  "cratchit slog ihop #2 och #3 till #2: Bankavgift : AVGIFTER (samma).",
-                  "cratchit glömde utkast #1, redan bokfört som A1: Kund betalar (händelse)."}));
+                  "cratchit slog ihop #2 och #1 till #1: Bankavgift : AVGIFTER (samma).",
+                  "cratchit glömde utkast #2, redan bokfört som A1: Kund betalar (händelse)."}));
   // Utkast tells what was done
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().view(),
             (View{"Utkast 2025: utkast 1–1 av 1",
                   "  #1            2025-03-04         10.00  Bankavgift : AVGIFTER (samma)",
-                  "cratchit slog ihop #2 och #3 till #2: Bankavgift : AVGIFTER (samma).",
-                  "cratchit glömde utkast #1, redan bokfört som A1: Kund betalar (händelse)."}));
+                  "cratchit slog ihop #2 och #1 till #1: Bankavgift : AVGIFTER (samma).",
+                  "cratchit glömde utkast #2, redan bokfört som A1: Kund betalar (händelse)."}));
   // The one draft is made of the same amount: 9 is Inte samma, and splits it at once
   auto opened = navigator.current().on_input(U"#1");
   ASSERT_TRUE(opened) << opened.error();
@@ -2091,8 +2094,8 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(),
             (View{"Utkast 2025: utkast 1–2 av 2",
-                  "  #2            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
-                  "  #1            2025-03-04         10.00  Bankavgift (händelse)",
+                  "  #1            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
+                  "  #2            2025-03-04         10.00  Bankavgift (händelse)",
                   "cratchit delade #1 i 2 utkast."}));
   // Each is lone again: 9 is Glöm
   opened = navigator.current().on_input(U"#2");
@@ -2121,12 +2124,12 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   ASSERT_TRUE(navigator.current().on_input(U"Telia 1118,00 2025-10-22"));
   ASSERT_TRUE(navigator.current().on_input(U"Loopia 311,25 2025-03-05"));
   ASSERT_TRUE(navigator.back());
-  // The oldest first, as its view shows it
+  // The oldest first, as its view shows it: the highest id, counting down
   ASSERT_TRUE(navigator.press(U'2'));
-  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
+  EXPECT_EQ(navigator.current().name(), "Fullborda #2");
   auto const first = navigator.current().view();
   ASSERT_FALSE(first.empty());
-  EXPECT_EQ(first.front(), "Utkast #1 av 2 i 2025 (händelse)");
+  EXPECT_EQ(first.front(), "Utkast #2 av 2 i 2025 (händelse)");
   EXPECT_NE(std::ranges::find(first, "  Rubrik:         Loopia"), first.end());
   // The options of the draft's view, and < and >
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"},
@@ -2137,8 +2140,8 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
                                                         {U'>', "Nästa"}}));
   EXPECT_FALSE(navigator.press(U'<')); // the first: nothing
   ASSERT_TRUE(navigator.press(U'>'));
-  EXPECT_EQ(navigator.current().name(), "Fullborda #2");
-  EXPECT_EQ(navigator.current().view().front(), "Utkast #2 av 2 i 2025 (händelse)");
+  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
+  EXPECT_EQ(navigator.current().view().front(), "Utkast #1 av 2 i 2025 (händelse)");
   EXPECT_FALSE(navigator.press(U'>')); // the last: nothing
   // As the prompt loop does: enter the next state, else go back where the state says
   auto const follow = [&](auto& result) {
@@ -2196,18 +2199,18 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   ASSERT_TRUE(accepted) << accepted.error();
   follow(accepted);
   view = navigator.current().view();
-  EXPECT_EQ(view.front(), "Utkast #2 i 2025 (klart)");
+  EXPECT_EQ(view.front(), "Utkast #1 i 2025 (klart)");
   EXPECT_NE(std::ranges::find(view, "Konteringarna balanserar."), view.end());
   EXPECT_EQ(view.back(), "Utkastet är klart att bokföra: tryck - och sedan 2.");
   // 9 removes the last posting typed
   ASSERT_TRUE(navigator.press(U'9'));
-  EXPECT_EQ(navigator.current().view().front(), "Utkast #2 i 2025 (samma)");
+  EXPECT_EQ(navigator.current().view().front(), "Utkast #1 i 2025 (samma)");
   accepted = navigator.current().on_input(U"6212 1118");
   ASSERT_TRUE(accepted) << accepted.error();
   follow(accepted);
   // Back in Fullborda: read again, at the same draft
   ASSERT_TRUE(navigator.back());
-  EXPECT_EQ(navigator.current().name(), "Fullborda #2");
+  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
   // Händelse (0 here, not in Kontera): the heading changed for itself, typed in
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Händelse");
@@ -2218,7 +2221,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   follow(accepted);
   EXPECT_EQ(navigator.current().name(), "Händelse");
   ASSERT_TRUE(navigator.back());
-  EXPECT_EQ(navigator.current().name(), "Fullborda #2");
+  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
   view = navigator.current().view();
   EXPECT_NE(std::ranges::find(view, "  Rubrik:         Telia oktober"), view.end());
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"},
@@ -2238,7 +2241,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   EXPECT_EQ(navigator.current().name(), "Bokför");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::book);
   view = navigator.current().view();
-  EXPECT_EQ(view.front(), "Bokför utkast #2 som verifikation i 2025:");
+  EXPECT_EQ(view.front(), "Bokför utkast #1 som verifikation i 2025:");
   EXPECT_NE(std::ranges::find(view, "  Text:           Telia oktober"), view.end());
   EXPECT_NE(std::ranges::find(view, "  D  Leverantörsfakturor (nästa D1)"), view.end());
   auto refused_series = navigator.current().on_input(U"Q");
@@ -2249,13 +2252,13 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   follow(accepted);
   // Back in Fullborda: the draft is booked, the one before is at the place
   EXPECT_EQ(navigator.current().name(), "Fullborda #1");
-  EXPECT_EQ(accepted->reply, "cratchit bokförde #2 som D1: Telia oktober.");
+  EXPECT_EQ(accepted->reply, "cratchit bokförde #1 som D1: Telia oktober.");
   view = navigator.current().view();
   EXPECT_EQ(std::ranges::find(view, accepted->reply), view.end()); // not in the view
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Utkast");
   view = navigator.current().view();
-  EXPECT_EQ(view.back(), "cratchit bokförde #2 som D1: Telia oktober.");
+  EXPECT_EQ(view.back(), "cratchit bokförde #1 som D1: Telia oktober.");
   EXPECT_EQ(view[0], "Utkast 2025: utkast 1–1 av 1");
   // Gör bokfört till utkast: the last voucher of each series, chosen by its series
   ASSERT_TRUE(navigator.press(U'5'));
@@ -2275,7 +2278,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   view = navigator.current().view();
   EXPECT_EQ(view[0], "Utkast 2025: utkast 1–2 av 2");
   EXPECT_TRUE(view[1].ends_with("Telia oktober (klart)")) << view[1];
-  EXPECT_EQ(view.back(), "cratchit gjorde D1 till utkast #2: Telia oktober.");
+  EXPECT_EQ(view.back(), "cratchit gjorde D1 till utkast #1: Telia oktober.");
 }
 
 TEST_F(RootMenuTest, AReadyDraftIsBookedFromItsView) {
@@ -2407,14 +2410,14 @@ TEST_F(RootMenuTest, ATemplateCompletesAnAccountEventInItsSeries) {
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.enter(std::move(accepted->next));
   ASSERT_TRUE(navigator.press(U'J'));
-  // Fullborda #1, the fee: 3 Använd mall lists E1 (1930 credit, as the fee)
+  // Fullborda #2, the fee (the oldest): 3 Använd mall lists E1 (1930 credit, as the fee)
   ASSERT_TRUE(navigator.press(U'2'));
-  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
+  EXPECT_EQ(navigator.current().name(), "Fullborda #2");
   ASSERT_TRUE(navigator.press(U'3'));
   EXPECT_EQ(navigator.current().name(), "Mall");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::use_template);
   EXPECT_EQ(navigator.current().view(),
-            (View{"Utkastet:", "  #1            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
+            (View{"Utkastet:", "  #2            2025-03-05        -10.00  1930  AVGIFTER (kontohändelse)",
                   "Tidigare verifikationer med samma konton och samma tecken som utkastets konteringar:",
                   "  1  E1            2025-02-01          2.00  Bankavgift",
                   "       1930  Bank                  -2.00",
@@ -2426,27 +2429,75 @@ TEST_F(RootMenuTest, ATemplateCompletesAnAccountEventInItsSeries) {
   accepted = navigator.current().on_input(U"1");
   ASSERT_TRUE(accepted) << accepted.error();
   EXPECT_EQ(accepted->reply, "cratchit använde E1 som mall: 1 rad tillagd, serie E.");
+  // On to what is missing: the heading (the amount came with the template), from Fullborda
   navigator.follow_back_to();
-  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
+  EXPECT_EQ(navigator.current().name(), "Rubrik");
+  ASSERT_EQ(navigator.path().size(), 3u); // Utkast > Fullborda #2 > Rubrik
+  EXPECT_EQ(navigator.path()[1]->name(), "Fullborda #2");
+  // No text from the template: the heading is the account event's, typed in
+  EXPECT_EQ(navigator.current().start_input(), U"AVGIFTER");
+  // - leaves the chain at the draft, which tells what is missing
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Fullborda #2");
   auto view = navigator.current().view();
   EXPECT_NE(std::ranges::find(view, "  Serie:          E"), view.end());
   EXPECT_NE(std::ranges::find(view, "  6570  Bankkostnader         10.00"), view.end());
-  // No text from the template: the heading is the account event's, typed in
-  ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "Datum: 2025-03-05"}, {U'1', "Rubrik:"}, {U'2', "Belopp: 10.00"}, {U'3', "Serie: E"}}));
-  ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().start_input(), U"AVGIFTER");
+  EXPECT_EQ(view.back(), "  Rubrik saknas: tryck 0 och sedan 1.");
+  // The template again: nothing to add, on to the heading, then Bokför with the template's series
+  ASSERT_TRUE(navigator.press(U'3'));
+  accepted = navigator.current().on_input(U"1");
+  ASSERT_TRUE(accepted) << accepted.error();
+  EXPECT_EQ(accepted->reply, "cratchit använde E1 som mall: 0 rader tillagda, serie E.");
+  navigator.follow_back_to();
+  EXPECT_EQ(navigator.current().name(), "Rubrik");
   accepted = navigator.current().on_input(navigator.current().start_input());
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.follow_back_to();
-  ASSERT_TRUE(navigator.back());
-  // Ready: Bokför starts with the template's series
-  ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Bokför");
+  EXPECT_EQ(navigator.path()[1]->name(), "Fullborda #2");
   EXPECT_EQ(navigator.current().start_input(), U"E");
   accepted = navigator.current().on_input(navigator.current().start_input());
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.follow_back_to();
-  EXPECT_EQ(accepted->reply, "cratchit bokförde #1 som E2: AVGIFTER.");
+  EXPECT_EQ(accepted->reply, "cratchit bokförde #2 som E2: AVGIFTER.");
+  // Back in Fullborda, at the draft left: ready to go on
+  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
+}
+
+TEST_F(RootMenuTest, ATemplateLeadsOnToKonteraWhenThePostingsDoNotBalance) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 6570 \"Bankkostnader\"\r\n"
+         "#VER \"E\" \"1\" 20250201 \"Bankavgift\"\r\n{\r\n#TRANS 1930 {} -2.00\r\n#TRANS 6570 {} 2.00\r\n}\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  // An event of 20.00 with half of it paid from 1930: the template adds 6570 10.00 to balance
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.current().on_input(U"Bankavgift mars 20,00 2025-03-05"));
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'2'));
+  ASSERT_TRUE(navigator.press(U'1'));
+  auto accepted = navigator.current().on_input(U"1930 -10");
+  ASSERT_TRUE(accepted) << accepted.error();
+  ASSERT_TRUE(navigator.back());
+  ASSERT_TRUE(navigator.press(U'3'));
+  accepted = navigator.current().on_input(U"1");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.follow_back_to();
+  // Heading and amount are there, debit 10.00 is not the amount 20.00: Kontera
+  EXPECT_EQ(navigator.current().name(), "Kontera");
+  EXPECT_EQ(navigator.path()[1]->name(), "Fullborda #1");
+  accepted = navigator.current().on_input(U"1930 -10");
+  ASSERT_TRUE(accepted) << accepted.error();
+  EXPECT_FALSE(navigator.follow_back_to()); // not ready yet: Kontera stays
+  EXPECT_EQ(navigator.current().name(), "Kontera");
+  accepted = navigator.current().on_input(U"6570 10");
+  ASSERT_TRUE(accepted) << accepted.error();
+  // Ready: on to Bokför
+  navigator.follow_back_to();
+  EXPECT_EQ(navigator.current().name(), "Bokför");
+  EXPECT_EQ(navigator.current().start_input(), U"E");
 }

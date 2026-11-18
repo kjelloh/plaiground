@@ -378,11 +378,11 @@ Tryck `0` i Årsflöde:
 
 ```text
 Utkast 2026/27: utkast 1–12 av 12
-  #12           2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1 (kontohändelse)
-  #11           2026-09-10       -204.68  1920  Kortköp 260910 ANTHROPIC* CLAUDE SU | ANTHROPIC* CLAU 2656 (kontohändelse)
-  #10           2026-09-05          1.00  1630  Intäktsränta (kontohändelse)
+  #1            2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | 62600010249540 | Webhotell 12/10 - 11/1 (kontohändelse)
+  #2            2026-09-10       -204.68  1920  Kortköp 260910 ANTHROPIC* CLAUDE SU | ANTHROPIC* CLAU 2656 (kontohändelse)
+  #3            2026-09-05          1.00  1630  Intäktsränta (kontohändelse)
   …
-  #1            2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontohändelse)
+  #12           2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontohändelse)
   0 Beskriv händelser
   1 Samma?
   2 Fullborda utkast
@@ -398,18 +398,18 @@ Saknar året utkast står det `Utkast 2026/27: inga utkast.`
 
 Varje rad visar utkastets nummer, datum, belopp och text, och sist hur långt utkastet har kommit inom parentes (se tabellen i [Räkenskapsår](#räkenskapsår)). Har utkastet ingen rubrik, som ett utkast från ett kontoutdrag, visar raden kontot och konteringens text i stället. Ett utkast med stadiet `samma` visar delarnas texter, rubriken först, med ` : ` emellan och utan kontonummer, på högst 40 tecken. En del som är kortare än sin andel står kvar hel, och de längre delarna delar lika på resten och slutar med `..`. Till exempel `Anthropic Claude : Kortköp 260910 ANTH.. (samma)`, eller för en överföring `Utbetalning : Skatt | 5050-1030 SK5567.. (samma)`. I bästa fall är det redan texten för verifikationen. cratchit räknar fram den av delarna varje gång och sparar den inte; utkastets vy visar rubriken och konteringarnas fullständiga texter var för sig. Beloppet är händelsens, med tecken (se [Beskriv händelser](#beskriv-händelser)). Saknar händelsen belopp och utkastet har en enda kontering, som ett utkast från ett kontoutdrag, är det konteringens belopp med tecken: minus är ut från kontot. Har utkastet flera konteringar är det vad de flyttar, utan tecken.
 
-Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat från det äldsta. Det är inget fast id: numren ändras när ett utkast med tidigare datum tillkommer eller när ett utkast försvinner ur listan, till exempel när det bokförs.
+Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat från det nyaste: det översta i listan är `#1` och det äldsta har det högsta numret. Det är inget fast id: numren ändras när ett utkast med senare datum tillkommer eller när ett nyare utkast försvinner ur listan. Bokför du det äldsta utkastet behåller de andra sina nummer.
 
 ##### Utkastet
 
 <!-- hjälp: utkastet -->
-Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för att ändra händelsen i [Ändra händelsen](#ändra-händelsen) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. Tryck `3` för att fullborda det med en [mall](#använd-mall). `9` är *Glöm* för ett utkast utan kontohändelser och för ett ensamt utkast. Ett utkast med kontohändelser och flera delar med samma belopp har i stället *Inte samma*, som delar det direkt, och ett med kontohändelser och olika belopp har inget `9`, så att raderna från kontoutdraget finns kvar. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sedan *Konteringar*. Är utkastet inte klart står sist, under `Innan utkastet kan bokföras:`, vad som saknas och var du ändrar det, till exempel `Rubrik saknas: tryck 0 och sedan 1.` Det kan också vara belopp, konteringar, att konteringarna inte balanserar, eller att debet inte är beloppet. Tryck `0` för att ändra händelsen i [Ändra händelsen](#ändra-händelsen) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. Tryck `3` för att fullborda det med en [mall](#använd-mall). `9` är *Glöm* för ett utkast utan kontohändelser och för ett ensamt utkast. Ett utkast med kontohändelser och flera delar med samma belopp har i stället *Inte samma*, som delar det direkt, och ett med kontohändelser och olika belopp har inget `9`, så att raderna från kontoutdraget finns kvar. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
-Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
+Skriv utkastets nummer i Utkast, till exempel `#12`, och tryck Enter:
 
 ```text
-Utkast #1 i 2026/27 (kontohändelse)
+Utkast #12 i 2026/27 (kontohändelse)
   Noterad:        2026-11-17
 Händelse:
   Datum:          2026-07-03
@@ -420,7 +420,7 @@ Konteringar:
   0 Händelse
   1 Konteringar
   9 Glöm
-Cratchit > … > Utkast > #1> 
+Cratchit > … > Utkast > #12> 
 ```
 
 Skriver du något annat än `#` och ett nummer säger cratchit `Skriv utkastets id som #13.`, och finns inget utkast med numret `Det finns inget utkast #20 i 2026/27.` Raden står kvar så att du kan rätta den.
@@ -444,7 +444,7 @@ Utkastet tas bort ur bokföringen och går inte att få tillbaka.
 Cratchit > … > Utkast > #14 > Glöm> 
 ```
 
-Tryck `9` igen för att glömma utkastet. cratchit går då tillbaka till Utkast och skriver under listan till exempel `cratchit glömde utkast #14: Loopia webhotell (händelse).` De utkast som kom efter det glömda får nya nummer. Loggen får det glömda utkastet med alla dess konteringar.
+Tryck `9` igen för att glömma utkastet. cratchit går då tillbaka till Utkast och skriver under listan till exempel `cratchit glömde utkast #14: Loopia webhotell (händelse).` De utkast som är äldre än det glömda får nya nummer. Loggen får det glömda utkastet med alla dess konteringar.
 
 Glömmer du ett utkast från ett kontoutdrag och läser kontoutdraget igen blir raden ett nytt utkast, eftersom den varken är bokförd eller ett utkast längre.
 
@@ -475,13 +475,13 @@ Ett sådant utkast, med kontohändelser, glöms inte direkt; dela det först och
 ##### Fullborda utkast
 
 <!-- hjälp: fullborda -->
-Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Valen är desamma som när du öppnar ett utkast: `0` ändrar händelsen, `1` konteringarna i [Kontera](#kontera), `2` [bokför](#bokför) utkastet när det är klart, `3` [använder en mall](#använd-mall), och `9` glömmer eller delar det. Under utkastet står vad du har gjort här. Tryck `-` för att gå tillbaka till Utkast.
+Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Det äldsta har det högsta numret, så numret räknar ner när du går framåt. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Valen är desamma som när du öppnar ett utkast: `0` ändrar händelsen, `1` konteringarna i [Kontera](#kontera), `2` [bokför](#bokför) utkastet när det är klart, `3` [använder en mall](#använd-mall) och leder dig sedan till det som saknas och till Bokför, och `9` glömmer eller delar det. Som i utkastets vy står sist vad som saknas för att bokföra. Vyn visar bara utkastet och dess val; vad du har gjort står i Utkast när du går tillbaka dit. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Att fullborda ett utkast är att göra det klart att bokföra: välja en mall, fylla i det som saknas och få konteringarna att balansera. Att bokföra är sista steget. Tryck `2` i Utkast:
 
 ```text
-Utkast #1 av 18 i 2026/27 (kontohändelse)
+Utkast #18 av 18 i 2026/27 (kontohändelse)
   Noterad:        2026-11-17
 Händelse:
   Datum:          2026-07-03
@@ -495,7 +495,7 @@ Konteringar:
   9 Glöm
   < Föregående
   > Nästa
-Cratchit > … > Utkast > Fullborda #1>
+Cratchit > … > Utkast > Fullborda #18>
 ```
 
 Verifikationer bokförs i den ordning händelserna inträffade, så cratchit börjar med det äldsta utkastet. Prompten har utkastets nummer, och överst står hur många utkast det finns. Valen är desamma som i [utkastets vy](#utkastet), så att ett utkast alltid går att ändra var du än ser det, och att bokföra när det är klart. `2 Bokför` finns bara för ett klart utkast och leder till [Bokför](#bokför). Glömmer eller delar du utkastet står du kvar, och cratchit läser utkasten igen. Saknar året utkast står det `Inga utkast att fullborda i 2026/27.`
@@ -509,14 +509,14 @@ Skriv en kontering, konto och belopp, och tryck Enter, till exempel `6570 3,70`.
 Här bygger du utkastet tills det balanserar, och här ändrar du det. Du kommer hit med `1 Konteringar` i Fullborda eller i utkastets vy. Till exempel bankavgiften från kontoutdraget:
 
 ```text
-Utkast #1 i 2026/27 (kontohändelse)
+Utkast #18 i 2026/27 (kontohändelse)
   …
 Konteringar:
   1920  PlusGiro        -3.70  AVGIFTER NORDEA
 
 Kvar: debet 3.70.
 Rubrik och belopp ändrar du i Händelse: tryck - och sedan 0.
-Cratchit > … > Utkast > Fullborda #1 > Kontera: 6570
+Cratchit > … > Utkast > Fullborda #18 > Kontera: 6570
 ```
 
 Varje kontering läggs till direkt, och du står kvar för nästa. Raderna under utkastet säger var konteringarna står:
@@ -559,12 +559,12 @@ Utkastets händelse: datum, rubrik och belopp, som för en verifikation, och ser
 Ett utkast behöver en rubrik och ett belopp för att bli klart. Tryck `0` i utkastets vy eller i Fullborda. Kontera har inget val för händelsen, eftersom där arbetar du bara med konteringarna:
 
 ```text
-Händelsen i #1
+Händelsen i #18
   0 Datum: 2026-07-03
   1 Rubrik:
   2 Belopp:
   3 Serie:
-Cratchit > … > Utkast > Fullborda #1 > Händelse>
+Cratchit > … > Utkast > Fullborda #18 > Händelse>
 ```
 
 Det utkastet saknar står tomt. Varje val visar en rad som är ifylld med det utkastet redan har:
@@ -579,20 +579,20 @@ Det utkastet saknar står tomt. Varje val visar en rad som är ifylld med det ut
 ###### Använd mall
 
 <!-- hjälp: anvand-mall -->
-Tidigare verifikationer som liknar utkastet, de bästa först, var och en med sina konteringar. Skriv mallens nummer och tryck Enter för att använda den: utkastet får mallens konteringar, skalade till utkastets belopp, och mallens serie. Tryck `-` för att gå tillbaka utan att använda någon.
+Tidigare verifikationer som liknar utkastet, de bästa först, var och en med sina konteringar. Skriv mallens nummer och tryck Enter för att använda den: utkastet får mallens konteringar, skalade till utkastets belopp, och mallens serie. Sedan leder cratchit dig till det som saknas, en sak i taget, och sist till Bokför. Tryck `-` för att gå tillbaka utan att använda någon.
 <!-- /hjälp -->
 
 En mall är en tidigare verifikation som du utgår från. Tryck `3` i utkastets vy eller i Fullborda:
 
 ```text
 Utkastet:
-  #1            2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontohändelse)
+  #18           2026-07-03         -3.70  1920  AVGIFTER NORDEA (kontohändelse)
 Tidigare verifikationer med samma konton och samma tecken som utkastets konteringar:
   1  A2            2026-05-06          1.85  AVGIFTER NORDEA
        1920  PlusGiro        -1.85
        6570  Bankkostnader    1.85
 Skriv mallens nummer och tryck Enter.
-Cratchit > … > Fullborda #1 > Mall>
+Cratchit > … > Fullborda #18 > Mall>
 ```
 
 Vilka verifikationer som visas:
@@ -609,9 +609,27 @@ Skriv numret och tryck Enter. Mallen syns i sin helhet innan du väljer, så cra
 * **beloppet**: utkastets eget, eller, när händelsen saknar belopp, vad delarna har för belopp;
 * **mallens serie**, som [Bokför](#bokför) börjar med. Du ändrar den i [Händelse](#ändra-händelsen).
 
-Rubriken tas inte från mallen; den gäller en annan händelse. Saknar utkastet rubrik skriver du den i Händelse, där kontohändelsens text står ifylld.
+Rubriken tas inte från mallen; den gäller en annan händelse.
 
-Du kommer tillbaka dit du var, och cratchit säger till exempel `cratchit använde A2 som mall: 1 rad tillagd, serie A.` Det mallen lade till tar du bort med `9 Ta bort sista` i [Kontera](#kontera).
+cratchit säger till exempel `cratchit använde A2 som mall: 1 rad tillagd, serie A.` och leder dig sedan vidare till det som saknas för att bokföra, en sak i taget och i den här ordningen:
+
+1. **Rubrik**, om utkastet saknar en. Delarnas texter, eller kontohändelsens text, står ifyllda; skriv om och tryck Enter.
+2. **Belopp**, om utkastet saknar ett. Det konteringarna flyttar står ifyllt.
+3. **[Kontera](#kontera)**, om konteringarna inte balanserar eller debet inte är beloppet. Så fort utkastet är klart går du vidare.
+4. **[Bokför](#bokför)**, med mallens serie ifylld. Enter bokför.
+
+Det som redan finns hoppar cratchit över, så ett utkast som blir klart av mallen går direkt till Bokför:
+
+```text
+Cratchit > … > Fullborda #18 > Mall> 1
+cratchit använde A2 som mall: 1 rad tillagd, serie A.
+Skriv rubriken och tryck Enter.
+Cratchit > … > Fullborda #18 > Rubrik: AVGIFTER NORDEA
+…
+Cratchit > … > Fullborda #18 > Bokför: A
+```
+
+Varje steg sparas när du trycker Enter. Tryck `-` i vilket steg som helst för att lämna kedjan; du är då tillbaka vid utkastet, som visar vad som återstår (se [Utkastet](#utkastet)). Efter Bokför är du i Fullborda vid nästa utkast, eller i Utkast om du började i utkastets vy. Det mallen lade till tar du bort med `9 Ta bort sista` i [Kontera](#kontera).
 
 ###### Bokför
 
@@ -622,7 +640,7 @@ Verifikationen som utkastet blir, i sin helhet, och bokföringens serier med nä
 Tryck `2 Bokför` i Fullborda eller i utkastets vy för ett utkast som är klart:
 
 ```text
-Bokför utkast #1 som verifikation i 2026/27:
+Bokför utkast #18 som verifikation i 2026/27:
   Datum:          2026-07-03
   Text:           AVGIFTER NORDEA
   Belopp:         3.70
@@ -635,7 +653,7 @@ Serier:
   B  Kundfakturor (nästa B1)
   …
 Skriv serien och tryck Enter för att bokföra. Verifikationen går inte att ändra efteråt.
-Cratchit > … > Fullborda #1 > Bokför>
+Cratchit > … > Fullborda #18 > Bokför>
 ```
 
 Du väljer alltid serien själv; cratchit gissar inte. Har utkastet en serie, från en [mall](#använd-mall) eller från Händelse, står den ifylld, och du trycker Enter eller skriver en annan. Stora och små bokstäver räknas lika. Numret är det högsta i serien under räkenskapsåret plus ett, så numreringen börjar om varje år. Serien och Enter är bekräftelsen: verifikationen står där i sin helhet innan du bokför, och cratchit frågar inte en gång till.
@@ -646,7 +664,7 @@ Verifikationen får
 * **konteringarna** med sina datum och texter, men inte vilken kontoutdragsrad de kom från;
 * **registreringsdagen** i dag, och ingen signatur än.
 
-cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. I terminalen skriver cratchit en gång till exempel `cratchit bokförde #1 som A11: AVGIFTER NORDEA.` Bokförde du från Fullborda är du tillbaka där på samma plats, där nu nästa utkast står. Bokförde du från utkastets vy är du tillbaka i Utkast, eftersom utkastet inte finns längre. Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
+cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. I terminalen skriver cratchit en gång till exempel `cratchit bokförde #18 som A11: AVGIFTER NORDEA.` Bokförde du från Fullborda är du tillbaka där på samma plats, där nu nästa utkast står, här `#17`. Bokförde du från utkastets vy är du tillbaka i Utkast, eftersom utkastet inte finns längre. Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
 
 Den sista verifikationen i en serie kan du göra till ett utkast igen, se [Gör till utkast](#gör-till-utkast). Ett stängt räkenskapsår går inte att bokföra i, och dess verifikationer går inte att göra till utkast; cratchit säger då att året är stängt.
 
@@ -792,10 +810,10 @@ Samma händelse kan bli två utkast: kvittot du beskrev och kortköpet på konto
 
 ```text
 Möjliga par i 2026/27 (samma belopp, högst 4 dagar emellan):
-  1  utkast   #12           2026-09-26       1308.75  Loopia webhotell (händelse)
-              #13           2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontohändelse)
+  1  utkast   #13           2026-09-26       1308.75  Loopia webhotell (händelse)
+              #12           2026-09-28      -1308.75  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontohändelse)
               2 dagar emellan, delar orden: loopia, webhotell
-  2  bokfört  #4            2026-09-01       -311.25  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontohändelse)
+  2  bokfört  #22           2026-09-01       -311.25  1920  5343-2795 | LOOPIA AB (WEBSUPPORT) | … (kontohändelse)
               D6            2026-08-31        311.25  Loopia Faktura
               1 dag emellan, delar orden: loopia
   < Föregående sida
@@ -823,12 +841,12 @@ Paret i sin helhet och vad som talar för det. Två utkast: tryck `0`, *Samma!*,
 
 ```text
 Samma händelse? 2 dagar emellan, delar orden: loopia, webhotell.
-Utkast #12 (händelse), noterat 2026-11-17
+Utkast #13 (händelse), noterat 2026-11-17
   Datum:          2026-09-26
   Rubrik:         Loopia webhotell
   Belopp:         1308.75
   Konteringar:    inga
-Utkast #13 (kontohändelse), noterat 2026-11-17
+Utkast #12 (kontohändelse), noterat 2026-11-17
   Datum:          2026-09-28
   Rubrik:         
   Belopp:         
@@ -851,7 +869,7 @@ Utkastet går att dela igen med `9`, *Inte samma*, när du öppnar det från Utk
 
 För ett utkast och en verifikation visar cratchit utkastets konteringar som inte finns i verifikationen. De glöms med utkastet. `9` leder till [Glöm](#glöm), som för ett utkast du öppnat. Verifikationen ändras inte.
 
-Efteråt är du tillbaka i Samma?. cratchit söker paren igen, och under listan står vad du gjorde, till exempel `cratchit slog ihop #12 och #13 till #12: Loopia webhotell : 5343-2795 | LOOPIA.. (samma).` Numren kan ha ändrats, eftersom ett utkast har försvunnit. Utkast säger samma sak när du går tillbaka dit.
+Efteråt är du tillbaka i Samma?. cratchit söker paren igen, och under listan står vad du gjorde, till exempel `cratchit slog ihop #13 och #12 till #12: Loopia webhotell : 5343-2795 | LOOPIA.. (samma).` Numren kan ha ändrats, eftersom ett utkast har försvunnit. Utkast säger samma sak när du går tillbaka dit.
 
 ##### Läs pdf-underlag
 
