@@ -2160,6 +2160,26 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Fullborda #2");
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Bokför"}, {U'<', "Föregående"}, {U'>', "Nästa"}}));
+  // Bokför: the voucher in full, the series to type
   ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().name(), "Inte än (Bokför)");
+  EXPECT_EQ(navigator.current().name(), "Bokför");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::book);
+  view = navigator.current().view();
+  EXPECT_EQ(view.front(), "Bokför utkast #2 som verifikation i 2025:");
+  EXPECT_NE(std::ranges::find(view, "  Text:           Telia oktober"), view.end());
+  EXPECT_NE(std::ranges::find(view, "  D  Leverantörsfakturor (nästa D1)"), view.end());
+  auto refused_series = navigator.current().on_input(U"Q");
+  ASSERT_FALSE(refused_series);
+  EXPECT_EQ(refused_series.error(), "Q är ingen serie i bokföringen.");
+  accepted = navigator.current().on_input(U"d");
+  ASSERT_TRUE(accepted) << accepted.error();
+  follow(accepted);
+  // Back in Fullborda: the draft is booked, the one before is at the place
+  EXPECT_EQ(navigator.current().name(), "Fullborda #1");
+  EXPECT_EQ(navigator.current().view().back(), "cratchit bokförde #2 som D1: Telia oktober.");
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  view = navigator.current().view();
+  EXPECT_EQ(view.back(), "cratchit bokförde #2 som D1: Telia oktober.");
+  EXPECT_EQ(view[0], "Utkast 2025: utkast 1–1 av 1");
 }

@@ -58,6 +58,24 @@ std::expected<std::size_t, std::string> replace_draft(std::filesystem::path cons
                                                       std::size_t index, books::Draft const& expected,
                                                       books::Draft changed);
 
+// The number the next voucher of series in year gets: the highest number of
+// the series in the year plus one, 1 for none (numbering starts again each year)
+std::string next_number(books::FiscalYear const& year, std::string_view series);
+
+// Books the draft at index of the fiscal year starting on year_start as a
+// voucher of series (one of the books' series), numbered next_number,
+// registered on today, without signature, and writes the books: the voucher
+// is added and the draft leaves. The voucher has the event's date and heading
+// and its amount without sign, and the draft's postings with their dates and
+// texts (not the statement entries they came from). Only for a draft that is
+// ready, and only when the draft there is still expected (the one the user
+// saw). Gives the voucher. Error text when the books cannot be read or written,
+// the year is not in them, the draft is not there any more or not ready, or
+// the series is not one of the books'. Does not log.
+std::expected<books::Voucher, std::string> book_draft(std::filesystem::path const& project_folder, Date year_start,
+                                                      std::size_t index, books::Draft const& expected,
+                                                      std::string_view series, Date today);
+
 // An amount of a posting as typed: an optional sign (+ or -), digits, and a
 // decimal comma or point with at most two decimals, e.g. -3,70 or 1118. Spaces
 // (also no-break spaces) inside it do not count. Nothing for anything else.

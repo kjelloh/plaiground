@@ -1280,6 +1280,119 @@ private:
   std::string error_;
 };
 
+// Bokför: the voucher a ready draft is to become (book_draft), in full: date,
+// text, amount, the day it is registered and the postings, then the books'
+// series, each with its name and the number its next voucher gets. The user
+// types a series and Enter, which books it (the voucher shown in full is the
+// confirmation; beslut 2026-11-18): reported through report, then back to
+// Fullborda (back_to). A series that is not the books' is refused.
+class BookState : public State {
+public:
+  BookState(Project project, FiscalYear year, std::size_t index, books::Draft draft, State const* complete,
+            std::function<void(std::string)> report)
+      : project_(std::move(project)), year_(std::move(year)), index_(index), draft_(std::move(draft)),
+        complete_(complete), report_(std::move(report)) {
+    read();
+  }
+  std::string name() const override { return "Bokför"; }
+  View view() const override {
+    if (!error_.empty()) return {std::format("cratchit kunde inte läsa bokföringen: {}", error_)};
+    auto const row = [](std::string_view label, std::string const& value) {
+      return std::format("  {:<16}{}", std::string(label) + ":", value);
+    };
+    auto const amount = draft_.event.amount < 0 ? -draft_.event.amount : draft_.event.amount;
+    View lines{std::format("Bokför utkast {} som verifikation i {}:", draft_id(index_), label_of(year_)),
+               row("Datum", format_iso_date(draft_.event.date)), row("Text", draft_.event.heading),
+               row("Belopp", format_amount(amount)), row("Registreras", format_iso_date(today_date())),
+               "Konteringar:"};
+    std::size_t account_width = 0;
+    std::size_t name_width = 0;
+    for (auto const& posting : draft_.postings) {
+      account_width = std::max(account_width, width_of(posting.account));
+      name_width = std::max(name_width, width_of(account_name(accounts_, posting.account)));
+    }
+    auto const padded = [](std::string text, std::size_t width) {
+      for (auto shown = width_of(text); shown < width; ++shown) text += ' ';
+      return text;
+    };
+    for (auto const& posting : draft_.postings) {
+      if (posting.kind == books::Posting::Kind::removed) continue;
+      auto line = std::format("  {}  {}  {:>12}", padded(posting.account, account_width),
+                              padded(account_name(accounts_, posting.account), name_width),
+                              format_amount(posting.amount));
+      if (!posting.text.empty()) line += "  " + posting.text;
+      if (posting.date && *posting.date != draft_.event.date) line += "  " + format_iso_date(*posting.date);
+      lines.push_back(std::move(line));
+    }
+    lines.push_back("Serier:");
+    for (auto const& series : series_) lines.push_back("  " + series);
+    lines.push_back("Skriv serien och tryck Enter för att bokföra. Verifikationen går inte att ändra efteråt.");
+    return lines;
+  }
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  InputResult on_input(std::u32string_view text) override {
+    auto series = utf8_of(text);
+    while (!series.empty() && series.back() == ' ') series.pop_back();
+    while (!series.empty() && series.front() == ' ') series.erase(0, 1);
+    for (auto& c : series) {
+      if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+    }
+    if (series.empty()) return std::unexpected(std::string("Skriv serien, till exempel A."));
+    auto const year_start = parse_iso_date(year_.start);
+    if (!year_start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year_.start));
+    auto const voucher = book_draft(project_.folder, *year_start, index_, draft_, series, today_date());
+    if (!voucher) {
+      LOG_BUSINESS("Kunde inte bokföra utkast {} i {} ({}): {}", draft_id(index_), label_of(year_),
+                   project_.folder.string(), voucher.error());
+      return std::unexpected(voucher.error());
+    }
+    auto const id = books::voucher_id(voucher->series, voucher->number);
+    LOG_BUSINESS("Utkast {} bokfört i {} ({}) som {}: {} {} \"{}\", registrerad {}", draft_id(index_), label_of(year_),
+                 project_.folder.string(), id, format_iso_date(voucher->event.date),
+                 format_amount(voucher->event.amount), voucher->event.heading,
+                 format_iso_date(voucher->registered.value_or(today_date())));
+    for (auto const& posting : voucher->postings) {
+      LOG_BUSINESS("  kontering: {} {} {} \"{}\"", posting.account, format_amount(posting.amount),
+                   posting.date ? format_iso_date(*posting.date) : std::string(), posting.text);
+    }
+    report_(std::format("cratchit bokförde {} som {}: {}.", draft_id(index_), id, voucher->event.heading));
+    done_ = true;
+    return Accepted(); // back to Fullborda
+  }
+  State const* back_to() const override { return done_ ? complete_ : nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::book); }
+
+private:
+  void read() {
+    auto const books = books::read_books(project_.folder);
+    if (!books) {
+      error_ = books.error();
+      return;
+    }
+    accounts_ = books->accounts;
+    auto const start = parse_iso_date(year_.start);
+    auto const* year = start ? books->year_starting(*start) : nullptr;
+    for (auto const& series : books->series) {
+      auto const next = year != nullptr ? next_number(*year, series.series) : std::string("1");
+      series_.push_back(series.name.empty() ? std::format("{}  (nästa {}{})", series.series, series.series, next)
+                                            : std::format("{}  {} (nästa {}{})", series.series, series.name,
+                                                          series.series, next));
+    }
+  }
+
+  Project project_;
+  FiscalYear year_;
+  std::size_t index_;
+  books::Draft draft_;
+  State const* complete_;
+  std::function<void(std::string)> report_;
+  std::vector<books::Account> accounts_;
+  std::vector<std::string> series_;
+  std::string error_;
+  bool done_ = false;
+};
+
 // Fullborda #<n>: the drafts one at a time, from the oldest (date order), each as
 // its view shows it, with "#n av N" in the heading. < and > go to the one before
 // and after (in place; at either end they do nothing). 0 Fullborda (Bokför for a
@@ -1288,15 +1401,24 @@ private:
 // comes back, at the same place.
 class CompleteState : public State {
 public:
-  CompleteState(Project project, FiscalYear year) : project_(std::move(project)), year_(std::move(year)) { read(); }
+  CompleteState(Project project, FiscalYear year, std::function<void(std::string)> report)
+      : project_(std::move(project)), year_(std::move(year)), report_(std::move(report)) {
+    read();
+  }
   std::string name() const override {
     return drafts_.empty() ? std::string("Fullborda") : "Fullborda " + draft_id(index_);
   }
   View view() const override {
     if (!error_.empty()) return {std::format("cratchit kunde inte läsa bokföringen: {}", error_)};
-    if (drafts_.empty()) return {std::format("Inga utkast att fullborda i {}.", label_of(year_))};
-    return draft_view_lines(drafts_[index_], std::format("{} av {}", draft_id(index_), drafts_.size()),
-                            label_of(year_), accounts_);
+    View lines;
+    if (drafts_.empty()) {
+      lines.push_back(std::format("Inga utkast att fullborda i {}.", label_of(year_)));
+    } else {
+      lines = draft_view_lines(drafts_[index_], std::format("{} av {}", draft_id(index_), drafts_.size()),
+                               label_of(year_), accounts_);
+    }
+    lines.insert(lines.end(), done_.begin(), done_.end());
+    return lines;
   }
   OptionsList options() const override {
     if (drafts_.empty()) return {};
@@ -1317,7 +1439,10 @@ public:
   OnKeyResult on_key(CodePoint key) override {
     if (key != U'0' || drafts_.empty()) return nullptr;
     if (books::stage(drafts_[index_]) == books::DraftStage::ready) {
-      return make_design_insufficiency_state("Bokför", "att bokföra ett utkast som är klart");
+      return std::make_unique<BookState>(project_, year_, index_, drafts_[index_], this, [this](std::string line) {
+        done_.push_back(line);
+        report_(std::move(line));
+      });
     }
     return std::make_unique<PostingState>(
         std::make_shared<Completing>(Completing{project_, year_, index_, drafts_[index_], accounts_}));
@@ -1343,10 +1468,12 @@ private:
 
   Project project_;
   FiscalYear year_;
+  std::function<void(std::string)> report_;
   std::vector<books::Draft> drafts_;
   std::vector<books::Account> accounts_;
   std::size_t index_ = 0;
   std::string error_;
+  View done_; // what was booked here, until the user leaves
 };
 
 class DraftState : public State {
@@ -1390,7 +1517,8 @@ public:
     }
     if (key == U'2') {
       report_.clear();
-      return std::make_unique<CompleteState>(project_, year_);
+      return std::make_unique<CompleteState>(project_, year_,
+                                             [this](std::string line) { report_.push_back(std::move(line)); });
     }
     if (key == U'4') {
       report_.clear();

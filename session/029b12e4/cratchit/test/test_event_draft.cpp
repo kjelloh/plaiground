@@ -215,3 +215,61 @@ TEST(ReplaceDraft, ChangesTheDraftSeenAndFollowsItsDate) {
   EXPECT_EQ(books->years.front().drafts[1], changed);
   fs::remove_all(folder);
 }
+
+TEST(BookDraft, AReadyDraftBecomesTheNextVoucherOfItsSeries) {
+  auto const folder = fs::temp_directory_path() / "cratchit_book_draft_test";
+  fs::remove_all(folder);
+  fs::create_directories(folder);
+  std::ofstream(folder / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20260101 20261231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 6570 \"Bankkostnader\"\r\n"
+         "#VER \"A\" \"9\" 20260301 \"Avgift\"\r\n{\r\n#TRANS 6570 {} 1.00\r\n#TRANS 1930 {} -1.00\r\n}\r\n";
+  auto plan = plan_project_from_sie(folder / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(create_project_from_sie(*plan, "2026-11-09"));
+  Date const start{2026y, January, 1d};
+  Date const today{2026y, November, 18d};
+  ASSERT_TRUE(add_event_draft(folder, start, {"Kreditfaktura", -370, oct20}, today));
+  auto books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  EXPECT_EQ(next_number(books->years.front(), "A"), "10");
+  EXPECT_EQ(next_number(books->years.front(), "D"), "1");
+  auto const event = books->years.front().drafts[0];
+  // Not ready: refused
+  auto refused = book_draft(folder, start, 0, event, "A", today);
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Utkastet är inte klart att bokföra.");
+  auto ready = event;
+  books::Posting bank;
+  bank.account = "1930";
+  bank.amount = 370;
+  bank.text = "Återbetalning";
+  bank.source = "bank.csv:3";
+  books::Posting fee;
+  fee.account = "6570";
+  fee.amount = -370;
+  ready.postings = {bank, fee};
+  ASSERT_TRUE(replace_draft(folder, start, 0, event, ready));
+  // Not a series of the books: refused
+  refused = book_draft(folder, start, 0, ready, "Q", today);
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Q är ingen serie i bokföringen.");
+  // Booked: the next number, the amount without sign, registered today, the draft gone
+  auto const voucher = book_draft(folder, start, 0, ready, "A", today);
+  ASSERT_TRUE(voucher) << voucher.error();
+  EXPECT_EQ(voucher->series, "A");
+  EXPECT_EQ(voucher->number, "10");
+  EXPECT_EQ(voucher->event, (books::Event{"Kreditfaktura", 370, oct20}));
+  EXPECT_EQ(voucher->registered, today);
+  ASSERT_EQ(voucher->postings.size(), 2u);
+  EXPECT_EQ(voucher->postings[0].text, "Återbetalning");
+  EXPECT_TRUE(voucher->postings[0].source.empty());
+  books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  EXPECT_TRUE(books->years.front().drafts.empty());
+  ASSERT_EQ(books->years.front().vouchers.size(), 2u);
+  EXPECT_EQ(books->years.front().vouchers.back(), *voucher);
+  // Not the draft seen any more
+  EXPECT_FALSE(book_draft(folder, start, 0, ready, "A", today));
+  fs::remove_all(folder);
+}

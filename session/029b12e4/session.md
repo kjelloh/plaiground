@@ -45,6 +45,14 @@ Vi har i alla fall två sätt som det vore bra att kunna göra det på.
     * Editorn skall föreslå återstående belopp hela tiden.
     * Editorn skall fungera 'bäst' om användaren konterar hela beloppet först och sedan motkonton i minskande beloppsföljd (kronor och öresavrundning sist)
 
+Nu har Claude byggt mig en konterings-editor.
+
+* Den fungerar men frågan är hur vi kan skruva på den så den blir smidigare?
+
+Jag tror jag väljer att införa 'bokför' och sedan funktionen att ta tillbaka sista från en serie.
+
+* Då har jag så jag kan testa ett utkast 'fram och tillbaka' genom kedjan.
+
 Från igår gjorde jag några noteringar om funktioner som vore bra att få med för en fullödig bokföringsupplevelse (he he)
 
 Så vad bör vi försöka få med innan dagen är slut (Och Claude-prenumerationen går ut)?

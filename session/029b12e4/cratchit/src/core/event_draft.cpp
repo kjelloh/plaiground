@@ -3,8 +3,11 @@
 #include "core/amount.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <format>
 #include <optional>
+#include <string>
+#include <system_error>
 #include <utility>
 
 namespace cratchit {
@@ -189,6 +192,52 @@ std::expected<std::size_t, std::string> replace_draft(std::filesystem::path cons
   auto const at = year->place_draft(std::move(changed));
   if (auto written = books::write_books(project_folder, *books); !written) return std::unexpected(written.error());
   return at;
+}
+
+std::string next_number(books::FiscalYear const& year, std::string_view series) {
+  long long highest = 0;
+  for (auto const& voucher : year.vouchers) {
+    if (voucher.series != series) continue;
+    long long number = 0;
+    auto const& text = voucher.number;
+    auto const [end, error] = std::from_chars(text.data(), text.data() + text.size(), number);
+    if (error == std::errc{} && end == text.data() + text.size()) highest = std::max(highest, number);
+  }
+  return std::to_string(highest + 1);
+}
+
+std::expected<books::Voucher, std::string> book_draft(std::filesystem::path const& project_folder, Date year_start,
+                                                      std::size_t index, books::Draft const& expected,
+                                                      std::string_view series, Date today) {
+  auto books = books::read_books(project_folder);
+  if (!books) return std::unexpected(books.error());
+  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
+  if (year == books->years.end()) {
+    return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
+  }
+  if (index >= year->drafts.size() || year->drafts[index] != expected) {
+    return std::unexpected("Utkastet finns inte längre på sin plats i bokföringen. Öppna det igen från Utkast.");
+  }
+  if (books::stage(expected) != books::DraftStage::ready) {
+    return std::unexpected("Utkastet är inte klart att bokföra.");
+  }
+  if (std::ranges::find(books->series, series, &books::Series::series) == books->series.end()) {
+    return std::unexpected(std::format("{} är ingen serie i bokföringen.", series));
+  }
+  auto const amount = expected.event.amount < 0 ? -expected.event.amount : expected.event.amount;
+  books::Voucher voucher{std::string(series), next_number(*year, series),
+                         books::Event{expected.event.heading, amount, expected.event.date}, today, "", {}};
+  for (auto const& posting : expected.postings) {
+    if (posting.kind == books::Posting::Kind::removed) continue;
+    auto booked = posting;
+    booked.kind = books::Posting::Kind::normal;
+    booked.source.clear();
+    voucher.postings.push_back(std::move(booked));
+  }
+  year->vouchers.push_back(voucher);
+  year->drafts.erase(year->drafts.begin() + static_cast<std::ptrdiff_t>(index));
+  if (auto written = books::write_books(project_folder, *books); !written) return std::unexpected(written.error());
+  return voucher;
 }
 
 std::optional<Amount> parse_typed_amount(std::string_view text) {

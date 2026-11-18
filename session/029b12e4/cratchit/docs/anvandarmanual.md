@@ -471,7 +471,7 @@ Händelsen i utkastet: datum, rubrik och belopp. I ett utkast ska allt gå att �
 ##### Fullborda utkast
 
 <!-- hjälp: fullborda -->
-Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Tryck `0` för att fullborda utkastet i [Kontera](#kontera), eller för att bokföra det när det är klart. Att bokföra finns inte än. Tryck `-` för att gå tillbaka till Utkast.
+Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Tryck `0` för att fullborda utkastet i [Kontera](#kontera), eller för att [bokföra](#bokför) det när det är klart. Under utkastet står vad du har bokfört här. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Att fullborda ett utkast är att göra det klart att bokföra: välja en mall, fylla i det som saknas och få konteringarna att balansera. Att bokföra är sista steget. Tryck `2` i Utkast:
@@ -491,7 +491,7 @@ Konteringar:
 Cratchit > … > Utkast > Fullborda #1>
 ```
 
-Verifikationer bokförs i den ordning händelserna inträffade, så cratchit börjar med det äldsta utkastet. Prompten har utkastets nummer, och överst står hur många utkast det finns. Valet heter `0 Fullborda` så länge utkastet inte är klart och leder till [Kontera](#kontera). När utkastet är klart heter det `0 Bokför`, som leder till *Inte än* för nu. Saknar året utkast står det `Inga utkast att fullborda i 2026/27.`
+Verifikationer bokförs i den ordning händelserna inträffade, så cratchit börjar med det äldsta utkastet. Prompten har utkastets nummer, och överst står hur många utkast det finns. Valet heter `0 Fullborda` så länge utkastet inte är klart och leder till [Kontera](#kontera). När utkastet är klart heter det `0 Bokför`, som leder till [Bokför](#bokför). Saknar året utkast står det `Inga utkast att fullborda i 2026/27.`
 
 ###### Kontera
 
@@ -540,6 +540,43 @@ Ett utkast behöver en rubrik och ett belopp för att bli klart. Tryck `0` i Kon
 
 Ändra det du vill och tryck Enter. Raden läses som i [Beskriv händelser](#beskriv-händelser). Kan beloppet läsas på flera sätt säger cratchit vilka; skriv det då utan mellanslag eller ändra rubriken.
 
+
+###### Bokför
+
+<!-- hjälp: bokfor-utkast -->
+Verifikationen som utkastet blir, i sin helhet, och bokföringens serier med nästa nummer i varje. Skriv serien, till exempel `D`, och tryck Enter för att bokföra. Verifikationen går inte att ändra efteråt. Tryck `-` för att gå tillbaka till Fullborda utan att bokföra.
+<!-- /hjälp -->
+
+Tryck `0 Bokför` i Fullborda för ett utkast som är klart:
+
+```text
+Bokför utkast #1 som verifikation i 2026/27:
+  Datum:          2026-07-03
+  Text:           AVGIFTER NORDEA
+  Belopp:         3.70
+  Registreras:    2026-11-18
+Konteringar:
+  1920  PlusGiro              -3.70  AVGIFTER NORDEA
+  6570  Bankkostnader          3.70
+Serier:
+  A  Redovisning (nästa A11)
+  B  Kundfakturor (nästa B1)
+  …
+Skriv serien och tryck Enter för att bokföra. Verifikationen går inte att ändra efteråt.
+Cratchit > … > Fullborda #1 > Bokför>
+```
+
+Du väljer alltid serien själv; cratchit gissar inte. Stora och små bokstäver räknas lika. Numret är det högsta i serien under räkenskapsåret plus ett, så numreringen börjar om varje år. Serien och Enter är bekräftelsen: verifikationen står där i sin helhet innan du bokför, och cratchit frågar inte en gång till.
+
+Verifikationen får
+
+* **datum, text och belopp** från utkastets händelse; beloppet utan tecken, som alla verifikationer;
+* **konteringarna** med sina datum och texter, men inte vilken kontoutdragsrad de kom från;
+* **registreringsdagen** i dag, och ingen signatur än.
+
+cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. Du är tillbaka i Fullborda på samma plats, där nu nästa utkast står, och under det till exempel `cratchit bokförde #1 som A11: AVGIFTER NORDEA.` Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
+
+Det går ännu inte att ångra en bokföring.
 
 ##### Läs kontoutdrag
 
