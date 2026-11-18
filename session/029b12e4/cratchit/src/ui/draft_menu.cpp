@@ -1654,9 +1654,10 @@ public:
       LOG_BUSINESS("  kontering: {} {} {} \"{}\"", posting.account, format_amount(posting.amount),
                    posting.date ? format_iso_date(*posting.date) : std::string(), posting.text);
     }
-    report_(std::format("cratchit bokförde {} som {}: {}.", draft_id(index_), id, voucher->event.heading));
+    auto reply = std::format("cratchit bokförde {} som {}: {}.", draft_id(index_), id, voucher->event.heading);
+    report_(reply);
     done_ = true;
-    return Accepted(); // back to Fullborda
+    return Accepted(reply); // shown once in the terminal, then back to Fullborda
   }
   State const* back_to() const override { return done_ ? complete_ : nullptr; }
   std::string help_topic() const override { return std::string(help_topic::book); }
@@ -1696,8 +1697,8 @@ private:
 // and after (in place; at either end they do nothing). The options are those of
 // the draft's view (beslut 2026-11-18: the same options wherever a draft is
 // shown): 0 Händelse and 1 Konteringar (Kontera), 2 Bokför for a draft that is
-// ready, 9 Glöm or Inte samma. What was done is shown below the draft and told
-// to Utkast. The drafts are read again when the user comes back, at the same place.
+// ready, 9 Glöm or Inte samma. The view is the draft and its options; what was
+// done is told to Utkast (Bokför also replies once in the terminal). The drafts are read again when the user comes back, at the same place.
 class CompleteState : public State {
 public:
   CompleteState(Project project, FiscalYear year, std::function<void(std::string)> report)
@@ -1710,13 +1711,14 @@ public:
   View view() const override {
     if (!error_.empty()) return {std::format("cratchit kunde inte läsa bokföringen: {}", error_)};
     View lines;
+    if (!failed_.empty()) lines.push_back(failed_);
     if (drafts_.empty()) {
       lines.push_back(std::format("Inga utkast att fullborda i {}.", label_of(year_)));
     } else {
-      lines = draft_view_lines(drafts_[index_], std::format("{} av {}", draft_id(index_), drafts_.size()),
-                               label_of(year_), accounts_);
+      auto const shown = draft_view_lines(drafts_[index_], std::format("{} av {}", draft_id(index_), drafts_.size()),
+                                          label_of(year_), accounts_);
+      lines.insert(lines.end(), shown.begin(), shown.end());
     }
-    lines.insert(lines.end(), done_.begin(), done_.end());
     return lines;
   }
   // As the draft's view (make_draft_view), with < and > to browse
@@ -1733,6 +1735,7 @@ public:
     return options;
   }
   bool on_key_in_place(CodePoint key) override {
+    failed_.clear();
     if (key == back_key && index_ > 0) {
       --index_;
       return true;
@@ -1745,7 +1748,7 @@ public:
     if (key == U'9' && !drafts_.empty() && removal_of(drafts_[index_]) == DraftRemoval::split) {
       auto const count = split_logged(project_, year_, index_, drafts_[index_]);
       if (!count) {
-        done_.push_back(std::format("cratchit kunde inte dela utkastet: {}", count.error()));
+        failed_ = std::format("cratchit kunde inte dela utkastet: {}", count.error());
       } else {
         report(std::format("cratchit delade {} i {} utkast.", draft_id(index_), *count));
       }
@@ -1755,6 +1758,7 @@ public:
     return false; // at either end: nothing
   }
   OnKeyResult on_key(CodePoint key) override {
+    failed_.clear();
     if (drafts_.empty()) return nullptr;
     auto const& draft = drafts_[index_];
     auto const completing = [&] {
@@ -1786,9 +1790,8 @@ public:
   std::string help_topic() const override { return std::string(help_topic::complete); }
 
 private:
-  // What was done here: shown below the draft until the user leaves, and told to Utkast
+  // What was done here: told to Utkast
   void report(std::string line) {
-    done_.push_back(line);
     report_(std::move(line));
   }
 
@@ -1814,7 +1817,7 @@ private:
   std::vector<books::Account> accounts_;
   std::size_t index_ = 0;
   std::string error_;
-  View done_; // what was booked here, until the user leaves
+  std::string failed_; // a split that failed, until the next key
 };
 
 class DraftState : public State {

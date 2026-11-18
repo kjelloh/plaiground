@@ -646,7 +646,7 @@ Verifikationen får
 * **konteringarna** med sina datum och texter, men inte vilken kontoutdragsrad de kom från;
 * **registreringsdagen** i dag, och ingen signatur än.
 
-cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. Bokförde du från Fullborda är du tillbaka där på samma plats, där nu nästa utkast står, och under det till exempel `cratchit bokförde #1 som A11: AVGIFTER NORDEA.` Bokförde du från utkastets vy är du tillbaka i Utkast, eftersom utkastet inte finns längre. Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
+cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. I terminalen skriver cratchit en gång till exempel `cratchit bokförde #1 som A11: AVGIFTER NORDEA.` Bokförde du från Fullborda är du tillbaka där på samma plats, där nu nästa utkast står. Bokförde du från utkastets vy är du tillbaka i Utkast, eftersom utkastet inte finns längre. Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
 
 Den sista verifikationen i en serie kan du göra till ett utkast igen, se [Gör till utkast](#gör-till-utkast). Ett stängt räkenskapsår går inte att bokföra i, och dess verifikationer går inte att göra till utkast; cratchit säger då att året är stängt.
 

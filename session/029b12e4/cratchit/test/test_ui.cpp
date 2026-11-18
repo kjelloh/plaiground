@@ -2249,7 +2249,9 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   follow(accepted);
   // Back in Fullborda: the draft is booked, the one before is at the place
   EXPECT_EQ(navigator.current().name(), "Fullborda #1");
-  EXPECT_EQ(navigator.current().view().back(), "cratchit bokförde #2 som D1: Telia oktober.");
+  EXPECT_EQ(accepted->reply, "cratchit bokförde #2 som D1: Telia oktober.");
+  view = navigator.current().view();
+  EXPECT_EQ(std::ranges::find(view, accepted->reply), view.end()); // not in the view
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Utkast");
   view = navigator.current().view();
@@ -2446,5 +2448,5 @@ TEST_F(RootMenuTest, ATemplateCompletesAnAccountEventInItsSeries) {
   accepted = navigator.current().on_input(navigator.current().start_input());
   ASSERT_TRUE(accepted) << accepted.error();
   navigator.follow_back_to();
-  EXPECT_EQ(navigator.current().view().back(), "cratchit bokförde #1 som E2: AVGIFTER.");
+  EXPECT_EQ(accepted->reply, "cratchit bokförde #1 som E2: AVGIFTER.");
 }
