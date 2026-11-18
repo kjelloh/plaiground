@@ -30,6 +30,12 @@
 
 ## 20261118
 
+Allra sist idag - Vibe-kodade in cratchit i kodbasen för riktiga cratchit!
+
+* Så senaste versionen av cratchit är nu 'third' i [github.com/kjelloh/cratchit](https://github.com/kjelloh/cratchit)
+
+Tidigare under dagen.
+
 Så var det dags att införa funktioner för att faktiskt fullborda ett utkasts konteringar och registrera i bokföringen.
 
 Vi har i alla fall två sätt som det vore bra att kunna göra det på.
@@ -72,9 +78,27 @@ I have now lost confidence in trying to tell Claude to design states that tie to
     * A human developer would NEVER design the tests in this way?
     * Testing should be per-state, not UI locations or state flows?
 
-Nu kunde jag med hyfsad kontroll bokföra fram tillk M2 med hjälp av mallar ok!
+Nu kunde jag med hyfsad kontroll bokföra fram till M2 med hjälp av mallar ok!
 
 Så nu är det dags för ett UI för enklare momsrapport!
+
+Och detta gick ju snabbt och smärtfritt. Allt var ju 'klart' i take 3 så nu har denna cratychit ett UI för momsrapport ok!
+
+* Jag verkar nu kunna utföra löpande bokföring med denna cratchit?!
+* Jag verkar kunna göra Momsrapport ok (kvartalsmoms)
+* Claude har talat om för mig att jag kan öppna ett nytt tomt år när det b,ir dags.
+
+Nu är det dags för middag och sedan får vi se hur mycket mer vi hinner göra innan min Claude-prenumeration upphör vid midnatt.
+
+* Be om ett UI för stöd vid bokslut?
+
+    * Stämma av balanser
+    * Bokföra avskrivningar
+    * Bokföra årets resultat
+
+* Be om stöd för att bokföra stämmobeslutet om resultatfördelning?
+
+* Be om något slags stöd för snygg utskrift av verifikation?
 
 
 Från igår gjorde jag några noteringar om funktioner som vore bra att få med för en fullödig bokföringsupplevelse (he he)
