@@ -2548,9 +2548,16 @@ TEST_F(RootMenuTest, MomsrapportClearsAQuarterAndWritesItsFiles) {
   EXPECT_TRUE(fs::exists(folder / "verifikation.txt"));
   EXPECT_TRUE(fs::exists(folder / "moms_202503.eskd"));
   view = navigator.current().view();
-  EXPECT_EQ(view[view.size() - 2],
-            "cratchit skrev momsrapport.txt, verifikation.txt och moms_202503.eskd i moms_2025-01-01_2025-03-31.");
-  EXPECT_EQ(view.back(), "Ladda upp moms_202503.eskd i Skatteverkets e-tjänst Lämna momsdeklaration.");
+  // Each file with its full path, to find it again
+  auto const text = [](fs::path const& path) {
+    auto const u8 = path.u8string();
+    return std::string(u8.begin(), u8.end());
+  };
+  ASSERT_GE(view.size(), 5u);
+  EXPECT_EQ(View(view.end() - 5, view.end()),
+            (View{"cratchit skrev:", "  " + text(folder / "momsrapport.txt"), "  " + text(folder / "verifikation.txt"),
+                  "  " + text(folder / "moms_202503.eskd"),
+                  "Ladda upp moms_202503.eskd i Skatteverkets e-tjänst Lämna momsdeklaration."}));
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_TRUE(fs::exists(folder / "moms_202503_2.eskd"));
   // Granska rutorna: a box by its number, < and > the box before and after

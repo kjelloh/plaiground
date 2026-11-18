@@ -1202,7 +1202,17 @@ eSKD-fil moms_202609.eskd:
 Kontrollerna varnar för det som kan göra rapporten fel: utkast som är daterade i kvartalet, 2650 eller 1650 i en verifikation som inte är en momsverifikation, omvänd skattskyldighet som inte går jämnt upp, en verifikation som registrerades efter kvartalets momstömning, och konton 2600–2699 som inte redovisas i någon ruta.
 
 * `1 Momstömning` finns för ett kvartal som har tagit slut, har något att avräkna och inte redan är avräknat. cratchit gör tömningen till ett utkast i serie M, daterat kvartalets sista dag, och går direkt till [Bokför](#bokför), där `M` står ifyllt. Enter bokför. Trycker du `-` ligger tömningen kvar som utkast, och vyn säger vilket; nästa `1` använder samma utkast. Har bokföringen ändrats sedan dess byter cratchit ut utkastets konteringar. Efter bokföringen står det till exempel `2026 Q3 är redan avräknat av M3.`
-* `2 Skriv rapport och eSKD-fil` skriver mappen `moms_<första dag>_<sista dag>` i bokföringens mapp, till exempel `moms_2026-07-01_2026-09-30`, med `momsrapport.txt` (rapporten och kontrollerna), `verifikation.txt` (tömningen, eller att kvartalet redan är avräknat) och eSKD-filen `moms_202609.eskd`. Rapport och verifikation skrivs om varje gång. En eSKD-fil skrivs aldrig över; nästa får ett nummer, till exempel `moms_202609_2.eskd`, så filen du laddade upp finns kvar. Ladda upp eSKD-filen i Skatteverkets e-tjänst *Lämna momsdeklaration*. För kvartalet som pågår skriver cratchit bara rapporten.
+* `2 Skriv rapport och eSKD-fil` skriver mappen `moms_<första dag>_<sista dag>` i bokföringens mapp, till exempel `moms_2026-07-01_2026-09-30`, med `momsrapport.txt` (rapporten och kontrollerna), `verifikation.txt` (tömningen, eller att kvartalet redan är avräknat) och eSKD-filen `moms_202609.eskd`. Rapport och verifikation skrivs om varje gång. En eSKD-fil skrivs aldrig över; nästa får ett nummer, till exempel `moms_202609_2.eskd`, så filen du laddade upp finns kvar. Under vyn står varje fil med hela sökvägen, så att du hittar eSKD-filen när du laddar upp den i Skatteverkets e-tjänst *Lämna momsdeklaration*:
+
+```text
+cratchit skrev:
+  /Users/du/Documents/The ITfied AB/moms_2026-07-01_2026-09-30/momsrapport.txt
+  /Users/du/Documents/The ITfied AB/moms_2026-07-01_2026-09-30/verifikation.txt
+  /Users/du/Documents/The ITfied AB/moms_2026-07-01_2026-09-30/moms_202609.eskd
+Ladda upp moms_202609.eskd i Skatteverkets e-tjänst Lämna momsdeklaration.
+```
+
+För kvartalet som pågår skriver cratchit bara rapporten.
 
 Ordningen mellan `1` och `2` spelar ingen roll. eSKD-filen behöver organisationsnumret; saknar bokföringen det säger cratchit det.
 

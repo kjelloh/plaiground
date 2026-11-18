@@ -424,7 +424,13 @@ private:
       list += written[i];
     }
     LOG_BUSINESS("Momsrapport för {} skriven i {}: {}", vat::quarter_name(period_), folder.string(), list);
-    done_.push_back(std::format("cratchit skrev {} i {}.", list, folder_name(period_)));
+    // Each file with its full path, to find it again, e.g. when uploading the eSKD file
+    auto const shown = [&folder](std::string const& name) {
+      auto const text = (folder / fs::path(std::u8string(name.begin(), name.end()))).u8string();
+      return std::string(text.begin(), text.end());
+    };
+    done_.push_back("cratchit skrev:");
+    for (auto const& name : written) done_.push_back("  " + shown(name));
     if (eskd_name) {
       done_.push_back(std::format("Ladda upp {} i Skatteverkets e-tjänst Lämna momsdeklaration.", *eskd_name));
     } else if (!running()) {
