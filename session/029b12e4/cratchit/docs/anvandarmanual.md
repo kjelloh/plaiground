@@ -401,7 +401,7 @@ Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat frå
 ##### Utkastet
 
 <!-- hjälp: utkastet -->
-Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för att ändra händelsen i [Ändra händelsen](#ändra-händelsen) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. `9` är *Glöm* för ett ensamt utkast, en händelse eller en kontohändelse, och *Inte samma* för ett utkast av flera delar med samma belopp, som delar det direkt. Ett utkast vars konteringar har olika belopp har inget `9`. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för att ändra händelsen i [Ändra händelsen](#ändra-händelsen) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. `9` är *Glöm* för ett utkast utan kontohändelser och för ett ensamt utkast. Ett utkast med kontohändelser och flera delar med samma belopp har i stället *Inte samma*, som delar det direkt, och ett med kontohändelser och olika belopp har inget `9`, så att raderna från kontoutdraget finns kvar. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
@@ -446,9 +446,16 @@ Tryck `9` igen för att glömma utkastet. cratchit går då tillbaka till Utkast
 
 Glömmer du ett utkast från ett kontoutdrag och läser kontoutdraget igen blir raden ett nytt utkast, eftersom den varken är bokförd eller ett utkast längre.
 
+Vilka utkast som har `9 Glöm`:
+
+* **Ett utkast utan kontohändelser**, alltså utan konteringar från ett kontoutdrag, oavsett hur många delar det har. Inget går förlorat som du inte kan skapa igen: en [ändringsverifikation](#ändringsverifikation) du skapade för att prova skapar du igen från verifikationen, och det du skrivit skriver du igen.
+* **Ett ensamt utkast**: en händelse eller en kontohändelse.
+
+Ett utkast med kontohändelser och flera delar glöms inte direkt, så att raderna från kontoutdraget inte försvinner med det. Har delarna samma belopp trycker du `9 Inte samma` och glömmer sedan delarna var för sig. Annars tar du först bort konteringarna du skrivit med `9 Ta bort sista` i [Kontera](#kontera) tills delarna har samma belopp.
+
 ###### Inte samma
 
-Ett utkast kan bestå av flera delar: en händelse och konteringar, eller flera konteringar. Har alla delarna samma belopp, utan tecken, är det samma händelse sett från olika håll, till exempel en faktura och betalningen på kontoutdraget, eller en överföring med en rad på vart kontoutdrag. Ett sådant utkast kommer oftast från [Samma?](#samma). Där har `9` texten *Inte samma*:
+Ett utkast kan bestå av flera delar: en händelse och konteringar, eller flera konteringar. Har alla delarna samma belopp, utan tecken, är det samma händelse sett från olika håll, till exempel en faktura och betalningen på kontoutdraget, eller en överföring med en rad på vart kontoutdrag. Ett sådant utkast kommer oftast från [Samma?](#samma). Har det kontohändelser har `9` texten *Inte samma*:
 
 ```text
 Utkast #14 i 2026/27 (samma)
@@ -461,7 +468,7 @@ Cratchit > … > Utkast > #14>
 
 `9` delar utkastet direkt i en händelse och en kontohändelse för varje kontering, och du kommer tillbaka till Utkast, som säger till exempel `cratchit delade #14 i 2 utkast.` Varje kontohändelse får konteringens datum och minns sin fil och rad, och alla får utkastets noteringsdag. cratchit frågar inte först, eftersom du kan slå ihop dem igen i Samma?.
 
-Ett utkast med flera delar kan inte glömmas direkt. Dela det först och glöm sedan delarna. Har konteringarna olika belopp, som i en färdig kontering av en faktura med moms, är utkastet mer än samma händelse och har inget `9`.
+Ett sådant utkast, med kontohändelser, glöms inte direkt; dela det först och glöm sedan delarna. Ett utkast utan kontohändelser har i stället `9 Glöm` (se [Glöm](#glöm)). Har konteringarna olika belopp, som i en färdig kontering av en faktura med moms, är utkastet mer än samma händelse och har inget `9`.
 
 ##### Fullborda utkast
 
@@ -980,7 +987,7 @@ Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört: D19
 * Finns verifikationen inte i räkenskapsåret, eller är id:t skrivet på annat sätt, säger cratchit det under prompten, och texten står kvar så att du kan rätta den.
 
 <!-- hjälp: verifikation -->
-Verifikationen i tre delar. Överst hur den är bokförd: serien med seriens namn, när den registrerades och signaturen när den finns. Sedan *Händelse*: datum, rubrik och belopp. Sist *Konteringar*: konto, kontots namn och belopp, och radens egen text och datum när den har dem. En struken rad är märkt `(struken)` och en tillagd rad `(tillagd)`. Tryck `0` för händelsen och `1` för konteringarna. Än så länge kan du bara se verifikationen. Tryck `-` för att gå tillbaka till Bokfört.
+Verifikationen i tre delar. Överst hur den är bokförd: serien med seriens namn, när den registrerades och signaturen när den finns. Sedan *Händelse*: datum, rubrik och belopp. Sist *Konteringar*: konto, kontots namn och belopp, och radens egen text och datum när den har dem. En struken rad är märkt `(struken)` och en tillagd rad `(tillagd)`. Tryck `0` för händelsen och `1` för konteringarna. Tryck `2` för att skapa en [ändringsverifikation](#ändringsverifikation) som vänder verifikationen. Verifikationen själv går inte att ändra. Tryck `-` för att gå tillbaka till Bokfört.
 <!-- /hjälp -->
 
 ```text
@@ -1058,6 +1065,30 @@ Cratchit > … > Bokfört > D19 > Konteringar > 1>
 Än så länge visar cratchit bara verifikationen. Att rätta den, med strukna och tillagda rader, kommer senare.
 
 **Serier.** Varje verifikation hör till en serie, en bokstav. En SIE-fil har inga namn på serierna, så bokföringen har sina egna. Från början har den Fortnox serier: A Redovisning, B Kundfakturor, C Inbetalningar från kunder, D Leverantörsfakturor, E Utbetalningar till leverantörer, F Kassa, G Avskrivning, H Periodisering, I Bokslut, J Kontantfaktura, K Kvitto, L Lön, M Momsrapport och N Lager. En serie som en SIE-fil använder men som inte finns där läggs till utan namn, och visas då bara med sin bokstav. Att byta namn på en serie eller lägga till en kommer senare.
+
+#### Ändringsverifikation
+
+En bokförd verifikation går inte att ändra, men du kan boka bort den med en ändringsverifikation: en ny verifikation som vänder den, så att de tillsammans blir 0. Det använder du till exempel när en faktura blivit bokförd två gånger; den andra fanns aldrig i verkligheten. Det är du som avgör när det speglar verkligheten, och det går för alla verifikationer, inte bara den sista i en serie. Tryck `2` i verifikationens vy:
+
+```text
+Verifikation D19
+  …
+  0 Händelse
+  1 Konteringar
+  2 Ändringsverifikation
+Cratchit > … > Bokfört > D19> 2
+cratchit skapade utkast #5: Ändring av D19, daterat 2025-03-10 som D19.
+Se till att datumet inte ligger i ett år eller en momsperiod som redan är rapporterad; då krävs en ny rapport. Datumet ändrar du med 0 i utkastets vy innan du bokför.
+```
+
+cratchit skapar ändringen som ett utkast, inte som en bokförd verifikation, och du står kvar i verifikationens vy. Utkastet har
+
+* **rubriken** `Ändring av D19`;
+* **beloppet** med minus, `-1233.75`: händelsen går åt andra hållet än vanligt;
+* **konteringarna** med vänt tecken och samma texter, men utan egna datum; en struken rad kommer inte med, och en tillagd rad vänds som de andra;
+* **datumet** från verifikationen, så att ändringen hamnar i samma period som det den vänder.
+
+Utkastet är klart. Bokför det med `2 Bokför` i utkastets vy eller i [Fullborda utkast](#fullborda-utkast), där du väljer serien. Ligger verifikationens datum i ett år eller en momsperiod som redan är rapporterad skulle ändringen kräva en ny rapport; ändra då datumet till en period som inte är rapporterad, med `0` i utkastets vy, innan du bokför. Vill du inte ha ändringen glömmer du utkastet.
 
 #### Bokslut
 

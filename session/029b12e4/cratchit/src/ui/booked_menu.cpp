@@ -2,7 +2,10 @@
 
 #include "charset/utf8.hpp"
 #include "core/books/books.hpp"
+#include "core/amount.hpp"
 #include "core/date.hpp"
+#include "core/event_draft.hpp"
+#include "core/sie_summary.hpp"
 #include "core/log.hpp"
 #include "pyroceph/tui/pager.hpp"
 #include "ui/help_topics.hpp"
@@ -107,8 +110,26 @@ public:
         return v.series == series && same_number(v.number, number);
       });
       if (found != year->vouchers.end()) {
+        auto reverse = [project = project_, year = year_, voucher = *found]() -> std::expected<View, std::string> {
+          auto const id = books::voucher_id(voucher.series, voucher.number);
+          auto const year_start = parse_iso_date(year.start);
+          if (!year_start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year.start));
+          auto const index = add_reversal_draft(project.folder, *year_start, voucher, today_date());
+          if (!index) {
+            LOG_BUSINESS("Kunde inte skapa ändringsverifikation för {} i {} ({}): {}", id, label_of(year),
+                         project.folder.string(), index.error());
+            return std::unexpected(index.error());
+          }
+          LOG_BUSINESS("Ändringsverifikation för {} skapad som utkast {} i {} ({}): {} {}", id, draft_id(*index),
+                       label_of(year), project.folder.string(), format_iso_date(voucher.event.date),
+                       format_amount(-voucher.event.amount));
+          return View{std::format("cratchit skapade utkast {}: Ändring av {}, daterat {} som {}.", draft_id(*index), id,
+                                  format_iso_date(voucher.event.date), id),
+                      "Se till att datumet inte ligger i ett år eller en momsperiod som redan är rapporterad; då krävs "
+                      "en ny rapport. Datumet ändrar du med 0 i utkastets vy innan du bokför."};
+        };
         return Accepted(make_voucher_menu(*found, books->accounts, books->series_name(found->series),
-                                          last_in_series(year->vouchers, found->series)));
+                                          last_in_series(year->vouchers, found->series), std::move(reverse)));
       }
     }
     return std::unexpected(std::format("Det finns ingen verifikation {} i {}.", typed, label_of(year_)));

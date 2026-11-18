@@ -32,21 +32,28 @@ inline constexpr std::size_t postings_page_rows = 10;
 // * The options of a posting (account, description, amount) lead to Inte än
 //   (make_design_insufficiency_state) for now.
 // To grow into the voucher editor.
+// 2 Ändringsverifikation (beslut 2026-11-18) calls reverse, which makes the
+// draft that reverses the voucher (add_reversal_draft) and gives what to tell
+// the user; that is shown below the voucher, and the user stays. An error text
+// is shown the same way. The option is there only when reverse is given.
+using ReverseVoucher = std::function<std::expected<pyroceph::tui::View, std::string>()>;
 std::unique_ptr<pyroceph::tui::State> make_voucher_menu(books::Voucher voucher, std::vector<books::Account> accounts,
-                                                        std::string series_name, std::string last_in_series);
+                                                        std::string series_name, std::string last_in_series,
+                                                        ReverseVoucher reverse = {});
 
 // A draft, named by its id in the path ("#3", see draft_id), shown as a voucher
 // is: the heading "Utkast #3 i 2026/27 (<stage>)", the day it was noted, then
 // "Händelse" (a heading or amount it lacks shows empty) and "Konteringar".
 //
-// 9 depends on what the draft is made of (parts_of, beslut 2026-11-17: 9 is
-// the option that removes, kept apart from the others):
-// * lone: 9 Glöm leads to "Glöm": it shows summary, says the draft cannot be
-//   had back, and offers 9 Glöm and N Nej. 9 again calls forget; done, the TUI
-//   goes back to origin (State::back_to, Utkast); N goes back to the draft.
-// * same: 9 Inte samma calls split at once (it can be undone in Samma?); done,
-//   back to origin.
-// * more than the same: no 9.
+// 9 is what removal_of gives (beslut 2026-11-17 and -18: 9 is the option that
+// removes, kept apart from the others):
+// * forget (no statement entries, or lone): 9 Glöm leads to "Glöm": it shows
+//   summary, says the draft cannot be had back, and offers 9 Glöm and N Nej.
+//   9 again calls forget; done, the TUI goes back to origin (State::back_to,
+//   Utkast); N goes back to the draft.
+// * split (statement entries, the same): 9 Inte samma calls split at once (it
+//   can be undone in Samma?); done, back to origin.
+// * none (statement entries, more than the same): no 9.
 // A failure of forget or split leads to the error state with its text.
 //
 // 0 Händelse and 1 Konteringar change the draft (beslut 2026-11-18: one editor

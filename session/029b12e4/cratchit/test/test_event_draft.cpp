@@ -318,3 +318,31 @@ TEST(UnbookVoucher, TheLastOfASeriesBecomesADraftAndBooksAgainAsItWas) {
   EXPECT_EQ(again->number, "2");
   fs::remove_all(folder);
 }
+
+TEST(ReversalOf, TurnsEachPostingAndTheAmount) {
+  books::Posting supplier;
+  supplier.account = "2440";
+  supplier.amount = -123375;
+  supplier.text = "Telia";
+  supplier.date = Date{2026y, October, 21d};
+  books::Posting cost;
+  cost.account = "6210";
+  cost.amount = 98700;
+  books::Posting vat;
+  vat.account = "2641";
+  vat.amount = 24675;
+  books::Posting struck = cost;
+  struck.kind = books::Posting::Kind::removed;
+  books::Voucher const voucher{"D", "19", {"Telia faktura", 123375, oct20}, oct20, "KO", {supplier, cost, vat, struck}};
+  auto const draft = reversal_of(voucher, Date{2026y, November, 18d});
+  EXPECT_EQ(draft.event, (books::Event{"Ändring av D19", -123375, oct20}));
+  EXPECT_EQ(draft.noted, (Date{2026y, November, 18d}));
+  ASSERT_EQ(draft.postings.size(), 3u);
+  EXPECT_EQ(draft.postings[0].account, "2440");
+  EXPECT_EQ(draft.postings[0].amount, 123375);
+  EXPECT_EQ(draft.postings[0].text, "Telia");
+  EXPECT_FALSE(draft.postings[0].date);
+  EXPECT_EQ(draft.postings[1].amount, -98700);
+  EXPECT_EQ(draft.postings[2].amount, -24675);
+  EXPECT_EQ(books::stage(draft), books::DraftStage::ready);
+}

@@ -1369,7 +1369,8 @@ TEST_F(RootMenuTest, BookedOpensAVoucherByItsIdAsOneWord) {
                   "Konteringar:",
                   "  2440  Leverantörsskulder            -125.00", "  6210  Telekommunikation              100.00",
                   "  2641  Debiterad ingående moms         25.00"}));
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Ändringsverifikation"}}));
   // The last in D is D11, the highest number (not the last in the file, nor by text)
   ASSERT_TRUE(navigator.press(U'0'));
   ASSERT_TRUE(navigator.press(U'0'));
@@ -2222,7 +2223,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"},
                                                         {U'1', "Konteringar"},
                                                         {U'2', "Bokför"},
-                                                        {U'9', "Inte samma"},
+                                                        {U'9', "Glöm"},
                                                         {U'<', "Föregående"},
                                                         {U'>', "Nästa"}}));
   // A ready draft is still changed in Kontera
@@ -2298,7 +2299,7 @@ TEST_F(RootMenuTest, AReadyDraftIsBookedFromItsView) {
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().view().front(), "Utkast #1 i 2025 (klart)");
   EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Bokför"}, {U'9', "Inte samma"}}));
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Bokför"}, {U'9', "Glöm"}}));
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Bokför");
   accepted = navigator.current().on_input(U"a");
@@ -2308,4 +2309,44 @@ TEST_F(RootMenuTest, AReadyDraftIsBookedFromItsView) {
   EXPECT_EQ(navigator.current().name(), "Utkast");
   EXPECT_EQ(navigator.current().view(),
             (View{"Utkast 2025: inga utkast.", "cratchit bokförde #1 som A1: Bankavgift."}));
+}
+
+TEST_F(RootMenuTest, AnAndringsverifikationIsADraftThatReversesTheVoucher) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 2440 \"Leverantörsskulder\"\r\n#KONTO 6210 \"Telekommunikation\"\r\n"
+         "#VER \"D\" \"19\" 20250310 \"Telia faktura\"\r\n{\r\n#TRANS 2440 {} -100.00\r\n#TRANS 6210 {} 100.00\r\n}\r\n"
+         "#VER \"D\" \"20\" 20250311 \"Loopia\"\r\n{\r\n#TRANS 2440 {} -50.00\r\n#TRANS 6210 {} 50.00\r\n}\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_booked_menu(*project, {"2025-01-01", "2025-12-31"}));
+  // Any voucher, not only the last of its series
+  auto accepted = navigator.current().on_input(U"D19");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Ändringsverifikation"}}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "D19"); // stays, and tells what it made
+  auto const view = navigator.current().view();
+  ASSERT_GE(view.size(), 2u);
+  EXPECT_EQ(view[view.size() - 2], "cratchit skapade utkast #1: Ändring av D19, daterat 2025-03-10 som D19.");
+  EXPECT_EQ(view.back(), "Se till att datumet inte ligger i ett år eller en momsperiod som redan är rapporterad; då krävs "
+                         "en ny rapport. Datumet ändrar du med 0 i utkastets vy innan du bokför.");
+  // The draft reverses D19 and is ready to book
+  Navigator drafts(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  EXPECT_EQ(drafts.current().view(),
+            (View{"Utkast 2025: utkast 1–1 av 1", "  #1            2025-03-10       -100.00  Ändring av D19 (klart)"}));
+  // No statement entries in it: 9 Glöm forgets it whole
+  auto opened = drafts.current().on_input(U"#1");
+  ASSERT_TRUE(opened) << opened.error();
+  drafts.enter(std::move(opened->next));
+  EXPECT_EQ(drafts.current().options(),
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Bokför"}, {U'9', "Glöm"}}));
+  ASSERT_TRUE(drafts.press(U'9'));
+  ASSERT_TRUE(drafts.press(U'9'));
+  EXPECT_EQ(drafts.current().name(), "Utkast");
+  EXPECT_EQ(drafts.current().view().front(), "Utkast 2025: inga utkast.");
 }

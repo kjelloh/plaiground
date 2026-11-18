@@ -228,3 +228,20 @@ TEST(DraftParts, SplitDraftWritesTheLoneDraftsOnlyForTheSame) {
   EXPECT_FALSE(split_draft(folder, start, 0, drafts[1]));
   fs::remove_all(folder);
 }
+
+TEST(DraftRemoval, ForgetWithoutStatementEntriesElseSplitOrNothing) {
+  // No statement entries: always forget, even more than the same
+  auto typed = event_draft("Telia", 111800, on(20, 10));
+  typed.postings = {posting("2440", -111800), posting("6212", 89440), posting("2641", 22360)};
+  EXPECT_EQ(parts_of(typed), DraftParts::more);
+  EXPECT_EQ(removal_of(typed), DraftRemoval::forget);
+  // A lone statement entry: forget
+  auto const entry = statement_draft("1920", -111800, on(22, 10), "TELIA", "a.csv:2");
+  EXPECT_EQ(removal_of(entry), DraftRemoval::forget);
+  // With a statement entry, the same: split; more than the same: nothing
+  auto paid = event_draft("Telia", 111800, on(20, 10));
+  paid.postings = entry.postings;
+  EXPECT_EQ(removal_of(paid), DraftRemoval::split);
+  paid.postings.push_back(posting("6212", 89440));
+  EXPECT_EQ(removal_of(paid), DraftRemoval::none);
+}

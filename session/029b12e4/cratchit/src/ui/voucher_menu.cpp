@@ -59,8 +59,9 @@ struct Shown {
   Date noted{};
   std::string summary{};             // one line about it, for Glöm
   State const* origin = nullptr;     // Utkast, to go back to once forgotten or split
-  DraftParts parts = DraftParts::lone;
+  DraftRemoval removal = DraftRemoval::forget; // what 9 does (removal_of)
   DraftActions actions{};
+  ReverseVoucher reverse{}; // a voucher: makes its ändringsverifikation as a draft
 
   std::string id() const { return draft ? draft_id : books::voucher_id(voucher.series, voucher.number); }
 
@@ -338,13 +339,18 @@ class VoucherState : public State {
 public:
   explicit VoucherState(std::shared_ptr<Shown const> shown) : shown_(std::move(shown)) {}
   std::string name() const override { return shown_->id(); }
-  View view() const override { return view_of(*shown_, name()); }
+  View view() const override {
+    auto lines = view_of(*shown_, name());
+    lines.insert(lines.end(), report_.begin(), report_.end());
+    return lines;
+  }
   OptionsList options() const override {
     if (split_) return {};
     OptionsList options{{U'0', "Händelse"}, {U'1', "Konteringar"}};
     if (ready()) options.push_back({U'2', "Bokför"});
-    if (shown_->draft && shown_->parts == DraftParts::lone) options.push_back({U'9', "Glöm"});
-    if (shown_->draft && shown_->parts == DraftParts::same) options.push_back({U'9', "Inte samma"});
+    if (!shown_->draft && shown_->reverse) options.push_back({U'2', "Ändringsverifikation"});
+    if (shown_->draft && shown_->removal == DraftRemoval::forget) options.push_back({U'9', "Glöm"});
+    if (shown_->draft && shown_->removal == DraftRemoval::split) options.push_back({U'9', "Inte samma"});
     return options;
   }
   OnKeyResult on_key(CodePoint key) override {
@@ -355,15 +361,22 @@ public:
     if (key == U'0') return std::make_unique<EventState>(shown_);
     if (key == U'1') return std::make_unique<PostingsState>(shown_);
     if (key != U'9' || !shown_->draft) return nullptr;
-    if (shown_->parts == DraftParts::lone) {
+    if (shown_->removal == DraftRemoval::forget) {
       return make_forget_draft_state(shown_->id(), shown_->summary, shown_->actions.forget, shown_->origin, this);
     }
-    if (shown_->parts != DraftParts::same || !shown_->actions.split) return nullptr;
+    if (shown_->removal != DraftRemoval::split || !shown_->actions.split) return nullptr;
     if (auto done = shown_->actions.split(); !done) {
       return pyroceph::tui::make_error_state(std::format("cratchit kunde inte dela utkastet: {}", done.error()));
     }
     split_ = true;
     return nullptr; // back to Utkast (back_to)
+  }
+  // Ändringsverifikation: made at once (a draft, to book or forget), told below the voucher
+  bool on_key_in_place(CodePoint key) override {
+    if (key != U'2' || shown_->draft || !shown_->reverse) return false;
+    auto const made = shown_->reverse();
+    report_ = made ? *made : View{std::format("cratchit kunde inte skapa ändringsverifikationen: {}", made.error())};
+    return true;
   }
   // Split: the draft is gone, back to Utkast
   State const* back_to() const override { return split_ ? shown_->origin : nullptr; }
@@ -375,7 +388,7 @@ public:
     auto shown = draft_shown(now->draft, now->id, shown_->year_label, shown_->accounts);
     shown.summary = now->summary;
     shown.origin = shown_->origin;
-    shown.parts = parts_of(now->draft);
+    shown.removal = removal_of(now->draft);
     shown.actions = shown_->actions;
     shown_ = std::make_shared<Shown const>(std::move(shown));
   }
@@ -391,6 +404,7 @@ private:
 
   std::shared_ptr<Shown const> shown_;
   bool split_ = false;
+  View report_; // what 2 Ändringsverifikation did
 };
 
 } // namespace
@@ -406,9 +420,10 @@ std::unique_ptr<State> make_forget_draft_state(std::string id, std::string summa
 }
 
 std::unique_ptr<State> make_voucher_menu(books::Voucher voucher, std::vector<books::Account> accounts,
-                                         std::string series_name, std::string last_in_series) {
-  return std::make_unique<VoucherState>(std::make_shared<Shown const>(
-      Shown{std::move(voucher), std::move(accounts), std::move(series_name), std::move(last_in_series)}));
+                                         std::string series_name, std::string last_in_series, ReverseVoucher reverse) {
+  Shown shown{std::move(voucher), std::move(accounts), std::move(series_name), std::move(last_in_series)};
+  shown.reverse = std::move(reverse);
+  return std::make_unique<VoucherState>(std::make_shared<Shown const>(std::move(shown)));
 }
 
 std::unique_ptr<State> make_draft_view(books::Draft const& draft, std::string id, std::string year_label,
@@ -417,7 +432,7 @@ std::unique_ptr<State> make_draft_view(books::Draft const& draft, std::string id
   auto shown = draft_shown(draft, std::move(id), std::move(year_label), std::move(accounts));
   shown.summary = std::move(summary);
   shown.origin = origin;
-  shown.parts = parts_of(draft);
+  shown.removal = removal_of(draft);
   shown.actions = std::move(actions);
   return std::make_unique<VoucherState>(std::make_shared<Shown const>(std::move(shown)));
 }

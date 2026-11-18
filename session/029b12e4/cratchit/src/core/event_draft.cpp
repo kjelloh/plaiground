@@ -292,6 +292,40 @@ std::expected<books::Voucher, std::string> book_draft(std::filesystem::path cons
   return voucher;
 }
 
+books::Draft reversal_of(books::Voucher const& voucher, Date today) {
+  books::Draft draft{{"Ändring av " + books::voucher_id(voucher.series, voucher.number), -voucher.event.amount,
+                      voucher.event.date},
+                     today,
+                     {}};
+  for (auto const& posting : voucher.postings) {
+    if (posting.kind == books::Posting::Kind::removed) continue;
+    books::Posting reversed;
+    reversed.account = posting.account;
+    reversed.objects = posting.objects;
+    reversed.amount = -posting.amount;
+    reversed.text = posting.text;
+    draft.postings.push_back(std::move(reversed));
+  }
+  return draft;
+}
+
+std::expected<std::size_t, std::string> add_reversal_draft(std::filesystem::path const& project_folder,
+                                                           Date year_start, books::Voucher const& voucher, Date today) {
+  auto books = books::read_books(project_folder);
+  if (!books) return std::unexpected(books.error());
+  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
+  if (year == books->years.end()) {
+    return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
+  }
+  if (std::ranges::find(year->vouchers, voucher) == year->vouchers.end()) {
+    return std::unexpected(std::format("Verifikationen {} finns inte längre som den var i bokföringen.",
+                                       books::voucher_id(voucher.series, voucher.number)));
+  }
+  auto const index = year->place_draft(reversal_of(voucher, today));
+  if (auto written = books::write_books(project_folder, *books); !written) return std::unexpected(written.error());
+  return index;
+}
+
 std::optional<Amount> parse_typed_amount(std::string_view text) {
   std::string plain;
   for (std::size_t i = 0; i < text.size(); ++i) {

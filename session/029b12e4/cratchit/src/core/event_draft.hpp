@@ -90,6 +90,20 @@ std::vector<books::Voucher> last_vouchers(books::FiscalYear const& year);
 std::expected<std::size_t, std::string> unbook_voucher(std::filesystem::path const& project_folder, Date year_start,
                                                        books::Voucher const& expected, Date today);
 
+// The draft of a voucher's ändringsverifikation (beslut 2026-11-18): it reverses
+// the voucher, so that the two together come to 0. Heading "Ändring av <id>",
+// the voucher's amount with minus (the other way than usual) and its date; its
+// postings (not removed ones) with the sign turned and their texts, without
+// dates of their own (they follow the event's); noted on today. Ready to book.
+books::Draft reversal_of(books::Voucher const& voucher, Date today);
+
+// Adds reversal_of(voucher) as a draft of the fiscal year starting on
+// year_start and writes the books. Only when the voucher is in the year as it
+// was. Gives the draft's index. Error text when the books cannot be read or
+// written, the year is not in them or the voucher is not there. Does not log.
+std::expected<std::size_t, std::string> add_reversal_draft(std::filesystem::path const& project_folder,
+                                                           Date year_start, books::Voucher const& voucher, Date today);
+
 // An amount of a posting as typed: an optional sign (+ or -), digits, and a
 // decimal comma or point with at most two decimals, e.g. -3,70 or 1118. Spaces
 // (also no-break spaces) inside it do not count. Nothing for anything else.

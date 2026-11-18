@@ -78,6 +78,14 @@ std::expected<std::size_t, std::string> merge_drafts(std::filesystem::path const
 using books::DraftParts;
 using books::parts_of;
 
+// What 9 does to a draft (beslut 2026-11-18): a draft without postings from
+// statement entries can always be forgotten (nothing is lost that cannot be made
+// again); one with them is forgotten when lone, split when made of the same
+// (Inte samma), and neither when more than the same, so that the entries stay.
+enum class DraftRemoval { forget, split, none };
+
+DraftRemoval removal_of(books::Draft const& draft);
+
 // The lone drafts a draft is made of: its event, without postings (when it has
 // a heading or an amount), then each posting (not removed) as a draft of its
 // own, dated as the posting (else the event), with no heading and no amount.

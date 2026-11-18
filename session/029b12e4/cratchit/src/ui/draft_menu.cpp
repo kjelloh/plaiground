@@ -1610,8 +1610,8 @@ public:
     auto const& draft = drafts_[index_];
     OptionsList options{{U'0', "Händelse"}, {U'1', "Konteringar"}};
     if (books::stage(draft) == books::DraftStage::ready) options.push_back({U'2', "Bokför"});
-    if (parts_of(draft) == DraftParts::lone) options.push_back({U'9', "Glöm"});
-    if (parts_of(draft) == DraftParts::same) options.push_back({U'9', "Inte samma"});
+    if (removal_of(draft) == DraftRemoval::forget) options.push_back({U'9', "Glöm"});
+    if (removal_of(draft) == DraftRemoval::split) options.push_back({U'9', "Inte samma"});
     options.push_back({back_key, "Föregående"});
     options.push_back({forward_key, "Nästa"});
     return options;
@@ -1626,7 +1626,7 @@ public:
       return true;
     }
     // Inte samma splits it at once (it can be undone in Samma?); the parts are read in their places
-    if (key == U'9' && !drafts_.empty() && parts_of(drafts_[index_]) == DraftParts::same) {
+    if (key == U'9' && !drafts_.empty() && removal_of(drafts_[index_]) == DraftRemoval::split) {
       auto const count = split_logged(project_, year_, index_, drafts_[index_]);
       if (!count) {
         done_.push_back(std::format("cratchit kunde inte dela utkastet: {}", count.error()));
@@ -1652,7 +1652,7 @@ public:
       return std::make_unique<BookState>(project_, year_, index_, draft, this,
                                          [this](std::string line) { report(std::move(line)); });
     case U'9': {
-      if (parts_of(draft) != DraftParts::lone) return nullptr;
+      if (removal_of(draft) != DraftRemoval::forget) return nullptr;
       auto summary = draft_row(index_, draft);
       summary = summary.substr(summary.find(format_iso_date(draft.event.date)));
       auto forget = [this, index = index_, draft]() -> std::expected<void, std::string> {

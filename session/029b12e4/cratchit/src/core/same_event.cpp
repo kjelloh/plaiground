@@ -172,6 +172,19 @@ books::Draft merged(books::Draft const& a, books::Draft const& b, books::Event e
   return result;
 }
 
+DraftRemoval removal_of(books::Draft const& draft) {
+  auto const entries = std::ranges::any_of(draft.postings, [](books::Posting const& posting) {
+    return counted(posting) && !posting.source.empty();
+  });
+  if (!entries) return DraftRemoval::forget;
+  switch (parts_of(draft)) {
+  case DraftParts::lone: return DraftRemoval::forget;
+  case DraftParts::same: return DraftRemoval::split;
+  case DraftParts::more: return DraftRemoval::none;
+  }
+  return DraftRemoval::none;
+}
+
 std::vector<books::Draft> split(books::Draft const& draft) {
   std::vector<books::Draft> drafts;
   if (!draft.event.heading.empty() || draft.event.amount != 0) drafts.push_back({draft.event, draft.noted, {}});
