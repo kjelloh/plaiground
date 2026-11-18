@@ -346,3 +346,73 @@ TEST(ReversalOf, TurnsEachPostingAndTheAmount) {
   EXPECT_EQ(draft.postings[2].amount, -24675);
   EXPECT_EQ(books::stage(draft), books::DraftStage::ready);
 }
+
+TEST(NewYear, TheBooksRunOnAndTheNewYearOpensWithTheBalances) {
+  auto const folder = fs::temp_directory_path() / "cratchit_new_year_test";
+  fs::remove_all(folder);
+  fs::create_directories(folder);
+  std::ofstream(folder / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 6570 \"Bankkostnader\"\r\n#IB 0 1930 1000.00\r\n"
+         "#VER \"A\" \"1\" 20251201 \"Avgift\"\r\n{\r\n#TRANS 6570 {} 10.00\r\n#TRANS 1930 {} -10.00\r\n}\r\n";
+  auto plan = plan_project_from_sie(folder / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(create_project_from_sie(*plan, "2026-11-09"));
+  Date const start{2026y, January, 1d};
+  Date const today{2026y, November, 18d};
+  // A draft in the year after: the year is added
+  auto const added = add_event_draft(folder, start, {"Avgift januari", 500, Date{2026y, January, 5d}}, today);
+  ASSERT_TRUE(added) << added.error();
+  auto books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  ASSERT_EQ(books->years.size(), 2u);
+  EXPECT_EQ(books->years[1].start, start);
+  EXPECT_EQ(books->years[1].end, (Date{2026y, December, 31d}));
+  ASSERT_EQ(books->years[1].drafts.size(), 1u);
+  // It opens with the year before's closing balances: the real balance, 1000 - 10
+  auto const balances = books::balances(*books);
+  ASSERT_EQ(balances.size(), 2u);
+  EXPECT_EQ(balances[1].opening.at("1930"), 99000);
+  EXPECT_TRUE(balances[1].carried);
+  EXPECT_FALSE(balances[1].opening.contains("6570")); // result accounts open at zero
+  // Booked in the new year: A1 there, as numbering starts again
+  auto draft = books->years[1].drafts[0];
+  auto ready = draft;
+  books::Posting bank;
+  bank.account = "1930";
+  bank.amount = -500;
+  books::Posting fee;
+  fee.account = "6570";
+  fee.amount = 500;
+  ready.postings = {bank, fee};
+  ASSERT_TRUE(replace_draft(folder, start, 0, draft, ready));
+  auto const voucher = book_draft(folder, start, 0, ready, "A", today);
+  ASSERT_TRUE(voucher) << voucher.error();
+  EXPECT_EQ(voucher->number, "1");
+  books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  EXPECT_EQ(books::balances(*books)[1].closing.at("1930"), 98500);
+  // A closed year: not booked in, its vouchers not made drafts
+  ASSERT_TRUE(add_event_draft(folder, start, {"Avgift februari", 500, Date{2026y, February, 5d}}, today));
+  books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  books->years[1].closed = true;
+  ASSERT_TRUE(books::write_books(folder, *books));
+  books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  ASSERT_TRUE(books->years[1].closed);
+  auto const february = books->years[1].drafts[0];
+  auto february_ready = february;
+  february_ready.postings = {bank, fee};
+  ASSERT_TRUE(replace_draft(folder, start, 0, february, february_ready));
+  auto const refused = book_draft(folder, start, 0, february_ready, "A", today);
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Räkenskapsåret 2026-01-01 – 2026-12-31 är stängt: det går inte att bokföra i det.");
+  books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  auto const unbooked = unbook_voucher(folder, start, books->years[1].vouchers[0], today);
+  ASSERT_FALSE(unbooked);
+  EXPECT_EQ(unbooked.error(),
+            "Räkenskapsåret 2026-01-01 – 2026-12-31 är stängt: dess verifikationer går inte att göra till utkast.");
+  fs::remove_all(folder);
+}

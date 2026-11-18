@@ -107,8 +107,9 @@ std::expected<std::size_t, std::string> add_statement_drafts(fs::path const& pro
                                                              Date today) {
   auto books = books::read_books(project_folder);
   if (!books) return std::unexpected(books.error());
-  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
-  if (year == books->years.end()) {
+  // A year after the last in the books is added: the books run on over the years
+  auto* const year = books::continued_year(*books, year_start);
+  if (year == nullptr) {
     return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
   }
   for (auto const& entry : plan.added) {

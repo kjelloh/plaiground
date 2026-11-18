@@ -224,9 +224,12 @@ public:
       return std::unexpected(std::format("Konto {} finns inte i bokföringens kontoplan.", number));
     }
     auto const start = parse_iso_date(year_.start);
-    auto const* year = start ? books_.year_starting(*start) : nullptr;
-    if (year == nullptr) return std::unexpected(std::format("Räkenskapsåret {} finns inte i bokföringen.", label_of(year_)));
-    auto plan = plan_statement_drafts(*year, statement_.document, number);
+    auto const end = parse_iso_date(year_.end);
+    if (!start || !end) return std::unexpected(std::format("Felaktigt räkenskapsår {} – {}", year_.start, year_.end));
+    // A year not in the books yet has nothing booked: it is added with the drafts (continued_year)
+    auto const* year = books_.year_starting(*start);
+    books::FiscalYear const empty{*start, *end};
+    auto plan = plan_statement_drafts(year != nullptr ? *year : empty, statement_.document, number);
     LOG_BUSINESS("Kontoutdrag {}: konto {} valt", statement_.file.string(), number);
     return Accepted(std::make_unique<ConfirmStatementState>(project_, year_, statement_, std::move(plan),
                                                             account_text(books_, number), origin_, chooser_, report_));

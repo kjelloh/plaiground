@@ -304,7 +304,9 @@ Räkenskapsåren finns oavsett om något är bokfört i dem. När ett nytt räke
   1 2026-05-01 – 2027-04-30  bokfört: 37 verifikationer
 ```
 
-Ett år där inget är bokfört fungerar som de andra: du kan importera till det och exportera det.
+Ett år där inget är bokfört fungerar som de andra: du kan importera till det och exportera det, och du kan beskriva händelser, läsa kontoutdrag och bokföra i det.
+
+**Bokföringen löper vidare över åren.** Du behöver ingen SIE-fil för ett nytt år: första gången du skapar ett utkast i det lägger cratchit till året i bokföringen (och åren mellan, om du har hoppat över något). Ett år som följer direkt efter ett annat öppnar med förra årets utgående saldon på balanskontona, så ett kontos saldo är alltid det verkliga: den första ingående balansen plus alla konteringar sedan dess. Ändrar du något i ett tidigare år följer saldona med. Resultatkontona börjar på noll varje år; de visar årets resultat. Tills bokslutet för förra året är bokfört ligger dess resultat inte i det egna kapitalet, så balansräkningen går jämnt ut först då. Ingående och utgående balanser behöver du bara ange i rapporterna, som årsredovisningen. Ett äldre år än det äldsta i bokföringen kommer fortfarande bara från en SIE-fil.
 
 ### Räkenskapsår
 
@@ -606,7 +608,7 @@ Verifikationen får
 
 cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. Bokförde du från Fullborda är du tillbaka där på samma plats, där nu nästa utkast står, och under det till exempel `cratchit bokförde #1 som A11: AVGIFTER NORDEA.` Bokförde du från utkastets vy är du tillbaka i Utkast, eftersom utkastet inte finns längre. Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
 
-Den sista verifikationen i en serie kan du göra till ett utkast igen, se [Gör till utkast](#gör-till-utkast).
+Den sista verifikationen i en serie kan du göra till ett utkast igen, se [Gör till utkast](#gör-till-utkast). Ett stängt räkenskapsår går inte att bokföra i, och dess verifikationer går inte att göra till utkast; cratchit säger då att året är stängt.
 
 ##### Läs kontoutdrag
 

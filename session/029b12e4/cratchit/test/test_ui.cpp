@@ -2350,3 +2350,33 @@ TEST_F(RootMenuTest, AnAndringsverifikationIsADraftThatReversesTheVoucher) {
   EXPECT_EQ(drafts.current().name(), "Utkast");
   EXPECT_EQ(drafts.current().view().front(), "Utkast 2025: inga utkast.");
 }
+
+TEST_F(RootMenuTest, AStatementIsReadIntoAYearNotInTheBooksYet) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  fs::create_directories(documents / "bank");
+  std::ofstream(documents / "bank" / "nordea.csv", std::ios::binary) << "Datum;Belopp;Text;Saldo\n"
+                                                                       "2026/01/06;-5,00;AVGIFTER;985,00\n"
+                                                                       "2026/01/05;-10,00;AVGIFTER;990,00\n";
+  // 2026 is not in the books (only 2025): the books run on into it
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2026-01-01", "2026-12-31"}));
+  ASSERT_TRUE(navigator.press(U'3'));
+  auto accepted = navigator.current().on_input(pyroceph::tui::path_input_of(documents / "bank") + U"nordea.csv");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  accepted = navigator.current().on_input(U"1930");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  ASSERT_TRUE(navigator.press(U'J'));
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  EXPECT_EQ(navigator.current().view().front(), "Utkast 2026: utkast 1–2 av 2");
+  auto const books = cratchit::books::read_books(documents);
+  ASSERT_TRUE(books);
+  ASSERT_EQ(books->years.size(), 2u);
+  EXPECT_EQ(cratchit::format_iso_date(books->years[1].start), "2026-01-01");
+}

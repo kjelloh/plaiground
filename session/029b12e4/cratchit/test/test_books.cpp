@@ -439,3 +439,27 @@ TEST_F(BooksFiles, SeriesAreReadAndWrittenWithTheirNames) {
   EXPECT_EQ(back->series_name("A"), "Bank");
   EXPECT_EQ(back->series_name("X"), "Egen serie");
 }
+
+TEST(ContinuedYear, YearsAfterTheLastAreAddedTwelveMonthsEach) {
+  Books books;
+  books.years.push_back(FiscalYear{date(2025, 5, 1), date(2026, 4, 30)});
+  // In the books: that year
+  EXPECT_EQ(cratchit::books::continued_year(books, date(2025, 5, 1)), &books.years.front());
+  // Not the start of a year, or before the last: nothing added
+  EXPECT_EQ(cratchit::books::continued_year(books, date(2026, 6, 1)), nullptr);
+  EXPECT_EQ(cratchit::books::continued_year(books, date(2024, 5, 1)), nullptr);
+  EXPECT_EQ(books.years.size(), 1u);
+  // Two years on: the year between is added too
+  auto const* year = cratchit::books::continued_year(books, date(2027, 5, 1));
+  ASSERT_NE(year, nullptr);
+  ASSERT_EQ(books.years.size(), 3u);
+  EXPECT_EQ(books.years[1].start, date(2026, 5, 1));
+  EXPECT_EQ(books.years[1].end, date(2027, 4, 30));
+  EXPECT_EQ(year->start, date(2027, 5, 1));
+  EXPECT_EQ(year->end, date(2028, 4, 30));
+  EXPECT_FALSE(year->closed);
+  EXPECT_TRUE(year->reported_opening.empty());
+  // No year in the books: nothing to run on from
+  Books none;
+  EXPECT_EQ(cratchit::books::continued_year(none, date(2026, 5, 1)), nullptr);
+}

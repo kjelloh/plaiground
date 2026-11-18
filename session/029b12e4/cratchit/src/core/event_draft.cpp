@@ -140,8 +140,9 @@ std::expected<std::size_t, std::string> add_event_draft(std::filesystem::path co
                                                         books::Event const& event, Date today) {
   auto books = books::read_books(project_folder);
   if (!books) return std::unexpected(books.error());
-  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
-  if (year == books->years.end()) {
+  // A year after the last in the books is added: the books run on over the years
+  auto* const year = books::continued_year(*books, year_start);
+  if (year == nullptr) {
     return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
   }
   if (!year->holds(event.date)) {
@@ -240,6 +241,10 @@ std::expected<std::size_t, std::string> unbook_voucher(std::filesystem::path con
   if (found == year->vouchers.end()) {
     return std::unexpected(std::format("Verifikationen {} finns inte längre som den var i bokföringen.", id));
   }
+  if (year->closed) {
+    return std::unexpected(std::format("Räkenskapsåret {} – {} är stängt: dess verifikationer går inte att göra till utkast.",
+                                       format_iso_date(year->start), format_iso_date(year->end)));
+  }
   auto const last = last_vouchers(*year);
   if (std::ranges::find(last, expected) == last.end()) {
     return std::unexpected(std::format("{} är inte den sista verifikationen i serie {}.", id, expected.series));
@@ -272,6 +277,10 @@ std::expected<books::Voucher, std::string> book_draft(std::filesystem::path cons
   }
   if (books::stage(expected) != books::DraftStage::ready) {
     return std::unexpected("Utkastet är inte klart att bokföra.");
+  }
+  if (year->closed) {
+    return std::unexpected(std::format("Räkenskapsåret {} – {} är stängt: det går inte att bokföra i det.",
+                                       format_iso_date(year->start), format_iso_date(year->end)));
   }
   if (std::ranges::find(books->series, series, &books::Series::series) == books->series.end()) {
     return std::unexpected(std::format("{} är ingen serie i bokföringen.", series));

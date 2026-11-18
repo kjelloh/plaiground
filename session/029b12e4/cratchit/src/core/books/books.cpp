@@ -4,6 +4,7 @@
 #include "core/path_value.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <ranges>
 #include <format>
 #include <fstream>
@@ -409,6 +410,26 @@ DraftStage stage(Draft const& draft) {
   auto const ready = on_accounts && !draft.event.heading.empty() && amount != 0 && sum(draft.postings) == 0 && debit(draft.postings) == amount;
   if (ready) return DraftStage::ready;
   return parts_of(draft) == DraftParts::same ? DraftStage::same : DraftStage::unbalanced;
+}
+
+FiscalYear* continued_year(Books& books, Date start) {
+  using namespace std::chrono;
+  auto const found = std::ranges::find(books.years, start, &FiscalYear::start);
+  if (found != books.years.end()) return &*found;
+  if (books.years.empty() || start <= books.years.back().end) return nullptr;
+  // Year after year from the last in the books, until start is reached or passed
+  std::vector<FiscalYear> added;
+  auto end = books.years.back().end;
+  while (true) {
+    auto const next = Date{sys_days(end) + days(1)};
+    if (next > start) return nullptr;
+    auto const last_month = year_month(next.year(), next.month()) + months(11);
+    end = Date{last_month / last};
+    added.push_back(FiscalYear{next, end});
+    if (next == start) break;
+  }
+  for (auto& year : added) books.years.push_back(std::move(year));
+  return &books.years.back();
 }
 
 bool FiscalYear::holds(Date date) const {

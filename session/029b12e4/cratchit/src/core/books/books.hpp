@@ -205,6 +205,15 @@ struct Books {
   std::string series_name(std::string_view series) const;
 };
 
+// The fiscal year starting on start, added to books when it comes after the
+// last year in them (beslut 2026-11-18: the books run on over the years): each
+// year after the last is twelve months, from the day after the year before
+// ends, and the years between are added too, so that each opens with the
+// closing balances of the year before (see balances). nullptr when start is
+// not the start of such a year, or comes before the last year without being
+// in the books (older years come only from SIE files), or books has no year.
+FiscalYear* continued_year(Books& books, Date start);
+
 // The kind of an account in the books (by its type, else its BAS class)
 AccountKind account_kind(Books const& books, std::string_view number);
 
