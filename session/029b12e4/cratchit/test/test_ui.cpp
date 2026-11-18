@@ -345,6 +345,7 @@ TEST_F(RootMenuTest, FiscalYearZeroIsTheYearFlowWithItsStepsNotThereYet) {
                                                         {U'2', "Fullborda utkast"},
                                                         {U'3', "Läs kontoutdrag"},
                                                         {U'4', "Läs pdf-underlag"},
+                                                        {U'5', "Gör bokfört till utkast"},
                                                         {U'<', "Föregående sida"},
                                                         {U'>', "Nästa sida"}}));
   ASSERT_TRUE(navigator.back());
@@ -1298,7 +1299,7 @@ TEST_F(RootMenuTest, BookedShowsTheVouchersNewestFirstAPageAtATime) {
   EXPECT_TRUE(view[1].starts_with("  A45 ")) << view[1];
   EXPECT_TRUE(view[20].starts_with("  A26 ")) << view[20];
   EXPECT_EQ(view[21], "  …");
-  EXPECT_EQ(booked.options(), (OptionsList{{U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
+  EXPECT_EQ(booked.options(), (OptionsList{{U'0', "Gör till utkast"}, {U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
   EXPECT_FALSE(navigator.press(U'<')); // at the first page: nothing
   // > turns a page in place
   ASSERT_TRUE(navigator.press(U'>'));
@@ -1308,7 +1309,8 @@ TEST_F(RootMenuTest, BookedShowsTheVouchersNewestFirstAPageAtATime) {
   EXPECT_EQ(view[1], "  …");
   EXPECT_TRUE(view[2].starts_with("  A25 ")) << view[2];
   EXPECT_EQ(view.back(), "  …");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Gör till utkast"}, {U'<', "Föregående sida"}, {U'>', "Nästa sida"}}));
   ASSERT_TRUE(navigator.press(U'>'));
   view = navigator.current().view();
   EXPECT_EQ(view[0], "Bokfört 2025: verifikationer 41–45 av 45");
@@ -1477,14 +1479,14 @@ TEST(VoucherMenu, KonteringarAreTurnedTenAtATime) {
   }
   Navigator navigator(cratchit::ui::make_voucher_menu(voucher, {}, "", "A1"));
   EXPECT_EQ(navigator.current().view()[1], "  Serie:          A"); // a series without name
-  // A1 is the last in A: it may become a draft, once cratchit can
+  // A1 is the last in A: it may become a draft, with 0 in Bokfört
   ASSERT_TRUE(navigator.press(U'0'));
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Låst (Rubrik)");
   EXPECT_EQ(navigator.current().view(),
             (View{"Det går inte att ändra rubriken i en bokförd verifikation.",
                   "A1 är den sista verifikationen i serie A. Den sista i en serie går att göra om till ett utkast, där du "
-                  "kan ändra händelsen fritt och sedan bokföra den igen. Det har utvecklaren av cratchit inte infört ännu."}));
+                  "kan ändra händelsen fritt och sedan bokföra den igen: tryck 0 (Gör till utkast) i Bokfört."}));
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.back());
   ASSERT_TRUE(navigator.press(U'1'));
@@ -2182,4 +2184,23 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   view = navigator.current().view();
   EXPECT_EQ(view.back(), "cratchit bokförde #2 som D1: Telia oktober.");
   EXPECT_EQ(view[0], "Utkast 2025: utkast 1–1 av 1");
+  // Gör bokfört till utkast: the last voucher of each series, chosen by its series
+  ASSERT_TRUE(navigator.press(U'5'));
+  EXPECT_EQ(navigator.current().name(), "Gör till utkast");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::unbook);
+  view = navigator.current().view();
+  EXPECT_EQ(view[0], "Den sista verifikationen i varje serie i 2025:");
+  EXPECT_TRUE(view[1].starts_with("  D  D1            2025-10-22       1118.00  Telia oktober  registrerad ")) << view[1];
+  auto refused_unbook = navigator.current().on_input(U"A");
+  ASSERT_FALSE(refused_unbook);
+  EXPECT_EQ(refused_unbook.error(), "Serie A har ingen verifikation i 2025.");
+  accepted = navigator.current().on_input(U"d");
+  ASSERT_TRUE(accepted) << accepted.error();
+  follow(accepted);
+  // Back in Utkast: D1 is a draft again, ready, and not in Bokfört
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  view = navigator.current().view();
+  EXPECT_EQ(view[0], "Utkast 2025: utkast 1–2 av 2");
+  EXPECT_TRUE(view[1].ends_with("Telia oktober (klart)")) << view[1];
+  EXPECT_EQ(view.back(), "cratchit gjorde D1 till utkast #2: Telia oktober.");
 }

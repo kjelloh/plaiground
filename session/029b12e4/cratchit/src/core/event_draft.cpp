@@ -194,16 +194,68 @@ std::expected<std::size_t, std::string> replace_draft(std::filesystem::path cons
   return at;
 }
 
+namespace {
+
+// A voucher's number as a number; 0 for one that is not digits
+long long number_value(std::string const& text) {
+  long long number = 0;
+  auto const [end, error] = std::from_chars(text.data(), text.data() + text.size(), number);
+  return error == std::errc{} && end == text.data() + text.size() ? number : 0;
+}
+
+} // namespace
+
 std::string next_number(books::FiscalYear const& year, std::string_view series) {
   long long highest = 0;
   for (auto const& voucher : year.vouchers) {
-    if (voucher.series != series) continue;
-    long long number = 0;
-    auto const& text = voucher.number;
-    auto const [end, error] = std::from_chars(text.data(), text.data() + text.size(), number);
-    if (error == std::errc{} && end == text.data() + text.size()) highest = std::max(highest, number);
+    if (voucher.series == series) highest = std::max(highest, number_value(voucher.number));
   }
   return std::to_string(highest + 1);
+}
+
+std::vector<books::Voucher> last_vouchers(books::FiscalYear const& year) {
+  std::vector<books::Voucher> last;
+  for (auto const& voucher : year.vouchers) {
+    auto const found = std::ranges::find(last, voucher.series, &books::Voucher::series);
+    if (found == last.end()) {
+      last.push_back(voucher);
+    } else if (number_value(voucher.number) > number_value(found->number)) {
+      *found = voucher;
+    }
+  }
+  std::ranges::sort(last, {}, &books::Voucher::series);
+  return last;
+}
+
+std::expected<std::size_t, std::string> unbook_voucher(std::filesystem::path const& project_folder, Date year_start,
+                                                       books::Voucher const& expected, Date today) {
+  auto books = books::read_books(project_folder);
+  if (!books) return std::unexpected(books.error());
+  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
+  if (year == books->years.end()) {
+    return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
+  }
+  auto const id = books::voucher_id(expected.series, expected.number);
+  auto const found = std::ranges::find(year->vouchers, expected);
+  if (found == year->vouchers.end()) {
+    return std::unexpected(std::format("Verifikationen {} finns inte längre som den var i bokföringen.", id));
+  }
+  auto const last = last_vouchers(*year);
+  if (std::ranges::find(last, expected) == last.end()) {
+    return std::unexpected(std::format("{} är inte den sista verifikationen i serie {}.", id, expected.series));
+  }
+  books::Draft draft{expected.event, today, {}};
+  for (auto const& posting : expected.postings) {
+    if (posting.kind == books::Posting::Kind::removed) continue;
+    auto kept = posting;
+    kept.kind = books::Posting::Kind::normal;
+    kept.signature.clear();
+    draft.postings.push_back(std::move(kept));
+  }
+  year->vouchers.erase(found);
+  auto const index = year->place_draft(std::move(draft));
+  if (auto written = books::write_books(project_folder, *books); !written) return std::unexpected(written.error());
+  return index;
 }
 
 std::expected<books::Voucher, std::string> book_draft(std::filesystem::path const& project_folder, Date year_start,

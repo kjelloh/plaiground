@@ -6,6 +6,7 @@
 #include "core/log.hpp"
 #include "pyroceph/tui/pager.hpp"
 #include "ui/help_topics.hpp"
+#include "ui/unbook_menu.hpp"
 #include "ui/voucher_menu.hpp"
 #include "ui/year_view.hpp"
 
@@ -69,17 +70,24 @@ public:
                            pager_.first() + pager_.shown(), pager_.count())};
     auto const page = pager_.view();
     lines.insert(lines.end(), page.begin(), page.end());
+    lines.insert(lines.end(), report_.begin(), report_.end());
     return lines;
   }
   // Always both, so that turning past either end does nothing (and starts no input)
-  OptionsList options() const override { return {{back_key, "Föregående sida"}, {forward_key, "Nästa sida"}}; }
+  OptionsList options() const override {
+    return {{U'0', "Gör till utkast"}, {back_key, "Föregående sida"}, {forward_key, "Nästa sida"}};
+  }
   // < and > turn the page in place (keys match exactly, beslut.md)
   bool on_key_in_place(CodePoint key) override {
     if (key == back_key) return pager_.back();
     if (key == forward_key) return pager_.forward();
     return false;
   }
-  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  OnKeyResult on_key(CodePoint key) override {
+    if (key != U'0') return nullptr;
+    report_.clear();
+    return make_unbook_menu(project_, year_, this, [this](std::string line) { report_.push_back(std::move(line)); });
+  }
   // The id of a voucher as one word, e.g. A12, opens it
   InputResult on_input(std::u32string_view text) override {
     std::string typed;
@@ -126,6 +134,7 @@ private:
   FiscalYear year_;
   pyroceph::tui::Pager pager_{booked_page_rows};
   std::string error_;
+  View report_; // what was just done (Gör till utkast), until the user goes on
 };
 
 } // namespace

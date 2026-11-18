@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -271,5 +272,49 @@ TEST(BookDraft, AReadyDraftBecomesTheNextVoucherOfItsSeries) {
   EXPECT_EQ(books->years.front().vouchers.back(), *voucher);
   // Not the draft seen any more
   EXPECT_FALSE(book_draft(folder, start, 0, ready, "A", today));
+  fs::remove_all(folder);
+}
+
+TEST(UnbookVoucher, TheLastOfASeriesBecomesADraftAndBooksAgainAsItWas) {
+  auto const folder = fs::temp_directory_path() / "cratchit_unbook_voucher_test";
+  fs::remove_all(folder);
+  fs::create_directories(folder);
+  std::ofstream(folder / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20260101 20261231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 6570 \"Bankkostnader\"\r\n"
+         "#VER \"A\" \"1\" 20260301 \"Avgift mars\"\r\n{\r\n#TRANS 6570 {} 1.00\r\n#TRANS 1930 {} -1.00\r\n}\r\n"
+         "#VER \"A\" \"2\" 20260401 \"Avgift april\"\r\n{\r\n#TRANS 6570 {} 2.00\r\n#TRANS 1930 {} -2.00 20260402 \"Nordea\"\r\n}\r\n";
+  auto plan = plan_project_from_sie(folder / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(create_project_from_sie(*plan, "2026-11-09"));
+  Date const start{2026y, January, 1d};
+  Date const today{2026y, November, 18d};
+  auto books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  auto const& fiscal = books->years.front();
+  auto const last_in_series = last_vouchers(fiscal);
+  ASSERT_EQ(last_in_series.size(), 1u);
+  EXPECT_EQ(last_in_series[0].number, "2");
+  // Not the last of its series: refused
+  auto const first = *std::ranges::find(fiscal.vouchers, std::string("1"), &books::Voucher::number);
+  auto const refused = unbook_voucher(folder, start, first, today);
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "A1 är inte den sista verifikationen i serie A.");
+  // The last: a ready draft, noted today, with the postings' dates and texts
+  auto const index = unbook_voucher(folder, start, last_in_series[0], today);
+  ASSERT_TRUE(index) << index.error();
+  books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  ASSERT_EQ(books->years.front().vouchers.size(), 1u);
+  auto const draft = books->years.front().drafts[*index];
+  EXPECT_EQ(draft.event, last_in_series[0].event);
+  EXPECT_EQ(draft.noted, today);
+  EXPECT_EQ(books::stage(draft), books::DraftStage::ready);
+  ASSERT_EQ(draft.postings.size(), 2u);
+  EXPECT_EQ(draft.postings[1].text, "Nordea");
+  // Booked again in A: the same number
+  auto const again = book_draft(folder, start, *index, draft, "A", today);
+  ASSERT_TRUE(again) << again.error();
+  EXPECT_EQ(again->number, "2");
   fs::remove_all(folder);
 }

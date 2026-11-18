@@ -45,6 +45,7 @@ inline constexpr std::string_view complete = "fullborda";
 inline constexpr std::string_view post = "kontera";
 inline constexpr std::string_view complete_event = "kontera-handelse";
 inline constexpr std::string_view book = "bokfor-utkast";
+inline constexpr std::string_view unbook = "gor-till-utkast";
 inline constexpr std::string_view read_pdf = "las-pdf-underlag";
 inline constexpr std::string_view pdf_list = "pdf-underlag";
 inline constexpr std::string_view document = "underlag";
@@ -74,7 +75,7 @@ inline constexpr std::string_view quit = pyroceph::tui::quit_help_topic;
 inline constexpr std::array all_help_topics{
     help_topic::root,    help_topic::workspace,           help_topic::add_project, help_topic::open_existing,
     help_topic::new_project, help_topic::from_sie, help_topic::confirm_sie_project, help_topic::from_details,
-    help_topic::details_name, help_topic::details_orgnr, help_topic::details_year, help_topic::details_months, help_topic::here, help_topic::here_name, help_topic::project, help_topic::forget_project, help_topic::fiscal_year, help_topic::year_flow, help_topic::drafts, help_topic::read_statement, help_topic::statement_account, help_topic::confirm_statement, help_topic::describe_event, help_topic::same, help_topic::same_pair, help_topic::complete, help_topic::post, help_topic::complete_event, help_topic::book, help_topic::read_pdf, help_topic::pdf_list, help_topic::document, help_topic::interpret, help_topic::amount_choice, help_topic::booked, help_topic::voucher, help_topic::draft, help_topic::draft_event, help_topic::forget_draft, help_topic::event, help_topic::postings, help_topic::posting, help_topic::locked, help_topic::closing, help_topic::vat_return, help_topic::annual_report, help_topic::tax_return, help_topic::import_sie, help_topic::confirm_import, help_topic::replace_sie, help_topic::export_sie,
+    help_topic::details_name, help_topic::details_orgnr, help_topic::details_year, help_topic::details_months, help_topic::here, help_topic::here_name, help_topic::project, help_topic::forget_project, help_topic::fiscal_year, help_topic::year_flow, help_topic::drafts, help_topic::read_statement, help_topic::statement_account, help_topic::confirm_statement, help_topic::describe_event, help_topic::same, help_topic::same_pair, help_topic::complete, help_topic::post, help_topic::complete_event, help_topic::book, help_topic::unbook, help_topic::read_pdf, help_topic::pdf_list, help_topic::document, help_topic::interpret, help_topic::amount_choice, help_topic::booked, help_topic::voucher, help_topic::draft, help_topic::draft_event, help_topic::forget_draft, help_topic::event, help_topic::postings, help_topic::posting, help_topic::locked, help_topic::closing, help_topic::vat_return, help_topic::annual_report, help_topic::tax_return, help_topic::import_sie, help_topic::confirm_import, help_topic::replace_sie, help_topic::export_sie,
     help_topic::sie_difference, help_topic::sie_comparison, help_topic::design_insufficiency,
     help_topic::error, help_topic::quit,
 };

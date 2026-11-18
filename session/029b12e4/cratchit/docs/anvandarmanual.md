@@ -369,7 +369,7 @@ Valen finns i menyn, men de flesta kan cratchit inte utföra än (se [Inte än](
 #### Utkast
 
 <!-- hjälp: utkast -->
-Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att beskriva händelser, en i taget, och skapa ett utkast av var och en, `1` för att se vilka utkast som kan vara samma händelse, `2` för att fullborda utkasten ett i taget, `3` för att läsa ett kontoutdrag och skapa utkast av dess rader, eller `4` för att välja en mapp med pdf-underlag. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets utkast, händelser som ännu inte är bokförda, det senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv ett utkasts nummer som ett ord, till exempel `#3`, och tryck Enter för att öppna det. Under listan står vad du nyss gjorde. Tryck `0` för att beskriva händelser, en i taget, och skapa ett utkast av var och en, `1` för att se vilka utkast som kan vara samma händelse, `2` för att fullborda utkasten ett i taget, `3` för att läsa ett kontoutdrag och skapa utkast av dess rader, `4` för att välja en mapp med pdf-underlag, eller `5` för att göra en bokförd verifikation till ett utkast igen (se [Gör till utkast](#gör-till-utkast)). Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `0` i Årsflöde:
@@ -386,6 +386,7 @@ Utkast 2026/27: utkast 1–12 av 12
   2 Fullborda utkast
   3 Läs kontoutdrag
   4 Läs pdf-underlag
+  5 Gör bokfört till utkast
   < Föregående sida
   > Nästa sida
 Cratchit > Samlingsmapp > The ITfied AB > 2026/27 > Årsflöde > Utkast> 
@@ -400,7 +401,7 @@ Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat frå
 ##### Utkastet
 
 <!-- hjälp: utkastet -->
-Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för händelsen och `1` för konteringarna. `9` är *Glöm* för ett ensamt utkast, en händelse eller en kontohändelse, och *Inte samma* för ett utkast av flera delar med samma belopp, som delar det direkt. Ett utkast vars konteringar har olika belopp har inget `9`. Än så länge kan du inte ändra utkastet. Tryck `-` för att gå tillbaka till Utkast.
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för händelsen och `1` för konteringarna. `9` är *Glöm* för ett ensamt utkast, en händelse eller en kontohändelse, och *Inte samma* för ett utkast av flera delar med samma belopp, som delar det direkt. Ett utkast vars konteringar har olika belopp har inget `9`. Utkastet ändrar du i [Kontera](#kontera) via [Fullborda utkast](#fullborda-utkast). Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
@@ -576,7 +577,7 @@ Verifikationen får
 
 cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. Du är tillbaka i Fullborda på samma plats, där nu nästa utkast står, och under det till exempel `cratchit bokförde #1 som A11: AVGIFTER NORDEA.` Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
 
-Det går ännu inte att ångra en bokföring.
+Den sista verifikationen i en serie kan du göra till ett utkast igen, se [Gör till utkast](#gör-till-utkast).
 
 ##### Läs kontoutdrag
 
@@ -891,7 +892,7 @@ Tryck `-` för att gå tillbaka till samma underlag och fortsätta med `<` och `
 #### Bokfört
 
 <!-- hjälp: bokfort -->
-Räkenskapsårets bokförda verifikationer, den senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv en verifikations id som ett ord, till exempel `A12`, och tryck Enter för att öppna den. Tryck `-` för att gå tillbaka till Årsflöde.
+Räkenskapsårets bokförda verifikationer, den senaste överst, 20 i taget. `…` överst betyder att det finns nyare, och `…` nederst att det finns äldre. Tryck `>` för nästa sida och `<` för föregående. Vid första och sista sidan gör de ingenting. Skriv en verifikations id som ett ord, till exempel `A12`, och tryck Enter för att öppna den. Tryck `0` för att göra den sista verifikationen i en serie till ett utkast igen. Tryck `-` för att gå tillbaka till Årsflöde.
 <!-- /hjälp -->
 
 Tryck `1` i Årsflöde för att se räkenskapsårets bokförda verifikationer. De visas en sida i taget, den senaste överst:
@@ -904,6 +905,7 @@ Bokfört 2025/26: verifikationer 21–40 av 120
   …
   A30           2026-01-12       1250.00  Telia
   …
+  0 Gör till utkast
   < Föregående sida
   > Nästa sida
 Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört> 
@@ -913,6 +915,35 @@ Cratchit > Samlingsmapp > The ITfied AB > 2025/26 > Årsflöde > Bokfört>
 * `…` överst betyder att det finns nyare verifikationer före sidan, och `…` nederst att det finns äldre efter den.
 * `>` visar nästa sida, med äldre verifikationer, och `<` föregående sida. Båda valen finns alltid; på första sidan gör `<` ingenting, och på sista sidan gör `>` ingenting.
 * Skriv en verifikations id och tryck Enter för att öppna den (se nedan).
+* `0` gör den sista verifikationen i en serie till ett utkast igen (se nedan).
+
+#### Gör till utkast
+
+<!-- hjälp: gor-till-utkast -->
+Den sista verifikationen i varje serie. Skriv seriens bokstav och tryck Enter för att göra den verifikationen till ett utkast igen. Kom den från ett annat program med en SIE-fil, eller har du exporterat den dit, finns den kvar där. Tryck `-` för att gå tillbaka.
+<!-- /hjälp -->
+
+En bokförd verifikation går inte att ändra. Den sista i en serie kan du ändå göra till ett utkast igen, till exempel för att rätta något du nyss bokförde. Tryck `0` i Bokfört eller `5` i Utkast:
+
+```text
+Den sista verifikationen i varje serie i 2026/27:
+  A  A11           2026-07-03          3.70  AVGIFTER NORDEA  registrerad 2026-11-18
+  D  D3            2026-06-12       1233.75  Websupport  registrerad 2026-07-15
+  …
+Kom verifikationen från ett annat program med en SIE-fil, eller har du exporterat den dit, finns den kvar där. Då skiljer sig bokföringarna tills du har rättat där också.
+Skriv seriens bokstav och tryck Enter för att göra verifikationen till ett utkast.
+Cratchit > … > Bokfört > Gör till utkast>
+```
+
+Skriv seriens bokstav, stor eller liten, och tryck Enter. Verifikationen blir direkt ett utkast; cratchit frågar inte först, eftersom du kan bokföra utkastet igen. Bokför du det i samma serie får det samma nummer. Du kommer tillbaka dit du var, där det står till exempel `cratchit gjorde A11 till utkast #1: AVGIFTER NORDEA.` Loggen får hela verifikationen.
+
+Utkastet får verifikationens datum, text och belopp, och dess konteringar med datum och texter. En struken rad kommer inte med, och en tillagd rad blir en vanlig kontering. Utkastet noteras i dag och är *klart*, så det står med `0 Bokför` i [Fullborda utkast](#fullborda-utkast). Det som går förlorat:
+
+* **tecknet**: verifikationen har beloppet utan tecken, så en kreditfaktura kommer tillbaka med plus;
+* **kontoutdragsraden** en kontering kom från, som verifikationen inte sparade;
+* **registreringsdagen och signaturen**: bokför du igen blir registreringsdagen ny.
+
+cratchit vet inte vilka verifikationer som har kommit från eller gått till ett annat program, så varningen står alltid med. Bokföringslagen tillåter inte att en bokförd verifikation bara försvinner; använd det till att rätta det du nyss bokförde i cratchit.
 
 #### Öppna en verifikation
 
@@ -975,7 +1006,7 @@ Cratchit > … > Bokfört > D19 > Händelse > Låst (Datum)>
 ```
 
 <!-- hjälp: last -->
-Det du valde går inte att ändra i en bokförd verifikation. Är verifikationen den sista i sin serie kommer den att gå att göra om till ett utkast, där du kan ändra händelsen fritt och bokföra den igen; det har utvecklaren av cratchit inte infört ännu. Annars rättar du en felaktig händelse med en ny verifikation. Tryck `-` för att gå tillbaka.
+Det du valde går inte att ändra i en bokförd verifikation. Är verifikationen den sista i sin serie kan du göra om den till ett utkast, där du kan ändra händelsen fritt och bokföra den igen: tryck `0` i Bokfört (se [Gör till utkast](#gör-till-utkast)). Annars rättar du en felaktig händelse med en ny verifikation. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
 <!-- hjälp: konteringar -->

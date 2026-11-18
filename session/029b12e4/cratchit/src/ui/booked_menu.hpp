@@ -19,8 +19,9 @@ inline constexpr std::size_t booked_page_rows = 20;
 // always offered; at either end the key does nothing. Typing a voucher's id
 // as one word, e.g. A12, and Enter opens it (make_voucher_menu); an id typed
 // otherwise, or one the year has not, is refused with the reason, and the text
-// is kept. The vouchers are read again when the user comes back. Opened with 1
-// in Årsflöde.
+// is kept. The vouchers are read again when the user comes back. 0 Gör till
+// utkast leads to make_unbook_menu; what it did is shown below the list. Opened
+// with 1 in Årsflöde.
 std::unique_ptr<pyroceph::tui::State> make_booked_menu(Project project, FiscalYear year);
 
 } // namespace cratchit::ui

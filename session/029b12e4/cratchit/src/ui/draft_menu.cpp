@@ -15,6 +15,7 @@
 #include "pyroceph/tui/prompt_loop.hpp"
 #include "ui/design_insufficiency.hpp"
 #include "ui/booked_menu.hpp"
+#include "ui/unbook_menu.hpp"
 #include "ui/help_topics.hpp"
 #include "ui/voucher_menu.hpp"
 #include "ui/year_view.hpp"
@@ -1501,6 +1502,7 @@ public:
             {U'2', "Fullborda utkast"},
             {U'3', "Läs kontoutdrag"},
             {U'4', "Läs pdf-underlag"},
+            {U'5', "Gör bokfört till utkast"},
             {back_key, "Föregående sida"},
             {forward_key, "Nästa sida"}};
   }
@@ -1519,6 +1521,10 @@ public:
       report_.clear();
       return std::make_unique<CompleteState>(project_, year_,
                                              [this](std::string line) { report_.push_back(std::move(line)); });
+    }
+    if (key == U'5') {
+      report_.clear();
+      return make_unbook_menu(project_, year_, this, [this](std::string line) { report_.push_back(std::move(line)); });
     }
     if (key == U'4') {
       report_.clear();

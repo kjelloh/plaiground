@@ -76,6 +76,20 @@ std::expected<books::Voucher, std::string> book_draft(std::filesystem::path cons
                                                       std::size_t index, books::Draft const& expected,
                                                       std::string_view series, Date today);
 
+// The last voucher of each series in year (the highest number), by series
+std::vector<books::Voucher> last_vouchers(books::FiscalYear const& year);
+
+// Makes the voucher expected, the last of its series in the fiscal year
+// starting on year_start, a draft again (beslut 2026-11-18) and writes the
+// books: the voucher leaves, and the draft has its event (date, heading,
+// amount without sign), its postings (removed ones left out, added ones as
+// any other) with their dates and texts, and is noted today. Booking it again
+// in the same series gives it the same number. Gives the draft's index. Error
+// text when the books cannot be read or written, the year is not in them, or
+// the voucher is not there or not the last of its series. Does not log.
+std::expected<std::size_t, std::string> unbook_voucher(std::filesystem::path const& project_folder, Date year_start,
+                                                       books::Voucher const& expected, Date today);
+
 // An amount of a posting as typed: an optional sign (+ or -), digits, and a
 // decimal comma or point with at most two decimals, e.g. -3,70 or 1118. Spaces
 // (also no-break spaces) inside it do not count. Nothing for anything else.

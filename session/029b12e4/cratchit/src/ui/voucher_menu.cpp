@@ -216,8 +216,8 @@ public:
     View lines{std::format("Det går inte att ändra {} i en bokförd verifikation.", what_)};
     if (id == shown_->last_in_series) {
       lines.push_back(std::format("{} är den sista verifikationen i serie {}. Den sista i en serie går att göra om till "
-                                  "ett utkast, där du kan ändra händelsen fritt och sedan bokföra den igen. Det har "
-                                  "utvecklaren av cratchit inte infört ännu.",
+                                  "ett utkast, där du kan ändra händelsen fritt och sedan bokföra den igen: tryck 0 "
+                                  "(Gör till utkast) i Bokfört.",
                                   id, series));
     } else {
       auto line = std::string("Bara den sista verifikationen i en serie går att göra om till ett utkast och ändra fritt.");

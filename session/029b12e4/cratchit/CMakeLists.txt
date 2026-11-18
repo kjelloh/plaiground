@@ -262,6 +262,7 @@ target_compile_definitions(cratchit_core PUBLIC CRATCHIT_DEVELOPMENT_TRACE=${dev
 add_library(cratchit_ui
   src/ui/add_project_menu.cpp
   src/ui/booked_menu.cpp
+  src/ui/unbook_menu.cpp
   src/ui/command_hint_menu.cpp
   src/ui/design_insufficiency.cpp
   src/ui/details_project_menu.cpp
