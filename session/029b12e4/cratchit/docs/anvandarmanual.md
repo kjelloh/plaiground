@@ -401,7 +401,7 @@ Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat frå
 ##### Utkastet
 
 <!-- hjälp: utkastet -->
-Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för händelsen och `1` för konteringarna. `9` är *Glöm* för ett ensamt utkast, en händelse eller en kontohändelse, och *Inte samma* för ett utkast av flera delar med samma belopp, som delar det direkt. Ett utkast vars konteringar har olika belopp har inget `9`. Utkastet ändrar du i [Kontera](#kontera) via [Fullborda utkast](#fullborda-utkast). Tryck `-` för att gå tillbaka till Utkast.
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för att ändra händelsen i [Händelse i Kontera](#händelse-i-kontera) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. `9` är *Glöm* för ett ensamt utkast, en händelse eller en kontohändelse, och *Inte samma* för ett utkast av flera delar med samma belopp, som delar det direkt. Ett utkast vars konteringar har olika belopp har inget `9`. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
@@ -423,7 +423,7 @@ Cratchit > … > Utkast > #1>
 
 Skriver du något annat än `#` och ett nummer säger cratchit `Skriv utkastets id som #13.`, och finns inget utkast med numret `Det finns inget utkast #20 i 2026/27.` Raden står kvar så att du kan rätta den.
 
-*Konteringar* och *Kontering* fungerar som för en verifikation. En kontering från ett kontoutdrag visar också var den kom ifrån, till exempel `Från: bank/nordea.csv rad 8`.
+Ett utkast ändrar du på ett enda sätt, i [Kontera](#kontera), oavsett om du öppnar det här eller i [Fullborda utkast](#fullborda-utkast). Har du ändrat datumet kan utkastet ha fått ett nytt nummer, som syns överst.
 
 ###### Glöm
 
@@ -463,16 +463,10 @@ Cratchit > … > Utkast > #14>
 
 Ett utkast med flera delar kan inte glömmas direkt. Dela det först och glöm sedan delarna. Har konteringarna olika belopp, som i en färdig kontering av en faktura med moms, är utkastet mer än samma händelse och har inget `9`.
 
-###### Utkastets händelse
-
-<!-- hjälp: utkastets-handelse -->
-Händelsen i utkastet: datum, rubrik och belopp. I ett utkast ska allt gå att ändra, men det finns inte än: valen leder till *Inte än*. Tryck `-` för att gå tillbaka till utkastet.
-<!-- /hjälp -->
-
 ##### Fullborda utkast
 
 <!-- hjälp: fullborda -->
-Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Tryck `0` för att fullborda utkastet i [Kontera](#kontera), eller för att [bokföra](#bokför) det när det är klart. Under utkastet står vad du har bokfört här. Tryck `-` för att gå tillbaka till Utkast.
+Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Valen är desamma som när du öppnar ett utkast: `0` ändrar händelsen, `1` konteringarna i [Kontera](#kontera), `2` [bokför](#bokför) utkastet när det är klart, och `9` glömmer eller delar det. Under utkastet står vad du har gjort här. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Att fullborda ett utkast är att göra det klart att bokföra: välja en mall, fylla i det som saknas och få konteringarna att balansera. Att bokföra är sista steget. Tryck `2` i Utkast:
@@ -486,13 +480,15 @@ Händelse:
   Belopp:
 Konteringar:
   1920  PlusGiro        -3.70  AVGIFTER NORDEA
-  0 Fullborda
+  0 Händelse
+  1 Konteringar
+  9 Glöm
   < Föregående
   > Nästa
 Cratchit > … > Utkast > Fullborda #1>
 ```
 
-Verifikationer bokförs i den ordning händelserna inträffade, så cratchit börjar med det äldsta utkastet. Prompten har utkastets nummer, och överst står hur många utkast det finns. Valet heter `0 Fullborda` så länge utkastet inte är klart och leder till [Kontera](#kontera). När utkastet är klart heter det `0 Bokför`, som leder till [Bokför](#bokför). Saknar året utkast står det `Inga utkast att fullborda i 2026/27.`
+Verifikationer bokförs i den ordning händelserna inträffade, så cratchit börjar med det äldsta utkastet. Prompten har utkastets nummer, och överst står hur många utkast det finns. Valen är desamma som i [utkastets vy](#utkastet), så att ett utkast alltid går att ändra var du än ser det, och att bokföra när det är klart. `2 Bokför` finns bara för ett klart utkast och leder till [Bokför](#bokför). Glömmer eller delar du utkastet står du kvar, och cratchit läser utkasten igen. Saknar året utkast står det `Inga utkast att fullborda i 2026/27.`
 
 ###### Kontera
 
@@ -500,7 +496,7 @@ Verifikationer bokförs i den ordning händelserna inträffade, så cratchit bö
 Skriv en kontering, konto och belopp, och tryck Enter, till exempel `6570 3,70`. Debet är positivt och kredit negativt. Skriver du bara kontot får konteringen det som återstår för att balansera. Tab fyller i ett kontonummer, eller visar konton vars namn innehåller ordet du skrivit. Under utkastet står vad som återstår. Tryck `0` för att ändra händelsen, rubrik, belopp och datum, och `9` för att ta bort den sista konteringen du skrev. Tryck `-` för att gå tillbaka till Fullborda.
 <!-- /hjälp -->
 
-Här bygger du utkastet tills det balanserar. Tryck `0` i Fullborda för ett utkast som inte är klart, till exempel bankavgiften från kontoutdraget:
+Här bygger du utkastet tills det balanserar, och här ändrar du det. Du kommer hit med `1 Konteringar` i Fullborda eller i utkastets vy. Till exempel bankavgiften från kontoutdraget:
 
 ```text
 Utkast #1 i 2026/27 (kontohändelse)
@@ -519,18 +515,20 @@ Varje kontering läggs till direkt, och du står kvar för nästa. Raderna under
 * `Kvar: debet 3.70.` eller `Kvar: kredit 3.70.`: det som fattas för att debet och kredit ska bli lika. Skriver du bara kontot får konteringen just det.
 * `Konteringarna balanserar.`
 * `Debet 0.00, beloppet 1118.00.`: debet stämmer inte med händelsens belopp.
-* `Utkastet är klart att bokföra.` När du går tillbaka till Fullborda heter valet då `0 Bokför`.
+* `Utkastet är klart att bokföra: tryck - och sedan 2.` Ett val för att bokföra direkt i Kontera skulle krocka med kontonumren, så du bokför från Fullborda eller utkastets vy, ett `-` bort.
 
 Det fungerar bäst om du först konterar hela beloppet, till exempel `2440 -1118` för en leverantörsfaktura, och sedan motkontona med det största beloppet först. Den sista raden, till exempel öresavrundningen, kan du då skriva med bara kontot.
 
 Ett konto som inte finns i kontoplanen går inte att använda. Skriver du ett ord i stället för ett nummer visar cratchit konton vars namn innehåller ordet. Stora och små bokstäver räknas lika.
+
+En kontering från ett kontoutdrag står sist med fil och rad, till exempel `1920 från bank/nordea.csv rad 8`.
 
 `9 Ta bort sista` tar bort den sista konteringen du skrev. En kontering från ett kontoutdrag tas inte bort här; den delar du ut med [Inte samma](#inte-samma).
 
 ###### Händelse i Kontera
 
 <!-- hjälp: kontera-handelse -->
-Händelsen på en rad: rubrik, belopp och datum, som i Beskriv händelser. Raden står ifylld; ändra den och tryck Enter för att gå tillbaka till Kontera. Tryck `-` på en tom rad för att gå tillbaka utan att ändra.
+Händelsen på en rad: rubrik, belopp och datum, som i Beskriv händelser. Raden står ifylld; ändra den och tryck Enter för att gå tillbaka dit du kom ifrån, Kontera eller utkastets vy. Tryck `-` på en tom rad för att gå tillbaka utan att ändra.
 <!-- /hjälp -->
 
 Ett utkast behöver en rubrik och ett belopp för att bli klart. Tryck `0` i Kontera. Raden är ifylld med det utkastet redan har:
@@ -548,7 +546,7 @@ Ett utkast behöver en rubrik och ett belopp för att bli klart. Tryck `0` i Kon
 Verifikationen som utkastet blir, i sin helhet, och bokföringens serier med nästa nummer i varje. Skriv serien, till exempel `D`, och tryck Enter för att bokföra. Verifikationen går inte att ändra efteråt. Tryck `-` för att gå tillbaka till Fullborda utan att bokföra.
 <!-- /hjälp -->
 
-Tryck `0 Bokför` i Fullborda för ett utkast som är klart:
+Tryck `2 Bokför` i Fullborda eller i utkastets vy för ett utkast som är klart:
 
 ```text
 Bokför utkast #1 som verifikation i 2026/27:
@@ -575,7 +573,7 @@ Verifikationen får
 * **konteringarna** med sina datum och texter, men inte vilken kontoutdragsrad de kom från;
 * **registreringsdagen** i dag, och ingen signatur än.
 
-cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. Du är tillbaka i Fullborda på samma plats, där nu nästa utkast står, och under det till exempel `cratchit bokförde #1 som A11: AVGIFTER NORDEA.` Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
+cratchit sparar verifikationen i räkenskapsårets `vouchers.csv` och `postings.csv`, tar bort utkastet och skriver det i loggen. Bokförde du från Fullborda är du tillbaka där på samma plats, där nu nästa utkast står, och under det till exempel `cratchit bokförde #1 som A11: AVGIFTER NORDEA.` Bokförde du från utkastets vy är du tillbaka i Utkast, eftersom utkastet inte finns längre. Utkast säger detsamma, och verifikationen finns i [Bokfört](#bokfört). För att få in den i Fortnox exporterar du skillnaden till en SIE-fil (se [Exportera till SIE](#exportera-till-sie)).
 
 Den sista verifikationen i en serie kan du göra till ett utkast igen, se [Gör till utkast](#gör-till-utkast).
 
@@ -937,7 +935,7 @@ Cratchit > … > Bokfört > Gör till utkast>
 
 Skriv seriens bokstav, stor eller liten, och tryck Enter. Verifikationen blir direkt ett utkast; cratchit frågar inte först, eftersom du kan bokföra utkastet igen. Bokför du det i samma serie får det samma nummer. Du kommer tillbaka dit du var, där det står till exempel `cratchit gjorde A11 till utkast #1: AVGIFTER NORDEA.` Loggen får hela verifikationen.
 
-Utkastet får verifikationens datum, text och belopp, och dess konteringar med datum och texter. En struken rad kommer inte med, och en tillagd rad blir en vanlig kontering. Utkastet noteras i dag och är *klart*, så det står med `0 Bokför` i [Fullborda utkast](#fullborda-utkast). Det som går förlorat:
+Utkastet får verifikationens datum, text och belopp, och dess konteringar med datum och texter. En struken rad kommer inte med, och en tillagd rad blir en vanlig kontering. Utkastet noteras i dag och är *klart*, så det har `2 Bokför` i sin vy och i [Fullborda utkast](#fullborda-utkast). Det som går förlorat:
 
 * **tecknet**: verifikationen har beloppet utan tecken, så en kreditfaktura kommer tillbaka med plus;
 * **kontoutdragsraden** en kontering kom från, som verifikationen inte sparade;

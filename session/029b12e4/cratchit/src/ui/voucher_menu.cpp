@@ -59,9 +59,8 @@ struct Shown {
   Date noted{};
   std::string summary{};             // one line about it, for Glöm
   State const* origin = nullptr;     // Utkast, to go back to once forgotten or split
-  ForgetDraft forget{};
   DraftParts parts = DraftParts::lone;
-  ForgetDraft split{};
+  DraftActions actions{};
 
   std::string id() const { return draft ? draft_id : books::voucher_id(voucher.series, voucher.number); }
 
@@ -250,17 +249,9 @@ public:
             {U'1', event.heading.empty() ? std::string("Rubrik:") : "Rubrik: " + event.heading},
             {U'2', amount.empty() ? std::string("Belopp:") : "Belopp: " + amount}};
   }
-  // The event of a booked voucher is locked: each option tells why, and what to do instead.
-  // A draft's can be changed, but not yet.
+  // The event of a booked voucher is locked: each option tells why, and what to do instead
+  // (a draft's event is changed in Händelse i Kontera, see make_draft_view)
   OnKeyResult on_key(CodePoint key) override {
-    if (shown_->draft) {
-      switch (key) {
-      case U'0': return make_design_insufficiency_state("Datum", "att ändra datumet i ett utkast");
-      case U'1': return make_design_insufficiency_state("Rubrik", "att ändra rubriken i ett utkast");
-      case U'2': return make_design_insufficiency_state("Belopp", "att ändra beloppet i ett utkast");
-      default: return nullptr;
-      }
-    }
     switch (key) {
     case U'0': return std::make_unique<LockedState>(shown_, "Datum", "datumet");
     case U'1': return std::make_unique<LockedState>(shown_, "Rubrik", "rubriken");
@@ -268,9 +259,7 @@ public:
     default: return nullptr;
     }
   }
-  std::string help_topic() const override {
-    return std::string(shown_->draft ? help_topic::draft_event : help_topic::event);
-  }
+  std::string help_topic() const override { return std::string(help_topic::event); }
 
 private:
   std::shared_ptr<Shown const> shown_;
@@ -353,20 +342,24 @@ public:
   OptionsList options() const override {
     if (split_) return {};
     OptionsList options{{U'0', "Händelse"}, {U'1', "Konteringar"}};
+    if (ready()) options.push_back({U'2', "Bokför"});
     if (shown_->draft && shown_->parts == DraftParts::lone) options.push_back({U'9', "Glöm"});
     if (shown_->draft && shown_->parts == DraftParts::same) options.push_back({U'9', "Inte samma"});
     return options;
   }
   OnKeyResult on_key(CodePoint key) override {
     if (split_) return nullptr;
+    if (shown_->draft && key == U'0' && shown_->actions.edit_event) return shown_->actions.edit_event(this);
+    if (shown_->draft && key == U'1' && shown_->actions.edit_postings) return shown_->actions.edit_postings();
+    if (key == U'2' && ready()) return shown_->actions.book(this);
     if (key == U'0') return std::make_unique<EventState>(shown_);
     if (key == U'1') return std::make_unique<PostingsState>(shown_);
     if (key != U'9' || !shown_->draft) return nullptr;
     if (shown_->parts == DraftParts::lone) {
-      return make_forget_draft_state(shown_->id(), shown_->summary, shown_->forget, shown_->origin, this);
+      return make_forget_draft_state(shown_->id(), shown_->summary, shown_->actions.forget, shown_->origin, this);
     }
-    if (shown_->parts != DraftParts::same || !shown_->split) return nullptr;
-    if (auto done = shown_->split(); !done) {
+    if (shown_->parts != DraftParts::same || !shown_->actions.split) return nullptr;
+    if (auto done = shown_->actions.split(); !done) {
       return pyroceph::tui::make_error_state(std::format("cratchit kunde inte dela utkastet: {}", done.error()));
     }
     split_ = true;
@@ -374,11 +367,28 @@ public:
   }
   // Split: the draft is gone, back to Utkast
   State const* back_to() const override { return split_ ? shown_->origin : nullptr; }
+  // A draft may have been changed in Kontera: show it as it is now
+  void on_return() override {
+    if (!shown_->draft || !shown_->actions.now) return;
+    auto const now = shown_->actions.now();
+    if (!now) return;
+    auto shown = draft_shown(now->draft, now->id, shown_->year_label, shown_->accounts);
+    shown.summary = now->summary;
+    shown.origin = shown_->origin;
+    shown.parts = parts_of(now->draft);
+    shown.actions = shown_->actions;
+    shown_ = std::make_shared<Shown const>(std::move(shown));
+  }
   std::string help_topic() const override {
     return std::string(shown_->draft ? help_topic::draft : help_topic::voucher);
   }
 
 private:
+  // A draft that is ready, and can be booked from here
+  bool ready() const {
+    return shown_->draft && shown_->actions.book && shown_->stage == stage_text(books::DraftStage::ready);
+  }
+
   std::shared_ptr<Shown const> shown_;
   bool split_ = false;
 };
@@ -403,13 +413,12 @@ std::unique_ptr<State> make_voucher_menu(books::Voucher voucher, std::vector<boo
 
 std::unique_ptr<State> make_draft_view(books::Draft const& draft, std::string id, std::string year_label,
                                        std::vector<books::Account> accounts, std::string summary, State const* origin,
-                                       ForgetDraft forget, ForgetDraft split) {
+                                       DraftActions actions) {
   auto shown = draft_shown(draft, std::move(id), std::move(year_label), std::move(accounts));
   shown.summary = std::move(summary);
   shown.origin = origin;
-  shown.forget = std::move(forget);
   shown.parts = parts_of(draft);
-  shown.split = std::move(split);
+  shown.actions = std::move(actions);
   return std::make_unique<VoucherState>(std::make_shared<Shown const>(std::move(shown)));
 }
 

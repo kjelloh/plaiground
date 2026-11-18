@@ -748,6 +748,23 @@ std::expected<void, std::string> forget_logged(Project const& project, FiscalYea
   return {};
 }
 
+// Splits the draft at index of year, the one seen (split_draft), and logs it; gives how many drafts it became
+std::expected<std::size_t, std::string> split_logged(Project const& project, FiscalYear const& year, std::size_t index,
+                                                     books::Draft const& draft) {
+  auto const id = draft_id(index);
+  auto const year_start = parse_iso_date(year.start);
+  if (!year_start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year.start));
+  auto const count = split_draft(project.folder, *year_start, index, draft);
+  if (!count) {
+    LOG_BUSINESS("Kunde inte dela utkast {} i {} ({}): {}", id, label_of(year), project.folder.string(), count.error());
+    return count;
+  }
+  LOG_BUSINESS("Utkast {} delat i {} ({}): {} {} \"{}\", {} konteringar, blev {} utkast", id, label_of(year),
+               project.folder.string(), format_iso_date(draft.event.date), format_amount(draft.event.amount),
+               draft.event.heading, draft.postings.size(), *count);
+  return count;
+}
+
 // A row of draft_rows or voucher_rows without its indent
 std::string unindented(std::string row) { return row.starts_with("  ") ? row.substr(2) : row; }
 
@@ -1081,7 +1098,7 @@ View posting_status(books::Draft const& draft) {
                                 format_amount(amount)));
   }
   if (books::stage(draft) == books::DraftStage::ready) {
-    lines.push_back("Utkastet är klart att bokföra.");
+    lines.push_back("Utkastet är klart att bokföra: tryck - och sedan 2.");
   } else if (draft.event.heading.empty() || draft.event.amount == 0) {
     lines.push_back("Rubrik och belopp skrivs i Händelse (0).");
   }
@@ -1187,6 +1204,15 @@ public:
     lines.push_back("");
     auto const status = posting_status(c.draft);
     lines.insert(lines.end(), status.begin(), status.end());
+    // Where postings from statement entries came from, e.g. "1930 från bank/nordea.csv rad 2"
+    for (auto const& posting : c.draft.postings) {
+      if (posting.source.empty()) continue;
+      auto const colon = posting.source.rfind(':');
+      lines.push_back(colon == std::string::npos
+                          ? std::format("{} från {}", posting.account, posting.source)
+                          : std::format("{} från {} rad {}", posting.account, posting.source.substr(0, colon),
+                                        posting.source.substr(colon + 1)));
+    }
     if (!error_.empty()) lines.push_back(error_);
     return lines;
   }
@@ -1396,10 +1422,11 @@ private:
 
 // Fullborda #<n>: the drafts one at a time, from the oldest (date order), each as
 // its view shows it, with "#n av N" in the heading. < and > go to the one before
-// and after (in place; at either end they do nothing). 0 Fullborda (Bokför for a
-// draft that is ready) leads to Inte än for now: it is to start choosing a
-// template or editing until it balances. The drafts are read again when the user
-// comes back, at the same place.
+// and after (in place; at either end they do nothing). The options are those of
+// the draft's view (beslut 2026-11-18: the same options wherever a draft is
+// shown): 0 Händelse and 1 Konteringar (Kontera), 2 Bokför for a draft that is
+// ready, 9 Glöm or Inte samma. What was done is shown below the draft and told
+// to Utkast. The drafts are read again when the user comes back, at the same place.
 class CompleteState : public State {
 public:
   CompleteState(Project project, FiscalYear year, std::function<void(std::string)> report)
@@ -1421,10 +1448,17 @@ public:
     lines.insert(lines.end(), done_.begin(), done_.end());
     return lines;
   }
+  // As the draft's view (make_draft_view), with < and > to browse
   OptionsList options() const override {
     if (drafts_.empty()) return {};
-    auto const ready = books::stage(drafts_[index_]) == books::DraftStage::ready;
-    return {{U'0', ready ? "Bokför" : "Fullborda"}, {back_key, "Föregående"}, {forward_key, "Nästa"}};
+    auto const& draft = drafts_[index_];
+    OptionsList options{{U'0', "Händelse"}, {U'1', "Konteringar"}};
+    if (books::stage(draft) == books::DraftStage::ready) options.push_back({U'2', "Bokför"});
+    if (parts_of(draft) == DraftParts::lone) options.push_back({U'9', "Glöm"});
+    if (parts_of(draft) == DraftParts::same) options.push_back({U'9', "Inte samma"});
+    options.push_back({back_key, "Föregående"});
+    options.push_back({forward_key, "Nästa"});
+    return options;
   }
   bool on_key_in_place(CodePoint key) override {
     if (key == back_key && index_ > 0) {
@@ -1435,23 +1469,56 @@ public:
       ++index_;
       return true;
     }
+    // Inte samma splits it at once (it can be undone in Samma?); the parts are read in their places
+    if (key == U'9' && !drafts_.empty() && parts_of(drafts_[index_]) == DraftParts::same) {
+      auto const count = split_logged(project_, year_, index_, drafts_[index_]);
+      if (!count) {
+        done_.push_back(std::format("cratchit kunde inte dela utkastet: {}", count.error()));
+      } else {
+        report(std::format("cratchit delade {} i {} utkast.", draft_id(index_), *count));
+      }
+      read();
+      return true;
+    }
     return false; // at either end: nothing
   }
   OnKeyResult on_key(CodePoint key) override {
-    if (key != U'0' || drafts_.empty()) return nullptr;
-    if (books::stage(drafts_[index_]) == books::DraftStage::ready) {
-      return std::make_unique<BookState>(project_, year_, index_, drafts_[index_], this, [this](std::string line) {
-        done_.push_back(line);
-        report_(std::move(line));
-      });
+    if (drafts_.empty()) return nullptr;
+    auto const& draft = drafts_[index_];
+    auto const completing = [&] {
+      return std::make_shared<Completing>(Completing{project_, year_, index_, draft, accounts_});
+    };
+    switch (key) {
+    case U'0': return std::make_unique<EventLineState>(completing(), this);
+    case U'1': return std::make_unique<PostingState>(completing());
+    case U'2':
+      if (books::stage(draft) != books::DraftStage::ready) return nullptr;
+      return std::make_unique<BookState>(project_, year_, index_, draft, this,
+                                         [this](std::string line) { report(std::move(line)); });
+    case U'9': {
+      if (parts_of(draft) != DraftParts::lone) return nullptr;
+      auto summary = draft_row(index_, draft);
+      summary = summary.substr(summary.find(format_iso_date(draft.event.date)));
+      auto forget = [this, index = index_, draft]() -> std::expected<void, std::string> {
+        if (auto forgotten = forget_logged(project_, year_, index, draft, "glömt"); !forgotten) return forgotten;
+        report(std::format("cratchit glömde utkast {}: {}.", draft_id(index), draft_text(draft)));
+        return {};
+      };
+      return make_forget_draft_state(draft_id(index_), summary, std::move(forget), this, this);
     }
-    return std::make_unique<PostingState>(
-        std::make_shared<Completing>(Completing{project_, year_, index_, drafts_[index_], accounts_}));
+    default: return nullptr;
+    }
   }
   void on_return() override { read(); }
   std::string help_topic() const override { return std::string(help_topic::complete); }
 
 private:
+  // What was done here: shown below the draft until the user leaves, and told to Utkast
+  void report(std::string line) {
+    done_.push_back(line);
+    report_(std::move(line));
+  }
+
   void read() {
     error_.clear();
     drafts_.clear();
@@ -1564,33 +1631,43 @@ public:
     }
     report_.clear();
     auto const index = number - 1;
-    auto const& draft = year->drafts[index];
-    auto const id = draft_id(index);
+    auto completing = std::make_shared<Completing>(Completing{project_, year_, index, year->drafts[index], books->accounts});
     // The draft as the list shows it, without the id: date, amount and text
-    auto summary = draft_rows(year)[year->drafts.size() - 1 - index];
-    summary = summary.substr(summary.find(format_iso_date(draft.event.date)));
-    auto forget = [this, index, draft, id]() -> std::expected<void, std::string> {
-      if (auto forgotten = forget_logged(project_, year_, index, draft, "glömt"); !forgotten) return forgotten;
-      report_ = {std::format("cratchit glömde utkast {}: {}.", id, draft_text(draft))};
+    auto const summary_of = [](std::size_t at, books::Draft const& draft) {
+      auto summary = draft_row(at, draft);
+      return summary.substr(summary.find(format_iso_date(draft.event.date)));
+    };
+    DraftActions actions;
+    actions.forget = [this, completing]() -> std::expected<void, std::string> {
+      auto const& c = *completing;
+      if (auto forgotten = forget_logged(project_, year_, c.index, c.draft, "glömt"); !forgotten) return forgotten;
+      report_ = {std::format("cratchit glömde utkast {}: {}.", draft_id(c.index), draft_text(c.draft))};
       return {};
     };
-    auto split = [this, index, draft, id]() -> std::expected<void, std::string> {
-      auto const year_start = parse_iso_date(year_.start);
-      if (!year_start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year_.start));
-      auto const count = split_draft(project_.folder, *year_start, index, draft);
-      if (!count) {
-        LOG_BUSINESS("Kunde inte dela utkast {} i {} ({}): {}", id, label_of(year_), project_.folder.string(),
-                     count.error());
-        return std::unexpected(count.error());
-      }
-      LOG_BUSINESS("Utkast {} delat i {} ({}): {} {} \"{}\", {} konteringar, blev {} utkast", id, label_of(year_),
-                   project_.folder.string(), format_iso_date(draft.event.date), format_amount(draft.event.amount),
-                   draft.event.heading, draft.postings.size(), *count);
-      report_ = {std::format("cratchit delade {} i {} utkast.", id, *count)};
+    actions.split = [this, completing]() -> std::expected<void, std::string> {
+      auto const& c = *completing;
+      auto const count = split_logged(project_, year_, c.index, c.draft);
+      if (!count) return std::unexpected(count.error());
+      report_ = {std::format("cratchit delade {} i {} utkast.", draft_id(c.index), *count)};
       return {};
     };
-    return Accepted(make_draft_view(draft, id, label_of(year_), books->accounts, summary, this, std::move(forget),
-                                    std::move(split)));
+    actions.book = [this, completing](State const*) -> std::unique_ptr<State> {
+      auto const& c = *completing;
+      // Booked, the draft is gone: back to Utkast, which tells it
+      return std::make_unique<BookState>(project_, year_, c.index, c.draft, this,
+                                         [this](std::string line) { report_ = {std::move(line)}; });
+    };
+    actions.edit_event = [completing](State const* back) -> std::unique_ptr<State> {
+      return std::make_unique<EventLineState>(completing, back);
+    };
+    actions.edit_postings = [completing]() -> std::unique_ptr<State> { return std::make_unique<PostingState>(completing); };
+    actions.now = [completing, summary_of]() -> std::optional<DraftNow> {
+      auto const& c = *completing;
+      return DraftNow{c.draft, draft_id(c.index), summary_of(c.index, c.draft)};
+    };
+    auto const& draft = completing->draft;
+    return Accepted(make_draft_view(draft, draft_id(index), label_of(year_), books->accounts, summary_of(index, draft),
+                                    this, std::move(actions)));
   }
   void on_return() override { read(); }
   std::string help_topic() const override { return std::string(help_topic::drafts); }

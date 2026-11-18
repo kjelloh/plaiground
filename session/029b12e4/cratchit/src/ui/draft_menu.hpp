@@ -43,7 +43,8 @@ inline constexpr std::size_t same_page_pairs = 6;
 // voucher: 9 Glöm forgets the draft (9 again confirms). Done, back to Samma?,
 // which finds the pairs again and lists what was done; Utkast tells it too.
 // 2 Fullborda utkast: the drafts one at a time from the oldest, < and > to
-// browse, 0 Fullborda (Bokför when ready) leads to Inte än for now.
+// browse, with the options of the draft's view (0 Händelse, 1 Konteringar,
+// 2 Bokför when ready, 9 Glöm or Inte samma).
 // 5 Gör bokfört till utkast leads to make_unbook_menu (also 0 in Bokfört).
 // 4 Läs pdf-underlag: the user types the path of a folder, starting in the
 // project folder; Tab completes folders and shows the folder's pdf files as

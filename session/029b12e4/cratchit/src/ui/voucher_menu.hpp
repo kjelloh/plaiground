@@ -7,6 +7,7 @@
 #include <expected>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -37,9 +38,6 @@ std::unique_ptr<pyroceph::tui::State> make_voucher_menu(books::Voucher voucher, 
 // A draft, named by its id in the path ("#3", see draft_id), shown as a voucher
 // is: the heading "Utkast #3 i 2026/27 (<stage>)", the day it was noted, then
 // "Händelse" (a heading or amount it lacks shows empty) and "Konteringar".
-// A posting from a statement entry shows where it came from ("Från: <file> rad
-// <n>"). Options as for a voucher; the event's and a posting's options lead to
-// Inte än for now (in a draft everything is to be changeable).
 //
 // 9 depends on what the draft is made of (parts_of, beslut 2026-11-17: 9 is
 // the option that removes, kept apart from the others):
@@ -50,11 +48,36 @@ std::unique_ptr<pyroceph::tui::State> make_voucher_menu(books::Voucher voucher, 
 //   back to origin.
 // * more than the same: no 9.
 // A failure of forget or split leads to the error state with its text.
+//
+// 0 Händelse and 1 Konteringar change the draft (beslut 2026-11-18: one editor
+// for drafts, Kontera): they lead to what edit_event (with the view to go back
+// to) and edit_postings give. 2 Bokför, only for a draft that is ready, leads
+// to what book gives. Coming back, the view shows the draft as now
+// gives it (it may have a new id, as its date may have changed).
 using ForgetDraft = std::function<std::expected<void, std::string>()>;
+
+// A draft as it is now, after it was changed: the draft, its id and its summary line
+struct DraftNow {
+  books::Draft draft;
+  std::string id;
+  std::string summary;
+};
+
+// What can be done to a draft from its view
+struct DraftActions {
+  ForgetDraft forget;
+  ForgetDraft split;
+  std::function<std::unique_ptr<pyroceph::tui::State>(pyroceph::tui::State const* back)> edit_event;
+  std::function<std::unique_ptr<pyroceph::tui::State>()> edit_postings;
+  // Bokför, for a draft that is ready (2 Bokför), with the view
+  std::function<std::unique_ptr<pyroceph::tui::State>(pyroceph::tui::State const* view)> book;
+  std::function<std::optional<DraftNow>()> now;
+};
+
 std::unique_ptr<pyroceph::tui::State> make_draft_view(books::Draft const& draft, std::string id,
                                                       std::string year_label, std::vector<books::Account> accounts,
                                                       std::string summary, pyroceph::tui::State const* origin,
-                                                      ForgetDraft forget, ForgetDraft split);
+                                                      DraftActions actions);
 
 // The lines of a draft's view (as make_draft_view shows it, without options),
 // with id in its heading, e.g. "Utkast #1 av 18 i 2026/27 (kontohändelse)"

@@ -1905,22 +1905,26 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
                   "  Datum:          2025-03-05", "  Rubrik:         ", "  Belopp:         ", "Konteringar:",
                   "  1930  Bank        -10.00  AVGIFTER"}));
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
-  // Its event: what it lacks shows empty, and changing is not there yet
-  ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::draft_event);
-  EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "Datum: 2025-03-05"}, {U'1', "Rubrik:"}, {U'2', "Belopp:"}}));
+  // Its postings are changed in Kontera, which tells where a posting came from
   ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().name(), "Inte än (Rubrik)");
+  EXPECT_EQ(navigator.current().name(), "Kontera");
+  auto const kontera = navigator.current().view();
+  EXPECT_EQ(kontera.back(), "1930 från bank/nordea.csv rad 2"); // the file's line 2
+  auto typed = navigator.current().on_input(U"1930 10");
+  ASSERT_TRUE(typed) << typed.error();
   ASSERT_TRUE(navigator.back());
-  ASSERT_TRUE(navigator.back());
-  // Its posting tells where it came from
-  ASSERT_TRUE(navigator.press(U'1'));
+  // Back in the draft: shown as it is now
+  EXPECT_EQ(navigator.current().name(), "#2");
+  EXPECT_EQ(navigator.current().view().back(), "  1930  Bank         10.00");
+  // Its event is changed in Händelse, the line typed in; back in the draft, shown as it is now
   ASSERT_TRUE(navigator.press(U'0'));
-  auto const posting = navigator.current().view();
-  EXPECT_EQ(posting.back(), "  Från:           bank/nordea.csv rad 2"); // the file's line 2
-  ASSERT_TRUE(navigator.back());
-  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Händelse");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::complete_event);
+  typed = navigator.current().on_input(U"Bankavgift rättad 10,00 2025-03-05");
+  ASSERT_TRUE(typed) << typed.error();
+  navigator.follow_back_to();
+  EXPECT_EQ(navigator.current().name(), "#2");
+  EXPECT_EQ(navigator.current().view()[4], "  Rubrik:         Bankavgift rättad");
   ASSERT_TRUE(navigator.back());
   // The event without postings
   accepted = navigator.current().on_input(U"#3");
@@ -1931,7 +1935,8 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   EXPECT_EQ(view[4], "  Rubrik:         Telia faktura");
   EXPECT_EQ(view[5], "  Belopp:         1118.00");
   ASSERT_TRUE(navigator.press(U'1'));
-  EXPECT_EQ(navigator.current().view(), (View{"#3 har inga konteringar."}));
+  EXPECT_EQ(navigator.current().name(), "Kontera");
+  EXPECT_EQ(navigator.current().view().back(), "Inga konteringar än.");
   ASSERT_TRUE(navigator.back());
   // 9 Glöm, apart from the other options; N goes back to the draft
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
@@ -2092,8 +2097,12 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   ASSERT_FALSE(first.empty());
   EXPECT_EQ(first.front(), "Utkast #1 av 2 i 2025 (händelse)");
   EXPECT_NE(std::ranges::find(first, "  Rubrik:         Loopia"), first.end());
-  EXPECT_EQ(navigator.current().options(),
-            (OptionsList{{U'0', "Fullborda"}, {U'<', "Föregående"}, {U'>', "Nästa"}}));
+  // The options of the draft's view, and < and >
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"},
+                                                        {U'1', "Konteringar"},
+                                                        {U'9', "Glöm"},
+                                                        {U'<', "Föregående"},
+                                                        {U'>', "Nästa"}}));
   EXPECT_FALSE(navigator.press(U'<')); // the first: nothing
   ASSERT_TRUE(navigator.press(U'>'));
   EXPECT_EQ(navigator.current().name(), "Fullborda #2");
@@ -2107,8 +2116,8 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
       navigator.follow_back_to();
     }
   };
-  // Fullborda: Kontera, postings typed one at a time
-  ASSERT_TRUE(navigator.press(U'0'));
+  // Konteringar: Kontera, postings typed one at a time
+  ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Kontera");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::post);
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}}));
@@ -2141,7 +2150,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   view = navigator.current().view();
   EXPECT_EQ(view.front(), "Utkast #2 i 2025 (klart)");
   EXPECT_NE(std::ranges::find(view, "Konteringarna balanserar."), view.end());
-  EXPECT_EQ(view.back(), "Utkastet är klart att bokföra.");
+  EXPECT_EQ(view.back(), "Utkastet är klart att bokföra: tryck - och sedan 2.");
   // 9 removes the last posting typed
   ASSERT_TRUE(navigator.press(U'9'));
   EXPECT_EQ(navigator.current().view().front(), "Utkast #2 i 2025 (samma)");
@@ -2161,9 +2170,19 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   // Back in Fullborda: read again, at the same draft, now ready to book
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Fullborda #2");
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Bokför"}, {U'<', "Föregående"}, {U'>', "Nästa"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"},
+                                                        {U'1', "Konteringar"},
+                                                        {U'2', "Bokför"},
+                                                        {U'9', "Inte samma"},
+                                                        {U'<', "Föregående"},
+                                                        {U'>', "Nästa"}}));
+  // A ready draft is still changed in Kontera
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Kontera");
+  EXPECT_EQ(navigator.current().view().back(), "Utkastet är klart att bokföra: tryck - och sedan 2.");
+  ASSERT_TRUE(navigator.back());
   // Bokför: the voucher in full, the series to type
-  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Bokför");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::book);
   view = navigator.current().view();
@@ -2203,4 +2222,41 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   EXPECT_EQ(view[0], "Utkast 2025: utkast 1–2 av 2");
   EXPECT_TRUE(view[1].ends_with("Telia oktober (klart)")) << view[1];
   EXPECT_EQ(view.back(), "cratchit gjorde D1 till utkast #2: Telia oktober.");
+}
+
+TEST_F(RootMenuTest, AReadyDraftIsBookedFromItsView) {
+  std::ofstream(documents / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 6570 \"Bankkostnader\"\r\n";
+  auto plan = cratchit::plan_project_from_sie(documents / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
+  ASSERT_TRUE(project) << project.error();
+  Navigator navigator(cratchit::ui::make_draft_menu(*project, {"2025-01-01", "2025-12-31"}));
+  ASSERT_TRUE(navigator.press(U'0'));
+  ASSERT_TRUE(navigator.current().on_input(U"Bankavgift 10,00 2025-03-05"));
+  ASSERT_TRUE(navigator.back());
+  // Opened by its id: not ready, no Bokför
+  auto accepted = navigator.current().on_input(U"#1");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.enter(std::move(accepted->next));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'9', "Glöm"}}));
+  EXPECT_FALSE(navigator.press(U'2'));
+  // Made ready in Kontera; back in its view, 2 Bokför
+  ASSERT_TRUE(navigator.press(U'1'));
+  ASSERT_TRUE(navigator.current().on_input(U"1930 -10"));
+  ASSERT_TRUE(navigator.current().on_input(U"6570"));
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().view().front(), "Utkast #1 i 2025 (klart)");
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Händelse"}, {U'1', "Konteringar"}, {U'2', "Bokför"}, {U'9', "Inte samma"}}));
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().name(), "Bokför");
+  accepted = navigator.current().on_input(U"a");
+  ASSERT_TRUE(accepted) << accepted.error();
+  navigator.follow_back_to();
+  // Booked: the draft is gone, back in Utkast, which tells it
+  EXPECT_EQ(navigator.current().name(), "Utkast");
+  EXPECT_EQ(navigator.current().view(),
+            (View{"Utkast 2025: inga utkast.", "cratchit bokförde #1 som A1: Bankavgift."}));
 }
