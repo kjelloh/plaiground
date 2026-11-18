@@ -1,3 +1,7 @@
+# PARKED: GitHub does not run files outside .github/workflows/.
+# cratchit moved to its own GitHub repo; kept here for reference.
+# To re-enable: git mv this file back to .github/workflows/
+
 name: cratchit (session 029b12e4)
 
 on:
