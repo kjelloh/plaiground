@@ -1075,6 +1075,53 @@ std::vector<std::string> accounts_like(std::vector<books::Account> const& accoun
   return found;
 }
 
+// The words of a line, split at spaces
+std::vector<std::string> words_of(std::string_view line) {
+  std::vector<std::string> words;
+  std::string word;
+  for (char const c : line) {
+    if (c == ' ') {
+      if (!word.empty()) words.push_back(std::move(word));
+      word.clear();
+    } else {
+      word += c;
+    }
+  }
+  if (!word.empty()) words.push_back(std::move(word));
+  return words;
+}
+
+// A posting typed by an account's name: the words of the name and the amount after
+// them, the longest run of last words that reads as an amount (e.g. "1 118,00"), with
+// at least one word left for the name
+struct NamedPosting {
+  std::vector<std::string> name;
+  std::string amount; // as typed; empty when none
+};
+
+NamedPosting named_posting(std::string_view line) {
+  auto const words = words_of(line);
+  for (std::size_t at = 1; at < words.size(); ++at) {
+    std::string amount;
+    for (std::size_t i = at; i < words.size(); ++i) amount += (i == at ? "" : " ") + words[i];
+    if (parse_typed_amount(amount)) return {{words.begin(), words.begin() + static_cast<std::ptrdiff_t>(at)}, amount};
+  }
+  return {words, {}};
+}
+
+// The accounts whose name holds every word (case folded, in any order)
+std::vector<books::Account> accounts_named(std::vector<books::Account> const& accounts,
+                                           std::vector<std::string> const& words) {
+  std::vector<books::Account> found;
+  for (auto const& account : accounts) {
+    auto const name = lower_case(account.name);
+    if (std::ranges::all_of(words, [&](std::string const& word) { return name.contains(lower_case(word)); })) {
+      found.push_back(account);
+    }
+  }
+  return found;
+}
+
 // Where the postings of a draft stand, for Kontera: what remains for them to balance,
 // how debit stands against the amount, and whether it is ready
 View posting_status(books::Draft const& draft) {
@@ -1189,8 +1236,12 @@ private:
 // Kontera: the draft as its view shows it, with where its postings stand
 // (posting_status). The user types a posting, an account and an amount (debit
 // positive, credit negative, e.g. "6570 3,70"); the account alone takes what
-// remains for the postings to balance. Tab completes the account by number, or
-// lists the accounts whose name holds a word. Each posting is added at once
+// remains for the postings to balance. The account may also be typed as words
+// of its name (beslut 2026-11-18): when exactly one account's name holds them
+// all, Enter shows the line again with its number and the amount (as typed,
+// else what remains) for the user to check and Enter once more; else the
+// accounts that fit are listed. Tab completes an account number, or tells which
+// accounts' names hold the words. Each posting is added at once
 // (replace_draft) and the user stays here for the next one. 0 Händelse changes
 // the event (EventLineState). 9 Ta bort sista removes the last posting typed
 // (one from a statement entry stays: Inte samma splits it off).
@@ -1240,31 +1291,68 @@ public:
   }
   Completion complete(std::u32string_view text) const override {
     auto const typed = utf8_of(text);
-    if (typed.empty() || typed.contains(' ')) return {};
-    auto const found = accounts_like(completing_->accounts, typed);
+    auto const words = words_of(typed);
+    if (words.empty()) return {};
     Completion completion;
-    if (all_digits(typed) && found.size() == 1) {
-      auto const number = found.front().substr(0, found.front().find(' '));
-      completion.added = u32_of(number.substr(typed.size()) + " ");
-      completion.notes.push_back(found.front());
-    } else if (all_digits(typed)) {
-      completion.candidates = found;
+    if (all_digits(words.front())) {
+      if (words.size() > 1 || typed.ends_with(' ')) return {};
+      auto const found = accounts_like(completing_->accounts, typed);
+      if (found.size() == 1) {
+        auto const number = found.front().substr(0, found.front().find(' '));
+        completion.added = u32_of(number.substr(typed.size()) + " ");
+        completion.notes.push_back(found.front());
+      } else {
+        completion.candidates = found;
+      }
+      return completion;
+    }
+    auto const found = accounts_named(completing_->accounts, named_posting(typed).name);
+    if (found.empty()) {
+      completion.notes.push_back("Inget konto har det i namnet.");
+    } else if (found.size() == 1) {
+      completion.notes.push_back(std::format("{}  {} passar; Enter väljer det.", found.front().number, found.front().name));
     } else {
-      completion.notes = found.empty() ? std::vector<std::string>{"Inget konto har det i namnet."} : found;
+      for (std::size_t i = 0; i < found.size() && i < 20; ++i) {
+        completion.notes.push_back(std::format("{}  {}", found[i].number, found[i].name));
+      }
+      if (found.size() > 20) completion.notes.push_back("  …");
     }
     return completion;
   }
+  // A line chosen by name, with its number, for the user to check (see on_input)
+  std::u32string start_input() const override { return pending_; }
   InputResult on_input(std::u32string_view text) override {
+    pending_.clear();
     auto const typed = utf8_of(text);
     auto const space = typed.find(' ');
     auto const account = typed.substr(0, space);
     auto const rest = space == std::string::npos ? std::string() : typed.substr(space + 1);
     auto& c = *completing_;
     if (account.empty()) return std::unexpected(std::string("Skriv konto och belopp, till exempel 6570 3,70."));
+    if (!all_digits(account)) {
+      // Words of a name: one account that fits shows the line again, with its number
+      auto const named = named_posting(typed);
+      auto const found = accounts_named(c.accounts, named.name);
+      std::string words;
+      for (auto const& word : named.name) words += (words.empty() ? "" : " ") + word;
+      if (found.empty()) return std::unexpected(std::format("Inget konto har {} i namnet.", words));
+      if (found.size() > 1) {
+        std::string error = "Flera konton passar:";
+        for (std::size_t i = 0; i < found.size() && i < 10; ++i) {
+          error += std::format("\n  {}  {}", found[i].number, found[i].name);
+        }
+        if (found.size() > 10) error += "\n  …";
+        return std::unexpected(error + "\nSkriv fler ord eller numret.");
+      }
+      auto const remains = -books::sum(c.draft.postings);
+      auto const amount = !named.amount.empty() ? named.amount : remains != 0 ? format_amount(remains) : std::string();
+      pending_ = code_points_of(std::format("{} {}", found.front().number, amount));
+      return Accepted(std::format("{}  {} passar. Kontrollera beloppet och tryck Enter.", found.front().number,
+                                  found.front().name));
+    }
     if (std::ranges::find(c.accounts, account, &books::Account::number) == c.accounts.end()) {
       auto const found = accounts_like(c.accounts, account, 10);
-      std::string error = all_digits(account) ? std::format("Kontot {} finns inte i kontoplanen.", account)
-                                               : std::format("{} är inget konto.", account);
+      std::string error = std::format("Kontot {} finns inte i kontoplanen.", account);
       if (!found.empty()) {
         error += " Konton som passar:";
         for (auto const& line : found) error += "\n  " + line;
@@ -1305,6 +1393,7 @@ private:
 
   std::shared_ptr<Completing> completing_;
   std::string error_;
+  std::u32string pending_; // a line chosen by name, to check and Enter again
 };
 
 // Bokför: the voucher a ready draft is to become (book_draft), in full: date,

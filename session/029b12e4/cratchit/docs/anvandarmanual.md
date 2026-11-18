@@ -493,7 +493,7 @@ Verifikationer bokförs i den ordning händelserna inträffade, så cratchit bö
 ###### Kontera
 
 <!-- hjälp: kontera -->
-Skriv en kontering, konto och belopp, och tryck Enter, till exempel `6570 3,70`. Debet är positivt och kredit negativt. Skriver du bara kontot får konteringen det som återstår för att balansera. Tab fyller i ett kontonummer, eller visar konton vars namn innehåller ordet du skrivit. Under utkastet står vad som återstår. Tryck `0` för att ändra händelsen, rubrik, belopp och datum, och `9` för att ta bort den sista konteringen du skrev. Tryck `-` för att gå tillbaka till Fullborda.
+Skriv en kontering, konto och belopp, och tryck Enter, till exempel `6570 3,70`. Debet är positivt och kredit negativt. Skriver du bara kontot får konteringen det som återstår för att balansera. Du kan också skriva ord ur kontots namn, till exempel `bankkost 3,70`: passar exakt ett konto visar cratchit raden igen med numret, `6570 3,70`, så att du kan kontrollera beloppet och trycka Enter en gång till. Tab fyller i ett kontonummer, eller visar vilka konton namnet passar. Under utkastet står vad som återstår. Tryck `0` för att ändra händelsen, rubrik, belopp och datum, och `9` för att ta bort den sista konteringen du skrev. Tryck `-` för att gå tillbaka till Fullborda.
 <!-- /hjälp -->
 
 Här bygger du utkastet tills det balanserar, och här ändrar du det. Du kommer hit med `1 Konteringar` i Fullborda eller i utkastets vy. Till exempel bankavgiften från kontoutdraget:
@@ -519,7 +519,23 @@ Varje kontering läggs till direkt, och du står kvar för nästa. Raderna under
 
 Det fungerar bäst om du först konterar hela beloppet, till exempel `2440 -1118` för en leverantörsfaktura, och sedan motkontona med det största beloppet först. Den sista raden, till exempel öresavrundningen, kan du då skriva med bara kontot.
 
-Ett konto som inte finns i kontoplanen går inte att använda. Skriver du ett ord i stället för ett nummer visar cratchit konton vars namn innehåller ordet. Stora och små bokstäver räknas lika.
+Ett konto som inte finns i kontoplanen går inte att använda.
+
+Du behöver inte kunna kontonumret. Skriv ord ur kontots namn i stället, ett eller flera, och eventuellt beloppet efter:
+
+```text
+… > Kontera: bankkost
+6570  Bankkostnader passar. Kontrollera beloppet och tryck Enter.
+… > Kontera: 6570 3.70
+```
+
+* Ett konto passar när dess namn innehåller alla orden, i vilken ordning som helst. Stora och små bokstäver räknas lika.
+* Passar exakt ett konto skriver cratchit raden igen med kontots nummer och beloppet: det du skrev, eller, om du inte skrev något, det som återstår. Ändra beloppet om det behövs och tryck Enter. Balanserar konteringarna redan står bara numret där, och du skriver beloppet.
+* Passar flera konton visar cratchit dem (högst tio), och raden står kvar så att du kan skriva fler ord eller numret, till exempel `debiterad moms` i stället för `moms`. Passar inget säger cratchit det.
+* Tab under tiden du skriver visar vilka konton orden passar, och när det är ett enda att Enter väljer det.
+* Beloppet är de sista orden som kan läsas som ett belopp, till exempel `1 118,00`.
+
+Så kommer du också åt ett konto vars nummer börjar på `0` eller `9`, siffror som är val i Kontera: skriv namnet i stället.
 
 En kontering från ett kontoutdrag står sist med fil och rad, till exempel `1920 från bank/nordea.csv rad 8`.
 

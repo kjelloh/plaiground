@@ -2122,10 +2122,21 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::post);
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}}));
   EXPECT_EQ(navigator.current().view().back(), "Inga konteringar än.");
-  // Not an account: the accounts that fit
-  auto refused = navigator.current().on_input(U"bank 1118");
+  // Words of a name: one account fits, the line is shown again with its number, to check
+  auto chosen = navigator.current().on_input(U"BANK -1 118,00");
+  ASSERT_TRUE(chosen) << chosen.error();
+  EXPECT_EQ(chosen->reply, "1930  Bank passar. Kontrollera beloppet och tryck Enter.");
+  EXPECT_EQ(navigator.current().start_input(), U"1930 -1 118,00");
+  // Several fit, or none
+  auto refused = navigator.current().on_input(U"n");
   ASSERT_FALSE(refused);
-  EXPECT_EQ(refused.error(), "bank är inget konto. Konton som passar:\n  1930  Bank");
+  EXPECT_EQ(refused.error(), "Flera konton passar:\n  1930  Bank\n  6212  Mobiltelefon\nSkriv fler ord eller numret.");
+  EXPECT_EQ(navigator.current().start_input(), U""); // the line typed stays instead
+  refused = navigator.current().on_input(U"hyra 500");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Inget konto har hyra i namnet.");
+  EXPECT_EQ(navigator.current().complete(U"mobil").notes,
+            (std::vector<std::string>{"6212  Mobiltelefon passar; Enter väljer det."}));
   refused = navigator.current().on_input(U"1940 1118");
   ASSERT_FALSE(refused);
   EXPECT_EQ(refused.error(), "Kontot 1940 finns inte i kontoplanen.");
@@ -2144,7 +2155,12 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   EXPECT_NE(std::ranges::find(view, "Kvar: debet 1118.00."), view.end());
   EXPECT_NE(std::ranges::find(view, "Debet 0.00, beloppet 1118.00."), view.end());
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'9', "Ta bort sista"}}));
-  accepted = navigator.current().on_input(U"6212");
+  // A name without amount: the line again with what remains, then Enter adds it
+  accepted = navigator.current().on_input(U"telefon");
+  ASSERT_TRUE(accepted) << accepted.error();
+  follow(accepted);
+  EXPECT_EQ(navigator.current().start_input(), U"6212 1118.00");
+  accepted = navigator.current().on_input(navigator.current().start_input());
   ASSERT_TRUE(accepted) << accepted.error();
   follow(accepted);
   view = navigator.current().view();

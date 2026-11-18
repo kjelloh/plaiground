@@ -53,6 +53,15 @@ Jag tror jag väljer att införa 'bokför' och sedan funktionen att ta tillbaka 
 
 * Då har jag så jag kan testa ett utkast 'fram och tillbaka' genom kedjan.
 
+OK, so now we have entered the 'confused or brain fogged' Claude again.
+
+* It keeps implementing 'the same state' (as the user experience it) as different ones?
+
+    * The draft view when selected is a different one than the one traveled to by the 'finalise drafts' wizard?
+    * Maybe that comes from the architecture?
+    * Still, it is sub-optimal and requires patches to make them look alike.
+
+
 Från igår gjorde jag några noteringar om funktioner som vore bra att få med för en fullödig bokföringsupplevelse (he he)
 
 Så vad bör vi försöka få med innan dagen är slut (Och Claude-prenumerationen går ut)?
