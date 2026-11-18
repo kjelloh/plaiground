@@ -121,20 +121,22 @@ std::string_view stage_text(books::DraftStage stage) {
   return "";
 }
 
+std::string same_text(books::Draft const& draft) {
+  if (books::stage(draft) != books::DraftStage::same) return {};
+  std::vector<std::string> parts;
+  if (!draft.event.heading.empty()) parts.push_back(draft.event.heading);
+  for (auto const& posting : draft.postings) {
+    if (posting.kind == books::Posting::Kind::removed || posting.text.empty()) continue;
+    parts.push_back(posting.text);
+  }
+  return joined_within(parts, same_text_width);
+}
+
 std::string draft_text(books::Draft const& draft) {
   auto const stage = books::stage(draft);
-  std::string text = draft.event.heading;
   // The same event from several parts: their raw texts, in the best case the text of the
   // voucher to come (beslut 2026-11-18); worked out each time, never stored
-  if (stage == books::DraftStage::same) {
-    std::vector<std::string> parts;
-    if (!text.empty()) parts.push_back(text);
-    for (auto const& posting : draft.postings) {
-      if (posting.kind == books::Posting::Kind::removed || posting.text.empty()) continue;
-      parts.push_back(posting.text);
-    }
-    text = joined_within(parts, same_text_width);
-  }
+  std::string text = stage == books::DraftStage::same ? same_text(draft) : draft.event.heading;
   if (text.empty()) {
     auto const posting = std::ranges::find_if(draft.postings, [](books::Posting const& p) {
       return p.kind != books::Posting::Kind::removed;

@@ -1,11 +1,13 @@
 #pragma once
 
+#include "core/amount.hpp"
 #include "core/books/books.hpp"
 #include "core/date.hpp"
 
 #include <cstddef>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -44,5 +46,21 @@ std::expected<std::size_t, std::string> add_event_draft(std::filesystem::path co
 // Does not log.
 std::expected<void, std::string> forget_draft(std::filesystem::path const& project_folder, Date year_start,
                                               std::size_t index, books::Draft const& expected);
+
+// Replaces the draft at index of the fiscal year starting on year_start with
+// changed (e.g. a posting added, its event changed) and writes the books. Only
+// when the draft there is still expected (the one the user saw). Gives the
+// index of the changed draft, which moves when its date changed (see
+// place_draft). Error text when the books cannot be read or written, the year
+// is not in them, the draft is not there any more, or the changed date is
+// outside the year. Does not log.
+std::expected<std::size_t, std::string> replace_draft(std::filesystem::path const& project_folder, Date year_start,
+                                                      std::size_t index, books::Draft const& expected,
+                                                      books::Draft changed);
+
+// An amount of a posting as typed: an optional sign (+ or -), digits, and a
+// decimal comma or point with at most two decimals, e.g. -3,70 or 1118. Spaces
+// (also no-break spaces) inside it do not count. Nothing for anything else.
+std::optional<Amount> parse_typed_amount(std::string_view text);
 
 } // namespace cratchit

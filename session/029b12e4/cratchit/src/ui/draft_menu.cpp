@@ -64,6 +64,25 @@ std::string utf8_of(std::u32string_view text) {
 
 std::u32string u32_of(std::string_view text) { return std::u32string(text.begin(), text.end()); } // ASCII only
 
+// UTF-8 text as code points (a malformed byte stands for itself)
+std::u32string code_points_of(std::string_view text) {
+  std::u32string result;
+  for (std::size_t i = 0; i < text.size();) {
+    auto const c = static_cast<unsigned char>(text[i]);
+    std::size_t const length = c < 0x80 ? 1 : (c >> 5) == 0x6 ? 2 : (c >> 4) == 0xE ? 3 : (c >> 3) == 0x1E ? 4 : 1;
+    if (length == 1 || i + length > text.size()) {
+      result.push_back(c);
+      ++i;
+      continue;
+    }
+    char32_t point = c & (0x7F >> length);
+    for (std::size_t k = 1; k < length; ++k) point = (point << 6) | (static_cast<unsigned char>(text[i + k]) & 0x3F);
+    result.push_back(point);
+    i += length;
+  }
+  return result;
+}
+
 // "2026-07-03     -3.70  AVGIFTER NORDEA"
 std::string entry_text(statement::Entry const& entry) {
   return std::format("    {}  {:>12}  {}", format_iso_date(entry.date), format_amount(entry.amount), entry.text);
@@ -999,6 +1018,268 @@ private:
   View done_; // what was done here, until the user leaves
 };
 
+// ASCII and the Latin-1 letters in UTF-8 to lower case, to find an account by its name
+std::string lower_case(std::string_view text) {
+  std::string result(text);
+  for (std::size_t i = 0; i < result.size(); ++i) {
+    auto const c = static_cast<unsigned char>(result[i]);
+    if (c >= 'A' && c <= 'Z') {
+      result[i] = static_cast<char>(c - 'A' + 'a');
+    } else if (c == 0xC3 && i + 1 < result.size()) {
+      auto const next = static_cast<unsigned char>(result[i + 1]);
+      if (next >= 0x80 && next <= 0x9E && next != 0x97) result[i + 1] = static_cast<char>(next + 0x20);
+      ++i;
+    }
+  }
+  return result;
+}
+
+bool all_digits(std::string_view text) {
+  return !text.empty() && std::ranges::all_of(text, [](char c) { return c >= '0' && c <= '9'; });
+}
+
+// The accounts whose number starts with word (digits), or whose name holds it (else, case
+// folded), as "6570  Bankkostnader", at most max of them
+std::vector<std::string> accounts_like(std::vector<books::Account> const& accounts, std::string_view word,
+                                       std::size_t max = 20) {
+  std::vector<std::string> found;
+  auto const by_number = all_digits(word);
+  auto const folded = lower_case(word);
+  for (auto const& account : accounts) {
+    auto const fits = by_number ? account.number.starts_with(word) : lower_case(account.name).contains(folded);
+    if (!fits) continue;
+    if (found.size() == max) {
+      found.push_back("  …");
+      break;
+    }
+    found.push_back(std::format("{}  {}", account.number, account.name));
+  }
+  return found;
+}
+
+// Where the postings of a draft stand, for Kontera: what remains for them to balance,
+// how debit stands against the amount, and whether it is ready
+View posting_status(books::Draft const& draft) {
+  View lines;
+  auto const counted = std::ranges::count_if(draft.postings, [](books::Posting const& p) {
+    return p.kind != books::Posting::Kind::removed;
+  });
+  auto const sum = books::sum(draft.postings);
+  if (counted == 0) {
+    lines.push_back("Inga konteringar än.");
+  } else if (sum < 0) {
+    lines.push_back(std::format("Kvar: debet {}.", format_amount(-sum)));
+  } else if (sum > 0) {
+    lines.push_back(std::format("Kvar: kredit {}.", format_amount(sum)));
+  } else {
+    lines.push_back("Konteringarna balanserar.");
+  }
+  auto const amount = draft.event.amount < 0 ? -draft.event.amount : draft.event.amount;
+  if (amount != 0 && counted > 0 && books::debit(draft.postings) != amount) {
+    lines.push_back(std::format("Debet {}, beloppet {}.", format_amount(books::debit(draft.postings)),
+                                format_amount(amount)));
+  }
+  if (books::stage(draft) == books::DraftStage::ready) {
+    lines.push_back("Utkastet är klart att bokföra.");
+  } else if (draft.event.heading.empty() || draft.event.amount == 0) {
+    lines.push_back("Rubrik och belopp skrivs i Händelse (0).");
+  }
+  return lines;
+}
+
+// Shared by Kontera and Händelse: the draft being completed, where it is and how to change it
+struct Completing {
+  Project project;
+  FiscalYear year;
+  std::size_t index = 0;
+  books::Draft draft;
+  std::vector<books::Account> accounts;
+
+  // Writes changed in the place of the draft (replace_draft) and follows it
+  std::expected<void, std::string> change(books::Draft changed, std::string_view what) {
+    auto const year_start = parse_iso_date(year.start);
+    if (!year_start) return std::unexpected(std::format("Felaktigt räkenskapsår {}", year.start));
+    auto const at = replace_draft(project.folder, *year_start, index, draft, changed);
+    if (!at) {
+      LOG_BUSINESS("Kunde inte ändra utkast {} i {} ({}): {}", draft_id(index), label_of(year), project.folder.string(),
+                   at.error());
+      return std::unexpected(at.error());
+    }
+    LOG_BUSINESS("Utkast {} i {} ({}): {}; nu {}", draft_id(index), label_of(year), project.folder.string(), what,
+                 draft_id(*at));
+    index = *at;
+    draft = std::move(changed);
+    return {};
+  }
+};
+
+// Händelse (in Kontera): the draft's event on one line, as in Beskriv händelser
+// (parse_event), typed in for the user to change: its heading, else the text of
+// the same event (same_text); its amount, else what its parts amount to; its
+// date. Enter changes it and goes back to Kontera; an amount that can be read
+// in more than one way is refused with the readings.
+class EventLineState : public State {
+public:
+  EventLineState(std::shared_ptr<Completing> completing, State const* kontera)
+      : completing_(std::move(completing)), kontera_(kontera) {}
+  std::string name() const override { return "Händelse"; }
+  View view() const override {
+    return {"Skriv händelsen: rubrik, belopp och datum, och tryck Enter. Ett minustecken betyder att händelsen går "
+            "åt andra hållet än vanligt."};
+  }
+  OptionsList options() const override { return {}; }
+  OnKeyResult on_key(CodePoint) override { return nullptr; }
+  std::u32string start_input() const override {
+    auto const& draft = completing_->draft;
+    auto heading = draft.event.heading.empty() ? same_text(draft) : draft.event.heading;
+    auto const amount = draft.event.amount != 0 ? draft.event.amount : amount_of(draft);
+    std::string line = heading;
+    if (amount != 0) line += (line.empty() ? "" : " ") + format_amount(amount);
+    line += (line.empty() ? "" : " ") + format_iso_date(draft.event.date);
+    return code_points_of(line);
+  }
+  InputResult on_input(std::u32string_view text) override {
+    auto const readings = parse_event(utf8_of(text));
+    if (!readings) return std::unexpected(readings.error());
+    if (readings->size() > 1) {
+      std::string error = "Beloppet kan läsas på flera sätt:";
+      for (auto const& reading : *readings) {
+        error += std::format("\n  {}  {}", format_amount(reading.amount), reading.heading);
+      }
+      error += "\nSkriv beloppet utan mellanslag, eller ändra rubriken.";
+      return std::unexpected(error);
+    }
+    auto changed = completing_->draft;
+    changed.event = readings->front();
+    auto const what = std::format("händelsen ändrad till {} {} \"{}\"", format_iso_date(changed.event.date),
+                                  format_amount(changed.event.amount), changed.event.heading);
+    if (auto done = completing_->change(std::move(changed), what); !done) {
+      return std::unexpected(std::format("cratchit kunde inte ändra utkastet: {}", done.error()));
+    }
+    done_ = true;
+    return Accepted(); // back to Kontera
+  }
+  State const* back_to() const override { return done_ ? kontera_ : nullptr; }
+  std::string help_topic() const override { return std::string(help_topic::complete_event); }
+
+private:
+  std::shared_ptr<Completing> completing_;
+  State const* kontera_;
+  bool done_ = false;
+};
+
+// Kontera: the draft as its view shows it, with where its postings stand
+// (posting_status). The user types a posting, an account and an amount (debit
+// positive, credit negative, e.g. "6570 3,70"); the account alone takes what
+// remains for the postings to balance. Tab completes the account by number, or
+// lists the accounts whose name holds a word. Each posting is added at once
+// (replace_draft) and the user stays here for the next one. 0 Händelse changes
+// the event (EventLineState). 9 Ta bort sista removes the last posting typed
+// (one from a statement entry stays: Inte samma splits it off).
+class PostingState : public State {
+public:
+  explicit PostingState(std::shared_ptr<Completing> completing) : completing_(std::move(completing)) {}
+  std::string name() const override { return "Kontera"; }
+  View view() const override {
+    auto const& c = *completing_;
+    auto lines = draft_view_lines(c.draft, draft_id(c.index), label_of(c.year), c.accounts);
+    lines.push_back("");
+    auto const status = posting_status(c.draft);
+    lines.insert(lines.end(), status.begin(), status.end());
+    if (!error_.empty()) lines.push_back(error_);
+    return lines;
+  }
+  OptionsList options() const override {
+    OptionsList options{{U'0', "Händelse"}};
+    if (removable()) options.push_back({U'9', "Ta bort sista"});
+    return options;
+  }
+  bool on_key_in_place(CodePoint key) override {
+    if (key != U'9' || !removable()) return false;
+    auto changed = completing_->draft;
+    auto const removed = changed.postings.back();
+    changed.postings.pop_back();
+    auto const what = std::format("kontering borttagen: {} {}", removed.account, format_amount(removed.amount));
+    if (auto done = completing_->change(std::move(changed), what); !done) {
+      error_ = std::format("cratchit kunde inte ändra utkastet: {}", done.error());
+    } else {
+      error_.clear();
+    }
+    return true;
+  }
+  OnKeyResult on_key(CodePoint key) override {
+    if (key == U'0') return std::make_unique<EventLineState>(completing_, this);
+    return nullptr;
+  }
+  Completion complete(std::u32string_view text) const override {
+    auto const typed = utf8_of(text);
+    if (typed.empty() || typed.contains(' ')) return {};
+    auto const found = accounts_like(completing_->accounts, typed);
+    Completion completion;
+    if (all_digits(typed) && found.size() == 1) {
+      auto const number = found.front().substr(0, found.front().find(' '));
+      completion.added = u32_of(number.substr(typed.size()) + " ");
+      completion.notes.push_back(found.front());
+    } else if (all_digits(typed)) {
+      completion.candidates = found;
+    } else {
+      completion.notes = found.empty() ? std::vector<std::string>{"Inget konto har det i namnet."} : found;
+    }
+    return completion;
+  }
+  InputResult on_input(std::u32string_view text) override {
+    auto const typed = utf8_of(text);
+    auto const space = typed.find(' ');
+    auto const account = typed.substr(0, space);
+    auto const rest = space == std::string::npos ? std::string() : typed.substr(space + 1);
+    auto& c = *completing_;
+    if (account.empty()) return std::unexpected(std::string("Skriv konto och belopp, till exempel 6570 3,70."));
+    if (std::ranges::find(c.accounts, account, &books::Account::number) == c.accounts.end()) {
+      auto const found = accounts_like(c.accounts, account, 10);
+      std::string error = all_digits(account) ? std::format("Kontot {} finns inte i kontoplanen.", account)
+                                               : std::format("{} är inget konto.", account);
+      if (!found.empty()) {
+        error += " Konton som passar:";
+        for (auto const& line : found) error += "\n  " + line;
+      }
+      return std::unexpected(error);
+    }
+    Amount amount = 0;
+    if (rest.find_first_not_of(' ') == std::string::npos) {
+      amount = -books::sum(c.draft.postings);
+      if (amount == 0) return std::unexpected(std::string("Skriv beloppet: debet positivt, kredit negativt, till exempel -3,70."));
+    } else {
+      auto const parsed = parse_typed_amount(rest);
+      if (!parsed) return std::unexpected(std::format("{} är inget belopp. Skriv till exempel 3,70 eller -3,70.", rest));
+      if (*parsed == 0) return std::unexpected(std::string("Beloppet är noll."));
+      amount = *parsed;
+    }
+    auto changed = c.draft;
+    books::Posting posting;
+    posting.account = account;
+    posting.amount = amount;
+    changed.postings.push_back(std::move(posting));
+    if (auto done = c.change(std::move(changed), std::format("kontering tillagd: {} {}", account, format_amount(amount)));
+        !done) {
+      return std::unexpected(std::format("cratchit kunde inte ändra utkastet: {}", done.error()));
+    }
+    error_.clear();
+    return Accepted();
+  }
+  std::string help_topic() const override { return std::string(help_topic::post); }
+
+private:
+  // The last posting was typed (not from a statement entry)
+  bool removable() const {
+    auto const& postings = completing_->draft.postings;
+    return !postings.empty() && postings.back().source.empty() &&
+           postings.back().kind != books::Posting::Kind::removed;
+  }
+
+  std::shared_ptr<Completing> completing_;
+  std::string error_;
+};
+
 // Fullborda #<n>: the drafts one at a time, from the oldest (date order), each as
 // its view shows it, with "#n av N" in the heading. < and > go to the one before
 // and after (in place; at either end they do nothing). 0 Fullborda (Bokför for a
@@ -1038,7 +1319,8 @@ public:
     if (books::stage(drafts_[index_]) == books::DraftStage::ready) {
       return make_design_insufficiency_state("Bokför", "att bokföra ett utkast som är klart");
     }
-    return make_design_insufficiency_state("Fullborda", "att fullborda ett utkast med en mall eller genom att ändra det");
+    return std::make_unique<PostingState>(
+        std::make_shared<Completing>(Completing{project_, year_, index_, drafts_[index_], accounts_}));
   }
   void on_return() override { read(); }
   std::string help_topic() const override { return std::string(help_topic::complete); }

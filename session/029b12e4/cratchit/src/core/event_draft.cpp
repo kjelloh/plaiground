@@ -169,4 +169,40 @@ std::expected<void, std::string> forget_draft(std::filesystem::path const& proje
   return {};
 }
 
+std::expected<std::size_t, std::string> replace_draft(std::filesystem::path const& project_folder, Date year_start,
+                                                      std::size_t index, books::Draft const& expected,
+                                                      books::Draft changed) {
+  auto books = books::read_books(project_folder);
+  if (!books) return std::unexpected(books.error());
+  auto const year = std::ranges::find_if(books->years, [&](books::FiscalYear const& y) { return y.start == year_start; });
+  if (year == books->years.end()) {
+    return std::unexpected(std::format("Räkenskapsåret som börjar {} finns inte i bokföringen", format_iso_date(year_start)));
+  }
+  if (index >= year->drafts.size() || year->drafts[index] != expected) {
+    return std::unexpected("Utkastet finns inte längre på sin plats i bokföringen. Öppna det igen från Utkast.");
+  }
+  if (!year->holds(changed.event.date)) {
+    return std::unexpected(std::format("{} ligger inte i räkenskapsåret {} – {}.", format_iso_date(changed.event.date),
+                                       format_iso_date(year->start), format_iso_date(year->end)));
+  }
+  year->drafts.erase(year->drafts.begin() + static_cast<std::ptrdiff_t>(index));
+  auto const at = year->place_draft(std::move(changed));
+  if (auto written = books::write_books(project_folder, *books); !written) return std::unexpected(written.error());
+  return at;
+}
+
+std::optional<Amount> parse_typed_amount(std::string_view text) {
+  std::string plain;
+  for (std::size_t i = 0; i < text.size(); ++i) {
+    if (text[i] == ' ') continue;
+    if (text.substr(i).starts_with("\xC2\xA0")) {
+      i += 1; // the no-break space is two bytes in UTF-8
+      continue;
+    }
+    plain += text[i] == ',' ? '.' : text[i];
+  }
+  if (plain.starts_with('+')) plain.erase(0, 1);
+  return parse_amount(plain);
+}
+
 } // namespace cratchit

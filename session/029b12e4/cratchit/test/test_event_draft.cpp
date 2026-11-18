@@ -164,3 +164,54 @@ TEST(DraftStage, ACreditNoteIsReadyWhenDebitAddsUpToItsAmountWithoutSign) {
   draft.postings[0].amount = 124400;
   EXPECT_EQ(books::stage(draft), books::DraftStage::unbalanced);
 }
+
+TEST(ParseTypedAmount, SignDecimalCommaOrPointAndSpaces) {
+  EXPECT_EQ(parse_typed_amount("3,70"), Amount{370});
+  EXPECT_EQ(parse_typed_amount("-3.70"), Amount{-370});
+  EXPECT_EQ(parse_typed_amount("+1118"), Amount{111800});
+  EXPECT_EQ(parse_typed_amount("-1 118,00"), Amount{-111800});
+  EXPECT_EQ(parse_typed_amount("1\xC2\xA0" "118,5"), Amount{111850});
+  EXPECT_FALSE(parse_typed_amount("tre"));
+  EXPECT_FALSE(parse_typed_amount("1,234"));
+  EXPECT_FALSE(parse_typed_amount(""));
+}
+
+TEST(ReplaceDraft, ChangesTheDraftSeenAndFollowsItsDate) {
+  auto const folder = fs::temp_directory_path() / "cratchit_replace_draft_test";
+  fs::remove_all(folder);
+  fs::create_directories(folder);
+  std::ofstream(folder / "test.se", std::ios::binary)
+      << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20260101 20261231\r\n";
+  auto plan = plan_project_from_sie(folder / "test.se");
+  ASSERT_TRUE(plan) << plan.error();
+  ASSERT_TRUE(create_project_from_sie(*plan, "2026-11-09"));
+  Date const start{2026y, January, 1d};
+  Date const today{2026y, November, 18d};
+  ASSERT_TRUE(add_event_draft(folder, start, {"Telia", 111800, oct20}, today));
+  ASSERT_TRUE(add_event_draft(folder, start, {"Loopia", 31125, Date{2026y, November, 1d}}, today));
+  auto books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  auto const telia = books->years.front().drafts[0];
+  auto changed = telia;
+  books::Posting posting;
+  posting.account = "1930";
+  posting.amount = -111800;
+  changed.postings.push_back(posting);
+  changed.event.date = Date{2026y, December, 1d}; // after Loopia now
+  // Not the draft seen there: refused
+  EXPECT_FALSE(replace_draft(folder, start, 1, telia, changed));
+  // A date outside the year: refused
+  auto outside = changed;
+  outside.event.date = Date{2027y, January, 2d};
+  auto const refused = replace_draft(folder, start, 0, telia, outside);
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "2027-01-02 ligger inte i räkenskapsåret 2026-01-01 – 2026-12-31.");
+  // The one seen: changed and placed by its new date
+  auto const at = replace_draft(folder, start, 0, telia, changed);
+  ASSERT_TRUE(at) << at.error();
+  EXPECT_EQ(*at, 1u);
+  books = books::read_books(folder);
+  ASSERT_TRUE(books);
+  EXPECT_EQ(books->years.front().drafts[1], changed);
+  fs::remove_all(folder);
+}

@@ -30,7 +30,31 @@
 
 ## 20261118
 
+Så var det dags att införa funktioner för att faktiskt fullborda ett utkasts konteringar och registrera i bokföringen.
+
+Vi har i alla fall två sätt som det vore bra att kunna göra det på.
+
+1. Leta upp en tidigare verifikation som på något sätt matchar utkastet.
+
+    * Om utkastet har konteringar matchar en verifikation bara om använda konton och tecken matchar
+    * Om utkastet inte har konteringar så matchar en verifikation om det finns liknande ord.
+    * Jag tror det vore bra om vi kunde matcha på 'ovanligt tecken' också?
+        * Så en kreditfaktura med negativt utkastbelopp matchar bara verifikation med 'omkastat' debit och kredit i konteringen? 
+2. Bygg på med konteringar tills utkastet balanserar.
+    * Användaren skall kunna välja BAS-konto på namn eller nummer
+    * Editorn skall föreslå återstående belopp hela tiden.
+    * Editorn skall fungera 'bäst' om användaren konterar hela beloppet först och sedan motkonton i minskande beloppsföljd (kronor och öresavrundning sist)
+
+Från igår gjorde jag några noteringar om funktioner som vore bra att få med för en fullödig bokföringsupplevelse (he he)
+
 Så vad bör vi försöka få med innan dagen är slut (Och Claude-prenumerationen går ut)?
+
+* Utkast vs Leverantörsskulder
+    * Vi förväntar oss att utbetalningar från 1920 kan finnas på leverantörsskulder
+    * Vi förväntar oss att en faktura hamnar på leverantörsskulder
+    * Vi förväntar oss att se periodiska fakturor dyka upp (varna för borttappad faktura  = inget utkast!)
+
+* Utkast vs momsfordran / skuld
 
 * Utskrift / Formatering
 

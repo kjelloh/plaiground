@@ -471,7 +471,7 @@ Händelsen i utkastet: datum, rubrik och belopp. I ett utkast ska allt gå att �
 ##### Fullborda utkast
 
 <!-- hjälp: fullborda -->
-Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Tryck `0` för att fullborda utkastet, eller för att bokföra det när det är klart. Det finns inte än. Tryck `-` för att gå tillbaka till Utkast.
+Utkasten ett i taget, det äldsta först, som när du öppnar ett utkast. Tryck `>` för nästa och `<` för föregående; vid första och sista gör de ingenting. Tryck `0` för att fullborda utkastet i [Kontera](#kontera), eller för att bokföra det när det är klart. Att bokföra finns inte än. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Att fullborda ett utkast är att göra det klart att bokföra: välja en mall, fylla i det som saknas och få konteringarna att balansera. Att bokföra är sista steget. Tryck `2` i Utkast:
@@ -491,7 +491,55 @@ Konteringar:
 Cratchit > … > Utkast > Fullborda #1>
 ```
 
-Verifikationer bokförs i den ordning händelserna inträffade, så cratchit börjar med det äldsta utkastet. Prompten har utkastets nummer, och överst står hur många utkast det finns. Valet heter `0 Fullborda` så länge utkastet inte är klart och `0 Bokför` när det är det. Båda leder till *Inte än* för nu. Saknar året utkast står det `Inga utkast att fullborda i 2026/27.`
+Verifikationer bokförs i den ordning händelserna inträffade, så cratchit börjar med det äldsta utkastet. Prompten har utkastets nummer, och överst står hur många utkast det finns. Valet heter `0 Fullborda` så länge utkastet inte är klart och leder till [Kontera](#kontera). När utkastet är klart heter det `0 Bokför`, som leder till *Inte än* för nu. Saknar året utkast står det `Inga utkast att fullborda i 2026/27.`
+
+###### Kontera
+
+<!-- hjälp: kontera -->
+Skriv en kontering, konto och belopp, och tryck Enter, till exempel `6570 3,70`. Debet är positivt och kredit negativt. Skriver du bara kontot får konteringen det som återstår för att balansera. Tab fyller i ett kontonummer, eller visar konton vars namn innehåller ordet du skrivit. Under utkastet står vad som återstår. Tryck `0` för att ändra händelsen, rubrik, belopp och datum, och `9` för att ta bort den sista konteringen du skrev. Tryck `-` för att gå tillbaka till Fullborda.
+<!-- /hjälp -->
+
+Här bygger du utkastet tills det balanserar. Tryck `0` i Fullborda för ett utkast som inte är klart, till exempel bankavgiften från kontoutdraget:
+
+```text
+Utkast #1 i 2026/27 (kontohändelse)
+  …
+Konteringar:
+  1920  PlusGiro        -3.70  AVGIFTER NORDEA
+
+Kvar: debet 3.70.
+Rubrik och belopp skrivs i Händelse (0).
+  0 Händelse
+Cratchit > … > Utkast > Fullborda #1 > Kontera: 6570
+```
+
+Varje kontering läggs till direkt, och du står kvar för nästa. Raderna under utkastet säger var konteringarna står:
+
+* `Kvar: debet 3.70.` eller `Kvar: kredit 3.70.`: det som fattas för att debet och kredit ska bli lika. Skriver du bara kontot får konteringen just det.
+* `Konteringarna balanserar.`
+* `Debet 0.00, beloppet 1118.00.`: debet stämmer inte med händelsens belopp.
+* `Utkastet är klart att bokföra.` När du går tillbaka till Fullborda heter valet då `0 Bokför`.
+
+Det fungerar bäst om du först konterar hela beloppet, till exempel `2440 -1118` för en leverantörsfaktura, och sedan motkontona med det största beloppet först. Den sista raden, till exempel öresavrundningen, kan du då skriva med bara kontot.
+
+Ett konto som inte finns i kontoplanen går inte att använda. Skriver du ett ord i stället för ett nummer visar cratchit konton vars namn innehåller ordet. Stora och små bokstäver räknas lika.
+
+`9 Ta bort sista` tar bort den sista konteringen du skrev. En kontering från ett kontoutdrag tas inte bort här; den delar du ut med [Inte samma](#inte-samma).
+
+###### Händelse i Kontera
+
+<!-- hjälp: kontera-handelse -->
+Händelsen på en rad: rubrik, belopp och datum, som i Beskriv händelser. Raden står ifylld; ändra den och tryck Enter för att gå tillbaka till Kontera. Tryck `-` på en tom rad för att gå tillbaka utan att ändra.
+<!-- /hjälp -->
+
+Ett utkast behöver en rubrik och ett belopp för att bli klart. Tryck `0` i Kontera. Raden är ifylld med det utkastet redan har:
+
+* **rubriken**, eller, för ett utkast med stadiet `samma` utan rubrik, delarnas text (se [Utkast](#utkast));
+* **beloppet**, eller, när händelsen saknar belopp, vad delarna har för belopp;
+* **datumet**.
+
+Ändra det du vill och tryck Enter. Raden läses som i [Beskriv händelser](#beskriv-händelser). Kan beloppet läsas på flera sätt säger cratchit vilka; skriv det då utan mellanslag eller ändra rubriken.
+
 
 ##### Läs kontoutdrag
 

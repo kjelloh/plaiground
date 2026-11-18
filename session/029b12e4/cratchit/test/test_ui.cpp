@@ -2066,7 +2066,7 @@ TEST_F(RootMenuTest, SameListsPairsToMergeOrForgetAsBooked) {
 TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   std::ofstream(documents / "test.se", std::ios::binary)
       << "#FLAGGA 0\r\n#SIETYP 4\r\n#FNAMN \"Test AB\"\r\n#ORGNR 556000-0001\r\n#RAR 0 20250101 20251231\r\n"
-         "#KONTO 1930 \"Bank\"\r\n";
+         "#KONTO 1930 \"Bank\"\r\n#KONTO 6212 \"Mobiltelefon\"\r\n";
   auto plan = cratchit::plan_project_from_sie(documents / "test.se");
   ASSERT_TRUE(plan) << plan.error();
   auto const project = cratchit::create_project_from_sie(*plan, "2026-11-09");
@@ -2086,10 +2086,10 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   // The oldest first, as its view shows it
   ASSERT_TRUE(navigator.press(U'2'));
   EXPECT_EQ(navigator.current().name(), "Fullborda #1");
-  auto const view = navigator.current().view();
-  ASSERT_FALSE(view.empty());
-  EXPECT_EQ(view.front(), "Utkast #1 av 2 i 2025 (händelse)");
-  EXPECT_NE(std::ranges::find(view, "  Rubrik:         Loopia"), view.end());
+  auto const first = navigator.current().view();
+  ASSERT_FALSE(first.empty());
+  EXPECT_EQ(first.front(), "Utkast #1 av 2 i 2025 (händelse)");
+  EXPECT_NE(std::ranges::find(first, "  Rubrik:         Loopia"), first.end());
   EXPECT_EQ(navigator.current().options(),
             (OptionsList{{U'0', "Fullborda"}, {U'<', "Föregående"}, {U'>', "Nästa"}}));
   EXPECT_FALSE(navigator.press(U'<')); // the first: nothing
@@ -2097,9 +2097,69 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   EXPECT_EQ(navigator.current().name(), "Fullborda #2");
   EXPECT_EQ(navigator.current().view().front(), "Utkast #2 av 2 i 2025 (händelse)");
   EXPECT_FALSE(navigator.press(U'>')); // the last: nothing
-  // Fullborda is not there yet; back at the same draft
+  // As the prompt loop does: enter the next state, else go back where the state says
+  auto const follow = [&](auto& result) {
+    if (result->next) {
+      navigator.enter(std::move(result->next));
+    } else {
+      navigator.follow_back_to();
+    }
+  };
+  // Fullborda: Kontera, postings typed one at a time
   ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().name(), "Inte än (Fullborda)");
+  EXPECT_EQ(navigator.current().name(), "Kontera");
+  EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::post);
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}}));
+  EXPECT_EQ(navigator.current().view().back(), "Inga konteringar än.");
+  // Not an account: the accounts that fit
+  auto refused = navigator.current().on_input(U"bank 1118");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "bank är inget konto. Konton som passar:\n  1930  Bank");
+  refused = navigator.current().on_input(U"1940 1118");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Kontot 1940 finns inte i kontoplanen.");
+  refused = navigator.current().on_input(U"1930");
+  ASSERT_FALSE(refused);
+  EXPECT_EQ(refused.error(), "Skriv beloppet: debet positivt, kredit negativt, till exempel -3,70.");
+  // Tab completes a number
+  auto const completion = navigator.current().complete(U"19");
+  EXPECT_EQ(completion.added, U"30 ");
+  // The whole amount first, then what remains with the account alone
+  auto accepted = navigator.current().on_input(U"1930 -1 118,00");
+  ASSERT_TRUE(accepted) << accepted.error();
+  follow(accepted);
+  EXPECT_EQ(navigator.current().name(), "Kontera");
+  auto view = navigator.current().view();
+  EXPECT_NE(std::ranges::find(view, "Kvar: debet 1118.00."), view.end());
+  EXPECT_NE(std::ranges::find(view, "Debet 0.00, beloppet 1118.00."), view.end());
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'9', "Ta bort sista"}}));
+  accepted = navigator.current().on_input(U"6212");
+  ASSERT_TRUE(accepted) << accepted.error();
+  follow(accepted);
+  view = navigator.current().view();
+  EXPECT_EQ(view.front(), "Utkast #2 i 2025 (klart)");
+  EXPECT_NE(std::ranges::find(view, "Konteringarna balanserar."), view.end());
+  EXPECT_EQ(view.back(), "Utkastet är klart att bokföra.");
+  // 9 removes the last posting typed
+  ASSERT_TRUE(navigator.press(U'9'));
+  EXPECT_EQ(navigator.current().view().front(), "Utkast #2 i 2025 (samma)");
+  accepted = navigator.current().on_input(U"6212 1118");
+  ASSERT_TRUE(accepted) << accepted.error();
+  follow(accepted);
+  // Händelse: the event on one line, typed in to change
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Händelse");
+  EXPECT_EQ(navigator.current().start_input(), U"Telia 1118.00 2025-10-22");
+  accepted = navigator.current().on_input(U"Telia oktober 1118,00 2025-10-22");
+  ASSERT_TRUE(accepted) << accepted.error();
+  follow(accepted);
+  EXPECT_EQ(navigator.current().name(), "Kontera");
+  view = navigator.current().view();
+  EXPECT_NE(std::ranges::find(view, "  Rubrik:         Telia oktober"), view.end());
+  // Back in Fullborda: read again, at the same draft, now ready to book
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Fullborda #2");
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Bokför"}, {U'<', "Föregående"}, {U'>', "Nästa"}}));
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Inte än (Bokför)");
 }

@@ -57,6 +57,10 @@ std::string draft_text(books::Draft const& draft);
 // what its postings move when it has several. None for nullptr.
 std::vector<std::string> draft_rows(books::FiscalYear const* year);
 
+// The text of a draft of stage samma as draft_text shows it, without the stage
+// (e.g. "Anthropic Claude : Kortköp 260910 ANTH.."); empty for any other stage
+std::string same_text(books::Draft const& draft);
+
 // One row of draft_rows: the draft at index
 std::string draft_row(std::size_t index, books::Draft const& draft);
 
