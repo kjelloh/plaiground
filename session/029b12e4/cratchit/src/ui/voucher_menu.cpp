@@ -250,7 +250,7 @@ public:
             {U'2', amount.empty() ? std::string("Belopp:") : "Belopp: " + amount}};
   }
   // The event of a booked voucher is locked: each option tells why, and what to do instead
-  // (a draft's event is changed in Händelse i Kontera, see make_draft_view)
+  // (a draft's event is changed part by part in DraftEventState, see make_draft_view)
   OnKeyResult on_key(CodePoint key) override {
     switch (key) {
     case U'0': return std::make_unique<LockedState>(shown_, "Datum", "datumet");

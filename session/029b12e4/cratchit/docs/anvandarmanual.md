@@ -401,7 +401,7 @@ Numret, till exempel `#3`, är utkastets plats bland årets utkast, räknat frå
 ##### Utkastet
 
 <!-- hjälp: utkastet -->
-Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för att ändra händelsen i [Händelse i Kontera](#händelse-i-kontera) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. `9` är *Glöm* för ett ensamt utkast, en händelse eller en kontohändelse, och *Inte samma* för ett utkast av flera delar med samma belopp, som delar det direkt. Ett utkast vars konteringar har olika belopp har inget `9`. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
+Utkastet i samma delar som en verifikation. Överst numret, räkenskapsåret, hur långt utkastet har kommit och när det noterades. Sedan *Händelse*: datum, rubrik och belopp; det utkastet saknar står tomt. Sist *Konteringar*. Tryck `0` för att ändra händelsen i [Ändra händelsen](#ändra-händelsen) och `1` för att ändra konteringarna i [Kontera](#kontera). Är utkastet klart finns också `2` för att [bokföra](#bokför) det. `9` är *Glöm* för ett ensamt utkast, en händelse eller en kontohändelse, och *Inte samma* för ett utkast av flera delar med samma belopp, som delar det direkt. Ett utkast vars konteringar har olika belopp har inget `9`. När du kommer tillbaka visar cratchit utkastet som det är nu. Tryck `-` för att gå tillbaka till Utkast.
 <!-- /hjälp -->
 
 Skriv utkastets nummer i Utkast, till exempel `#1`, och tryck Enter:
@@ -493,7 +493,7 @@ Verifikationer bokförs i den ordning händelserna inträffade, så cratchit bö
 ###### Kontera
 
 <!-- hjälp: kontera -->
-Skriv en kontering, konto och belopp, och tryck Enter, till exempel `6570 3,70`. Debet är positivt och kredit negativt. Skriver du bara kontot får konteringen det som återstår för att balansera. Du kan också skriva ord ur kontots namn, till exempel `bankkost 3,70`: passar exakt ett konto visar cratchit raden igen med numret, `6570 3,70`, så att du kan kontrollera beloppet och trycka Enter en gång till. Tab fyller i ett kontonummer, eller visar vilka konton namnet passar. Under utkastet står vad som återstår. Tryck `0` för att ändra händelsen, rubrik, belopp och datum, och `9` för att ta bort den sista konteringen du skrev. Tryck `-` för att gå tillbaka till Fullborda.
+Skriv en kontering, konto och belopp, och tryck Enter, till exempel `6570 3,70`. Debet är positivt och kredit negativt. Skriver du bara kontot får konteringen det som återstår för att balansera. Du kan också skriva ord ur kontots namn, till exempel `bankkost 3,70`: passar exakt ett konto visar cratchit raden igen med numret, `6570 3,70`, så att du kan kontrollera beloppet och trycka Enter en gång till. Tab fyller i ett kontonummer, eller visar vilka konton namnet passar. Under utkastet står vad som återstår. Tryck `9` för att ta bort den sista konteringen du skrev. Händelsen, rubrik, belopp och datum, ändrar du inte här utan i Händelse: tryck `-` och sedan `0`. Tryck `-` för att gå tillbaka.
 <!-- /hjälp -->
 
 Här bygger du utkastet tills det balanserar, och här ändrar du det. Du kommer hit med `1 Konteringar` i Fullborda eller i utkastets vy. Till exempel bankavgiften från kontoutdraget:
@@ -505,8 +505,7 @@ Konteringar:
   1920  PlusGiro        -3.70  AVGIFTER NORDEA
 
 Kvar: debet 3.70.
-Rubrik och belopp skrivs i Händelse (0).
-  0 Händelse
+Rubrik och belopp ändrar du i Händelse: tryck - och sedan 0.
 Cratchit > … > Utkast > Fullborda #1 > Kontera: 6570
 ```
 
@@ -535,26 +534,35 @@ Du behöver inte kunna kontonumret. Skriv ord ur kontots namn i stället, ett el
 * Tab under tiden du skriver visar vilka konton orden passar, och när det är ett enda att Enter väljer det.
 * Beloppet är de sista orden som kan läsas som ett belopp, till exempel `1 118,00`.
 
-Så kommer du också åt ett konto vars nummer börjar på `0` eller `9`, siffror som är val i Kontera: skriv namnet i stället.
+Så kommer du också åt ett konto vars nummer börjar på `9`, som är ett val i Kontera: skriv namnet i stället.
 
 En kontering från ett kontoutdrag står sist med fil och rad, till exempel `1920 från bank/nordea.csv rad 8`.
 
 `9 Ta bort sista` tar bort den sista konteringen du skrev. En kontering från ett kontoutdrag tas inte bort här; den delar du ut med [Inte samma](#inte-samma).
 
-###### Händelse i Kontera
+###### Ändra händelsen
 
 <!-- hjälp: kontera-handelse -->
-Händelsen på en rad: rubrik, belopp och datum, som i Beskriv händelser. Raden står ifylld; ändra den och tryck Enter för att gå tillbaka dit du kom ifrån, Kontera eller utkastets vy. Tryck `-` på en tom rad för att gå tillbaka utan att ändra.
+Utkastets händelse: datum, rubrik och belopp, som för en verifikation. Tryck `0`, `1` eller `2` för att ändra den delen. Raden står ifylld; ändra den och tryck Enter för att spara och komma tillbaka hit. Tryck `-` för att gå tillbaka utan att ändra.
 <!-- /hjälp -->
 
-Ett utkast behöver en rubrik och ett belopp för att bli klart. Tryck `0` i Kontera. Raden är ifylld med det utkastet redan har:
+Ett utkast behöver en rubrik och ett belopp för att bli klart. Tryck `0` i utkastets vy eller i Fullborda. Kontera har inget val för händelsen, eftersom där arbetar du bara med konteringarna:
 
-* **rubriken**, eller, för ett utkast med stadiet `samma` utan rubrik, delarnas text (se [Utkast](#utkast));
-* **beloppet**, eller, när händelsen saknar belopp, vad delarna har för belopp;
-* **datumet**.
+```text
+Händelsen i #1
+  0 Datum: 2026-07-03
+  1 Rubrik:
+  2 Belopp:
+Cratchit > … > Utkast > Fullborda #1 > Händelse>
+```
 
-Ändra det du vill och tryck Enter. Raden läses som i [Beskriv händelser](#beskriv-händelser). Kan beloppet läsas på flera sätt säger cratchit vilka; skriv det då utan mellanslag eller ändra rubriken.
+Det utkastet saknar står tomt. Varje val visar en rad som är ifylld med det utkastet redan har:
 
+* **Datum**: datumet, skrivet `2026-10-22` eller `20261022`. Det måste ligga i räkenskapsåret. Ändrar du datumet kan utkastet få ett nytt nummer.
+* **Rubrik**: rubriken, eller, för ett utkast med stadiet `samma` utan rubrik, delarnas text (se [Utkast](#utkast)). En tom rubrik går inte.
+* **Belopp**: beloppet, eller, när händelsen saknar belopp, vad delarna har för belopp. Ett minustecken betyder att händelsen går åt andra hållet än vanligt. Noll går inte.
+
+Ändra raden och tryck Enter. cratchit sparar ändringen direkt, och du är tillbaka i Händelse, där valen visar det nya. Går raden inte att använda säger cratchit varför, och raden står kvar så att du kan rätta den.
 
 ###### Bokför
 

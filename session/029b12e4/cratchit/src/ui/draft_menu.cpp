@@ -1147,7 +1147,7 @@ View posting_status(books::Draft const& draft) {
   if (books::stage(draft) == books::DraftStage::ready) {
     lines.push_back("Utkastet är klart att bokföra: tryck - och sedan 2.");
   } else if (draft.event.heading.empty() || draft.event.amount == 0) {
-    lines.push_back("Rubrik och belopp skrivs i Händelse (0).");
+    lines.push_back("Rubrik och belopp ändrar du i Händelse: tryck - och sedan 0.");
   }
   return lines;
 }
@@ -1178,59 +1178,126 @@ struct Completing {
   }
 };
 
-// Händelse (in Kontera): the draft's event on one line, as in Beskriv händelser
-// (parse_event), typed in for the user to change: its heading, else the text of
-// the same event (same_text); its amount, else what its parts amount to; its
-// date. Enter changes it and goes back to Kontera; an amount that can be read
-// in more than one way is refused with the readings.
-class EventLineState : public State {
+// The part of a draft's event that EventPartState changes
+enum class EventPart { date, heading, amount };
+
+// Datum, Rubrik or Belopp (in Händelse): one part of the draft's event, typed in
+// for the user to change: the date; the heading, else the text of the same event
+// (same_text); the amount, else what the parts amount to. Enter changes it at
+// once (replace_draft) and goes back to Händelse; what cannot be read, an empty
+// heading, a zero amount or a date outside the year is refused with the reason,
+// and the line kept.
+class EventPartState : public State {
 public:
-  EventLineState(std::shared_ptr<Completing> completing, State const* kontera)
-      : completing_(std::move(completing)), kontera_(kontera) {}
-  std::string name() const override { return "Händelse"; }
+  EventPartState(std::shared_ptr<Completing> completing, EventPart part, State const* event)
+      : completing_(std::move(completing)), part_(part), event_(event) {}
+  std::string name() const override {
+    switch (part_) {
+    case EventPart::date: return "Datum";
+    case EventPart::heading: return "Rubrik";
+    case EventPart::amount: return "Belopp";
+    }
+    return {};
+  }
   View view() const override {
-    return {"Skriv händelsen: rubrik, belopp och datum, och tryck Enter. Ett minustecken betyder att händelsen går "
-            "åt andra hållet än vanligt."};
+    switch (part_) {
+    case EventPart::date:
+      return {std::format("Skriv datumet, till exempel 2026-10-22, och tryck Enter. Räkenskapsåret är {} – {}.",
+                          completing_->year.start, completing_->year.end)};
+    case EventPart::heading: return {"Skriv rubriken och tryck Enter."};
+    case EventPart::amount:
+      return {"Skriv beloppet och tryck Enter. Ett minustecken betyder att händelsen går åt andra hållet än vanligt."};
+    }
+    return {};
   }
   OptionsList options() const override { return {}; }
   OnKeyResult on_key(CodePoint) override { return nullptr; }
   std::u32string start_input() const override {
     auto const& draft = completing_->draft;
-    auto heading = draft.event.heading.empty() ? same_text(draft) : draft.event.heading;
-    auto const amount = draft.event.amount != 0 ? draft.event.amount : amount_of(draft);
-    std::string line = heading;
-    if (amount != 0) line += (line.empty() ? "" : " ") + format_amount(amount);
-    line += (line.empty() ? "" : " ") + format_iso_date(draft.event.date);
-    return code_points_of(line);
+    switch (part_) {
+    case EventPart::date: return code_points_of(format_iso_date(draft.event.date));
+    case EventPart::heading:
+      return code_points_of(draft.event.heading.empty() ? same_text(draft) : draft.event.heading);
+    case EventPart::amount: {
+      auto const amount = draft.event.amount != 0 ? draft.event.amount : amount_of(draft);
+      return amount != 0 ? code_points_of(format_amount(amount)) : std::u32string();
+    }
+    }
+    return {};
   }
   InputResult on_input(std::u32string_view text) override {
-    auto const readings = parse_event(utf8_of(text));
-    if (!readings) return std::unexpected(readings.error());
-    if (readings->size() > 1) {
-      std::string error = "Beloppet kan läsas på flera sätt:";
-      for (auto const& reading : *readings) {
-        error += std::format("\n  {}  {}", format_amount(reading.amount), reading.heading);
-      }
-      error += "\nSkriv beloppet utan mellanslag, eller ändra rubriken.";
-      return std::unexpected(error);
-    }
+    auto typed = utf8_of(text);
+    while (!typed.empty() && typed.back() == ' ') typed.pop_back();
+    while (!typed.empty() && typed.front() == ' ') typed.erase(0, 1);
     auto changed = completing_->draft;
-    changed.event = readings->front();
-    auto const what = std::format("händelsen ändrad till {} {} \"{}\"", format_iso_date(changed.event.date),
-                                  format_amount(changed.event.amount), changed.event.heading);
-    if (auto done = completing_->change(std::move(changed), what); !done) {
+    std::string what;
+    switch (part_) {
+    case EventPart::date: {
+      auto const date = typed.contains('-') ? parse_iso_date(typed) : parse_compact_date(typed);
+      if (!date) return std::unexpected(std::format("{} är inget datum. Skriv till exempel 2026-10-22.", typed));
+      changed.event.date = *date;
+      what = "datum " + format_iso_date(*date);
+      break;
+    }
+    case EventPart::heading:
+      if (typed.empty()) return std::unexpected(std::string("Skriv rubriken."));
+      changed.event.heading = typed;
+      what = std::format("rubrik \"{}\"", typed);
+      break;
+    case EventPart::amount: {
+      auto const amount = parse_typed_amount(typed);
+      if (!amount) {
+        return std::unexpected(std::format("{} är inget belopp. Skriv till exempel 1118,00 eller -1118,00.", typed));
+      }
+      if (*amount == 0) return std::unexpected(std::string("Beloppet är noll."));
+      changed.event.amount = *amount;
+      what = "belopp " + format_amount(*amount);
+      break;
+    }
+    }
+    if (auto done = completing_->change(std::move(changed), "händelsen ändrad: " + what); !done) {
       return std::unexpected(std::format("cratchit kunde inte ändra utkastet: {}", done.error()));
     }
     done_ = true;
-    return Accepted(); // back to Kontera
+    return Accepted(); // back to Händelse
   }
-  State const* back_to() const override { return done_ ? kontera_ : nullptr; }
+  State const* back_to() const override { return done_ ? event_ : nullptr; }
   std::string help_topic() const override { return std::string(help_topic::complete_event); }
 
 private:
   std::shared_ptr<Completing> completing_;
-  State const* kontera_;
+  EventPart part_;
+  State const* event_;
   bool done_ = false;
+};
+
+// Händelse (of a draft, beslut 2026-11-18): as a voucher's event, its date,
+// heading and amount as options, but each leads to EventPartState to change it
+// (a heading or amount the draft lacks shows empty). The options show the event
+// as it is now. Opened with 0 in the draft's view and in Fullborda.
+class DraftEventState : public State {
+public:
+  explicit DraftEventState(std::shared_ptr<Completing> completing) : completing_(std::move(completing)) {}
+  std::string name() const override { return "Händelse"; }
+  View view() const override { return {std::format("Händelsen i {}", draft_id(completing_->index))}; }
+  OptionsList options() const override {
+    auto const& event = completing_->draft.event;
+    return {{U'0', "Datum: " + format_iso_date(event.date)},
+            {U'1', event.heading.empty() ? std::string("Rubrik:") : "Rubrik: " + event.heading},
+            {U'2', event.amount == 0 ? std::string("Belopp:") : "Belopp: " + format_amount(event.amount)}};
+  }
+  OnKeyResult on_key(CodePoint key) override {
+    switch (key) {
+    case U'0': return std::make_unique<EventPartState>(completing_, EventPart::date, this);
+    case U'1': return std::make_unique<EventPartState>(completing_, EventPart::heading, this);
+    case U'2': return std::make_unique<EventPartState>(completing_, EventPart::amount, this);
+    default: return nullptr;
+    }
+  }
+  std::string help_topic() const override { return std::string(help_topic::complete_event); }
+
+private:
+  std::shared_ptr<Completing> completing_;
 };
 
 // Kontera: the draft as its view shows it, with where its postings stand
@@ -1242,8 +1309,9 @@ private:
 // else what remains) for the user to check and Enter once more; else the
 // accounts that fit are listed. Tab completes an account number, or tells which
 // accounts' names hold the words. Each posting is added at once
-// (replace_draft) and the user stays here for the next one. 0 Händelse changes
-// the event (EventLineState). 9 Ta bort sista removes the last posting typed
+// (replace_draft) and the user stays here for the next one. Kontera works with
+// the postings only: the event is changed in Händelse (0 in the draft's view and
+// in Fullborda; beslut 2026-11-18). 9 Ta bort sista removes the last posting typed
 // (one from a statement entry stays: Inte samma splits it off).
 class PostingState : public State {
 public:
@@ -1267,10 +1335,10 @@ public:
     if (!error_.empty()) lines.push_back(error_);
     return lines;
   }
+  // Only the postings: the event is changed in Händelse, where the whole draft is shown
   OptionsList options() const override {
-    OptionsList options{{U'0', "Händelse"}};
-    if (removable()) options.push_back({U'9', "Ta bort sista"});
-    return options;
+    if (removable()) return {{U'9', "Ta bort sista"}};
+    return {};
   }
   bool on_key_in_place(CodePoint key) override {
     if (key != U'9' || !removable()) return false;
@@ -1285,8 +1353,7 @@ public:
     }
     return true;
   }
-  OnKeyResult on_key(CodePoint key) override {
-    if (key == U'0') return std::make_unique<EventLineState>(completing_, this);
+  OnKeyResult on_key(CodePoint) override {
     return nullptr;
   }
   Completion complete(std::u32string_view text) const override {
@@ -1578,7 +1645,7 @@ public:
       return std::make_shared<Completing>(Completing{project_, year_, index_, draft, accounts_});
     };
     switch (key) {
-    case U'0': return std::make_unique<EventLineState>(completing(), this);
+    case U'0': return std::make_unique<DraftEventState>(completing());
     case U'1': return std::make_unique<PostingState>(completing());
     case U'2':
       if (books::stage(draft) != books::DraftStage::ready) return nullptr;
@@ -1746,8 +1813,8 @@ public:
       return std::make_unique<BookState>(project_, year_, c.index, c.draft, this,
                                          [this](std::string line) { report_ = {std::move(line)}; });
     };
-    actions.edit_event = [completing](State const* back) -> std::unique_ptr<State> {
-      return std::make_unique<EventLineState>(completing, back);
+    actions.edit_event = [completing](State const*) -> std::unique_ptr<State> {
+      return std::make_unique<DraftEventState>(completing);
     };
     actions.edit_postings = [completing]() -> std::unique_ptr<State> { return std::make_unique<PostingState>(completing); };
     actions.now = [completing, summary_of]() -> std::optional<DraftNow> {

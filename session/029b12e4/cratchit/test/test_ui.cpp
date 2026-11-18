@@ -1916,15 +1916,45 @@ TEST_F(RootMenuTest, ADraftIsOpenedByItsIdAndShownAsAVoucher) {
   // Back in the draft: shown as it is now
   EXPECT_EQ(navigator.current().name(), "#2");
   EXPECT_EQ(navigator.current().view().back(), "  1930  Bank         10.00");
-  // Its event is changed in Händelse, the line typed in; back in the draft, shown as it is now
+  // Its event: each part changed for itself; back in the draft, shown as it is now
   ASSERT_TRUE(navigator.press(U'0'));
   EXPECT_EQ(navigator.current().name(), "Händelse");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::complete_event);
-  typed = navigator.current().on_input(U"Bankavgift rättad 10,00 2025-03-05");
+  EXPECT_EQ(navigator.current().options(),
+            (OptionsList{{U'0', "Datum: 2025-03-05"}, {U'1', "Rubrik:"}, {U'2', "Belopp:"}}));
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().name(), "Rubrik");
+  typed = navigator.current().on_input(U"");
+  ASSERT_FALSE(typed);
+  EXPECT_EQ(typed.error(), "Skriv rubriken.");
+  typed = navigator.current().on_input(U"Bankavgift rättad");
   ASSERT_TRUE(typed) << typed.error();
   navigator.follow_back_to();
+  EXPECT_EQ(navigator.current().name(), "Händelse");
+  EXPECT_EQ(navigator.current().options()[1], (std::pair<char32_t, std::string>{U'1', "Rubrik: Bankavgift rättad"}));
+  // A date outside the year, or not a date: refused
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().start_input(), U"2025-03-05");
+  typed = navigator.current().on_input(U"2026-01-02");
+  ASSERT_FALSE(typed);
+  EXPECT_EQ(typed.error(), "cratchit kunde inte ändra utkastet: 2026-01-02 ligger inte i räkenskapsåret 2025-01-01 – 2025-12-31.");
+  typed = navigator.current().on_input(U"igår");
+  ASSERT_FALSE(typed);
+  EXPECT_EQ(typed.error(), "igår är inget datum. Skriv till exempel 2026-10-22.");
+  ASSERT_TRUE(navigator.back());
+  // The amount: typed in from the parts, a zero refused
+  ASSERT_TRUE(navigator.press(U'2'));
+  EXPECT_EQ(navigator.current().start_input(), U"10.00");
+  typed = navigator.current().on_input(U"0");
+  ASSERT_FALSE(typed);
+  EXPECT_EQ(typed.error(), "Beloppet är noll.");
+  typed = navigator.current().on_input(U"-10,00");
+  ASSERT_TRUE(typed) << typed.error();
+  navigator.follow_back_to();
+  ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "#2");
   EXPECT_EQ(navigator.current().view()[4], "  Rubrik:         Bankavgift rättad");
+  EXPECT_EQ(navigator.current().view()[5], "  Belopp:         -10.00");
   ASSERT_TRUE(navigator.back());
   // The event without postings
   accepted = navigator.current().on_input(U"#3");
@@ -2120,7 +2150,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   ASSERT_TRUE(navigator.press(U'1'));
   EXPECT_EQ(navigator.current().name(), "Kontera");
   EXPECT_EQ(navigator.current().help_topic(), cratchit::ui::help_topic::post);
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}}));
+  EXPECT_TRUE(navigator.current().options().empty()); // the postings only: no Händelse here
   EXPECT_EQ(navigator.current().view().back(), "Inga konteringar än.");
   // Words of a name: one account fits, the line is shown again with its number, to check
   auto chosen = navigator.current().on_input(U"BANK -1 118,00");
@@ -2154,7 +2184,7 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   auto view = navigator.current().view();
   EXPECT_NE(std::ranges::find(view, "Kvar: debet 1118.00."), view.end());
   EXPECT_NE(std::ranges::find(view, "Debet 0.00, beloppet 1118.00."), view.end());
-  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"}, {U'9', "Ta bort sista"}}));
+  EXPECT_EQ(navigator.current().options(), (OptionsList{{U'9', "Ta bort sista"}}));
   // A name without amount: the line again with what remains, then Enter adds it
   accepted = navigator.current().on_input(U"telefon");
   ASSERT_TRUE(accepted) << accepted.error();
@@ -2173,19 +2203,22 @@ TEST_F(RootMenuTest, CompleteGoesThroughTheDraftsFromTheOldest) {
   accepted = navigator.current().on_input(U"6212 1118");
   ASSERT_TRUE(accepted) << accepted.error();
   follow(accepted);
-  // Händelse: the event on one line, typed in to change
-  ASSERT_TRUE(navigator.press(U'0'));
-  EXPECT_EQ(navigator.current().name(), "Händelse");
-  EXPECT_EQ(navigator.current().start_input(), U"Telia 1118.00 2025-10-22");
-  accepted = navigator.current().on_input(U"Telia oktober 1118,00 2025-10-22");
-  ASSERT_TRUE(accepted) << accepted.error();
-  follow(accepted);
-  EXPECT_EQ(navigator.current().name(), "Kontera");
-  view = navigator.current().view();
-  EXPECT_NE(std::ranges::find(view, "  Rubrik:         Telia oktober"), view.end());
-  // Back in Fullborda: read again, at the same draft, now ready to book
+  // Back in Fullborda: read again, at the same draft
   ASSERT_TRUE(navigator.back());
   EXPECT_EQ(navigator.current().name(), "Fullborda #2");
+  // Händelse (0 here, not in Kontera): the heading changed for itself, typed in
+  ASSERT_TRUE(navigator.press(U'0'));
+  EXPECT_EQ(navigator.current().name(), "Händelse");
+  ASSERT_TRUE(navigator.press(U'1'));
+  EXPECT_EQ(navigator.current().start_input(), U"Telia");
+  accepted = navigator.current().on_input(U"Telia oktober");
+  ASSERT_TRUE(accepted) << accepted.error();
+  follow(accepted);
+  EXPECT_EQ(navigator.current().name(), "Händelse");
+  ASSERT_TRUE(navigator.back());
+  EXPECT_EQ(navigator.current().name(), "Fullborda #2");
+  view = navigator.current().view();
+  EXPECT_NE(std::ranges::find(view, "  Rubrik:         Telia oktober"), view.end());
   EXPECT_EQ(navigator.current().options(), (OptionsList{{U'0', "Händelse"},
                                                         {U'1', "Konteringar"},
                                                         {U'2', "Bokför"},
